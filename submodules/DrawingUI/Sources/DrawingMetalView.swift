@@ -693,8 +693,26 @@ final class Texture {
     
     func createCGImage() -> CGImage? {
         let dataProvider: CGDataProvider
-        if #available(iOS 12.0, *) {
-#if targetEnvironment(simulator)
+//        if #available(iOS 12.0, *) {
+//#if targetEnvironment(simulator)
+//            guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
+//                return nil
+//            }
+//            data.length = self.bytesPerRow * self.height
+//            self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
+//
+//            guard let provider = CGDataProvider(data: data as CFData) else {
+//                return nil
+//            }
+//            dataProvider = provider
+//#else
+//            guard let buffer = self.buffer, let provider = CGDataProvider(data: Data(bytesNoCopy: buffer.contents(), count: buffer.length, deallocator: .custom { _, _ in
+//            }) as CFData) else {
+//                return nil
+//            }
+//            dataProvider = provider
+//#endif
+//        } else {
             guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
                 return nil
             }
@@ -705,25 +723,7 @@ final class Texture {
                 return nil
             }
             dataProvider = provider
-#else
-            guard let buffer = self.buffer, let provider = CGDataProvider(data: Data(bytesNoCopy: buffer.contents(), count: buffer.length, deallocator: .custom { _, _ in
-            }) as CFData) else {
-                return nil
-            }
-            dataProvider = provider
-#endif
-        } else {
-            guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
-                return nil
-            }
-            data.length = self.bytesPerRow * self.height
-            self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
-            
-            guard let provider = CGDataProvider(data: data as CFData) else {
-                return nil
-            }
-            dataProvider = provider
-        }
+//        }
 
         guard let image = CGImage(
             width: Int(self.width),
