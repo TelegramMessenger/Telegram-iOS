@@ -334,7 +334,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                 } else {
                     var photos = photos
                     if let secondEntry {
-                        photos.insert(TelegramPeerPhoto(image: secondEntry, reference: secondEntry.reference, date: 0, index: 1, totalCount: 0, messageId: nil), at: 1)
+                        photos.insert(TelegramPeerPhoto(image: secondEntry, reference: secondEntry.reference, date: photos.first?.date ?? 0, index: 1, totalCount: 0, messageId: nil), at: 1)
                     }
                     if let lastEntry {
                         photos.append(TelegramPeerPhoto(image: lastEntry, reference: lastEntry.reference, date: 0, index: photos.count, totalCount: 0, messageId: nil))
@@ -342,7 +342,11 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                     for photo in photos {
                         let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                         if result.isEmpty, let first = initialEntries.first {
-                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, false))
+                            var videoRepresentations: [VideoRepresentationWithReference] = photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) })
+                            if videoRepresentations.isEmpty {
+                                videoRepresentations = first.videoRepresentations
+                            }
+                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, videoRepresentations, peer, secondEntry != nil ? 0 : photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, false))
                         } else {
                             result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, photo.image.id == lastEntry?.id))
                         }

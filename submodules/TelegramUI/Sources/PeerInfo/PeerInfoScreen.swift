@@ -1371,27 +1371,28 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemInfo = 3
             let ItemDelete = 4
             
-            let compactName = EnginePeer(user).compactDisplayTitle
-            
-            items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemSuggest, text: presentationData.strings.UserInfo_SuggestPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Peer Info/SuggestAvatar"), action: {
-                interaction.suggestPhoto()
-            }))
-            
-            items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemCustom, text: presentationData.strings.UserInfo_SetCustomPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
-                interaction.setCustomPhoto()
-            }))
-            
-            if user.photo.first?.isPersonal == true || state.updatingAvatar != nil {
-                var representation: TelegramMediaImageRepresentation?
-                if let cachedData = data.cachedData as? CachedUserData, case let .known(photo) = cachedData.photo {
-                    representation = photo?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28))
-                }
-                
-                items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemReset, text: presentationData.strings.UserInfo_ResetCustomPhoto, color: .accent, icon: nil, iconSignal: peerAvatarCompleteImage(account: context.account, peer: EnginePeer(user), forceProvidedRepresentation: true, representation: representation, size: CGSize(width: 28.0, height: 28.0)), action: {
-                    interaction.resetCustomPhoto()
+            if !user.flags.contains(.isSupport) {
+                let compactName = EnginePeer(user).compactDisplayTitle
+                items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemSuggest, text: presentationData.strings.UserInfo_SuggestPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Peer Info/SuggestAvatar"), action: {
+                    interaction.suggestPhoto()
                 }))
+                
+                items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemCustom, text: presentationData.strings.UserInfo_SetCustomPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+                    interaction.setCustomPhoto()
+                }))
+                
+                if user.photo.first?.isPersonal == true || state.updatingAvatar != nil {
+                    var representation: TelegramMediaImageRepresentation?
+                    if let cachedData = data.cachedData as? CachedUserData, case let .known(photo) = cachedData.photo {
+                        representation = photo?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28))
+                    }
+                    
+                    items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemReset, text: presentationData.strings.UserInfo_ResetCustomPhoto, color: .accent, icon: nil, iconSignal: peerAvatarCompleteImage(account: context.account, peer: EnginePeer(user), forceProvidedRepresentation: true, representation: representation, size: CGSize(width: 28.0, height: 28.0)), action: {
+                        interaction.resetCustomPhoto()
+                    }))
+                }
+                items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemInfo, text: presentationData.strings.UserInfo_CustomPhotoInfo(compactName).string))
             }
-            items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemInfo, text: presentationData.strings.UserInfo_CustomPhotoInfo(compactName).string))
             
             if data.isContact {
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemDelete, text: presentationData.strings.UserInfo_DeleteContact, color: .destructive, action: {
