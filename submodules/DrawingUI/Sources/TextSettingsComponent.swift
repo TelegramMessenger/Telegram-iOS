@@ -181,13 +181,15 @@ final class TextFontComponent: Component {
     
     let values: [DrawingTextFont]
     let selectedValue: DrawingTextFont
+    let tag: AnyObject?
     let updated: (DrawingTextFont) -> Void
     
-    init(styleButton: AnyComponent<Empty>, alignmentButton: AnyComponent<Empty>, values: [DrawingTextFont], selectedValue: DrawingTextFont, updated: @escaping (DrawingTextFont) -> Void) {
+    init(styleButton: AnyComponent<Empty>, alignmentButton: AnyComponent<Empty>, values: [DrawingTextFont], selectedValue: DrawingTextFont, tag: AnyObject?, updated: @escaping (DrawingTextFont) -> Void) {
         self.styleButton = styleButton
         self.alignmentButton = alignmentButton
         self.values = values
         self.selectedValue = selectedValue
+        self.tag = tag
         self.updated = updated
     }
     
@@ -195,7 +197,7 @@ final class TextFontComponent: Component {
         return lhs.styleButton == rhs.styleButton && lhs.alignmentButton == rhs.alignmentButton && lhs.values == rhs.values && lhs.selectedValue == rhs.selectedValue
     }
     
-    public final class View: UIView {
+    final class View: UIView, ComponentTaggedView {
         private let styleButtonHost: ComponentView<Empty>
         private let alignmentButtonHost: ComponentView<Empty>
         
@@ -206,7 +208,18 @@ final class TextFontComponent: Component {
         private let maskCenter = SimpleLayer()
         private let maskRight = SimpleGradientLayer()
         
+        private var component: TextFontComponent?
         private var updated: (DrawingTextFont) -> Void = { _ in }
+        
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
         
         override init(frame: CGRect) {
             if #available(iOS 11.0, *) {
@@ -257,8 +270,57 @@ final class TextFontComponent: Component {
             }
         }
         
+        func animateIn() {
+            var delay: Double = 0.0
+            
+            if let view = self.styleButtonHost.view {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                delay += 0.02
+            }
+            
+            if let view = self.alignmentButtonHost.view {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
+                view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, delay: delay)
+                delay += 0.02
+            }
+            
+            if let component = self.component {
+                for value in component.values {
+                    if let view = self.buttons[value] {
+                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
+                        view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, delay: delay)
+                        delay += 0.02
+                    }
+                }
+            }
+        }
+        
+        func animateOut(completion: @escaping () -> Void) {
+            if let view = self.styleButtonHost.view {
+                view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            }
+            
+            if let view = self.alignmentButtonHost.view {
+                view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            }
+            
+            if let component = self.component {
+                for value in component.values {
+                    if let view = self.buttons[value] {
+                        view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    }
+                }
+            }
+            
+            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        }
+        
         private var previousValue: DrawingTextFont?
         func update(component: TextFontComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
             self.updated = component.updated
             
             var contentWidth: CGFloat = 10.0
@@ -362,6 +424,7 @@ final class TextSettingsComponent: CombinedComponent {
     let alignment: DrawingTextAlignment
     let font: DrawingTextFont
     let isEmojiKeyboard: Bool
+    let tag: AnyObject?
 
     let presentColorPicker: () -> Void
     let presentFastColorPicker: (GenericComponentViewTag) -> Void
@@ -378,6 +441,7 @@ final class TextSettingsComponent: CombinedComponent {
         alignment: DrawingTextAlignment,
         font: DrawingTextFont,
         isEmojiKeyboard: Bool,
+        tag: AnyObject?,
         presentColorPicker: @escaping () -> Void = {},
         presentFastColorPicker: @escaping (GenericComponentViewTag) -> Void = { _ in },
         updateFastColorPickerPan: @escaping (CGPoint) -> Void = { _ in },
@@ -392,6 +456,7 @@ final class TextSettingsComponent: CombinedComponent {
         self.alignment = alignment
         self.font = font
         self.isEmojiKeyboard = isEmojiKeyboard
+        self.tag = tag
         self.presentColorPicker = presentColorPicker
         self.presentFastColorPicker = presentFastColorPicker
         self.updateFastColorPickerPan = updateFastColorPickerPan
@@ -459,7 +524,7 @@ final class TextSettingsComponent: CombinedComponent {
     func makeState() -> State {
         State()
     }
-    
+        
     static var body: Body {
         let colorButton = Child(ColorSwatchComponent.self)
         let colorButtonTag = GenericComponentViewTag()
@@ -554,6 +619,7 @@ final class TextSettingsComponent: CombinedComponent {
                     ),
                     values: DrawingTextFont.allCases,
                     selectedValue: component.font,
+                    tag: component.tag,
                     updated: { font in
                         updateFont(font)
                     }
@@ -723,6 +789,7 @@ final class TextSizeSliderComponent: Component {
                 if let size = self.validSize, let component = self.component {
                     let _ = self.updateLayout(size: size, component: component, transition: .easeInOut(duration: 0.2))
                 }
+                self.released()
             default:
                 break
             }

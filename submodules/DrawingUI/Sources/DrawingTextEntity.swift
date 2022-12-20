@@ -198,6 +198,9 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
             self.renderImage = UIImage(data: renderImageData)
         }
+        if let renderSubEntities = try? container.decodeIfPresent([CodableDrawingEntity].self, forKey: .renderSubEntities) {
+            self.renderSubEntities = renderSubEntities.compactMap { $0.entity as? DrawingStickerEntity }
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -226,6 +229,10 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         if let renderImage, let data = renderImage.pngData() {
             try container.encode(data, forKey: .renderImage)
         }
+        if let renderSubEntities = self.renderSubEntities {
+            let codableEntities: [CodableDrawingEntity] = renderSubEntities.map { .sticker($0) }
+            try container.encode(codableEntities, forKey: .renderSubEntities)
+        }
     }
 
     public func duplicate() -> DrawingEntity {
@@ -247,6 +254,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     
     public func prepareForRender() {
         self.renderImage = (self.currentEntityView as? DrawingTextEntityView)?.getRenderImage()
+        self.renderSubEntities = (self.currentEntityView as? DrawingTextEntityView)?.getRenderSubEntities()
     }
 }
 
@@ -283,8 +291,6 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.delegate = self
         self.addSubview(self.textView)
         
-        self.update(animated: false)
-        
         self.emojiViewProvider = { [weak self] emoji in
             guard let strongSelf = self else {
                 return UIView()
@@ -293,6 +299,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             let pointSize: CGFloat = 128.0
             return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: strongSelf.context.animationCache, renderer: strongSelf.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
         }
+        
+        self.update(animated: false)
     }
     
     required init?(coder: NSCoder) {
@@ -312,11 +320,13 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.endEditing()
     }
     
+    private var emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
     func updateEntities() {
         self.textView.drawingLayoutManager.ensureLayout(for: self.textView.textContainer)
         
         var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
         
+        var shouldRepeat = false
         if let attributedText = self.textView.attributedText {
             let beginning = self.textView.beginningOfDocument
             attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
@@ -324,6 +334,9 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                     if let start = self.textView.position(from: beginning, offset: range.location), let end = self.textView.position(from: start, offset: range.length), let textRange = self.textView.textRange(from: start, to: end) {
                         let rect = self.textView.firstRect(for: textRange)
                         customEmojiRects.append((rect, value))
+                        if rect.origin.x.isInfinite {
+                            shouldRepeat = true
+                        }
                     }
                 }
             })
@@ -342,7 +355,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
         }
         
-        if !customEmojiRects.isEmpty {
+        self.emojiRects = customEmojiRects
+        if !customEmojiRects.isEmpty && !shouldRepeat {
             let customEmojiContainerView: CustomEmojiContainerView
             if let current = self.customEmojiContainerView {
                 customEmojiContainerView = current
@@ -354,14 +368,21 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                     return emojiViewProvider(emoji)
                 })
                 customEmojiContainerView.isUserInteractionEnabled = false
-                self.textView.addSubview(customEmojiContainerView)
+                customEmojiContainerView.center = customEmojiContainerView.center.offsetBy(dx: 0.0, dy: 10.0)
+                self.addSubview(customEmojiContainerView)
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(fontSize: self.displayFontSize, textColor: textColor, emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: self.displayFontSize * 0.8, textColor: textColor, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil
+        }
+        
+        if shouldRepeat {
+            Queue.mainQueue().after(0.01) {
+                self.updateEntities()
+            }
         }
     }
     
@@ -526,9 +547,6 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         super.layoutSubviews()
         
         var rect = self.bounds
-//        CGFloat correction = _textView.font.pointSize * _font.sizeCorrection;
-//        rect.origin.y += correction;
-//        rect.size.height -= correction;
         rect = rect.offsetBy(dx: 0.0, dy: 10.0) // CGRectOffset(rect, 0.0f, 10.0f);
         self.textView.frame = rect
     }
@@ -636,7 +654,6 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             self.updateEntities()
         }
         
-        
         super.update(animated: animated)
     }
     
@@ -671,10 +688,38 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     func getRenderImage() -> UIImage? {
         let rect = self.bounds
         UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
-        self.drawHierarchy(in: rect, afterScreenUpdates: false)
+        self.textView.drawHierarchy(in: rect.offsetBy(dx: 0.0, dy: 10.0), afterScreenUpdates: true)
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
+    }
+    
+    func getRenderSubEntities() -> [DrawingStickerEntity] {
+        let textSize = self.textView.bounds.size
+        let textPosition = self.textEntity.position
+        let scale = self.textEntity.scale
+        let rotation = self.textEntity.rotation
+        
+        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.8 / 17.0)
+        
+        var entities: [DrawingStickerEntity] = []
+        for (emojiRect, emojiAttribute) in self.emojiRects {
+            guard let file = emojiAttribute.file else {
+                continue
+            }
+            let emojiTextPosition = emojiRect.offsetBy(dx: 0.0, dy: 10.0).center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
+                        
+            let entity = DrawingStickerEntity(file: file)
+            entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
+            entity.scale = scale
+            entity.position = textPosition.offsetBy(
+                dx: (emojiTextPosition.x * cos(rotation) + emojiTextPosition.y * sin(rotation)) * scale,
+                dy: (emojiTextPosition.y * cos(rotation) + emojiTextPosition.x * sin(rotation)) * scale
+            )
+            entity.rotation = rotation
+            entities.append(entity)
+        }
+        return entities
     }
 }
 

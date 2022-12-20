@@ -267,27 +267,6 @@ final class NeonTool: DrawingElement {
         
         self.path = bezierPath
 
-//        if self.arrow && polyline.isComplete, polyline.points.count > 2 {
-//            let lastPoint = lastPosition
-//            var secondPoint = polyline.points[polyline.points.count - 2]
-//            if secondPoint.location.distance(to: lastPoint) < self.renderArrowLineWidth {
-//                secondPoint = polyline.points[polyline.points.count - 3]
-//            }
-//            let angle = lastPoint.angle(to: secondPoint.location)
-//            let point1 = lastPoint.pointAt(distance: self.renderArrowLength, angle: angle - CGFloat.pi * 0.15)
-//            let point2 = lastPoint.pointAt(distance: self.renderArrowLength, angle: angle + CGFloat.pi * 0.15)
-//            
-//            let arrowPath = UIBezierPath()
-//            arrowPath.move(to: point2)
-//            arrowPath.addLine(to: lastPoint)
-//            arrowPath.addLine(to: point1)
-//            let arrowThickPath = arrowPath.cgPath.copy(strokingWithWidth: self.renderArrowLineWidth, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
-//            
-//            combinedPath.usesEvenOddFillRule = false
-//            combinedPath.append(UIBezierPath(cgPath: arrowThickPath))
-//        }
-        
-        
         let cgPath = bezierPath.path.cgPath.copy(strokingWithWidth: self.renderLineWidth, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
         self.renderPath = cgPath
         

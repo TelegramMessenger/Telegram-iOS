@@ -256,6 +256,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
+    fileprivate var clipContentToTopPanel: Bool = false
+    
     var externalTopPanelContainerImpl: PagerExternalTopPanelContainer?
     public override var externalTopPanelContainer: UIView? {
         return self.externalTopPanelContainerImpl
@@ -1417,7 +1419,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 hiddenInputHeight: hiddenInputHeight,
                 inputHeight: inputHeight,
                 displayBottomPanel: true,
-                isExpanded: isExpanded && !self.isEmojiSearchActive
+                isExpanded: isExpanded && !self.isEmojiSearchActive,
+                clipContentToTopPanel: self.clipContentToTopPanel
             )),
             environment: {},
             containerSize: CGSize(width: width, height: expandedHeight)
@@ -1895,6 +1898,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                 chatPeerId: nil
             )
             self.inputNode = inputNode
+            inputNode.clipContentToTopPanel = hideBackground
             inputNode.emojiInputInteraction = inputInteraction
             inputNode.externalTopPanelContainerImpl = nil
             inputNode.switchToTextInput = { [weak self] in

@@ -169,9 +169,13 @@ public final class AnimationNode : ASDisplayNode {
         }
     }
     
-    public func loop() {
+    public func loop(count: Int? = nil) {
         if let animationView = self.animationView() {
-            animationView.loopMode = .loop
+            if let count = count {
+                animationView.loopMode = .repeat(Float(count))
+            } else {
+                animationView.loopMode = .loop
+            }
             animationView.play()
         }
     }

@@ -189,7 +189,8 @@ public final class EmojiStatusSelectionComponent: Component {
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,
                     displayBottomPanel: false,
-                    isExpanded: false
+                    isExpanded: false,
+                    clipContentToTopPanel: false
                 )),
                 environment: {},
                 containerSize: availableSize

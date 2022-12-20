@@ -156,7 +156,8 @@ private final class StickerSelectionComponent: Component {
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,
                     displayBottomPanel: true,
-                    isExpanded: true
+                    isExpanded: true,
+                    clipContentToTopPanel: false
                 )),
                 environment: {},
                 containerSize: availableSize

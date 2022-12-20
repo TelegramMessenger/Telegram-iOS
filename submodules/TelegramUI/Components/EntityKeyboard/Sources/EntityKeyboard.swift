@@ -113,6 +113,7 @@ public final class EntityKeyboardComponent: Component {
     public let inputHeight: CGFloat
     public let displayBottomPanel: Bool
     public let isExpanded: Bool
+    public let clipContentToTopPanel: Bool
     
     public init(
         theme: PresentationTheme,
@@ -141,7 +142,8 @@ public final class EntityKeyboardComponent: Component {
         hiddenInputHeight: CGFloat,
         inputHeight: CGFloat,
         displayBottomPanel: Bool,
-        isExpanded: Bool
+        isExpanded: Bool,
+        clipContentToTopPanel: Bool
     ) {
         self.theme = theme
         self.strings = strings
@@ -170,6 +172,7 @@ public final class EntityKeyboardComponent: Component {
         self.inputHeight = inputHeight
         self.displayBottomPanel = displayBottomPanel
         self.isExpanded = isExpanded
+        self.clipContentToTopPanel = clipContentToTopPanel
     }
     
     public static func ==(lhs: EntityKeyboardComponent, rhs: EntityKeyboardComponent) -> Bool {
@@ -228,6 +231,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
+        if lhs.clipContentToTopPanel != rhs.clipContentToTopPanel {
             return false
         }
         
@@ -738,7 +744,8 @@ public final class EntityKeyboardComponent: Component {
                         }
                         strongSelf.isTopPanelHiddenUpdated(isTopPanelHidden: isTopPanelHidden, transition: transition)
                     },
-                    panelHideBehavior: panelHideBehavior
+                    panelHideBehavior: panelHideBehavior,
+                    clipContentToTopPanel: component.clipContentToTopPanel
                 )),
                 environment: {
                     EntityKeyboardChildEnvironment(

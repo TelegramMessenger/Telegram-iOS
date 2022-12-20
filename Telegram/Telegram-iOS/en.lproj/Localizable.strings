@@ -8535,3 +8535,6 @@ Sorry for the inconvenience.";
 
 "Privacy.Exceptions.DeleteAll" = "Delete All";
 "Privacy.Exceptions.DeleteAllConfirmation" = "Are you sure you want to delete all exceptions?";
+
+"Attachment.EnableSpoiler" = "Hide With Spoiler";
+"Attachment.DisableSpoiler" = "Disable Spoiler";
