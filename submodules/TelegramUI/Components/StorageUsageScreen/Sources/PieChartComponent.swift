@@ -99,10 +99,42 @@ final class PieChartComponent: Component {
             let innerDiameter: CGFloat = 100.0
             let spacing: CGFloat = 2.0
             let innerAngleSpacing: CGFloat = spacing / (innerDiameter * 0.5)
+            let minAngle: CGFloat = innerAngleSpacing * 2.0 + 2.0 / (innerDiameter * 0.5)
             
             var valueSum: Double = 0.0
             for item in component.chartData.items {
                 valueSum += item.value
+            }
+            var angles: [Double] = []
+            var totalAngle: Double = 0.0
+            for i in 0 ..< component.chartData.items.count {
+                let item = component.chartData.items[i]
+                var angle = item.value / valueSum * CGFloat.pi * 2.0
+                if angle < minAngle {
+                    angle = minAngle
+                }
+                totalAngle += angle
+                angles.append(angle)
+            }
+            if totalAngle > CGFloat.pi * 2.0 {
+                let deltaAngle = totalAngle - CGFloat.pi * 2.0
+                
+                var availableAngleSum: Double = 0.0
+                for i in 0 ..< angles.count {
+                    let itemAngle = angles[i]
+                    let availableItemAngle = max(0.0, itemAngle - minAngle)
+                    if availableItemAngle > 0.0 {
+                        availableAngleSum += availableItemAngle
+                    }
+                }
+                let itemFraction = deltaAngle / availableAngleSum
+                for i in 0 ..< angles.count {
+                    let availableItemAngle = max(0.0, angles[i] - minAngle)
+                    if availableItemAngle > 0.0 {
+                        let itemDelta = availableItemAngle * itemFraction
+                        angles[i] -= itemDelta
+                    }
+                }
             }
             
             let diameter: CGFloat = 200.0
@@ -138,7 +170,7 @@ final class PieChartComponent: Component {
                 
                 transition.setFrame(layer: shapeLayer, frame: shapeLayerFrame)
                 
-                let angleValue: CGFloat = item.value / valueSum * CGFloat.pi * 2.0
+                let angleValue: CGFloat = angles[i]
                 
                 let innerStartAngle = startAngle + innerAngleSpacing * 0.5
                 var innerEndAngle = startAngle + angleValue - innerAngleSpacing * 0.5
@@ -173,25 +205,23 @@ final class PieChartComponent: Component {
                     label = ComponentView<Empty>()
                     self.labels[item.id] = label
                 }
-                let labelSize = label.update(transition: .immediate, component: AnyComponent(Text(text: "\(fractionString)%", font: Font.with(size: 15.0, design: .round, weight: .medium), color: component.theme.list.itemCheckColors.foregroundColor)), environment: {}, containerSize: CGSize(width: 100.0, height: 100.0))
+                let labelSize = label.update(transition: .immediate, component: AnyComponent(Text(text: "\(fractionString)%", font: Font.with(size: 16.0, design: .round, weight: .semibold), color: component.theme.list.itemCheckColors.foregroundColor)), environment: {}, containerSize: CGSize(width: 100.0, height: 100.0))
                 
+                var centerOffset: CGFloat = 0.5
+                
+                var labelScale: CGFloat = 1.0
+                if angleValue < 0.38 {
+                    labelScale = angleValue / 0.38
+                    centerOffset = labelScale * 0.6 + (1.0 - labelScale) * 0.5
+                }
+                    
                 let midAngle: CGFloat = (innerStartAngle + innerEndAngle) * 0.5
-                let centerDistance: CGFloat = (innerDiameter * 0.5 + (diameter - innerDiameter) * 0.25)
+                let centerDistance: CGFloat = (innerDiameter * 0.5 + (diameter * 0.5 - innerDiameter * 0.5) * centerOffset)
                 let labelCenter = CGPoint(
                     x: shapeLayerFrame.midX + cos(midAngle) * centerDistance,
                     y: shapeLayerFrame.midY + sin(midAngle) * centerDistance
                 )
                 let labelFrame = CGRect(origin: CGPoint(x: labelCenter.x - labelSize.width * 0.5, y: labelCenter.y - labelSize.height * 0.5), size: labelSize)
-                
-                //x2 + y2 = r2
-                //x = sqrt(r2 - y2)
-                //y = sqrt(r2 - x2)
-                
-                /*let localLabelRect = labelFrame.offsetBy(dx: -shapeLayerFrame.midX, dy: -shapeLayerFrame.midY)
-                let outerIntersectionX1 = sqrt(pow(diameter * 0.5, 2.0) - pow(localLabelRect.minY, 2.0))
-                let outerIntersectionX2 = sqrt(pow(diameter * 0.5, 2.0) - pow(localLabelRect.maxY, 2.0))
-                let outerIntersectionY1 = sqrt(pow(diameter * 0.5, 2.0) - pow(localLabelRect.minX, 2.0))
-                let outerIntersectionY2 = sqrt(pow(diameter * 0.5, 2.0) - pow(localLabelRect.maxX, 2.0))*/
                 
                 if let labelView = label.view {
                     if labelView.superview == nil {
@@ -199,15 +229,18 @@ final class PieChartComponent: Component {
                     }
                     labelView.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
                     transition.setPosition(view: labelView, position: labelFrame.center)
+                    transition.setScale(view: labelView, scale: labelScale)
+                    
+                    let normalAlpha: CGFloat = labelScale < 0.5 ? 0.0 : 1.0
                     
                     if let selectedKey = self.selectedKey {
                         if selectedKey == item.id {
-                            transition.setAlpha(view: labelView, alpha: 1.0)
+                            transition.setAlpha(view: labelView, alpha: normalAlpha)
                         } else {
                             transition.setAlpha(view: labelView, alpha: 0.0)
                         }
                     } else {
-                        transition.setAlpha(view: labelView, alpha: 1.0)
+                        transition.setAlpha(view: labelView, alpha: normalAlpha)
                     }
                 }
             }

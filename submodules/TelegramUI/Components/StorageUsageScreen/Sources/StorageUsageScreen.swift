@@ -222,8 +222,10 @@ private final class StorageUsageScreenComponent: Component {
                     alphaTransition = .easeInOut(duration: 0.25)
                 }
                 alphaTransition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
+                alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
             } else {
                 transition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
+                transition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value

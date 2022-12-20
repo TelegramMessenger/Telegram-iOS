@@ -208,7 +208,9 @@ final class StorageCategoryItemComponent: Component {
             
             let fractionValue: Double = floor(component.category.sizeFraction * 100.0 * 10.0) / 10.0
             let fractionString: String
-            if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
+            if fractionValue < 0.1 {
+                fractionString = "<0.1"
+            } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
                 fractionString = "\(Int(fractionValue))"
             } else {
                 fractionString = "\(fractionValue)"
