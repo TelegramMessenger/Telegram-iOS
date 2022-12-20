@@ -561,7 +561,7 @@ public final class MediaBox {
                 paths.partial,
                 paths.partial + ".meta"
             ])
-            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
@@ -598,7 +598,7 @@ public final class MediaBox {
                     return
                 }
                 
-                if let location = parameters?.location {
+                if let parameters = parameters, let location = parameters.location {
                     var messageNamespace: Int32 = 0
                     var messageIdValue: Int32 = 0
                     if let messageId = location.messageId {
@@ -606,7 +606,9 @@ public final class MediaBox {
                         messageIdValue = messageId.id
                     }
                     
-                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: messageNamespace), messageId: messageIdValue), to: resource.id.stringRepresentation.data(using: .utf8)!)
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: messageNamespace), messageId: messageIdValue), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters.contentType.rawValue)
+                } else {
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: 0, messageNamespace: 0, messageId: 0), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters?.contentType.rawValue ?? 0)
                 }
                 
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource.id) else {
@@ -771,7 +773,7 @@ public final class MediaBox {
             self.dataQueue.async {
                 let paths = self.storePathsForId(resource.id)
                 
-                if let location = parameters?.location {
+                if let parameters = parameters, let location = parameters.location {
                     var messageNamespace: Int32 = 0
                     var messageIdValue: Int32 = 0
                     if let messageId = location.messageId {
@@ -779,7 +781,9 @@ public final class MediaBox {
                         messageIdValue = messageId.id
                     }
                     
-                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: messageNamespace), messageId: messageIdValue), to: resource.id.stringRepresentation.data(using: .utf8)!)
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: messageNamespace), messageId: messageIdValue), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters.contentType.rawValue)
+                } else {
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: 0, messageNamespace: 0, messageId: 0), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters?.contentType.rawValue ?? 0)
                 }
                 
                 if let _ = fileSize(paths.complete) {
@@ -1289,9 +1293,17 @@ public final class MediaBox {
                         return
                     }
                     
-                    storageBox.addEmptyReferencesIfNotReferenced(ids: results.map { name -> Data in
-                        return MediaBox.idForFileName(name: name).data(using: .utf8)!
-                    }, completion: { addedCount in
+                    storageBox.addEmptyReferencesIfNotReferenced(ids: results.map { name -> (id: Data, size: Int64) in
+                        let resourceId = MediaBox.idForFileName(name: name)
+                        let paths = self.storePathsForId(MediaResourceId(resourceId))
+                        var size: Int64 = 0
+                        if let value = fileSize(paths.complete) {
+                            size = value
+                        } else if let value = fileSize(paths.partial) {
+                            size = value
+                        }
+                        return (resourceId.data(using: .utf8)!, size)
+                    }, contentType: MediaResourceUserContentType.other.rawValue, completion: { addedCount in
                         if addedCount != 0 {
                             postboxLog("UpdateResourceIndex: added \(addedCount) unreferenced ids")
                         }

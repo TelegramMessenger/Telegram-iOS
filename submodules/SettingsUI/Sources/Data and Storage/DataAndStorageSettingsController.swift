@@ -12,6 +12,7 @@ import PresentationDataUtils
 import AccountContext
 import OpenInExternalAppUI
 import ItemListPeerActionItem
+import StorageUsageScreen
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
@@ -594,7 +595,10 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     })
     
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
-        pushControllerImpl?(storageUsageController(context: context, cacheUsagePromise: cacheUsagePromise))
+        pushControllerImpl?(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        }))
+        //pushControllerImpl?(storageUsageController(context: context, cacheUsagePromise: cacheUsagePromise))
     }, openNetworkUsage: {
         pushControllerImpl?(networkUsageStatsController(context: context))
     }, openProxy: {

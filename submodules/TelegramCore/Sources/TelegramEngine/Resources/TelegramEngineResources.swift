@@ -8,10 +8,12 @@ public typealias EngineTempBoxFile = TempBoxFile
 
 public extension MediaResourceUserContentType {
     init(file: TelegramMediaFile) {
-        if file.isSticker || file.isAnimatedSticker {
+        if file.isMusic || file.isVoice {
+            self = .audio
+        } else if file.isSticker || file.isAnimatedSticker {
             self = .sticker
         } else if file.isCustomEmoji {
-            self = .emoji
+            self = .sticker
         } else if file.isVideo {
             if file.isAnimated {
                 self = .gif
@@ -219,6 +221,10 @@ public extension TelegramEngine {
 
         public func collectCacheUsageStats(peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
             return _internal_collectCacheUsageStats(account: self.account, peerId: peerId, additionalCachePaths: additionalCachePaths, logFilesPath: logFilesPath)
+        }
+        
+        public func collectStorageUsageStats() -> Signal<AllStorageUsageStats, NoError> {
+            return _internal_collectStorageUsageStats(account: self.account)
         }
 
         public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {

@@ -77,3 +77,11 @@
 + (NSData *)_manuallyEncryptedMessage:(NSData *)preparedData messageId:(int64_t)messageId authKey:(MTDatacenterAuthKey *)authKey;
 
 @end
+
+//#define DIRSTAT_FAST_ONLY 0x1
+struct darwin_dirstat {
+    off_t total_size;
+    uint64_t descendants;
+};
+
+int dirstat_np(const char *path, int flags, struct darwin_dirstat *ds, size_t dirstat_size);

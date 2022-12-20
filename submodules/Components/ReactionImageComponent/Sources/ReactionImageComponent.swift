@@ -39,7 +39,7 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
                 }
             }
             
-            let fetchFrame = animationCacheFetchFile(context: context, userLocation: .other, userContentType: .emoji, resource: MediaResourceReference.standalone(resource: animation.resource), type: type, keyframeOnly: true, customColor: customColor)
+            let fetchFrame = animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: MediaResourceReference.standalone(resource: animation.resource), type: type, keyframeOnly: true, customColor: customColor)
             
             class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                 let queue: Queue

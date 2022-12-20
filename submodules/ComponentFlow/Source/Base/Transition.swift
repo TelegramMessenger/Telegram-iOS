@@ -605,7 +605,7 @@ public struct Transition {
     public func animateBounds(layer: CALayer, from fromValue: CGRect, to toValue: CGRect, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
-            break
+            completion?(true)
         case let .curve(duration, curve):
             layer.animate(
                 from: NSValue(cgRect: fromValue),
@@ -624,7 +624,7 @@ public struct Transition {
     public func animateBoundsOrigin(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
-            break
+            completion?(true)
         case let .curve(duration, curve):
             layer.animate(
                 from: NSValue(cgPoint: fromValue),
@@ -643,7 +643,7 @@ public struct Transition {
     public func animateBoundsSize(layer: CALayer, from fromValue: CGSize, to toValue: CGSize, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
-            break
+            completion?(true)
         case let .curve(duration, curve):
             layer.animate(
                 from: NSValue(cgSize: fromValue),
@@ -661,6 +661,7 @@ public struct Transition {
     
     public func setCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)? = nil) {
         if layer.cornerRadius == cornerRadius {
+            completion?(true)
             return
         }
         switch self.animation {
@@ -693,8 +694,9 @@ public struct Transition {
         switch self.animation {
         case .none:
             layer.path = path
+            completion?(true)
         case let .curve(duration, curve):
-            if let previousPath = layer.path {
+            if let previousPath = layer.path, previousPath != path {
                 layer.animate(
                     from: previousPath,
                     to: path,
@@ -709,6 +711,7 @@ public struct Transition {
                 layer.path = path
             } else {
                 layer.path = path
+                completion?(true)
             }
         }
     }
@@ -717,6 +720,7 @@ public struct Transition {
         switch self.animation {
         case .none:
             layer.lineWidth = lineWidth
+            completion?(true)
         case let .curve(duration, curve):
             let previousLineWidth = layer.lineWidth
             layer.lineWidth = lineWidth
@@ -739,6 +743,7 @@ public struct Transition {
         switch self.animation {
         case .none:
             layer.lineDashPattern = pattern
+            completion?(true)
         case let .curve(duration, curve):
             if let previousLineDashPattern = layer.lineDashPattern {
                 layer.lineDashPattern = pattern
@@ -756,6 +761,7 @@ public struct Transition {
                 )
             } else {
                 layer.lineDashPattern = pattern
+                completion?(true)
             }
         }
     }

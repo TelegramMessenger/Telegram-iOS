@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-
+import MtProtoKit
 
 public enum PeerCacheUsageCategory: Int32 {
     case image = 0
@@ -50,6 +50,130 @@ private final class CacheUsageStatsState {
     var allResourceIds = Set<MediaResourceId>()
     var lowerBound: MessageIndex?
     var upperBound: MessageIndex?
+}
+
+public struct StorageUsageStats: Equatable {
+    public enum CategoryKey: Hashable {
+        case photos
+        case videos
+        case files
+        case music
+        case stickers
+        case avatars
+        case misc
+    }
+    
+    public struct CategoryData: Equatable {
+        public var size: Int64
+        
+        public init(size: Int64) {
+            self.size = size
+        }
+    }
+    
+    public var categories: [CategoryKey: CategoryData]
+    
+    public init(categories: [CategoryKey: CategoryData]) {
+        self.categories = categories
+    }
+}
+
+public struct AllStorageUsageStats: Equatable {
+    public struct PeerStats: Equatable {
+        public var peer: EnginePeer
+        public var stats: StorageUsageStats
+        
+        public init(peer: EnginePeer, stats: StorageUsageStats) {
+            self.peer = peer
+            self.stats = stats
+        }
+    }
+    
+    public var totalStats: StorageUsageStats
+    public var peers: [EnginePeer.Id: PeerStats]
+    
+    public init(totalStats: StorageUsageStats, peers: [EnginePeer.Id: PeerStats]) {
+        self.totalStats = totalStats
+        self.peers = peers
+    }
+}
+
+func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
+    let additionalStats = Signal<Int64, NoError> { subscriber in
+        DispatchQueue.global().async {
+            var totalSize: Int64 = 0
+            
+            let additionalPaths: [String] = [
+                "cache",
+                "animation-cache",
+                "short-cache",
+            ]
+            
+            for path in additionalPaths {
+                let fullPath: String
+                if path.isEmpty {
+                    fullPath = account.postbox.mediaBox.basePath
+                } else {
+                    fullPath = account.postbox.mediaBox.basePath + "/\(path)"
+                }
+                
+                var s = darwin_dirstat()
+                var result = dirstat_np(fullPath, 1, &s, MemoryLayout<darwin_dirstat>.size)
+                if result != -1 {
+                    totalSize += Int64(s.total_size)
+                } else {
+                    result = dirstat_np(fullPath, 0, &s, MemoryLayout<darwin_dirstat>.size)
+                    if result != -1 {
+                        totalSize += Int64(s.total_size)
+                        print(s.descendants)
+                    }
+                }
+            }
+            
+            subscriber.putNext(totalSize)
+            subscriber.putCompletion()
+        }
+        
+        return EmptyDisposable
+    }
+    
+    return combineLatest(
+        additionalStats,
+        account.postbox.mediaBox.storageBox.getStats()
+    )
+    |> deliverOnMainQueue
+    |> mapToSignal { additionalStats, allStats -> Signal<AllStorageUsageStats, NoError> in
+        var mappedCategories: [StorageUsageStats.CategoryKey: StorageUsageStats.CategoryData] = [:]
+        for (key, value) in allStats.contentTypes {
+            let mappedCategory: StorageUsageStats.CategoryKey
+            switch key {
+            case MediaResourceUserContentType.image.rawValue:
+                mappedCategory = .photos
+            case MediaResourceUserContentType.video.rawValue:
+                mappedCategory = .videos
+            case MediaResourceUserContentType.file.rawValue:
+                mappedCategory = .files
+            case MediaResourceUserContentType.audio.rawValue:
+                mappedCategory = .music
+            case MediaResourceUserContentType.avatar.rawValue:
+                mappedCategory = .avatars
+            case MediaResourceUserContentType.sticker.rawValue:
+                mappedCategory = .stickers
+            default:
+                mappedCategory = .misc
+            }
+            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value)
+        }
+        
+        if additionalStats != 0 {
+            mappedCategories[.misc, default: StorageUsageStats.CategoryData(size: 0)].size += additionalStats
+        }
+        
+        return .single(AllStorageUsageStats(
+            totalStats: StorageUsageStats(categories: mappedCategories),
+            peers: [:]
+        ))
+    }
 }
 
 func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {

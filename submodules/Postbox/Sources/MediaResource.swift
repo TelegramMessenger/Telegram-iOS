@@ -50,14 +50,14 @@ public final class MediaResourceStorageLocation {
 }
 
 public enum MediaResourceUserContentType: UInt8, Equatable {
-    case image = 0
-    case video = 1
-    case audio = 2
-    case file = 3
-    case gif = 4
-    case emoji = 5
+    case other = 0
+    case image = 1
+    case video = 2
+    case audio = 3
+    case file = 4
+    case gif = 5
     case sticker = 6
-    case other = 7
+    case avatar = 7
 }
 
 public struct MediaResourceFetchParameters {
