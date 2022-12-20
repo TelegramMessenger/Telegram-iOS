@@ -86,9 +86,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters) = mode {
+        if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters, chatListNodeFilter, chatListNodePeersFilter, _, inactiveSecretChatPeerIds) = mode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
-            let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+            let chatListNode = ChatListNode(context: context, groupId: .root, chatListFilter: chatListNodeFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: chatListNodePeersFilter ?? [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             if let limit = limit {
                 chatListNode.selectionLimit = limit
                 chatListNode.reachedSelectionLimit = reachedSelectionLimit
@@ -124,7 +124,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contentNode.node)
-        self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
+        if case let .chatSelection(_, _, _, _, _, _, omitTokenList, _) = mode, omitTokenList {
+        } else {
+            self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
+        }
         
         switch self.contentNode {
         case let .contacts(contactsNode):
@@ -252,7 +255,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
                 
-        let tokenListHeight = self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        let tokenListHeight = self.tokenListNode.supernode == nil ? 0.0 : self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         
         transition.updateFrame(node: self.tokenListNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: tokenListHeight)))
         

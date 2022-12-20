@@ -20,8 +20,9 @@ public struct CacheUsageStats {
     public let tempPaths: [String]
     public let tempSize: Int64
     public let immutableSize: Int64
+    public let secretChatThumbSize: Int64
     
-    public init(media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], mediaResourceIds: [MediaId: [MediaResourceId]], peers: [PeerId: Peer], otherSize: Int64, otherPaths: [String], cacheSize: Int64, tempPaths: [String], tempSize: Int64, immutableSize: Int64) {
+    public init(media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], mediaResourceIds: [MediaId: [MediaResourceId]], peers: [PeerId: Peer], otherSize: Int64, otherPaths: [String], cacheSize: Int64, tempPaths: [String], tempSize: Int64, immutableSize: Int64, secretChatThumbSize: Int64) {
         self.media = media
         self.mediaResourceIds = mediaResourceIds
         self.peers = peers
@@ -31,6 +32,7 @@ public struct CacheUsageStats {
         self.tempPaths = tempPaths
         self.tempSize = tempSize
         self.immutableSize = immutableSize
+        self.secretChatThumbSize = secretChatThumbSize
     }
 }
 
@@ -88,6 +90,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
             var resourceIdToMediaId: [MediaResourceId: (MediaId, PeerCacheUsageCategory)] = [:]
             var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
             var resourceIds: [MediaResourceId] = []
+            var excludeSecretChatThumbResourceIds = Set<MediaResourceId>()
             for (id, media) in mediaRefs {
                 mediaResourceIds[id] = []
                 var parsedMedia: [Media] = []
@@ -111,6 +114,10 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                 for media in parsedMedia {
                     if let image = media as? TelegramMediaImage {
                         for representation in image.representations {
+                            if let resource = representation.resource as? LocalFileMediaResource, resource.thumbSecretChatId != nil {
+                                excludeSecretChatThumbResourceIds.insert(representation.resource.id)
+                                continue
+                            }
                             resourceIds.append(representation.resource.id)
                             resourceIdToMediaId[representation.resource.id] = (id, .image)
                             mediaResourceIds[id]!.append(representation.resource.id)
@@ -130,6 +137,10 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                             }
                         }
                         for representation in file.previewRepresentations {
+                            if let resource = representation.resource as? LocalFileMediaResource, resource.thumbSecretChatId != nil {
+                                excludeSecretChatThumbResourceIds.insert(representation.resource.id)
+                                continue
+                            }
                             resourceIds.append(representation.resource.id)
                             resourceIdToMediaId[representation.resource.id] = (id, category)
                             mediaResourceIds[id]!.append(representation.resource.id)
@@ -184,7 +195,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                                    }
                                }
                            }
-                           return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: 0, otherPaths: [], cacheSize: 0, tempPaths: [], tempSize: 0, immutableSize: 0)
+                           return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: 0, otherPaths: [], cacheSize: 0, tempPaths: [], tempSize: 0, immutableSize: 0, secretChatThumbSize: 0)
                        } |> mapError { _ -> CollectCacheUsageStatsError in }
                        |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                            return .fail(.done(stats))
@@ -195,7 +206,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                         return (state.media, state.mediaResourceIds, state.allResourceIds)
                     }
                     
-                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: excludeResourceIds, combinedExcludeIds: allResourceIds.union(excludeResourceIds))
+                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: excludeResourceIds, combinedExcludeIds: allResourceIds.union(excludeResourceIds).union(excludeSecretChatThumbResourceIds))
                     |> mapError { _ -> CollectCacheUsageStatsError in }
                     |> mapToSignal { otherSize, otherPaths, cacheSize in
                         var tempPaths: [String] = []
@@ -253,6 +264,17 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                             }
                         }
                         
+                        var secretChatThumbSize: Int64 = 0
+#if DEBUG
+                        if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: account.basePath + "/postbox/media"), includingPropertiesForKeys: [URLResourceKey.fileSizeKey], options: []) {
+                            for url in files {
+                                if url.lastPathComponent.starts(with: "scthumb_"), let fileSize = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
+                                    secretChatThumbSize += Int64(fileSize)
+                                }
+                            }
+                        }
+#endif
+                        
                         return account.postbox.transaction { transaction -> CacheUsageStats in
                             var peers: [PeerId: Peer] = [:]
                             for peerId in finalMedia.keys {
@@ -263,7 +285,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                                     }
                                 }
                             }
-                            return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize, tempPaths: tempPaths, tempSize: tempSize, immutableSize: immutableSize)
+                            return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize, tempPaths: tempPaths, tempSize: tempSize, immutableSize: immutableSize, secretChatThumbSize: secretChatThumbSize)
                         } |> mapError { _ -> CollectCacheUsageStatsError in }
                         |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                             return .fail(.done(stats))

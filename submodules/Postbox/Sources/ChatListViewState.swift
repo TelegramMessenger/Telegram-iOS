@@ -15,17 +15,20 @@ enum ChatListViewSpacePinned {
 }
 
 enum ChatListViewSpace: Hashable {
-    case group(groupId: PeerGroupId, pinned: ChatListViewSpacePinned, predicate: ChatListFilterPredicate?)
+    case group(groupId: PeerGroupId, pinned: ChatListViewSpacePinned, predicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Set<PeerId>)
     case peers(peerIds: [PeerId], asPinned: Bool)
     
     static func ==(lhs: ChatListViewSpace, rhs: ChatListViewSpace) -> Bool {
         switch lhs {
-        case let .group(groupId, pinned, _):
-            if case let .group(rhsGroupId, rhsPinned, _) = rhs {
+        case let .group(groupId, pinned, _, inactiveSecretChatPeerIds):
+            if case let .group(rhsGroupId, rhsPinned, _, rhsInactiveSecretChatPeerIds) = rhs {
                 if groupId != rhsGroupId {
                     return false
                 }
                 if pinned != rhsPinned {
+                    return false
+                }
+                if inactiveSecretChatPeerIds != rhsInactiveSecretChatPeerIds {
                     return false
                 }
                 return true
@@ -43,9 +46,10 @@ enum ChatListViewSpace: Hashable {
     
     func hash(into hasher: inout Hasher) {
         switch self {
-        case let .group(groupId, pinned, _):
+        case let .group(groupId, pinned, _, inactiveSecretChatPeerIds):
             hasher.combine(groupId)
             hasher.combine(pinned)
+            hasher.combine(inactiveSecretChatPeerIds)
         case let .peers(peerIds, asPinned):
             hasher.combine(peerIds)
             hasher.combine(asPinned)
@@ -53,12 +57,18 @@ enum ChatListViewSpace: Hashable {
     }
 }
 
-private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIntermediateEntry) -> Bool {
+private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Set<PeerId>) -> (ChatListIntermediateEntry) -> Bool {
     let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
     return { entry in
         switch entry {
         case let .message(index, _):
+            if inactiveSecretChatPeerIds.contains(index.messageIndex.id.peerId) {
+                return false
+            }
             if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
+                guard let predicate = predicate else {
+                    return true
+                }
                 let isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
                 let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
                 let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
@@ -144,7 +154,7 @@ private final class ChatListViewSpaceState {
     
     private func fillSpace(postbox: PostboxImpl, currentTransaction: Transaction) {
         switch self.space {
-        case let .group(groupId, pinned, filterPredicate):
+        case let .group(groupId, pinned, filterPredicate, inactiveSecretChatPeerIds):
             let lowerBound: MutableChatListEntryIndex
             let upperBound: MutableChatListEntryIndex
             if pinned.include {
@@ -180,7 +190,7 @@ private final class ChatListViewSpaceState {
                 let resolvedUnpinnedAnchorIndex = min(unpinnedUpperBound, max(self.anchorIndex, unpinnedLowerBound))
                 
                 if lowerOrAtAnchorMessages.count < self.halfLimit || higherThanAnchorMessages.count < self.halfLimit {
-                    let loadedMessages = postbox.chatListTable.entries(groupId: groupId, from: (ChatListIndex.pinnedLowerBound, true), to: (ChatListIndex.absoluteUpperBound, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit * 2, predicate: filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: $0) }).map(mapEntry).sorted(by: { $0.entryIndex < $1.entryIndex })
+                    let loadedMessages = postbox.chatListTable.entries(groupId: groupId, from: (ChatListIndex.pinnedLowerBound, true), to: (ChatListIndex.absoluteUpperBound, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit * 2, predicate: mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)).map(mapEntry).sorted(by: { $0.entryIndex < $1.entryIndex })
                     
                     if lowerOrAtAnchorMessages.count < self.halfLimit {
                         var nextLowerIndex: MutableChatListEntryIndex
@@ -219,7 +229,7 @@ private final class ChatListViewSpaceState {
                     } else {
                         nextLowerIndex = resolvedAnchorIndex.successor
                     }
-                    let loadedLowerMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextLowerIndex.index, nextLowerIndex.isMessage), to: (lowerBound.index, lowerBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - lowerOrAtAnchorMessages.count, predicate: filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: $0) }).map(mapEntry)
+                    let loadedLowerMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextLowerIndex.index, nextLowerIndex.isMessage), to: (lowerBound.index, lowerBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - lowerOrAtAnchorMessages.count, predicate: mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)).map(mapEntry)
                     lowerOrAtAnchorMessages.append(contentsOf: loadedLowerMessages)
                 }
                 if higherThanAnchorMessages.count < self.halfLimit {
@@ -229,7 +239,7 @@ private final class ChatListViewSpaceState {
                     } else {
                         nextHigherIndex = resolvedAnchorIndex
                     }
-                    let loadedHigherMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextHigherIndex.index, nextHigherIndex.isMessage), to: (upperBound.index, upperBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - higherThanAnchorMessages.count, predicate: filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: $0) }).map(mapEntry)
+                    let loadedHigherMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextHigherIndex.index, nextHigherIndex.isMessage), to: (upperBound.index, upperBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - higherThanAnchorMessages.count, predicate: mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)).map(mapEntry)
                     higherThanAnchorMessages.append(contentsOf: loadedHigherMessages)
                 }
             }
@@ -379,9 +389,13 @@ private final class ChatListViewSpaceState {
                 switch operation {
                 case let .InsertEntry(index, messageIndex):
                     switch self.space {
-                    case let .group(spaceGroupId, pinned, filterPredicate):
+                    case let .group(spaceGroupId, pinned, filterPredicate, inactiveSecretChatPeerIds):
                         let matchesGroup = groupId == spaceGroupId && (index.pinningIndex != nil) == pinned.include
                         if !matchesGroup {
+                            continue inner
+                        }
+                        
+                        if inactiveSecretChatPeerIds.contains(index.messageIndex.id.peerId) {
                             continue inner
                         }
                         
@@ -435,7 +449,7 @@ private final class ChatListViewSpaceState {
                     }
                 case let .InsertHole(hole):
                     switch self.space {
-                    case let .group(spaceGroupId, pinned, _):
+                    case let .group(spaceGroupId, pinned, _, _):
                         if spaceGroupId == groupId && !pinned.include {
                             if self.add(entry: .HoleEntry(hole)) {
                                 hasUpdates = true
@@ -449,7 +463,7 @@ private final class ChatListViewSpaceState {
                     }
                 case let .RemoveEntry(indices):
                     switch self.space {
-                    case let .group(spaceGroupId, pinned, _):
+                    case let .group(spaceGroupId, pinned, _, _):
                         if spaceGroupId == groupId {
                             for index in indices {
                                 var updatedIndex = index
@@ -480,7 +494,7 @@ private final class ChatListViewSpaceState {
                     }
                 case let .RemoveHoles(indices):
                     switch self.space {
-                    case let .group(spaceGroupId, pinned, _):
+                    case let .group(spaceGroupId, pinned, _, _):
                         if spaceGroupId == groupId && !pinned.include {
                             for index in indices {
                                 if self.orderedEntries.remove(index: MutableChatListEntryIndex(index: index, isMessage: false)) {
@@ -496,7 +510,7 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if !transaction.currentUpdatedPeerNotificationSettings.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate {
+        if !transaction.currentUpdatedPeerNotificationSettings.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate, inactiveSecretChatPeerIds) = self.space, let filterPredicate = maybeFilterPredicate {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
             let _ = self.orderedEntries.mutableScan { entry in
                 let entryPeer: Peer
@@ -519,6 +533,9 @@ private final class ChatListViewSpaceState {
                 case .HoleEntry:
                     return nil
                 }
+                
+                assert(!inactiveSecretChatPeerIds.contains(entryPeer.id))
+                
                 if let settingsChange = transaction.currentUpdatedPeerNotificationSettings[entryNotificationsPeerId] {
                     let isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
                     
@@ -552,6 +569,10 @@ private final class ChatListViewSpaceState {
                 if let mainPeer = postbox.peerTable.get(peerId) {
                     var peers: [Peer] = [mainPeer]
                     for associatedId in postbox.reverseAssociatedPeerTable.get(peerId: mainPeer.id) {
+                        if inactiveSecretChatPeerIds.contains(associatedId) {
+                            continue
+                        }
+                        
                         if let associatedPeer = postbox.peerTable.get(associatedId) {
                             peers.append(associatedPeer)
                         }
@@ -725,7 +746,7 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate, let filterMessageTagSummary = filterPredicate.messageTagSummary {
+        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate, inactiveSecretChatPeerIds) = self.space, let filterPredicate = maybeFilterPredicate, let filterMessageTagSummary = filterPredicate.messageTagSummary {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
             let _ = self.orderedEntries.mutableScan { entry in
                 let entryPeer: Peer
@@ -748,6 +769,8 @@ private final class ChatListViewSpaceState {
                 case .HoleEntry:
                     return nil
                 }
+                
+                assert(!inactiveSecretChatPeerIds.contains(entryPeer.id))
                 
                 let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, namespace: filterMessageTagSummary.addCount.namespace)]
                 let updatedActionsSummary = transaction.currentUpdatedMessageActionsSummaries[PendingMessageActionsSummaryKey(type: filterMessageTagSummary.subtractCount.type, peerId: entryPeer.id, namespace: filterMessageTagSummary.subtractCount.namespace)]
@@ -792,6 +815,10 @@ private final class ChatListViewSpaceState {
                 if let mainPeer = postbox.peerTable.get(peerId) {
                     var peers: [Peer] = [mainPeer]
                     for associatedId in postbox.reverseAssociatedPeerTable.get(peerId: mainPeer.id) {
+                        if inactiveSecretChatPeerIds.contains(associatedId) {
+                            continue
+                        }
+                        
                         if let associatedPeer = postbox.peerTable.get(associatedId) {
                             peers.append(associatedPeer)
                         }
@@ -909,7 +936,7 @@ private final class ChatListViewSpaceState {
     
     private func checkEntries(postbox: PostboxImpl) {
         #if DEBUG
-        if case .group(.root, .notPinned, nil) = self.space {
+        if case .group(.root, .notPinned, nil, []) = self.space {
             let allEntries = self.orderedEntries.lowerOrAtAnchor + self.orderedEntries.higherThanAnchor
             if !allEntries.isEmpty {
                 assert(allEntries.sorted(by: { $0.index < $1.index }) == allEntries)
@@ -1547,7 +1574,7 @@ struct ChatListViewState {
         
         return ChatListViewSample(entries: result.map { $0.1 }, lower: lower, upper: upper, anchorIndex: self.anchorIndex.index, hole: sampledHole.flatMap { space, hole in
             switch space {
-            case let .group(groupId, _, _):
+            case let .group(groupId, _, _, _):
                 return (groupId, hole)
             case .peers:
                 return nil

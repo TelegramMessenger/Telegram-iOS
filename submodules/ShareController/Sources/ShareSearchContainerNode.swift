@@ -241,7 +241,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         |> mapToSignal { query -> Signal<([ShareSearchPeerEntry]?, Bool), NoError> in
             if !query.isEmpty {
                 let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
-                let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
+                let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased(), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError> = .single(([], [], true))
                 |> then(
                     context.engine.contacts.searchRemotePeers(query: query)

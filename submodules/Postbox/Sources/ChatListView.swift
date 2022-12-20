@@ -350,25 +350,28 @@ final class MutableChatListView {
     private var additionalItems: [AdditionalChatListItem] = []
     fileprivate var additionalItemEntries: [MutableChatListAdditionalItemEntry] = []
     
-    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    private let inactiveSecretChatPeerIds: Set<PeerId>
+    
+    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, inactiveSecretChatPeerIds: Set<PeerId>) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
         self.summaryComponents = summaryComponents
+        self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
         
         var spaces: [ChatListViewSpace] = [
-            .group(groupId: self.groupId, pinned: .notPinned, predicate: filterPredicate)
+            .group(groupId: self.groupId, pinned: .notPinned, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         ]
         if let filterPredicate = self.filterPredicate {
-            spaces.append(.group(groupId: self.groupId, pinned: .includePinnedAsUnpinned, predicate: filterPredicate))
+            spaces.append(.group(groupId: self.groupId, pinned: .includePinnedAsUnpinned, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds))
             for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
-                spaces.append(.group(groupId: additionalGroupId, pinned: .notPinned, predicate: filterPredicate))
-                spaces.append(.group(groupId: additionalGroupId, pinned: .includePinnedAsUnpinned, predicate: filterPredicate))
+                spaces.append(.group(groupId: additionalGroupId, pinned: .notPinned, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds))
+                spaces.append(.group(groupId: additionalGroupId, pinned: .includePinnedAsUnpinned, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds))
             }
-            if !filterPredicate.pinnedPeerIds.isEmpty {
-                spaces.append(.peers(peerIds: filterPredicate.pinnedPeerIds, asPinned: true))
+            if !filterPredicate.pinnedPeerIds.filter({ !inactiveSecretChatPeerIds.contains($0) }).isEmpty {
+                spaces.append(.peers(peerIds: filterPredicate.pinnedPeerIds.filter({ !inactiveSecretChatPeerIds.contains($0) }), asPinned: true))
             }
         } else {
-            spaces.append(.group(groupId: self.groupId, pinned: .includePinned, predicate: filterPredicate))
+            spaces.append(.group(groupId: self.groupId, pinned: .includePinned, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds))
         }
         self.spaces = spaces
         self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, halfLimit: count)
@@ -409,13 +412,15 @@ final class MutableChatListView {
                         switch entry {
                             case let .message(index, messageIndex):
                                 if let messageIndex = messageIndex {
-                                    foundIndices.append((index, messageIndex))
-                                    if index.pinningIndex == nil {
-                                        unpinnedCount += 1
-                                    }
-                                    
-                                    if unpinnedCount >= maxCount {
-                                        break inner
+                                    if !self.inactiveSecretChatPeerIds.contains(messageIndex.id.peerId) {
+                                        foundIndices.append((index, messageIndex))
+                                        if index.pinningIndex == nil {
+                                            unpinnedCount += 1
+                                        }
+                                        
+                                        if unpinnedCount >= maxCount {
+                                            break inner
+                                        }
                                     }
                                     
                                     upperBound = (entry.index, true)
@@ -616,7 +621,7 @@ final class MutableChatListView {
     }
 }
 
-public final class ChatListView {
+public final class ChatListView: Equatable {
     public let groupId: PeerGroupId
     public let additionalItemEntries: [ChatListAdditionalItemEntry]
     public let entries: [ChatListEntry]
@@ -661,5 +666,27 @@ public final class ChatListView {
         }
         
         self.additionalItemEntries = additionalItemEntries
+    }
+    
+    public static func ==(lhs: ChatListView, rhs: ChatListView) -> Bool {
+        if lhs.groupId != rhs.groupId {
+            return false
+        }
+        if lhs.additionalItemEntries != rhs.additionalItemEntries {
+            return false
+        }
+        if lhs.entries != rhs.entries {
+            return false
+        }
+        if lhs.groupEntries != rhs.groupEntries {
+            return false
+        }
+        if lhs.earlierIndex != rhs.earlierIndex {
+            return false
+        }
+        if lhs.laterIndex != rhs.laterIndex {
+            return false
+        }
+        return true
     }
 }

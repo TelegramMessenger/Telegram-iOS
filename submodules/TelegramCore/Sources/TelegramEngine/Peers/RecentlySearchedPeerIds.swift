@@ -4,6 +4,9 @@ import SwiftSignalKit
 
 
 func _internal_addRecentlySearchedPeer(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        return .complete()
+    }
     return postbox.transaction { transaction -> Void in
         if let entry = CodableEntry(RecentPeerItem(rating: 0.0)) {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, item: OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: entry), removeTailIfCountExceeds: 20)

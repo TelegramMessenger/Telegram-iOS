@@ -333,7 +333,7 @@ public func chatsToRemoveController(context: AccountContext, chatsToRemove: [Pee
         }
     }
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), ptgAllChats(account: context.account), configuredPeersSignal)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), ptgAllChats(context: context), configuredPeersSignal)
     |> deliverOnMainQueue
     |> map { presentationData, state, allChats, configuredPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let entries = chatsToRemoveEntries(context: context, presentationData: presentationData, state: state, peerEntries: allChats, configuredPeers: configuredPeers)
@@ -480,8 +480,8 @@ public func chatsToRemoveController(context: AccountContext, chatsToRemove: [Pee
     return controller
 }
 
-func ptgAllChats(account: Account) -> Signal<[PeerId: (index: ChatListIndex, peer: RenderedPeer)], NoError> {
-    return account.postbox.tailChatListView(groupId: .root, count: 1000, summaryComponents: ChatListEntrySummaryComponents())
+func ptgAllChats(context: AccountContext) -> Signal<[PeerId: (index: ChatListIndex, peer: RenderedPeer)], NoError> {
+    return context.account.postbox.tailChatListView(groupId: .root, count: 1000, summaryComponents: ChatListEntrySummaryComponents(), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
     |> take(1)
     |> map { view, updateType in
         return view.entries

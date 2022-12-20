@@ -29,13 +29,14 @@ struct ChatListNodeViewUpdate {
 }
 
 public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
-    var includePeers = Set(filter.includePeers.peers)
-    var excludePeers = Set(filter.excludePeers)
+    let includePeers = Set(filter.includePeers.peers)
+    let excludePeers = Set(filter.excludePeers)
     
-    if !filter.includePeers.pinnedPeers.isEmpty {
-        includePeers.subtract(filter.includePeers.pinnedPeers)
-        excludePeers.subtract(filter.includePeers.pinnedPeers)
-    }
+    // commented out to fix bug: pinning user chat in folder hides secret chats of the same user
+//    if !filter.includePeers.pinnedPeers.isEmpty {
+//        includePeers.subtract(filter.includePeers.pinnedPeers)
+//        excludePeers.subtract(filter.includePeers.pinnedPeers)
+//    }
     
     var includeAdditionalPeerGroupIds: [PeerGroupId] = []
     if !filter.excludeArchived {
@@ -109,7 +110,7 @@ public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilte
     })
 }
 
-func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<ChatListNodeViewUpdate, NoError> {
     let filterPredicate: ChatListFilterPredicate?
     if let filter = location.filter, case let .filter(_, _, _, data) = filter {
         filterPredicate = chatListFilterPredicate(filter: data)
@@ -120,14 +121,14 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
     switch location {
         case let .initial(count, _):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
-            signal = account.viewTracker.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count)
+            signal = account.viewTracker.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 return ChatListNodeViewUpdate(view: view, type: updateType, scrollPosition: nil)
             }
         case let .navigation(index, _):
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
@@ -142,7 +143,7 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil

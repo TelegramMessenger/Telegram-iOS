@@ -65,7 +65,7 @@ public func printOpenFiles() {
  
  */
 
-private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: inout [InodeInfo]) -> ScanFilesResult {
+private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: inout [InodeInfo], allSecretChatIds: Set<Int64>) -> ScanFilesResult {
     var result = ScanFilesResult()
     
     if let dp = opendir(path) {
@@ -73,6 +73,8 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: i
         defer {
             free(pathBuffer)
         }
+        
+        let secretChatThumbRegex = try! NSRegularExpression(pattern: "^scthumb_([^_]*+)_")
         
         while true {
             guard let dirp = readdir(dp) else {
@@ -85,6 +87,18 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: i
             if strncmp(&dirp.pointee.d_name.0, "..", 1024) == 0 {
                 continue
             }
+            
+            if path.hasSuffix("/media"),
+               dirp.pointee.d_namlen >= "scthumb_".count,
+               strncmp(&dirp.pointee.d_name.0, "scthumb_", "scthumb_".count) == 0,
+               let filename = String(bytesNoCopy: &dirp.pointee.d_name.0, length: Int(dirp.pointee.d_namlen), encoding: .utf8, freeWhenDone: false),
+               let match = secretChatThumbRegex.firstMatch(in: filename, range: NSRange(filename.startIndex..<filename.endIndex, in: filename)),
+               let range = Range(match.range(at: 1), in: filename),
+               let secretChatId = Int64(filename[range]),
+               allSecretChatIds.contains(secretChatId) {
+                continue
+            }
+            
             strncpy(pathBuffer, path, 1024)
             strncat(pathBuffer, "/", 1024)
             strncat(pathBuffer, &dirp.pointee.d_name.0, 1024)
@@ -184,6 +198,7 @@ private final class TimeBasedCleanupImpl {
     private var gigabytesLimit: Int32?
     private let scheduledScanDisposable = MetaDisposable()
     
+    private var allSecretChatIds: Set<Int64>?
     
     private struct GeneralFile : Comparable, Equatable {
         let file: String
@@ -209,7 +224,8 @@ private final class TimeBasedCleanupImpl {
         self.scheduledScanDisposable.dispose()
     }
     
-    func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+    func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32, allSecretChatIds: Set<Int64>) {
+        self.allSecretChatIds = allSecretChatIds
         if self.generalMaxStoreTime != general || self.shortLivedMaxStoreTime != shortLived || self.gigabytesLimit != gigabytesLimit {
             self.generalMaxStoreTime = general
             self.gigabytesLimit = gigabytesLimit
@@ -221,7 +237,7 @@ private final class TimeBasedCleanupImpl {
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
         let generalPaths = self.generalPaths
         let shortLivedPaths = self.shortLivedPaths
-        let scanOnce = Signal<Never, NoError> { subscriber in
+        let scanOnce = Signal<Never, NoError> { [weak self] subscriber in
             DispatchQueue.global(qos: .background).async {
                 var removedShortLivedCount: Int = 0
                 var removedGeneralCount: Int = 0
@@ -238,7 +254,7 @@ private final class TimeBasedCleanupImpl {
                 let oldestShortLivedTimestamp = timestamp - shortLived
                 let oldestGeneralTimestamp = timestamp - general
                 for path in shortLivedPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, inodes: &inodes)
+                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, inodes: &inodes, allSecretChatIds: self?.allSecretChatIds ?? [])
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -248,7 +264,7 @@ private final class TimeBasedCleanupImpl {
                 var totalLimitSize: UInt64 = 0
                 
                 for path in generalPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, inodes: &inodes)
+                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, inodes: &inodes, allSecretChatIds: self?.allSecretChatIds ?? [])
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -331,9 +347,9 @@ final class TimeBasedCleanup {
         }
     }
     
-    func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+    func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32, allSecretChatIds: Set<Int64>) {
         self.impl.with { impl in
-            impl.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
+            impl.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit, allSecretChatIds: allSecretChatIds)
         }
     }
 }

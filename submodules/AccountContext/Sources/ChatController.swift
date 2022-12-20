@@ -543,7 +543,9 @@ public enum ChatPresentationInputQueryResult: Equatable {
     }
 }
 
+#if DEBUG
 public let ChatControllerCount = Atomic<Int32>(value: 0)
+#endif
 
 public protocol PeerInfoScreen: ViewController {
     

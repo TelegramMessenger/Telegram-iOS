@@ -286,7 +286,7 @@ private struct StorageUsageState: Equatable {
     }
 }
 
-private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StorageUsageState) -> [StorageUsageEntry] {
+private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StorageUsageState, inactiveSecretChatPeerIds: Set<PeerId>) -> [StorageUsageEntry] {
     var entries: [StorageUsageEntry] = []
     
     entries.append(.keepMediaHeader(presentationData.theme, presentationData.strings.Cache_KeepMedia.uppercased()))
@@ -339,6 +339,9 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         } else {
             categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageServiceFiles, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
         }
+#if DEBUG
+        categories.append(StorageUsageCategory(title: "Secret Chat Thumbnails", size: stats.secretChatThumbSize, fraction: CGFloat(stats.secretChatThumbSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
+#endif
         categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageOtherApps, size: otherAppsSpace, fraction: CGFloat(otherAppsSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color2))
         categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageFree, size: freeSpace, fraction: CGFloat(freeSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color3))
         
@@ -348,6 +351,10 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         
         var index: Int32 = 0
         for (peerId, size) in statsByPeerId.sorted(by: { $0.1 > $1.1 }) {
+            if inactiveSecretChatPeerIds.contains(peerId) {
+                continue
+            }
+            
             if size >= 32 * 1024 {
                 if let peer = stats.peers[peerId] {
                     if !addedHeader {
@@ -633,7 +640,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             overlayNode.setProgressSignal(progressPromise.get())
                             controller?.setItemGroupOverlayNode(groupIndex: 0, node: overlayNode)
                             
-                            let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize)
+                            let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize, secretChatThumbSize: stats.secretChatThumbSize)
                             
                             cancelImpl = {
                                 clearDisposable.set(nil)
@@ -806,7 +813,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 overlayNode.setProgressSignal(progressPromise.get())
                                 controller?.setItemGroupOverlayNode(groupIndex: 0, node: overlayNode)
                                 
-                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
+                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize, secretChatThumbSize: stats.secretChatThumbSize)
                                 
                                 cancelImpl = {
                                     clearDisposable.set(nil)
@@ -917,7 +924,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         
                         var signal = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
                         
-                        let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
+                        let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize, secretChatThumbSize: stats.secretChatThumbSize)
                         
                         var cancelImpl: (() -> Void)?
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -971,14 +978,14 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     
     var dismissImpl: (() -> Void)?
     
-    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get(), statePromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, cacheSettings, cacheStats, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get(), statePromise.get(), context.inactiveSecretChatPeerIds) |> deliverOnMainQueue
+        |> map { presentationData, cacheSettings, cacheStats, state, inactiveSecretChatPeerIds -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             }) : nil
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Cache_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats, state: state, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

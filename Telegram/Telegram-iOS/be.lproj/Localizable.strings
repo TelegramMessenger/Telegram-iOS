@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Неадкладна";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Пры пераключэнні праграмы";
 
 "PasscodeSettings.FakePasscodes" = "Несапраўдныя кады доступу";
 "PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
@@ -105,8 +105,13 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Схаваць усе сакрэты";
 "SecretPasscodeStatus.SomeRevealed" = "Некаторыя сакрэты адкрыты.";
 "SecretPasscodeStatus.AllHidden" = "Усе сакрэты схаваны.";
-"SecretPasscodeStatus.Revealed" = "Сакрэты адкрыты.";
-"SecretPasscodeStatus.Hidden" = "Сакрэты схаваны.";
+"SecretPasscodeStatus.Revealed" = "Цяперашні стан: **сакрэты адкрыты**.";
+"SecretPasscodeStatus.Hidden" = "Цяперашні стан: **сакрэты схаваны**.";
+"SecretPasscode.AddSecretChats" = "Дадаць сакрэтныя чаты";
+"SecretPasscode.SecretChatsSelectionTitle" = "Сакрэтныя чаты";
+"SecretPasscode.SecretChatDeleted" = "Выдален";
+"SecretPasscode.AccountListTitle" = "Акаўнты";
+"SecretPasscode.AccountSelectionTitle" = "Абярыце акаўнт";
 
 "Share.LockedTitle" = "Разблакіруйце Telegram";
 "Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";

@@ -1236,7 +1236,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
                 
                 foundLocalPeers = combineLatest(
-                    context.engine.contacts.searchLocalPeers(query: query.lowercased()),
+                    context.engine.contacts.searchLocalPeers(query: query.lowercased(), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds),
                     fixedOrRemovedRecentlySearchedPeers
                 )
                 |> mapToSignal { local, allRecentlySearched -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: Int], [EngineRenderedPeer], Set<EnginePeer.Id>), NoError> in
@@ -1350,7 +1350,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
                 }
                 
-                let searchSignal = context.engine.messages.searchMessages(location: location, query: finalQuery, state: nil, limit: 50)
+                let searchSignal = context.engine.messages.searchMessages(location: location, query: finalQuery, state: nil, limit: 50, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
                 |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
                     let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
@@ -1362,7 +1362,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> mapToSignal { searchContext -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32, Set<MessageId>), Bool), NoError> in
                     if let searchContext = searchContext, searchContext.result.hasMore {
                         if let _ = searchContext.loadMoreIndex {
-                            return context.engine.messages.searchMessages(location: location, query: finalQuery, state: searchContext.result.state, limit: 80)
+                            return context.engine.messages.searchMessages(location: location, query: finalQuery, state: searchContext.result.state, limit: 80, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
                             |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                             |> map { result, updatedState -> (ChatListSearchMessagesResult, Bool) in
                                 var matchesOnlyBcOfFAN = searchContext.result.matchesOnlyBcOfFAN

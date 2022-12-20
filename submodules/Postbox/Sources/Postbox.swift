@@ -356,10 +356,10 @@ public final class Transaction {
         return .notIncluded
     }
     
-    public func getAssociatedPeerIds(_ id: PeerId) -> Set<PeerId> {
+    public func getAssociatedPeerIds(_ id: PeerId, inactiveSecretChatPeerIds: Set<PeerId>) -> Set<PeerId> {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.reverseAssociatedPeerTable.get(peerId: id)
+            return postbox.reverseAssociatedPeerTable.get(peerId: id).subtracting(inactiveSecretChatPeerIds)
         }
         return []
     }
@@ -931,10 +931,10 @@ public final class Transaction {
         self.postbox?.replaceGlobalMessageTagsHole(transaction: self, globalTags: globalTags, index: index, with: updatedIndex, messages: messages)
     }
     
-    public func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?) -> [Message] {
+    public func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?, inactiveSecretChatPeerIds: Set<PeerId>) -> [Message] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.searchMessages(peerId: peerId, query: query, tags: tags)
+            return postbox.searchMessages(peerId: peerId, query: query, tags: tags, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         } else {
             return []
         }
@@ -1120,15 +1120,24 @@ public final class Transaction {
         return postbox.chatListTable.getNamespaceEntries(groupId: groupId, namespace: namespace, summaryTag: summaryTag, messageIndexTable: postbox.messageHistoryIndexTable, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, readStateTable: postbox.readStateTable, summaryTable: postbox.messageHistoryTagsSummaryTable)
     }
     
-    public func getTopChatListEntries(groupId: PeerGroupId, count: Int) -> [RenderedPeer] {
+    public func getTopChatListEntries(groupId: PeerGroupId, count: Int, inactiveSecretChatPeerIds: Set<PeerId>) -> [RenderedPeer] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {
             return []
         }
-        return postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: nil, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: count).compactMap { entry -> RenderedPeer? in
+        var filteredCount = 0
+        return postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: nil, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: count + inactiveSecretChatPeerIds.count).compactMap { entry -> RenderedPeer? in
+            if filteredCount >= count {
+                return nil
+            }
+            filteredCount += 1
             switch entry {
             case let .message(index, _):
                 if let peer = self.getPeer(index.messageIndex.id.peerId) {
+                    if inactiveSecretChatPeerIds.contains(peer.id) {
+                        filteredCount -= 1
+                        return nil
+                    }
                     return RenderedPeer(peer: peer)
                 } else {
                     return nil
@@ -1149,9 +1158,9 @@ public final class Transaction {
         self.postbox?.reindexUnreadCounters(currentTransaction: self)
     }
     
-    public func searchPeers(query: String) -> [RenderedPeer] {
+    public func searchPeers(query: String, inactiveSecretChatPeerIds: Set<PeerId>) -> [RenderedPeer] {
         assert(!self.disposed)
-        return self.postbox?.searchPeers(query: query) ?? []
+        return self.postbox?.searchPeers(query: query, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds) ?? []
     }
 
     public func clearTimestampBasedAttribute(id: MessageId, tag: UInt16) {
@@ -2463,10 +2472,13 @@ final class PostboxImpl {
         self.messageHistoryTagsSummaryTable.replace(key: key, count: count, maxId: maxId, updatedSummaries: &self.currentUpdatedMessageTagSummaries)
     }
     
-    fileprivate func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?) -> [Message] {
+    fileprivate func searchMessages(peerId: PeerId?, query: String, tags: MessageTags?, inactiveSecretChatPeerIds: Set<PeerId>) -> [Message] {
         var result: [Message] = []
         for messageId in self.textIndexTable.search(peerId: peerId, text: query, tags: tags) {
             if let index = self.messageHistoryIndexTable.getIndex(messageId), let message = self.messageHistoryTable.getMessage(index) {
+                if inactiveSecretChatPeerIds.contains(messageId.peerId) {
+                    continue
+                }
                 result.append(self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable))
             } else {
                 assertionFailure()
@@ -2945,30 +2957,36 @@ final class PostboxImpl {
         |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true)
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int, summaryComponents: ChatListEntrySummaryComponents, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
-            let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
-            mutableView.render(postbox: self)
-            
-            let (index, signal) = self.viewTracker.addChatListView(mutableView)
-            
-            subscriber.putNext((ChatListView(mutableView), .Generic))
-            let disposable = signal.start(next: { next in
-                subscriber.putNext(next)
-            })
-            
-            return ActionDisposable { [weak self] in
-                disposable.dispose()
-                if let strongSelf = self {
-                    strongSelf.queue.async {
-                        strongSelf.viewTracker.removeChatListView(index)
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return inactiveSecretChatPeerIds
+        |> mapToSignal { inactiveSecretChatPeerIds in
+            return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
+                let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+                mutableView.render(postbox: self)
+                
+                let (index, signal) = self.viewTracker.addChatListView(mutableView)
+                
+                subscriber.putNext((ChatListView(mutableView), .Generic))
+                let disposable = signal.start(next: { next in
+                    subscriber.putNext(next)
+                })
+                
+                return ActionDisposable { [weak self] in
+                    disposable.dispose()
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeChatListView(index)
+                        }
                     }
                 }
-            }
+            })
+        }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            return lhs.1 == rhs.1 && lhs.0 == rhs.0
         })
     }
     
@@ -3014,21 +3032,30 @@ final class PostboxImpl {
         } |> switchToLatest
     }
     
-    public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
-        return self.transaction { transaction -> Signal<[RenderedPeer], NoError> in
-            return .single(transaction.searchPeers(query: query))
-        } |> switchToLatest
+    public func searchPeers(query: String, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<[RenderedPeer], NoError> {
+        return inactiveSecretChatPeerIds
+        |> mapToSignal { inactiveSecretChatPeerIds in
+            return self.transaction { transaction -> Signal<[RenderedPeer], NoError> in
+                return .single(transaction.searchPeers(query: query, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds))
+            } |> switchToLatest
+        }
+        |> distinctUntilChanged
     }
     
-    fileprivate func searchPeers(query: String) -> [RenderedPeer] {
+    fileprivate func searchPeers(query: String, inactiveSecretChatPeerIds: Set<PeerId>) -> [RenderedPeer] {
         var peerIds = Set<PeerId>()
         var chatPeers: [RenderedPeer] = []
         
         var (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
         
+        chatPeerIds.removeAll(where: { inactiveSecretChatPeerIds.contains($0) })
+        
         var additionalChatPeerIds: [PeerId] = []
         for peerId in chatPeerIds {
             for associatedId in self.reverseAssociatedPeerTable.get(peerId: peerId) {
+                if inactiveSecretChatPeerIds.contains(associatedId) {
+                    continue
+                }
                 let inclusionIndex = self.chatListIndexTable.get(peerId: associatedId)
                 if inclusionIndex.includedIndex(peerId: associatedId) != nil {
                     additionalChatPeerIds.append(associatedId)
@@ -3950,7 +3977,8 @@ public class Postbox {
         groupId: PeerGroupId,
         filterPredicate: ChatListFilterPredicate? = nil,
         count: Int,
-        summaryComponents: ChatListEntrySummaryComponents
+        summaryComponents: ChatListEntrySummaryComponents,
+        inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
     ) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -3960,7 +3988,8 @@ public class Postbox {
                     groupId: groupId,
                     filterPredicate: filterPredicate,
                     count: count,
-                    summaryComponents: summaryComponents
+                    summaryComponents: summaryComponents,
+                    inactiveSecretChatPeerIds: inactiveSecretChatPeerIds
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
@@ -3974,7 +4003,8 @@ public class Postbox {
         index: ChatListIndex,
         count: Int,
         summaryComponents: ChatListEntrySummaryComponents,
-        userInteractive: Bool = false
+        userInteractive: Bool = false,
+        inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
     ) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -3986,7 +4016,8 @@ public class Postbox {
                     index: index,
                     count: count,
                     summaryComponents: summaryComponents,
-                    userInteractive: userInteractive
+                    userInteractive: userInteractive,
+                    inactiveSecretChatPeerIds: inactiveSecretChatPeerIds
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
@@ -4018,12 +4049,12 @@ public class Postbox {
         }
     }
 
-    public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
+    public func searchPeers(query: String, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<[RenderedPeer], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
 
             self.impl.with { impl in
-                disposable.set(impl.searchPeers(query: query).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+                disposable.set(impl.searchPeers(query: query, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable

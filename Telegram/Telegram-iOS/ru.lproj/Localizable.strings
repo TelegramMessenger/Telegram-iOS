@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Немедленно";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "При переключении приложения";
 
 "PasscodeSettings.FakePasscodes" = "Ложные код-пароли";
 "PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";
@@ -105,8 +105,13 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";
 "SecretPasscodeStatus.SomeRevealed" = "Некоторые секреты открыты.";
 "SecretPasscodeStatus.AllHidden" = "Все секреты скрыты.";
-"SecretPasscodeStatus.Revealed" = "Секреты открыты.";
-"SecretPasscodeStatus.Hidden" = "Секреты скрыты.";
+"SecretPasscodeStatus.Revealed" = "Текущее состояние: **секреты открыты**.";
+"SecretPasscodeStatus.Hidden" = "Текущее состояние: **секреты скрыты**.";
+"SecretPasscode.AddSecretChats" = "Добавить секретные чаты";
+"SecretPasscode.SecretChatsSelectionTitle" = "Секретные чаты";
+"SecretPasscode.SecretChatDeleted" = "Удален";
+"SecretPasscode.AccountListTitle" = "Аккаунты";
+"SecretPasscode.AccountSelectionTitle" = "Выберите аккаунт";
 
 "Share.LockedTitle" = "Разблокируйте Telegram";
 "Share.LockedDescription" = "Откройте и разблокируйте Telegram, чтобы поделиться.";

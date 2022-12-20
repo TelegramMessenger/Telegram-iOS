@@ -4058,13 +4058,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
 
-                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
+                    if (strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport)) || strongSelf.peerId.namespace == Namespaces.Peer.SecretChat {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_StartSecretChat, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Lock"), color: theme.contextMenu.primaryColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
 
-                            self?.openStartSecretChat()
+                            self?.openStartSecretChat(user.id)
                         })))
                     }
 
@@ -4234,8 +4234,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     } else if strongSelf.peerId.namespace == Namespaces.Peer.SecretChat && data.isContact {
                         if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
                         } else {
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor)
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.destructiveColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
@@ -4488,12 +4488,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
     }
     
-    private func openStartSecretChat() {
-        let peerId = self.peerId
-
+    private func openStartSecretChat(_ peerId: PeerId) {
         let _ = (combineLatest(
-            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
-            self.context.engine.peers.mostRecentSecretChat(id: self.peerId)
+            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+            self.context.engine.peers.mostRecentSecretChat(id: peerId, inactiveSecretChatPeerIds: self.context.currentInactiveSecretChatPeerIds.with { $0 })
         )
         |> deliverOnMainQueue).start(next: { [weak self] peer, currentPeerId in
             guard let strongSelf = self else {
@@ -8080,6 +8078,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveT
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
+        precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+        
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId

@@ -760,6 +760,7 @@ private final class MultipartFetchManager {
                                         strongSelf.checkState()
                                     }
                                 }, error: { _ in
+                                    self?.finishWithError(.generic)
                                 }))
                             } else {
                                 Logger.shared.log("MultipartFetch", "reference invalidation requested, but no valid reference given")

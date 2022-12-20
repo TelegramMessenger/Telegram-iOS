@@ -43,7 +43,7 @@ final class WatchChatListHandler: WatchRequestHandler {
                 |> take(1)
                 |> mapToSignal({ context -> Signal<(ChatListView, PresentationData, Bool), NoError> in
                     if let context = context {
-                        return context.account.viewTracker.tailChatListView(groupId: .root, count: limit)
+                        return context.account.viewTracker.tailChatListView(groupId: .root, count: limit, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                         |> map { chatListView, _ -> (ChatListView, PresentationData, Bool) in
                             return (chatListView, context.sharedContext.currentPresentationData.with { $0 }, context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
                         }

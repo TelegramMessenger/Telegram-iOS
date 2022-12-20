@@ -26,9 +26,11 @@ public func fetchCloudMediaLocation(account: Account, resource: TelegramMediaRes
     return multipartFetch(postbox: account.postbox, network: account.network, mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext, resource: resource, datacenterId: datacenterId, size: size, intervals: intervals, parameters: parameters)
 }
 
-private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaResourceDataFetchResult, NoError> {
+private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
-        if move {
+        if !FileManager.default.fileExists(atPath: path) {
+            subscriber.putError(.generic)
+        } else if move {
             subscriber.putNext(.moveLocalFile(path: path))
             subscriber.putCompletion()
         } else {
@@ -58,7 +60,6 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
         }
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         return fetchLocalFileResource(path: localFileResource.localFilePath, move: localFileResource.isUniquelyReferencedTemporaryFile)
-        |> castError(MediaResourceDataFetchError.self)
     } else if let httpReference = resource as? HttpReferenceMediaResource {
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
         |> then(fetchHttpResource(url: httpReference.url))

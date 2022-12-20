@@ -269,7 +269,7 @@ private final class MediaReferenceRevalidationContextImpl {
         self.queue = queue
     }
     
-    func genericItem(key: MediaReferenceRevalidationKey, background: Bool, request: @escaping (@escaping (Any) -> Void, @escaping (RevalidateMediaReferenceError) -> Void) -> Disposable, _ f: @escaping (Any) -> Void) -> Disposable {
+    func genericItem(key: MediaReferenceRevalidationKey, background: Bool, request: @escaping (@escaping (Any) -> Void, @escaping (RevalidateMediaReferenceError) -> Void) -> Disposable, _ f: @escaping (Any) -> Void, _ notifyError: @escaping (RevalidateMediaReferenceError) -> Void) -> Disposable {
         let queue = self.queue
         
         let itemKey = MediaReferenceRevalidationKeyAndPlacement(key: key, background: background)
@@ -293,7 +293,8 @@ private final class MediaReferenceRevalidationContextImpl {
                         }
                     }
                 }
-            }, { _ in
+            }, { error in
+                notifyError(error)
             }))
         }
         
@@ -335,6 +336,8 @@ final class MediaReferenceRevalidationContext {
                 disposable.set(impl.genericItem(key: key, background: background, request: request, { result in
                     subscriber.putNext(result)
                     subscriber.putCompletion()
+                }, { error in
+                    subscriber.putError(error)
                 }))
             }
             return disposable

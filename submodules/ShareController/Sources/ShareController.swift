@@ -984,9 +984,16 @@ public final class ShareController: ViewController {
         self.currentAccount = account
         self.accountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
         
+        let context: AccountContext
+        if self.currentContext.account.id == self.currentAccount.id {
+            context = self.currentContext
+        } else {
+            context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
+        }
+        
         self.peers.set(combineLatest(
             TelegramEngine(account: self.currentAccount).data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.currentAccount.peerId)),
-            self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150)
+            self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
             |> take(1)
         )
         |> mapToSignal { maybeAccountPeer, view -> Signal<([(EngineRenderedPeer, EnginePeer.Presence?)], EnginePeer), NoError> in

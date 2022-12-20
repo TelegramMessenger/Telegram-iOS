@@ -128,7 +128,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         })
         
         switch self.mode {
-        case let .chatSelection(_, selectedChats, additionalCategories, _):
+        case let .chatSelection(_, selectedChats, additionalCategories, _, _, _, _, _):
             let _ = (self.context.engine.data.get(
                 EngineDataList(
                     selectedChats.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
@@ -208,11 +208,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = false
-        case let .chatSelection(title, _, _, _):
+        case let .chatSelection(title, _, _, _, _, _, _, _):
             self.titleView.title = CounterContollerTitle(title: title, counter: "")
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
             self.rightNavigationButton = rightNavigationButton
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.navigationPresentation == .default ? self.presentationData.strings.Common_Back : self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = self.params.alwaysEnabled
         }
@@ -441,7 +441,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 break
             case let .chats(chatsNode):
                 var categoryToken: EditableTokenListToken?
-                if case let .chatSelection(_, _, additionalCategories, _) = strongSelf.mode {
+                if case let .chatSelection(_, _, additionalCategories, _, _, _, _, _) = strongSelf.mode {
                     if let additionalCategories = additionalCategories {
                         for i in 0 ..< additionalCategories.categories.count {
                             if additionalCategories.categories[i].id == id {

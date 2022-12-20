@@ -341,7 +341,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
         |> mapToSignal { query -> Signal<[EnginePeer], NoError> in
             if let query = query {
-                return context.account.postbox.searchPeers(query: query.lowercased())
+                return context.account.postbox.searchPeers(query: query.lowercased(), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                 |> map { local -> [EnginePeer] in
                     return Array(local.compactMap { $0.peer }.prefix(10).map(EnginePeer.init))
                 }

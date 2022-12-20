@@ -666,6 +666,7 @@ public class Window1 {
     }
     
     private func updateBadgeVisibility() {
+        /*
         let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
         if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
             Queue.mainQueue().after(0.4) {
@@ -677,6 +678,7 @@ public class Window1 {
         } else {
             self.badgeView.isHidden = badgeIsHidden
         }
+        */
     }
     
     public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
@@ -1334,5 +1336,18 @@ public class Window1 {
     
     public var keyboardHeight: CGFloat {
         return self.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0
+    }
+}
+
+private var UIViewController_SensitiveUIKey: Int?
+
+extension UIViewController {
+    public var isSensitiveUI: Bool {
+        get {
+            return objc_getAssociatedObject(self, &UIViewController_SensitiveUIKey) != nil
+        }
+        set {
+            objc_setAssociatedObject(self, &UIViewController_SensitiveUIKey, newValue ? true : nil, .OBJC_ASSOCIATION_ASSIGN)
+        }
     }
 }

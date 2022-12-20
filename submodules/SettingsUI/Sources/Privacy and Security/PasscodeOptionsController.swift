@@ -624,6 +624,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
     }
     
+    controller.isSensitiveUI = true
+    
     return controller
 }
 

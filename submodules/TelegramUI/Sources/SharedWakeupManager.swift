@@ -38,9 +38,9 @@ private struct AccountTasks {
         if self.watchTasks {
             return false
         }
-        if self.userInterfaceInUse {
-            return false
-        }
+//        if self.userInterfaceInUse {
+//            return false
+//        }
         return true
     }
 }
@@ -261,9 +261,9 @@ public final class SharedWakeupManager {
         self.checkTasks()
     }
     
-    func checkTasks() {
+    func checkTasks(backgroundTaskExpired: Bool = false) {
         var hasTasksForBackgroundExtension = false
-        if self.inForeground || self.hasActiveAudioSession {
+        if self.inForeground || self.hasActiveAudioSession || backgroundTaskExpired {
             if let (completion, timer) = self.currentExternalCompletion {
                 self.currentExternalCompletion = nil
                 completion()
@@ -316,7 +316,7 @@ public final class SharedWakeupManager {
                                 return
                             }
                             strongSelf.isInBackgroundExtension = false
-                            strongSelf.checkTasks()
+                            strongSelf.checkTasks(backgroundTaskExpired: true)
                         }
                         if let taskId = self.beginBackgroundTask("background-wakeup", {
                             handleExpiration()

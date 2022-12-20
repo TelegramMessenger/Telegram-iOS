@@ -1367,6 +1367,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 UIApplication.shared.endBackgroundTask(taskId)
             }
         })
+        
+        self.mainWindow.forEachViewController { controller in
+            if let controller = controller as? UIViewController {
+                if controller is ActionSheetController || controller.isSensitiveUI {
+                    controller.dismiss(animated: false)
+                }
+            }
+            return true
+        }
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {

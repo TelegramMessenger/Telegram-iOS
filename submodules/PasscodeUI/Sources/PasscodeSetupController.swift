@@ -56,6 +56,8 @@ public final class PasscodeSetupController: ViewController, ReactiveToPasscodeSw
         if case let .secretEntry(modal, _) = self.mode, modal {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
+        
+        self.isSensitiveUI = true
     }
     
     required public init(coder aDecoder: NSCoder) {
