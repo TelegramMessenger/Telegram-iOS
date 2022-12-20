@@ -460,6 +460,8 @@ private class MediaBoxPartialFileDataRequest {
 final class MediaBoxPartialFile {
     private let queue: Queue
     private let manager: MediaBoxFileManager
+    private let storageBox: StorageBox
+    private let resourceId: Data
     private let path: String
     private let metaPath: String
     private let completePath: String
@@ -476,9 +478,12 @@ final class MediaBoxPartialFile {
     private var currentFetch: (Promise<[(Range<Int64>, MediaBoxFetchPriority)]>, Disposable)?
     private var processedAtLeastOneFetch: Bool = false
     
-    init?(queue: Queue, manager: MediaBoxFileManager, path: String, metaPath: String, completePath: String, completed: @escaping (Int64) -> Void) {
+    init?(queue: Queue, manager: MediaBoxFileManager, storageBox: StorageBox, resourceId: Data, path: String, metaPath: String, completePath: String, completed: @escaping (Int64) -> Void) {
         assert(queue.isCurrent())
         self.manager = manager
+        self.storageBox = storageBox
+        self.resourceId = resourceId
+        
         if let fd = manager.open(path: path, mode: .readwrite) {
             self.queue = queue
             self.path = path
@@ -504,6 +509,7 @@ final class MediaBoxPartialFile {
             } else {
                 self.fileMap = MediaBoxFileMap()
             }
+            self.storageBox.update(id: self.resourceId, size: self.fileMap.sum)
             self.missingRanges = MediaBoxFileMissingRanges()
         } else {
             return nil
@@ -586,6 +592,8 @@ final class MediaBoxPartialFile {
                 }
                 self.statusRequests.removeAll()
                 
+                self.storageBox.update(id: self.resourceId, size: self.fileMap.sum)
+                
                 self.completed(self.fileMap.sum)
             } else {
                 assertionFailure()
@@ -628,6 +636,8 @@ final class MediaBoxPartialFile {
                     statusRequest.0(.Local)
                 }
                 self.statusRequests.removeAll()
+                
+                self.storageBox.update(id: self.resourceId, size: size)
                 
                 self.completed(size)
             } else {
@@ -674,6 +684,8 @@ final class MediaBoxPartialFile {
         let range: Range<Int64> = offset ..< (offset + Int64(dataRange.count))
         self.fileMap.fill(range)
         self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+        
+        self.storageBox.update(id: self.resourceId, size: self.fileMap.sum)
         
         self.checkDataRequestsAfterFill(range: range)
     }
@@ -1184,7 +1196,7 @@ final class MediaBoxFileContext {
         return self.references.isEmpty
     }
     
-    init?(queue: Queue, manager: MediaBoxFileManager, path: String, partialPath: String, metaPath: String) {
+    init?(queue: Queue, manager: MediaBoxFileManager, storageBox: StorageBox, resourceId: Data, path: String, partialPath: String, metaPath: String) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -1195,7 +1207,7 @@ final class MediaBoxFileContext {
         var completeImpl: ((Int64) -> Void)?
         if let size = fileSize(path) {
             self.content = .complete(path, size)
-        } else if let file = MediaBoxPartialFile(queue: queue, manager: manager, path: partialPath, metaPath: metaPath, completePath: path, completed: { size in
+        } else if let file = MediaBoxPartialFile(queue: queue, manager: manager, storageBox: storageBox, resourceId: resourceId, path: partialPath, metaPath: metaPath, completePath: path, completed: { size in
             completeImpl?(size)
         }) {
             self.content = .partial(file)

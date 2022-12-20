@@ -19,6 +19,14 @@ private func md5Hash(_ data: Data) -> HashId {
 }
 
 public final class StorageBox {
+    public struct Stats {
+        public var contentTypes: [UInt8: Int64]
+        
+        public init(contentTypes: [UInt8: Int64]) {
+            self.contentTypes = contentTypes
+        }
+    }
+    
     public struct Reference {
         public var peerId: Int64
         public var messageNamespace: UInt8
@@ -53,15 +61,78 @@ public final class StorageBox {
         }
     }
     
+    private struct ItemInfo {
+        var id: Data
+        var contentType: UInt8
+        var size: Int64
+        
+        init(id: Data, contentType: UInt8, size: Int64) {
+            self.id = id
+            self.contentType = contentType
+            self.size = size
+        }
+        
+        init(buffer: MemoryBuffer) {
+            var id = Data()
+            var contentType: UInt8 = 0
+            var size: Int64 = 0
+            
+            withExtendedLifetime(buffer, {
+                let readBuffer = ReadBuffer(memoryBufferNoCopy: buffer)
+                var version: UInt8 = 0
+                readBuffer.read(&version, offset: 0, length: 1)
+                let _ = version
+                
+                var idLength: UInt16 = 0
+                readBuffer.read(&idLength, offset: 0, length: 2)
+                id.count = Int(idLength)
+                id.withUnsafeMutableBytes { buffer -> Void in
+                    readBuffer.read(buffer.baseAddress!, offset: 0, length: buffer.count)
+                }
+                
+                readBuffer.read(&contentType, offset: 0, length: 1)
+                
+                readBuffer.read(&size, offset: 0, length: 8)
+            })
+            
+            self.id = id
+            self.contentType = contentType
+            self.size = size
+        }
+        
+        func serialize() -> MemoryBuffer {
+            let writeBuffer = WriteBuffer()
+            
+            var version: UInt8 = 0
+            writeBuffer.write(&version, length: 1)
+            
+            var idLength = UInt16(clamping: self.id.count)
+            writeBuffer.write(&idLength, length: 2)
+            self.id.withUnsafeBytes { buffer in
+                writeBuffer.write(buffer.baseAddress!, length: Int(idLength))
+            }
+            
+            var contentType = self.contentType
+            writeBuffer.write(&contentType, length: 1)
+            
+            var size = self.size
+            writeBuffer.write(&size, length: 8)
+            
+            return writeBuffer
+        }
+    }
+    
     private final class Impl {
         let queue: Queue
         let logger: StorageBox.Logger
         let basePath: String
         let valueBox: SqliteValueBox
-        let hashIdToIdTable: ValueBoxTable
+        let hashIdToInfoTable: ValueBoxTable
         let idToReferenceTable: ValueBoxTable
         let peerIdToIdTable: ValueBoxTable
         let peerIdTable: ValueBoxTable
+        let peerContentTypeStatsTable: ValueBoxTable
+        let contentTypeStatsTable: ValueBoxTable
         
         init(queue: Queue, logger: StorageBox.Logger, basePath: String) {
             self.queue = queue
@@ -80,20 +151,81 @@ public final class StorageBox {
             }
             self.valueBox = valueBox
             
-            self.hashIdToIdTable = ValueBoxTable(id: 5, keyType: .binary, compactValuesOnCreation: true)
-            self.idToReferenceTable = ValueBoxTable(id: 6, keyType: .binary, compactValuesOnCreation: true)
-            self.peerIdToIdTable = ValueBoxTable(id: 7, keyType: .binary, compactValuesOnCreation: true)
-            self.peerIdTable = ValueBoxTable(id: 8, keyType: .binary, compactValuesOnCreation: true)
+            self.hashIdToInfoTable = ValueBoxTable(id: 15, keyType: .binary, compactValuesOnCreation: true)
+            self.idToReferenceTable = ValueBoxTable(id: 16, keyType: .binary, compactValuesOnCreation: true)
+            self.peerIdToIdTable = ValueBoxTable(id: 17, keyType: .binary, compactValuesOnCreation: true)
+            self.peerIdTable = ValueBoxTable(id: 18, keyType: .binary, compactValuesOnCreation: true)
+            self.peerContentTypeStatsTable = ValueBoxTable(id: 19, keyType: .binary, compactValuesOnCreation: true)
+            self.contentTypeStatsTable = ValueBoxTable(id: 20, keyType: .binary, compactValuesOnCreation: true)
         }
         
-        func add(reference: Reference, to id: Data) {
+        private func internalAddSize(contentType: UInt8, delta: Int64) {
+            let key = ValueBoxKey(length: 1)
+            key.setUInt8(0, value: contentType)
+            
+            var currentSize: Int64 = 0
+            if let value = self.valueBox.get(self.contentTypeStatsTable, key: key) {
+                value.read(&currentSize, offset: 0, length: 8)
+            }
+            
+            currentSize += delta
+            
+            if currentSize < 0 {
+                assertionFailure()
+                currentSize = 0
+            }
+            
+            self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+        }
+        
+        private func internalAddSize(peerId: Int64, contentType: UInt8, delta: Int64) {
+            let key = ValueBoxKey(length: 8 + 1)
+            key.setInt64(0, value: peerId)
+            key.setUInt8(8, value: contentType)
+            
+            var currentSize: Int64 = 0
+            if let value = self.valueBox.get(self.contentTypeStatsTable, key: key) {
+                value.read(&currentSize, offset: 0, length: 8)
+            }
+            
+            currentSize += delta
+            
+            if currentSize < 0 {
+                assertionFailure()
+                currentSize = 0
+            }
+            
+            self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+        }
+        
+        func add(reference: Reference, to id: Data, contentType: UInt8) {
             self.valueBox.begin()
             
             let hashId = md5Hash(id)
             
             let mainKey = ValueBoxKey(length: 16)
             mainKey.setData(0, value: hashId.data)
-            self.valueBox.setOrIgnore(self.hashIdToIdTable, key: mainKey, value: MemoryBuffer(data: id))
+            
+            var previousContentType: UInt8?
+            var size: Int64 = 0
+            if let currentInfoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
+                var info = ItemInfo(buffer: currentInfoValue)
+                if info.contentType != contentType {
+                    previousContentType = info.contentType
+                }
+                size = info.size
+                info.contentType = contentType
+                self.valueBox.set(self.hashIdToInfoTable, key: mainKey, value: info.serialize())
+            } else {
+                self.valueBox.set(self.hashIdToInfoTable, key: mainKey, value: ItemInfo(id: id, contentType: contentType, size: 0).serialize())
+            }
+            
+            if let previousContentType = previousContentType, previousContentType != contentType {
+                if size != 0 {
+                    self.internalAddSize(contentType: previousContentType, delta: -size)
+                    self.internalAddSize(contentType: contentType, delta: size)
+                }
+            }
             
             let idKey = ValueBoxKey(length: hashId.data.count + 8 + 1 + 4)
             idKey.setData(0, value: hashId.data)
@@ -145,25 +277,62 @@ public final class StorageBox {
             self.valueBox.commit()
         }
         
-        func addEmptyReferencesIfNotReferenced(ids: [Data]) -> Int {
+        func update(id: Data, size: Int64) {
+            self.valueBox.begin()
+            
+            let hashId = md5Hash(id)
+            
+            let mainKey = ValueBoxKey(length: 16)
+            mainKey.setData(0, value: hashId.data)
+            
+            if let currentInfoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
+                var info = ItemInfo(buffer: currentInfoValue)
+                
+                var sizeDelta: Int64 = 0
+                if info.size != size {
+                    sizeDelta = size - info.size
+                    info.size = size
+                    
+                    self.valueBox.set(self.hashIdToInfoTable, key: mainKey, value: info.serialize())
+                }
+                
+                if sizeDelta != 0 {
+                    self.internalAddSize(contentType: info.contentType, delta: sizeDelta)
+                }
+                
+                var peerIds: [Int64] = []
+                self.valueBox.range(self.idToReferenceTable, start: mainKey, end: mainKey.successor, keys: { key in
+                    peerIds.append(key.getInt64(0))
+                    return true
+                }, limit: 0)
+                
+                for peerId in peerIds {
+                    let _ = peerId
+                }
+            }
+            
+            self.valueBox.commit()
+        }
+        
+        func addEmptyReferencesIfNotReferenced(ids: [(id: Data, size: Int64)], contentType: UInt8) -> Int {
             self.valueBox.begin()
             
             var addedCount = 0
             
-            for id in ids {
+            for (id, size) in ids {
                 let reference = Reference(peerId: 0, messageNamespace: 0, messageId: 0)
                 
                 let hashId = md5Hash(id)
                 
                 let mainKey = ValueBoxKey(length: 16)
                 mainKey.setData(0, value: hashId.data)
-                if self.valueBox.exists(self.hashIdToIdTable, key: mainKey) {
+                if self.valueBox.exists(self.hashIdToInfoTable, key: mainKey) {
                     continue
                 }
                 
                 addedCount += 1
                 
-                self.valueBox.setOrIgnore(self.hashIdToIdTable, key: mainKey, value: MemoryBuffer(data: id))
+                self.valueBox.set(self.hashIdToInfoTable, key: mainKey, value: ItemInfo(id: id, contentType: contentType, size: size).serialize())
                 
                 let idKey = ValueBoxKey(length: hashId.data.count + 8 + 1 + 4)
                 idKey.setData(0, value: hashId.data)
@@ -229,7 +398,15 @@ public final class StorageBox {
                 let hashId = md5Hash(id)
                 mainKey.setData(0, value: hashId.data)
                 
-                self.valueBox.remove(self.hashIdToIdTable, key: mainKey, secure: false)
+                guard let infoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) else {
+                    continue
+                }
+                let info = ItemInfo(buffer: infoValue)
+                self.valueBox.remove(self.hashIdToInfoTable, key: mainKey, secure: false)
+                
+                if info.size != 0 {
+                    self.internalAddSize(contentType: info.contentType, delta: -info.size)
+                }
                 
                 var referenceKeys: [ValueBoxKey] = []
                 self.valueBox.range(self.idToReferenceTable, start: mainKey, end: mainKey.successor, keys: { key in
@@ -302,8 +479,9 @@ public final class StorageBox {
             let mainKey = ValueBoxKey(length: 16)
             for hashId in hashIds {
                 mainKey.setData(0, value: hashId)
-                if let value = self.valueBox.get(self.hashIdToIdTable, key: mainKey) {
-                    result.append(value.makeData())
+                if let infoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
+                    let info = ItemInfo(buffer: infoValue)
+                    result.append(info.id)
                 }
             }
             
@@ -336,8 +514,9 @@ public final class StorageBox {
                 } else {
                     if let currentId = currentId, !currentReferences.isEmpty {
                         mainKey.setData(0, value: currentId)
-                        if let value = self.valueBox.get(self.hashIdToIdTable, key: mainKey) {
-                            result.append(StorageBox.Entry(id: value.makeData(), references: currentReferences))
+                        if let infoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
+                            let info = ItemInfo(buffer: infoValue)
+                            result.append(StorageBox.Entry(id: info.id, references: currentReferences))
                         }
                         currentReferences.removeAll(keepingCapacity: true)
                     }
@@ -384,6 +563,20 @@ public final class StorageBox {
             
             return result
         }
+        
+        func getStats() -> Stats {
+            var contentTypes: [UInt8: Int64] = [:]
+            
+            self.valueBox.scan(self.contentTypeStatsTable, values: { key, value in
+                var size: Int64 = 0
+                value.read(&size, offset: 0, length: 8)
+                contentTypes[key.getUInt8(0)] = size
+                
+                return true
+            })
+            
+            return Stats(contentTypes: contentTypes)
+        }
     }
     
     private let queue: Queue
@@ -396,15 +589,21 @@ public final class StorageBox {
         })
     }
     
-    public func add(reference: Reference, to id: Data) {
+    public func add(reference: Reference, to id: Data, contentType: UInt8) {
         self.impl.with { impl in
-            impl.add(reference: reference, to: id)
+            impl.add(reference: reference, to: id, contentType: contentType)
         }
     }
     
-    public func addEmptyReferencesIfNotReferenced(ids: [Data], completion: @escaping (Int) -> Void) {
+    public func update(id: Data, size: Int64) {
         self.impl.with { impl in
-            let addedCount = impl.addEmptyReferencesIfNotReferenced(ids: ids)
+            impl.update(id: id, size: size)
+        }
+    }
+    
+    public func addEmptyReferencesIfNotReferenced(ids: [(id: Data, size: Int64)], contentType: UInt8, completion: @escaping (Int) -> Void) {
+        self.impl.with { impl in
+            let addedCount = impl.addEmptyReferencesIfNotReferenced(ids: ids, contentType: contentType)
             
             completion(addedCount)
         }
@@ -446,6 +645,15 @@ public final class StorageBox {
     public func get(ids: [Data]) -> Signal<[Entry], NoError> {
         return self.impl.signalWith { impl, subscriber in
             subscriber.putNext(impl.get(ids: ids))
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public func getStats() -> Signal<Stats, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            subscriber.putNext(impl.getStats())
             subscriber.putCompletion()
             
             return EmptyDisposable
