@@ -276,6 +276,18 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         panGestureRecognizer.delegate = self
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
+        
+        self.snapTool.onSnapXUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
+        
+        self.snapTool.onSnapYUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -296,6 +308,8 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         return true
     }
 
+    private let snapTool = DrawingEntitySnapTool()
+    
     private var currentHandle: CALayer?
     @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingBubbleEntity else {
@@ -305,6 +319,8 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         
         switch gestureRecognizer.state {
         case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
+            
             if let sublayers = self.layer.sublayers {
                 for layer in sublayers {
                     if layer.frame.contains(location) {
@@ -316,6 +332,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             self.currentHandle = self.layer
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
+            let velocity = gestureRecognizer.velocity(in: entityView.superview)
             
             var updatedSize = entity.size
             var updatedPosition = entity.position
@@ -358,6 +375,8 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
+                
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
             }
             
             entity.size = updatedSize
@@ -367,7 +386,9 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended:
-            break
+            self.snapTool.reset()
+        case .cancelled:
+            self.snapTool.reset()
         default:
             break
         }

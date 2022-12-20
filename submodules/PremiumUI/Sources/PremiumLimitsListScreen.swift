@@ -628,7 +628,6 @@ public class PremiumLimitsListScreen: ViewController {
             
             self.wrappingView = UIView()
             self.containerView = UIView()
-//            self.scrollView = UIScrollView()
             self.backgroundView = ComponentHostView()
             self.pagerView = ComponentHostView()
             self.closeView = ComponentHostView()
@@ -636,10 +635,7 @@ public class PremiumLimitsListScreen: ViewController {
             self.footerNode = FooterNode(theme: self.presentationData.theme, title: buttonTitle, gloss: gloss)
             
             super.init()
-            
-//            self.scrollView.delegate = self
-//            self.scrollView.showsVerticalScrollIndicator = false
-            
+                        
             self.containerView.clipsToBounds = true
             self.containerView.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
@@ -651,8 +647,7 @@ public class PremiumLimitsListScreen: ViewController {
             self.containerView.addSubview(self.pagerView)
             self.containerView.addSubnode(self.footerNode)
             self.containerView.addSubview(self.closeView)
-//            self.scrollView.addSubview(self.hostView)
-            
+        
             self.footerNode.action = { [weak self] in
                 self?.controller?.action()
             }
@@ -889,7 +884,7 @@ public class PremiumLimitsListScreen: ViewController {
             } else {
                 self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
                 self.containerView.layer.cornerRadius = 10.0
-                
+  
                 let verticalInset: CGFloat = 44.0
                 
                 let maxSide = max(layout.size.width, layout.size.height)
@@ -899,7 +894,6 @@ public class PremiumLimitsListScreen: ViewController {
             }
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
-//            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
             
             var clipLayout = layout.withUpdatedSize(clipFrame.size)
             if case .regular = layout.metrics.widthClass {
@@ -914,9 +908,11 @@ public class PremiumLimitsListScreen: ViewController {
         }
         
         func updated(transition: Transition) {
-            guard let controller = self.controller, let layout = self.currentLayout else {
+            guard let controller = self.controller else {
                 return
             }
+            
+            let contentSize = self.containerView.bounds.size
             
             let backgroundSize = self.backgroundView.update(
                 transition: .immediate,
@@ -929,9 +925,9 @@ public class PremiumLimitsListScreen: ViewController {
                     ])
                 ),
                 environment: {},
-                containerSize: CGSize(width: layout.size.width, height: layout.size.width)
+                containerSize: CGSize(width: contentSize.width, height: contentSize.width)
             )
-            self.backgroundView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
+            self.backgroundView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentSize.width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
             
             var isStandalone = false
             if case .other = controller.source {
@@ -1215,9 +1211,9 @@ public class PremiumLimitsListScreen: ViewController {
                             )
                         ),
                         environment: {},
-                        containerSize: CGSize(width: layout.size.width, height: self.containerView.frame.height)
+                        containerSize: contentSize
                     )
-                    self.pagerView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - pagerSize.width) / 2.0), y: 0.0), size: pagerSize)
+                    self.pagerView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentSize.width - pagerSize.width) / 2.0), y: 0.0), size: pagerSize)
                 }
             }
             
@@ -1228,7 +1224,6 @@ public class PremiumLimitsListScreen: ViewController {
                 closeImage = generateCloseButtonImage(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff))!
                 self.cachedCloseImage = closeImage
             }
-                  
             
             let closeSize = self.closeView.update(
                 transition: .immediate,
@@ -1259,7 +1254,7 @@ public class PremiumLimitsListScreen: ViewController {
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )
-            self.closeView.frame = CGRect(origin: CGPoint(x: layout.size.width - closeSize.width * 1.5, y: 28.0 - closeSize.height / 2.0), size: closeSize)
+            self.closeView.frame = CGRect(origin: CGPoint(x: contentSize.width - closeSize.width * 1.5, y: 28.0 - closeSize.height / 2.0), size: closeSize)
         }
         private var cachedCloseImage: UIImage?
         

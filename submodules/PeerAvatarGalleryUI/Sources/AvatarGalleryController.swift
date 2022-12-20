@@ -846,8 +846,13 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 self?.dismissImmediately()
             })
         }))
+                
+        var isFallback = false
+        if case let .image(_, _, _, _, _, _, _, _, _, _, isFallbackValue) = rawEntry {
+            isFallback = isFallbackValue
+        }
         
-        if self.peer.id == self.context.account.peerId, let position = rawEntry.indexData?.position, position > 0 {
+        if self.peer.id == self.context.account.peerId, let position = rawEntry.indexData?.position, position > 0 || isFallback {
             let title: String
             if let _ = rawEntry.videoRepresentations.last {
                 title = self.presentationData.strings.ProfilePhoto_SetMainVideo
@@ -907,11 +912,14 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             }
                         }
                 }
-                case let .image(_, reference, _, _, _, _, _, messageId, _, _, _):
+                case let .image(_, reference, _, _, _, _, _, messageId, _, _, isFallback):
                     if self.peer.id == self.context.account.peerId {
-                        if let reference = reference {
+                        if isFallback {
+                            let _ = self.context.engine.accountData.updateFallbackPhoto(resource: nil, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+                        } else if let reference = reference {
                             let _ = self.context.engine.accountData.removeAccountPhoto(reference: reference).start()
                         }
+                        
                         if entry == self.entries.first {
                             dismiss = true
                         } else {

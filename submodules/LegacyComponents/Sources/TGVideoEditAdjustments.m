@@ -77,7 +77,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     if (dictionary[@"originalSize"])
         adjustments->_originalSize = [dictionary[@"originalSize"] CGSizeValue];
     if (dictionary[@"entitiesData"]) {
-        adjustments->_paintingData = [TGPaintingData dataWithPaintingImagePath:dictionary[@"paintingImagePath"] entitiesData:dictionary[@"entitiesData"] hasAnimation:[dictionary[@"hasAnimation"] boolValue]];
+        adjustments->_paintingData = [TGPaintingData dataWithPaintingImagePath:dictionary[@"paintingImagePath"] entitiesData:dictionary[@"entitiesData"] hasAnimation:[dictionary[@"hasAnimation"] boolValue] stickers:dictionary[@"stickersData"]];
     } else if (dictionary[@"paintingImagePath"]) {
         adjustments->_paintingData = [TGPaintingData dataWithPaintingImagePath:dictionary[@"paintingImagePath"]];
     }

@@ -75,6 +75,9 @@
 
 @protocol TGPhotoDrawingEntitiesView <NSObject>
 
+@property (nonatomic, copy) CGPoint (^getEntityCenterPosition)(void);
+@property (nonatomic, copy) CGFloat (^getEntityInitialRotation)(void);
+
 @property (nonatomic, copy) void(^hasSelectionChanged)(bool);
 @property (nonatomic, readonly) BOOL hasSelection;
 
@@ -107,6 +110,7 @@
                                safeInsets:(UIEdgeInsets)safeInsets
                           statusBarHeight:(CGFloat)statusBarHeight
                               inputHeight:(CGFloat)inputHeight
+                              orientation:(UIInterfaceOrientation)orientation
                                  animated:(BOOL)animated;
 
 @end

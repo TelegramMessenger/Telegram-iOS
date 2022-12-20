@@ -219,6 +219,22 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
         strongSelf->_scrollView.pinchGestureRecognizer.enabled = !hasSelection;
     };
     
+    _entitiesView.getEntityCenterPosition = ^CGPoint {
+        __strong TGPhotoDrawingController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return CGPointZero;
+        
+        return [strongSelf entityCenterPoint];
+    };
+    
+    _entitiesView.getEntityInitialRotation = ^CGFloat {
+        __strong TGPhotoDrawingController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return 0.0f;
+        
+        return [strongSelf entityInitialRotation];
+    };
+    
     [self.view setNeedsLayout];
 }
 
@@ -771,6 +787,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
                                                  safeInsets:UIEdgeInsetsMake(0.0, _context.safeAreaInset.left, 0.0, _context.safeAreaInset.right)
                                             statusBarHeight:[_context statusBarFrame].size.height
                                                 inputHeight:_keyboardHeight
+                                                orientation:self.effectiveOrientation
                                                    animated:animated];
     
 }
@@ -876,6 +893,16 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 - (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
 {
     return UIRectEdgeTop | UIRectEdgeBottom;
+}
+
+- (CGPoint)entityCenterPoint
+{
+    return [_previewView convertPoint:TGPaintCenterOfRect(_previewView.bounds) toView:_entitiesView];
+}
+
+- (CGFloat)entityInitialRotation
+{
+    return TGCounterRotationForOrientation(_photoEditor.cropOrientation) - _photoEditor.cropRotation;
 }
 
 + (CGSize)maximumPaintingSize

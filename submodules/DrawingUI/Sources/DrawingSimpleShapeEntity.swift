@@ -185,6 +185,11 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         return max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.05)
     }
     
+    fileprivate var minimumSize: CGSize {
+        let minSize = min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height)
+        return CGSize(width: minSize * 0.1, height: minSize * 0.1)
+    }
+    
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         let lineWidth = self.maxLineWidth * 0.5
         let expandedBounds = self.bounds.insetBy(dx: -lineWidth, dy: -lineWidth)
@@ -291,6 +296,18 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         panGestureRecognizer.delegate = self
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
+        
+        self.snapTool.onSnapXUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
+        
+        self.snapTool.onSnapYUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -311,9 +328,11 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         return true
     }
 
+    private let snapTool = DrawingEntitySnapTool()
+    
     private var currentHandle: CALayer?
     @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingSimpleShapeEntity else {
+        guard let entityView = self.entityView as? DrawingSimpleShapeEntityView, let entity = entityView.entity as? DrawingSimpleShapeEntity else {
             return
         }
         let isAspectLocked = [.star].contains(entity.shapeType)
@@ -321,6 +340,8 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         
         switch gestureRecognizer.state {
         case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
+            
             if let sublayers = self.layer.sublayers {
                 for layer in sublayers {
                     if layer.frame.contains(location) {
@@ -332,50 +353,54 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             self.currentHandle = self.layer
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
+            let velocity = gestureRecognizer.velocity(in: entityView.superview)
             
             var updatedSize = entity.size
             var updatedPosition = entity.position
             
+            let minimumSize = entityView.minimumSize
+            
             if self.currentHandle === self.leftHandle {
                 let deltaX = delta.x * cos(entity.rotation)
                 let deltaY = delta.x * sin(entity.rotation)
-                
-                updatedSize.width -= deltaX
+                                
+                updatedSize.width = max(minimumSize.width, updatedSize.width - deltaX)
                 updatedPosition.x -= deltaX * -0.5
                 updatedPosition.y -= deltaY * -0.5
                 
                 if isAspectLocked {
-                    updatedSize.height -= delta.x
+                    updatedSize.height = updatedSize.width
                 }
             } else if self.currentHandle === self.rightHandle {
                 let deltaX = delta.x * cos(entity.rotation)
                 let deltaY = delta.x * sin(entity.rotation)
                 
-                updatedSize.width += deltaX
+                updatedSize.width = max(minimumSize.width, updatedSize.width + deltaX)
+                print(updatedSize.width)
                 updatedPosition.x += deltaX * 0.5
                 updatedPosition.y += deltaY * 0.5
                 if isAspectLocked {
-                    updatedSize.height += delta.x
+                    updatedSize.height = updatedSize.width
                 }
             } else if self.currentHandle === self.topHandle {
                 let deltaX = delta.y * sin(entity.rotation)
                 let deltaY = delta.y * cos(entity.rotation)
                 
-                updatedSize.height -= deltaY
+                updatedSize.height = max(minimumSize.height, updatedSize.height - deltaY)
                 updatedPosition.x += deltaX * 0.5
                 updatedPosition.y += deltaY * 0.5
                 if isAspectLocked {
-                    updatedSize.width -= delta.y
+                    updatedSize.width = updatedSize.height
                 }
             } else if self.currentHandle === self.bottomHandle {
                 let deltaX = delta.y * sin(entity.rotation)
                 let deltaY = delta.y * cos(entity.rotation)
                 
-                updatedSize.height += deltaY
+                updatedSize.height = max(minimumSize.height, updatedSize.height + deltaY)
                 updatedPosition.x += deltaX * 0.5
                 updatedPosition.y += deltaY * 0.5
                 if isAspectLocked {
-                    updatedSize.width += delta.y
+                    updatedSize.width = updatedSize.height
                 }
             } else if self.currentHandle === self.topLeftHandle {
                 var delta = delta
@@ -416,15 +441,19 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
+                
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
             }
             
             entity.size = updatedSize
             entity.position = updatedPosition
-            entityView.update()
+            entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended:
-            break
+            self.snapTool.reset()
+        case .cancelled:
+            self.snapTool.reset()
         default:
             break
         }

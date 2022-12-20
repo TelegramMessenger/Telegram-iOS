@@ -27,18 +27,10 @@ protocol DrawingElement: AnyObject {
     func draw(in: CGContext, size: CGSize)
 }
 
-enum DrawingCommand {
-    enum DrawingElementTransform {
-        case move(offset: CGPoint)
-    }
-    
-    case addStroke(DrawingElement)
-    case updateStrokes([UUID], DrawingElementTransform)
-    case removeStroke(DrawingElement)
-    case addEntity(DrawingEntity)
-    case updateEntity(UUID, DrawingEntity)
+enum DrawingOperation {
+    case element(DrawingElement)
+    case addEntity(UUID)
     case removeEntity(DrawingEntity)
-    case updateEntityZOrder(UUID, Int32)
 }
 
 public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDrawingView {
@@ -63,10 +55,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         case pen
         case marker
         case neon
-        case pencil
         case eraser
         case lasso
-        case objectRemover
         case blur
     }
         
@@ -82,7 +72,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     var getFullImage: (Bool) -> UIImage? = { _ in return nil }
     
     private var elements: [DrawingElement] = []
-    private var redoElements: [DrawingElement] = []
+    private var undoStack: [DrawingOperation] = []
+    private var redoStack: [DrawingOperation] = []
     fileprivate var uncommitedElement: DrawingElement?
     
     private(set) var drawingImage: UIImage?
@@ -109,6 +100,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private var strokeRecognitionTimer: SwiftSignalKit.Timer?
     
     private var isDrawing = false
+    private var drawingGestureStartTimestamp: Double?
     
     private func loadTemplates() {
         func load(_ name: String) {
@@ -134,7 +126,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         load("shape_arrow")
     }
     
-    public init(size: CGSize) {
+    init(size: CGSize) {
         self.imageSize = size
         
         let format = UIGraphicsImageRendererFormat()
@@ -203,20 +195,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             guard let strongSelf = self else {
                 return
             }
-            if case .objectRemover = strongSelf.tool {
-                if case let .location(point) = path {
-                    var elementsToRemove: [DrawingElement] = []
-                    for element in strongSelf.elements {
-                        if element.containsPoint(point.location) {
-                            elementsToRemove.append(element)
-                        }
-                    }
-                    
-                    for element in elementsToRemove {
-                        strongSelf.removeElement(element)
-                    }
-                }
-            } else if case .lasso = strongSelf.tool {
+            if case .lasso = strongSelf.tool {
                 if case let .smoothCurve(bezierPath) = path {
                     let scale = strongSelf.bounds.width / strongSelf.imageSize.width
                     
@@ -254,6 +233,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 case .began:
                     strongSelf.isDrawing = true
                     strongSelf.previousStrokePoint = nil
+                    strongSelf.drawingGestureStartTimestamp = CACurrentMediaTime()
                     
                     if strongSelf.uncommitedElement != nil {
                         strongSelf.finishDrawing()
@@ -263,7 +243,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                         return
                     }
                     
-                    if newElement is MarkerTool || newElement is PencilTool {
+                    if newElement is MarkerTool {
                         self?.metalView.isHidden = false
                     }
                     
@@ -283,6 +263,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     
                     if case let .polyline(line) = path, let lastPoint = line.points.last {
                         if let previousStrokePoint = strongSelf.previousStrokePoint, line.points.count > 10 {
+                            let currentTimestamp = CACurrentMediaTime()
                             if lastPoint.location.distance(to: previousStrokePoint) > 10.0 {
                                 strongSelf.previousStrokePoint = lastPoint.location
                                 
@@ -290,7 +271,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                                 strongSelf.strokeRecognitionTimer = nil
                             }
                                 
-                            if strongSelf.strokeRecognitionTimer == nil {
+                            if strongSelf.strokeRecognitionTimer == nil, let startTimestamp = strongSelf.drawingGestureStartTimestamp, currentTimestamp - startTimestamp < 3.0 {
                                 strongSelf.strokeRecognitionTimer = SwiftSignalKit.Timer(timeout: 0.85, repeat: false, completion: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
@@ -298,31 +279,30 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                                     if let previousStrokePoint = strongSelf.previousStrokePoint, lastPoint.location.distance(to: previousStrokePoint) <= 10.0 {
                                         let strokeRecognizer = Unistroke(points: line.points.map { $0.location })
                                         if let template = strokeRecognizer.match(templates: strongSelf.loadedTemplates, minThreshold: 0.5) {
-                                            
                                             let edges = line.bounds
                                             let bounds = CGRect(origin: edges.origin, size: CGSize(width: edges.width - edges.minX, height: edges.height - edges.minY))
                                             
                                             var entity: DrawingEntity?
                                             if template == "shape_rectangle" {
-                                                let shapeEntity = DrawingSimpleShapeEntity(shapeType: .rectangle, drawType: .stroke, color: strongSelf.toolColor, lineWidth: 0.25)
+                                                let shapeEntity = DrawingSimpleShapeEntity(shapeType: .rectangle, drawType: .stroke, color: strongSelf.toolColor, lineWidth: strongSelf.toolBrushSize)
                                                 shapeEntity.referenceDrawingSize = strongSelf.imageSize
                                                 shapeEntity.position = bounds.center
-                                                shapeEntity.size = bounds.size
+                                                shapeEntity.size = CGSize(width: bounds.size.width * 1.1, height: bounds.size.height * 1.1)
                                                 entity = shapeEntity
                                             } else if template == "shape_circle" {
-                                                let shapeEntity = DrawingSimpleShapeEntity(shapeType: .ellipse, drawType: .stroke, color: strongSelf.toolColor, lineWidth: 0.25)
+                                                let shapeEntity = DrawingSimpleShapeEntity(shapeType: .ellipse, drawType: .stroke, color: strongSelf.toolColor, lineWidth: strongSelf.toolBrushSize)
                                                 shapeEntity.referenceDrawingSize = strongSelf.imageSize
                                                 shapeEntity.position = bounds.center
-                                                shapeEntity.size = bounds.size
+                                                shapeEntity.size = CGSize(width: bounds.size.width * 1.1, height: bounds.size.height * 1.1)
                                                 entity = shapeEntity
                                             } else if template == "shape_star" {
-                                                let shapeEntity = DrawingSimpleShapeEntity(shapeType: .star, drawType: .stroke, color: strongSelf.toolColor, lineWidth: 0.25)
+                                                let shapeEntity = DrawingSimpleShapeEntity(shapeType: .star, drawType: .stroke, color: strongSelf.toolColor, lineWidth: strongSelf.toolBrushSize)
                                                 shapeEntity.referenceDrawingSize = strongSelf.imageSize
                                                 shapeEntity.position = bounds.center
-                                                shapeEntity.size = CGSize(width: max(bounds.width, bounds.height), height: max(bounds.width, bounds.height))
+                                                shapeEntity.size = CGSize(width: max(bounds.width, bounds.height) * 1.1, height: max(bounds.width, bounds.height) * 1.1)
                                                 entity = shapeEntity
                                             } else if template == "shape_arrow" {
-                                                let arrowEntity = DrawingVectorEntity(type: .oneSidedArrow, color: strongSelf.toolColor, lineWidth: 0.2)
+                                                let arrowEntity = DrawingVectorEntity(type: .oneSidedArrow, color: strongSelf.toolColor, lineWidth: strongSelf.toolBrushSize)
                                                 arrowEntity.referenceDrawingSize = strongSelf.imageSize
                                                 arrowEntity.start = line.points.first?.location ?? .zero
                                                 arrowEntity.end = line.points[line.points.count - 4].location
@@ -331,6 +311,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                                             
                                             if let entity = entity {
                                                 strongSelf.entitiesView?.add(entity)
+                                                strongSelf.entitiesView?.selectEntity(entity)
                                                 strongSelf.cancelDrawing()
                                                 strongSelf.drawingGesturePipeline?.gestureRecognizer?.isEnabled = false
                                                 strongSelf.drawingGesturePipeline?.gestureRecognizer?.isEnabled = true
@@ -561,9 +542,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         let complete: (Bool) -> Void = { synchronous in
             self.commit(interactive: true, synchronous: synchronous)
             
-            self.redoElements.removeAll()
+            self.redoStack.removeAll()
             if let uncommitedElement = self.uncommitedElement {
                 self.elements.append(uncommitedElement)
+                self.undoStack.append(.element(uncommitedElement))
                 self.uncommitedElement = nil
             }
             
@@ -584,7 +566,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
         self.uncommitedElement = nil
         self.elements.removeAll()
-        self.redoElements.removeAll()
+        self.undoStack.removeAll()
+        self.redoStack.removeAll()
         
         let snapshotView = UIImageView(image: self.drawingImage)
         snapshotView.frame = self.bounds
@@ -605,38 +588,89 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
     
     private func undo() {
-        guard let lastElement = self.elements.last else {
+        guard let lastOperation = self.undoStack.last else {
             return
         }
-        self.uncommitedElement = nil
-        self.redoElements.append(lastElement)
-        self.elements.removeLast()
-        
-        let snapshotView = UIImageView(image: self.drawingImage)
-        snapshotView.frame = self.bounds
-        self.addSubview(snapshotView)
-        self.commit(reset: true)
-        
-        Queue.mainQueue().justDispatch {
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                snapshotView?.removeFromSuperview()
-            })
+        switch lastOperation {
+        case let .element(element):
+            self.uncommitedElement = nil
+            self.redoStack.append(.element(element))
+            self.elements.removeAll(where: { $0.uuid == element.uuid })
+            
+            let snapshotView = UIImageView(image: self.drawingImage)
+            snapshotView.frame = self.bounds
+            self.addSubview(snapshotView)
+            self.commit(reset: true)
+            
+            Queue.mainQueue().justDispatch {
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+        case let .addEntity(uuid):
+            if let entityView = self.entitiesView?.getView(for: uuid) {
+                self.entitiesView?.remove(uuid: uuid, animated: true, announce: false)
+                self.redoStack.append(.removeEntity(entityView.entity))
+            }
+        case let .removeEntity(entity):
+            if let view = self.entitiesView?.add(entity, announce: false) {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                if !(entity is DrawingVectorEntity) {
+                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
+            }
+            self.redoStack.append(.addEntity(entity.uuid))
         }
+        
+        self.undoStack.removeLast()
 
         self.updateInternalState()
     }
     
     private func redo() {
-        guard let lastElement = self.redoElements.last else {
+        guard let lastOperation = self.redoStack.last else {
             return
         }
-        self.uncommitedElement = nil
-        self.elements.append(lastElement)
-        self.redoElements.removeLast()
-        self.uncommitedElement = lastElement
-               
-        self.commit(reset: false)
-        self.uncommitedElement = nil
+        
+        switch lastOperation {
+            case let .element(element):
+                self.uncommitedElement = nil
+                self.elements.append(element)
+                self.undoStack.append(.element(element))
+                self.uncommitedElement = element
+                       
+                self.commit(reset: false)
+                self.uncommitedElement = nil
+            case let .addEntity(uuid):
+                if let entityView = self.entitiesView?.getView(for: uuid) {
+                    self.entitiesView?.remove(uuid: uuid, animated: true, announce: false)
+                    self.undoStack.append(.removeEntity(entityView.entity))
+                }
+            case let .removeEntity(entity):
+                if let view = self.entitiesView?.add(entity, announce: false) {
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    if !(entity is DrawingVectorEntity) {
+                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                    }
+                }
+                self.undoStack.append(.addEntity(entity.uuid))
+        }
+        
+        self.redoStack.removeLast()
+        
+        self.updateInternalState()
+    }
+    
+    func onEntityAdded(_ entity: DrawingEntity) {
+        self.redoStack.removeAll()
+        self.undoStack.append(.addEntity(entity.uuid))
+        
+        self.updateInternalState()
+    }
+    
+    func onEntityRemoved(_ entity: DrawingEntity) {
+        self.redoStack.removeAll()
+        self.undoStack.append(.removeEntity(entity))
         
         self.updateInternalState()
     }
@@ -723,9 +757,9 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
 
     private func updateInternalState() {
         self.stateUpdated(NavigationState(
-            canUndo: !self.elements.isEmpty,
-            canRedo: !self.redoElements.isEmpty,
-            canClear: !self.elements.isEmpty,
+            canUndo: !self.elements.isEmpty || !self.undoStack.isEmpty,
+            canRedo: !self.redoStack.isEmpty,
+            canClear: !self.elements.isEmpty || !(self.entitiesView?.entities.isEmpty ?? true),
             canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
             isDrawing: self.isDrawing
         ))
@@ -764,15 +798,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 lineWidth: self.toolBrushSize * scale,
                 arrow: self.toolHasArrow
             )
-        case .pencil:
-            let pencilTool = PencilTool(
-                drawingSize: self.imageSize,
-                color: self.toolColor,
-                lineWidth: self.toolBrushSize * scale,
-                arrow: self.toolHasArrow
-            )
-            pencilTool.metalView = self.metalView
-            element = pencilTool
         case .blur:
             let blurTool = BlurTool(
                 drawingSize: self.imageSize,

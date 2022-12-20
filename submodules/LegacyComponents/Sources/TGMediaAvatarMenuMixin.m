@@ -158,12 +158,24 @@
         if (strongController == nil)
             return;
         
-        if (strongSelf.didFinishWithVideo != nil)
-            strongSelf.didFinishWithVideo(image, asset, adjustments);
-        
-        commit();
-        
-        [strongController dismissAnimated:false];
+        if (strongSelf.willFinishWithVideo != nil) {
+            strongSelf.willFinishWithVideo(image, ^{
+                if (strongSelf.didFinishWithVideo != nil)
+                    strongSelf.didFinishWithVideo(image, asset, adjustments);
+                
+                commit();
+                
+                [strongController dismissAnimated:false];
+            });
+        } else {
+            if (strongSelf.didFinishWithVideo != nil)
+                strongSelf.didFinishWithVideo(image,
+                                              asset, adjustments);
+            
+            commit();
+            
+            [strongController dismissAnimated:false];
+        }
     };
     [itemViews addObject:carouselItem];
     

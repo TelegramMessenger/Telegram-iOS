@@ -4,20 +4,46 @@ import Display
 
 final class PenTool: DrawingElement {
     class RenderLayer: SimpleLayer, DrawingRenderLayer {
+        var segmentsCount = 0
+        
+        var displayLink: ConstantDisplayLinkAnimator?
         func setup(size: CGSize) {
             self.shouldRasterize = true
             self.contentsScale = 1.0
             
             let bounds = CGRect(origin: .zero, size: size)
             self.frame = bounds
+            
+            self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+                if let strongSelf = self {
+                    if let line = strongSelf.line, strongSelf.segmentsCount < line.count, let velocity = strongSelf.velocity {
+                        let delta = max(9, Int(velocity / 100.0))
+                        let start = strongSelf.segmentsCount
+                        strongSelf.segmentsCount = min(strongSelf.segmentsCount + delta, line.count)
+                        
+                        let rect = line.rect(from: start, to: strongSelf.segmentsCount)
+                        strongSelf.setNeedsDisplay(rect.insetBy(dx: -50.0, dy: -50.0))
+                    }
+                }
+            })
+            self.displayLink?.frameInterval = 1
+            self.displayLink?.isPaused = false
         }
         
         
         private var color: UIColor?
         private var line: StrokeLine?
-        fileprivate func draw(line: StrokeLine, color: UIColor, rect: CGRect) {
+        private var velocity: CGFloat?
+        private var previousRect: CGRect?
+        fileprivate func draw(line: StrokeLine, velocity: CGFloat, color: UIColor, rect: CGRect) {
             self.line = line
             self.color = color
+            self.previousRect = rect
+            if let previous = self.velocity {
+                self.velocity = velocity * 0.4 + previous * 0.6
+            } else {
+                self.velocity = velocity
+            }
             self.setNeedsDisplay(rect.insetBy(dx: -50.0, dy: -50.0))
         }
         
@@ -48,7 +74,7 @@ final class PenTool: DrawingElement {
         }
         
         override func draw(in ctx: CGContext) {
-            self.line?.drawInContext(ctx)
+            self.line?.drawInContext(ctx, upTo: self.segmentsCount)
         }
     }
     
@@ -166,7 +192,7 @@ final class PenTool: DrawingElement {
         
         let rect = self.renderLine.draw(at: point)
         if let currentRenderLayer = self.currentRenderLayer as? RenderLayer {
-            currentRenderLayer.draw(line: self.renderLine, color: self.color.toUIColor(), rect: rect)
+            currentRenderLayer.draw(line: self.renderLine, velocity: point.velocity, color: self.color.toUIColor(), rect: rect)
         }
         
         if state == .ended {
@@ -239,6 +265,7 @@ private class StrokeLine {
         let d: CGPoint
         let abWidth: CGFloat
         let cdWidth: CGFloat
+        let rect: CGRect
     }
     
     struct Point {
@@ -281,8 +308,8 @@ private class StrokeLine {
         return appendPoint(point)
     }
     
-    func drawInContext(_ context: CGContext) {
-        self.drawSegments(self.segments, inContext: context)
+    func drawInContext(_ context: CGContext, upTo: Int? = nil) {
+        self.drawSegments(self.segments, upTo: upTo ?? self.segments.count, inContext: context)
     }
     
     func extractLineWidth(from velocity: CGFloat) -> CGFloat {
@@ -395,18 +422,48 @@ private class StrokeLine {
             let maxX = max(a.x, b.x, c.x, d.x, ab.x, cd.x)
             let maxY = max(a.y, b.y, c.y, d.y, ab.y, cd.y)
             
-            updateRect = updateRect.union(CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY))
+            let segmentRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+            updateRect = updateRect.union(segmentRect)
             
-            segments.append(Segment(a: a, b: b, c: c, d: d, abWidth: previousWidth, cdWidth: currentWidth))
+            segments.append(Segment(a: a, b: b, c: c, d: d, abWidth: previousWidth, cdWidth: currentWidth, rect: segmentRect))
         }
         return (segments, updateRect)
     }
     
-    func drawSegments(_ segments: [Segment], inContext context: CGContext) {
-        for segment in segments {
+    var count: Int {
+        return self.segments.count
+    }
+    
+    func rect(from: Int, to: Int) -> CGRect {
+        var minX: CGFloat = .greatestFiniteMagnitude
+        var minY: CGFloat = .greatestFiniteMagnitude
+        var maxX: CGFloat = 0.0
+        var maxY: CGFloat = 0.0
+        
+        for i in from ..< to {
+            let segment = self.segments[i]
+            
+            if segment.rect.minX < minX {
+                minX = segment.rect.minX
+            }
+            if segment.rect.maxX > maxX {
+                maxX = segment.rect.maxX
+            }
+            if segment.rect.minY < minY {
+                minY = segment.rect.minY
+            }
+            if segment.rect.maxY > maxY {
+                maxY = segment.rect.maxY
+            }
+        }
+        
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+    
+    func drawSegments(_ segments: [Segment], upTo: Int, inContext context: CGContext) {
+        for i in 0 ..< upTo {
+            let segment = segments[i]
             context.beginPath()
-
-            //let color = [UIColor.red, UIColor.green, UIColor.blue, UIColor.yellow].randomElement()!
             
             context.setStrokeColor(color.cgColor)
             context.setFillColor(color.cgColor)

@@ -4,8 +4,6 @@
 
 #import <objc/runtime.h>
 
-#import <LegacyComponents/ASWatcher.h>
-
 #import <Photos/Photos.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
@@ -52,7 +50,7 @@
 #import <LegacyComponents/AVURLAsset+TGMediaItem.h>
 #import "TGCameraCapturedVideo.h"
 
-@interface TGPhotoEditorController () <ASWatcher, TGViewControllerNavigationBarAppearance, TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate, UIDocumentInteractionControllerDelegate>
+@interface TGPhotoEditorController () <TGViewControllerNavigationBarAppearance, TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate, UIDocumentInteractionControllerDelegate>
 {
     bool _switchingTab;
     TGPhotoEditorTab _availableTabs;
@@ -102,7 +100,6 @@
     bool _hasOpenedPhotoTools;
     bool _hiddenToolbarView;
     
-    TGMenuContainerView *_menuContainerView;
     UIDocumentInteractionController *_documentController;
     
     bool _dismissed;
@@ -136,16 +133,13 @@
 
 @implementation TGPhotoEditorController
 
-@synthesize actionHandle = _actionHandle;
-
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSAttributedString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab
 {
     self = [super initWithContext:context];
     if (self != nil)
     {
         _context = context;
-        _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
-        
+    
         self.automaticallyManageScrollViewInsets = false;
         self.autoManageStatusBarBackground = false;
         self.isImportant = true;
@@ -195,7 +189,6 @@
 
 - (void)dealloc
 {
-    [_actionHandle reset];
     [_faceDetectorDisposable dispose];
     [_thumbnailsDisposable dispose];
 }
@@ -255,11 +248,6 @@
     
     void(^toolbarDoneLongPressed)(id) = ^(id sender)
     {
-        __strong TGPhotoEditorController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        [strongSelf doneButtonLongPressed:sender];
     };
     
     void(^toolbarTabPressed)(TGPhotoEditorTab) = ^(TGPhotoEditorTab tab)
@@ -2267,45 +2255,6 @@
             _standaloneEditingContext = [[TGMediaEditingContext alloc] init];
         }
         return _standaloneEditingContext;
-    }
-}
-
-- (void)doneButtonLongPressed:(UIButton *)sender
-{
-    if (_intent == TGPhotoEditorControllerVideoIntent)
-        return;
-    
-    if (_menuContainerView != nil)
-    {
-        [_menuContainerView removeFromSuperview];
-        _menuContainerView = nil;
-    }
-
-    _menuContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.view.frame.size.width, self.view.frame.size.height)];
-    [self.view addSubview:_menuContainerView];
-    
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    [actions addObject:@{ @"title": @"Save to Camera Roll", @"action": @"save" }];    
-    if ([_context canOpenURL:[NSURL URLWithString:@"instagram://"]])
-        [actions addObject:@{ @"title": @"Share on Instagram", @"action": @"instagram" }];
-    
-    [_menuContainerView.menuView setButtonsAndActions:actions watcherHandle:_actionHandle];
-    [_menuContainerView.menuView sizeToFit];
-    
-    CGRect titleLockIconViewFrame = [sender.superview convertRect:sender.frame toView:_menuContainerView];
-    titleLockIconViewFrame.origin.y += 16.0f;
-    [_menuContainerView showMenuFromRect:titleLockIconViewFrame animated:false];
-}
-
-- (void)actionStageActionRequested:(NSString *)action options:(id)options
-{
-    if ([action isEqualToString:@"menuAction"])
-    {
-        NSString *menuAction = options[@"action"];
-        if ([menuAction isEqualToString:@"save"])
-            [self _saveToCameraRoll];
-        else if ([menuAction isEqualToString:@"instagram"])
-            [self _openInInstagram];
     }
 }
 

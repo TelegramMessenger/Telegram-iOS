@@ -44,11 +44,12 @@ enum DrawingTextAlignment: Equatable {
     }
 }
 
-enum DrawingTextFont: Equatable, CaseIterable {
+enum DrawingTextFont: Equatable, Hashable {
     case sanFrancisco
     case newYork
     case monospaced
     case round
+    case custom(String, String)
     
     init(font: DrawingTextEntity.Font) {
         switch font {
@@ -60,6 +61,8 @@ enum DrawingTextFont: Equatable, CaseIterable {
             self = .monospaced
         case .round:
             self = .round
+        case let .custom(font, name):
+            self = .custom(font, name)
         }
     }
     
@@ -73,6 +76,8 @@ enum DrawingTextFont: Equatable, CaseIterable {
             return .monospaced
         case .round:
             return .round
+        case let .custom(font, name):
+            return .custom(font, name)
         }
     }
     
@@ -86,6 +91,8 @@ enum DrawingTextFont: Equatable, CaseIterable {
             return "Monospaced"
         case .round:
             return "Rounded"
+        case let .custom(_, name):
+            return name
         }
     }
     
@@ -99,6 +106,8 @@ enum DrawingTextFont: Equatable, CaseIterable {
             return Font.with(size: 13.0, design: .monospace, weight: .semibold)
         case .round:
             return Font.with(size: 13.0, design: .round, weight: .semibold)
+        case let .custom(font, _):
+            return UIFont(name: font, size: 13.0) ?? Font.semibold(13.0)
         }
     }
 }
@@ -355,7 +364,10 @@ final class TextFontComponent: Component {
             
             contentWidth += 36.0
             
+            var validIds = Set<DrawingTextFont>()
             for value in component.values {
+                validIds.insert(value)
+                
                 contentWidth += 12.0
                 let button: HighlightableButton
                 if let current = self.buttons[value] {
@@ -386,6 +398,13 @@ final class TextFontComponent: Component {
                 contentWidth += button.frame.width
             }
             contentWidth += 12.0
+            
+            for (font, button) in self.buttons {
+                if !validIds.contains(font) {
+                    button.removeFromSuperview()
+                    self.buttons[font] = nil
+                }
+            }
             
             if self.scrollView.contentSize.width != contentWidth {
                 self.scrollView.contentSize = CGSize(width: contentWidth, height: 30.0)
@@ -590,6 +609,16 @@ final class TextSettingsComponent: CombinedComponent {
             if component.color != nil {
                 fontAvailableWidth -= 72.0
             }
+            
+            var fonts: [DrawingTextFont] = [
+                .sanFrancisco,
+                .newYork,
+                .monospaced,
+                .round
+            ]
+            if case .custom = component.font {
+                fonts.insert(component.font, at: 0)
+            }
                         
             let font = font.update(
                 component: TextFontComponent(
@@ -617,7 +646,7 @@ final class TextSettingsComponent: CombinedComponent {
                             }
                         ).minSize(CGSize(width: 44.0, height: 44.0))
                     ),
-                    values: DrawingTextFont.allCases,
+                    values: fonts,
                     selectedValue: component.font,
                     tag: component.tag,
                     updated: { font in

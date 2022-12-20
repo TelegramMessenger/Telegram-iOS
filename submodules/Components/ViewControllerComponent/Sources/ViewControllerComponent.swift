@@ -27,6 +27,7 @@ open class ViewControllerComponentContainer: ViewController {
         public let inputHeight: CGFloat
         public let metrics: LayoutMetrics
         public let deviceMetrics: DeviceMetrics
+        public let orientation: UIInterfaceOrientation?
         public let isVisible: Bool
         public let theme: PresentationTheme
         public let strings: PresentationStrings
@@ -40,6 +41,7 @@ open class ViewControllerComponentContainer: ViewController {
             inputHeight: CGFloat,
             metrics: LayoutMetrics,
             deviceMetrics: DeviceMetrics,
+            orientation: UIInterfaceOrientation? = nil,
             isVisible: Bool,
             theme: PresentationTheme,
             strings: PresentationStrings,
@@ -52,6 +54,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.inputHeight = inputHeight
             self.metrics = metrics
             self.deviceMetrics = deviceMetrics
+            self.orientation = orientation
             self.isVisible = isVisible
             self.theme = theme
             self.strings = strings
@@ -80,6 +83,9 @@ open class ViewControllerComponentContainer: ViewController {
                 return false
             }
             if lhs.deviceMetrics != rhs.deviceMetrics {
+                return false
+            }
+            if lhs.orientation != rhs.orientation {
                 return false
             }
             if lhs.isVisible != rhs.isVisible {

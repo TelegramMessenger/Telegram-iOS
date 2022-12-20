@@ -19,9 +19,9 @@
 
 @property (nonatomic, readonly) bool hasAnimation;
 
-+ (instancetype)dataWithDrawingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage hasAnimation:(bool)hasAnimation;
++ (instancetype)dataWithDrawingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage hasAnimation:(bool)hasAnimation stickers:(NSArray *)stickers;
 
-+ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entitiesData:(NSData *)entitiesData hasAnimation:(bool)hasAnimation;
++ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entitiesData:(NSData *)entitiesData hasAnimation:(bool)hasAnimation stickers:(NSArray *)stickers;
 
 + (instancetype)dataWithPaintingImagePath:(NSString *)imagePath;
 
