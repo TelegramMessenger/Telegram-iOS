@@ -6,53 +6,25 @@ protocol DrawingRenderLayer: CALayer {
     
 }
 
-final class MarkerTool: DrawingElement {
-    let uuid = UUID()
+final class MarkerTool: DrawingElement, Codable {
+    let uuid: UUID
     
     let drawingSize: CGSize
     let color: DrawingColor
-    let lineWidth: CGFloat
-    let arrow: Bool
     
     let renderLineWidth: CGFloat
-    var renderPath = UIBezierPath()
-    var renderAngle: CGFloat = 0.0
     
     var translation = CGPoint()
     
-    var bounds: CGRect {
-        return self.renderPath.bounds.offsetBy(dx: self.translation.x, dy: self.translation.y)
-    }
+    var points: [CGPoint] = []
     
-    var _points: [Polyline.Point] = []
-    var points: [Polyline.Point] {
-        return self._points.map { $0.offsetBy(self.translation) }
-    }
-
     weak var metalView: DrawingMetalView?
-    
-    func containsPoint(_ point: CGPoint) -> Bool {
-        return self.renderPath.contains(point.offsetBy(CGPoint(x: -self.translation.x, y: -self.translation.y)))
-    }
-    
-    func hasPointsInsidePath(_ path: UIBezierPath) -> Bool {
-        let pathBoundingBox = path.bounds
-        if self.bounds.intersects(pathBoundingBox) {
-            for point in self._points {
-                if path.contains(point.location.offsetBy(self.translation)) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-    
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
+        
+    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat) {
+        self.uuid = UUID()
         self.drawingSize = drawingSize
         self.color = color
-        self.lineWidth = lineWidth
-        self.arrow = arrow
-                
+        
         let minLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.01)
         let maxLineWidth = max(20.0, max(drawingSize.width, drawingSize.height) * 0.09)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
@@ -60,43 +32,64 @@ final class MarkerTool: DrawingElement {
         self.renderLineWidth = lineWidth
     }
     
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawingSize
+        case color
+        case renderLineWidth
+        case points
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+        self.renderLineWidth = try container.decode(CGFloat.self, forKey: .renderLineWidth)
+        self.points = try container.decode([CGPoint].self, forKey: .points)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.renderLineWidth, forKey: .renderLineWidth)
+        try container.encode(self.points, forKey: .points)
+    }
+    
     func setupRenderLayer() -> DrawingRenderLayer? {
         return nil
     }
     
-    private var hot = false
+    private var didSetup = false
     func updatePath(_ path: DrawingGesturePipeline.DrawingResult, state: DrawingGesturePipeline.DrawingGestureState) {
         guard case let .location(point) = path else {
             return
         }
              
-        if self._points.isEmpty {
-            self.renderPath.move(to: point.location)
-        } else {
-            self.renderPath.addLine(to: point.location)
-        }
-        self._points.append(point)
+        self.points.append(point.location)
         
-        self.hot = true
+        self.didSetup = true
         self.metalView?.updated(point, state: state, brush: .marker, color: self.color, size: self.renderLineWidth)
     }
     
     func draw(in context: CGContext, size: CGSize) {
-        guard !self._points.isEmpty else {
+        guard !self.points.isEmpty else {
             return
         }
         context.saveGState()
         
         context.translateBy(x: self.translation.x, y: self.translation.y)
         
-        let hot = self.hot
-        if hot {
-            self.hot = false
+        let didSetup = self.didSetup
+        if didSetup {
+            self.didSetup = false
         } else {
-            self.metalView?.setup(self._points.map { $0.location }, brush: .marker, color: self.color, size: self.renderLineWidth)
+            self.metalView?.setup(self.points, brush: .marker, color: self.color, size: self.renderLineWidth)
         }
         self.metalView?.drawInContext(context)
-        if !hot {
+        if !didSetup {
             self.metalView?.clear()
         }
         
@@ -104,7 +97,7 @@ final class MarkerTool: DrawingElement {
     }
 }
     
-final class NeonTool: DrawingElement {
+final class NeonTool: DrawingElement, Codable {
     class RenderLayer: SimpleLayer, DrawingRenderLayer {
         var lineWidth: CGFloat = 0.0
         
@@ -132,7 +125,6 @@ final class NeonTool: DrawingElement {
             self.shadowLayer.shadowOpacity = 1.0
             self.shadowLayer.shadowOffset = .zero
 
-          
             self.borderLayer.frame = bounds
             self.borderLayer.contentsScale = 1.0
             self.borderLayer.lineWidth = strokeWidth
@@ -141,7 +133,6 @@ final class NeonTool: DrawingElement {
             self.borderLayer.fillColor = UIColor.clear.cgColor
             self.borderLayer.strokeColor = UIColor.white.mixedWith(color.toUIColor(), alpha: 0.25).cgColor
             
-          
             self.fillLayer.frame = bounds
             self.fillLayer.contentsScale = 1.0
             self.fillLayer.fillColor = UIColor.white.cgColor
@@ -158,16 +149,11 @@ final class NeonTool: DrawingElement {
         }
     }
     
-    let uuid = UUID()
+    let uuid: UUID
     
     let drawingSize: CGSize
     let color: DrawingColor
-    let lineWidth: CGFloat
-    let arrow: Bool
-    
-    var path: BezierPath?
-    var boundingBox: CGRect?
-    
+        
     var renderPath: CGPath?
     let renderStrokeWidth: CGFloat
     let renderShadowRadius: CGFloat
@@ -176,70 +162,11 @@ final class NeonTool: DrawingElement {
     var translation = CGPoint()
     
     private var currentRenderLayer: DrawingRenderLayer?
-    
-    var bounds: CGRect {
-        return self.path?.path.bounds.offsetBy(dx: self.translation.x, dy: self.translation.y) ?? .zero
-    }
-    
-    var points: [Polyline.Point] {
-        guard let linePath = self.path else {
-            return []
-        }
-        var points: [Polyline.Point] = []
-        for element in linePath.elements {
-            if case .moveTo = element.type {
-                points.append(element.startPoint.offsetBy(self.translation))
-            } else {
-                points.append(element.endPoint.offsetBy(self.translation))
-            }
-        }
-        return points
-    }
-    
-    func containsPoint(_ point: CGPoint) -> Bool {
-        return self.renderPath?.contains(point.offsetBy(CGPoint(x: -self.translation.x, y: -self.translation.y))) ?? false
-    }
-    
-    func hasPointsInsidePath(_ path: UIBezierPath) -> Bool {
-        if let linePath = self.path {
-            let pathBoundingBox = path.bounds
-            if self.bounds.intersects(pathBoundingBox) {
-                for element in linePath.elements {
-                    if case .moveTo = element.type {
-                        if path.contains(element.startPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                    } else {
-                        if path.contains(element.startPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                        if path.contains(element.endPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                        if case .cubicCurve = element.type {
-                            if path.contains(element.controlPoints[0].offsetBy(self.translation)) {
-                                return true
-                            }
-                            if path.contains(element.controlPoints[1].offsetBy(self.translation)) {
-                                return true
-                            }
-                        } else if case .quadCurve = element.type {
-                            if path.contains(element.controlPoints[0].offsetBy(self.translation)) {
-                                return true
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false
-    }
-    
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
+        
+    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat) {
+        self.uuid = UUID()
         self.drawingSize = drawingSize
         self.color = color
-        self.lineWidth = lineWidth
-        self.arrow = arrow
         
         let strokeWidth = min(drawingSize.width, drawingSize.height) * 0.008
         let shadowRadius = min(drawingSize.width, drawingSize.height) * 0.03
@@ -251,6 +178,37 @@ final class NeonTool: DrawingElement {
         self.renderStrokeWidth = strokeWidth
         self.renderShadowRadius = shadowRadius
         self.renderLineWidth = lineWidth
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawingSize
+        case color
+        case renderStrokeWidth
+        case renderShadowRadius
+        case renderLineWidth
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+        self.renderStrokeWidth = try container.decode(CGFloat.self, forKey: .renderStrokeWidth)
+        self.renderShadowRadius = try container.decode(CGFloat.self, forKey: .renderShadowRadius)
+        self.renderLineWidth = try container.decode(CGFloat.self, forKey: .renderLineWidth)
+//        self.points = try container.decode([CGPoint].self, forKey: .points)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.renderStrokeWidth, forKey: .renderStrokeWidth)
+        try container.encode(self.renderShadowRadius, forKey: .renderShadowRadius)
+        try container.encode(self.renderLineWidth, forKey: .renderLineWidth)
+//        try container.encode(self.points, forKey: .points)
     }
     
     func setupRenderLayer() -> DrawingRenderLayer? {
@@ -265,8 +223,6 @@ final class NeonTool: DrawingElement {
             return
         }
         
-        self.path = bezierPath
-
         let cgPath = bezierPath.path.cgPath.copy(strokingWithWidth: self.renderLineWidth, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
         self.renderPath = cgPath
         
@@ -310,124 +266,40 @@ final class NeonTool: DrawingElement {
     }
 }
 
-final class PencilTool: DrawingElement {
-    let uuid = UUID()
-    
-    let drawingSize: CGSize
-    let color: DrawingColor
-    let lineWidth: CGFloat
-    let arrow: Bool
-    
-    var translation = CGPoint()
-    
-    let renderLineWidth: CGFloat
-    var renderPath = UIBezierPath()
-    var renderAngle: CGFloat = 0.0
-    
-    var bounds: CGRect {
-        return self.renderPath.bounds.offsetBy(dx: self.translation.x, dy: self.translation.y)
-    }
-    
-    var _points: [Polyline.Point] = []
-    var points: [Polyline.Point] {
-        return self._points.map { $0.offsetBy(self.translation) }
-    }
-    
-    weak var metalView: DrawingMetalView?
-    
-    func containsPoint(_ point: CGPoint) -> Bool {
-        return self.renderPath.contains(point.offsetBy(dx: -self.translation.x, dy: -self.translation.y))
-    }
-    
-    func hasPointsInsidePath(_ path: UIBezierPath) -> Bool {
-        let pathBoundingBox = path.bounds
-        if self.bounds.intersects(pathBoundingBox) {
-            for point in self._points {
-                if path.contains(point.location.offsetBy(self.translation)) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-    
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
-        self.drawingSize = drawingSize
-        self.color = color
-        self.lineWidth = lineWidth
-        self.arrow = arrow
-                
-        let minLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.01)
-        let maxLineWidth = max(20.0, max(drawingSize.width, drawingSize.height) * 0.09)
-        let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
-        
-        self.renderLineWidth = lineWidth
-    }
-    
-    func setupRenderLayer() -> DrawingRenderLayer? {
-        return nil
-    }
-    
-    private var hot = false
-    func updatePath(_ path: DrawingGesturePipeline.DrawingResult, state: DrawingGesturePipeline.DrawingGestureState) {
-        guard case let .location(point) = path else {
-            return
-        }
-        
-        if self._points.isEmpty {
-            self.renderPath.move(to: point.location)
-        } else {
-            self.renderPath.addLine(to: point.location)
-        }
-        self._points.append(point)
-        
-        self.hot = true
-        self.metalView?.updated(point, state: state, brush: .pencil, color: self.color, size: self.renderLineWidth)
-    }
-    
-    func draw(in context: CGContext, size: CGSize) {
-        guard !self._points.isEmpty else {
-            return
-        }
-        context.saveGState()
-        
-        context.translateBy(x: self.translation.x, y: self.translation.y)
-        
-        let hot = self.hot
-        if hot {
-            self.hot = false
-        } else {
-            self.metalView?.setup(self._points.map { $0.location }, brush: .pencil, color: self.color, size: self.renderLineWidth)
-        }
-        self.metalView?.drawInContext(context)
-        if !hot {
-            self.metalView?.clear()
-        }
-        
-        context.restoreGState()
-    }
-}
-
-final class FillTool: DrawingElement {
-    let uuid = UUID()
+final class FillTool: DrawingElement, Codable {
+    let uuid: UUID
 
     let drawingSize: CGSize
     let color: DrawingColor
-    let renderLineWidth: CGFloat = 0.0
-    
-    var bounds: CGRect {
-        return .zero
-    }
-    
-    var points: [Polyline.Point] {
-        return []
-    }
     
     var translation = CGPoint()
     
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
+    required init(drawingSize: CGSize, color: DrawingColor) {
+        self.uuid = UUID()
         self.drawingSize = drawingSize
         self.color = color
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawingSize
+        case color
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+//        self.points = try container.decode([CGPoint].self, forKey: .points)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.color, forKey: .color)
+//        try container.encode(self.points, forKey: .points)
     }
     
     func setupRenderLayer() -> DrawingRenderLayer? {
@@ -458,14 +330,14 @@ final class FillTool: DrawingElement {
 }
 
 
-final class BlurTool: DrawingElement {
+final class BlurTool: DrawingElement, Codable {
     class RenderLayer: SimpleLayer, DrawingRenderLayer {
         var lineWidth: CGFloat = 0.0
         
         let blurLayer = SimpleLayer()
         let fillLayer = SimpleShapeLayer()
         
-        func setup(size: CGSize, color: DrawingColor, lineWidth: CGFloat, image: UIImage?) {
+        func setup(size: CGSize, lineWidth: CGFloat, image: UIImage?) {
             self.contentsScale = 1.0
             self.lineWidth = lineWidth
                         
@@ -497,15 +369,11 @@ final class BlurTool: DrawingElement {
     
     var getFullImage: () -> UIImage? = { return nil }
     
-    let uuid = UUID()
+    let uuid: UUID
     
     let drawingSize: CGSize
-    let color: DrawingColor
-    let lineWidth: CGFloat
-    let arrow: Bool
     
     var path: BezierPath?
-    var boundingBox: CGRect?
     
     var renderPath: CGPath?
     let renderLineWidth: CGFloat
@@ -514,69 +382,9 @@ final class BlurTool: DrawingElement {
     
     private var currentRenderLayer: DrawingRenderLayer?
     
-    var bounds: CGRect {
-        return self.path?.path.bounds.offsetBy(dx: self.translation.x, dy: self.translation.y) ?? .zero
-    }
-    
-    var points: [Polyline.Point] {
-        guard let linePath = self.path else {
-            return []
-        }
-        var points: [Polyline.Point] = []
-        for element in linePath.elements {
-            if case .moveTo = element.type {
-                points.append(element.startPoint.offsetBy(self.translation))
-            } else {
-                points.append(element.endPoint.offsetBy(self.translation))
-            }
-        }
-        return points
-    }
-    
-    func containsPoint(_ point: CGPoint) -> Bool {
-        return self.renderPath?.contains(point.offsetBy(CGPoint(x: -self.translation.x, y: -self.translation.y))) ?? false
-    }
-    
-    func hasPointsInsidePath(_ path: UIBezierPath) -> Bool {
-        if let linePath = self.path {
-            let pathBoundingBox = path.bounds
-            if self.bounds.intersects(pathBoundingBox) {
-                for element in linePath.elements {
-                    if case .moveTo = element.type {
-                        if path.contains(element.startPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                    } else {
-                        if path.contains(element.startPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                        if path.contains(element.endPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                        if case .cubicCurve = element.type {
-                            if path.contains(element.controlPoints[0].offsetBy(self.translation)) {
-                                return true
-                            }
-                            if path.contains(element.controlPoints[1].offsetBy(self.translation)) {
-                                return true
-                            }
-                        } else if case .quadCurve = element.type {
-                            if path.contains(element.controlPoints[0].offsetBy(self.translation)) {
-                                return true
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false
-    }
-    
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
+    required init(drawingSize: CGSize, lineWidth: CGFloat) {
+        self.uuid = UUID()
         self.drawingSize = drawingSize
-        self.color = color
-        self.lineWidth = lineWidth
-        self.arrow = arrow
             
         let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.003)
         let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.09)
@@ -585,9 +393,31 @@ final class BlurTool: DrawingElement {
         self.renderLineWidth = lineWidth
     }
     
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawingSize
+        case renderLineWidth
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.renderLineWidth = try container.decode(CGFloat.self, forKey: .renderLineWidth)
+//        self.points = try container.decode([CGPoint].self, forKey: .points)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.renderLineWidth, forKey: .renderLineWidth)
+//        try container.encode(self.points, forKey: .points)
+    }
+    
     func setupRenderLayer() -> DrawingRenderLayer? {
         let layer = RenderLayer()
-        layer.setup(size: self.drawingSize, color: self.color, lineWidth: self.renderLineWidth, image: self.getFullImage())
+        layer.setup(size: self.drawingSize, lineWidth: self.renderLineWidth, image: self.getFullImage())
         self.currentRenderLayer = layer
         return layer
     }
@@ -621,14 +451,14 @@ final class BlurTool: DrawingElement {
 }
 
 
-final class EraserTool: DrawingElement {
+final class EraserTool: DrawingElement, Codable {
     class RenderLayer: SimpleLayer, DrawingRenderLayer {
         var lineWidth: CGFloat = 0.0
         
         let blurLayer = SimpleLayer()
         let fillLayer = SimpleShapeLayer()
         
-        func setup(size: CGSize, color: DrawingColor, lineWidth: CGFloat, image: UIImage?) {
+        func setup(size: CGSize, lineWidth: CGFloat, image: UIImage?) {
             self.contentsScale = 1.0
             self.lineWidth = lineWidth
                         
@@ -661,15 +491,10 @@ final class EraserTool: DrawingElement {
     
     var getFullImage: () -> UIImage? = { return nil }
     
-    let uuid = UUID()
-    
+    let uuid: UUID
     let drawingSize: CGSize
-    let color: DrawingColor
-    let lineWidth: CGFloat
-    let arrow: Bool
     
     var path: BezierPath?
-    var boundingBox: CGRect?
     
     var renderPath: CGPath?
     let renderLineWidth: CGFloat
@@ -678,70 +503,9 @@ final class EraserTool: DrawingElement {
     
     private var currentRenderLayer: DrawingRenderLayer?
     
-    var bounds: CGRect {
-        return self.path?.path.bounds.offsetBy(dx: self.translation.x, dy: self.translation.y) ?? .zero
-    }
-    
-    var points: [Polyline.Point] {
-        guard let linePath = self.path else {
-            return []
-        }
-        var points: [Polyline.Point] = []
-        for element in linePath.elements {
-            if case .moveTo = element.type {
-                points.append(element.startPoint.offsetBy(self.translation))
-            } else {
-                points.append(element.endPoint.offsetBy(self.translation))
-            }
-        }
-        return points
-    }
-    
-    func containsPoint(_ point: CGPoint) -> Bool {
-        return false
-//        return self.renderPath?.contains(point.offsetBy(CGPoint(x: -self.translation.x, y: -self.translation.y))) ?? false
-    }
-    
-    func hasPointsInsidePath(_ path: UIBezierPath) -> Bool {
-        if let linePath = self.path {
-            let pathBoundingBox = path.bounds
-            if self.bounds.intersects(pathBoundingBox) {
-                for element in linePath.elements {
-                    if case .moveTo = element.type {
-                        if path.contains(element.startPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                    } else {
-                        if path.contains(element.startPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                        if path.contains(element.endPoint.location.offsetBy(self.translation)) {
-                            return true
-                        }
-                        if case .cubicCurve = element.type {
-                            if path.contains(element.controlPoints[0].offsetBy(self.translation)) {
-                                return true
-                            }
-                            if path.contains(element.controlPoints[1].offsetBy(self.translation)) {
-                                return true
-                            }
-                        } else if case .quadCurve = element.type {
-                            if path.contains(element.controlPoints[0].offsetBy(self.translation)) {
-                                return true
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false
-    }
-    
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
+    required init(drawingSize: CGSize, lineWidth: CGFloat) {
+        self.uuid = UUID()
         self.drawingSize = drawingSize
-        self.color = color
-        self.lineWidth = lineWidth
-        self.arrow = arrow
             
         let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.003)
         let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.09)
@@ -750,9 +514,31 @@ final class EraserTool: DrawingElement {
         self.renderLineWidth = lineWidth
     }
     
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawingSize
+        case renderLineWidth
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.renderLineWidth = try container.decode(CGFloat.self, forKey: .renderLineWidth)
+//        self.points = try container.decode([CGPoint].self, forKey: .points)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.renderLineWidth, forKey: .renderLineWidth)
+//        try container.encode(self.points, forKey: .points)
+    }
+    
     func setupRenderLayer() -> DrawingRenderLayer? {
         let layer = RenderLayer()
-        layer.setup(size: self.drawingSize, color: self.color, lineWidth: self.renderLineWidth, image: self.getFullImage())
+        layer.setup(size: self.drawingSize, lineWidth: self.renderLineWidth, image: self.getFullImage())
         self.currentRenderLayer = layer
         return layer
     }
@@ -782,5 +568,108 @@ final class EraserTool: DrawingElement {
             renderLayer = self.setupRenderLayer()
         }
         renderLayer?.render(in: context)
+    }
+}
+
+enum CodableDrawingElement {
+    case pen(PenTool)
+    case marker(MarkerTool)
+    case neon(NeonTool)
+    case eraser(EraserTool)
+    case blur(BlurTool)
+    case fill(FillTool)
+
+    init?(element: DrawingElement) {
+        if let element = element as? PenTool {
+            self = .pen(element)
+        } else if let element = element as? MarkerTool {
+            self = .marker(element)
+        } else if let element = element as? NeonTool {
+            self = .neon(element)
+        } else if let element = element as? EraserTool {
+            self = .eraser(element)
+        } else if let element = element as? BlurTool {
+            self = .blur(element)
+        } else if let element = element as? FillTool {
+            self = .fill(element)
+        } else {
+            return nil
+        }
+    }
+
+    var entity: DrawingElement {
+        switch self {
+        case let .pen(element):
+            return element
+        case let .marker(element):
+            return element
+        case let .neon(element):
+            return element
+        case let .eraser(element):
+            return element
+        case let .blur(element):
+            return element
+        case let .fill(element):
+            return element
+        }
+    }
+}
+
+extension CodableDrawingElement: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case element
+    }
+
+    private enum ElementType: Int, Codable {
+        case pen
+        case marker
+        case neon
+        case eraser
+        case blur
+        case fill
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(ElementType.self, forKey: .type)
+        switch type {
+        case .pen:
+            self = .pen(try container.decode(PenTool.self, forKey: .element))
+        case .marker:
+            self = .marker(try container.decode(MarkerTool.self, forKey: .element))
+        case .neon:
+            self = .neon(try container.decode(NeonTool.self, forKey: .element))
+        case .eraser:
+            self = .eraser(try container.decode(EraserTool.self, forKey: .element))
+        case .blur:
+            self = .blur(try container.decode(BlurTool.self, forKey: .element))
+        case .fill:
+            self = .fill(try container.decode(FillTool.self, forKey: .element))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .pen(payload):
+            try container.encode(ElementType.pen, forKey: .type)
+            try container.encode(payload, forKey: .element)
+        case let .marker(payload):
+            try container.encode(ElementType.marker, forKey: .type)
+            try container.encode(payload, forKey: .element)
+        case let .neon(payload):
+            try container.encode(ElementType.neon, forKey: .type)
+            try container.encode(payload, forKey: .element)
+        case let .eraser(payload):
+            try container.encode(ElementType.eraser, forKey: .type)
+            try container.encode(payload, forKey: .element)
+        case let .blur(payload):
+            try container.encode(ElementType.blur, forKey: .type)
+            try container.encode(payload, forKey: .element)
+        case let .fill(payload):
+            try container.encode(ElementType.fill, forKey: .type)
+            try container.encode(payload, forKey: .element)
+        }
     }
 }

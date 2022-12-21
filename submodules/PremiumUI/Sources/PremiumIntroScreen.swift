@@ -1595,7 +1595,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             let isPremium = state?.isPremium == true
                             
                             var dismissImpl: (() -> Void)?
-                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "–").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
                             controller.action = { [weak state] in
                                 dismissImpl?()
                                 if state?.isPremium == false {
@@ -1610,23 +1610,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 controller?.dismiss(animated: true, completion: nil)
                             }
                             updateIsFocused(true)
-                            
-//                            let controller = PremiumDemoScreen(
-//                                context: accountContext,
-//                                subject: demoSubject,
-//                                source: .intro(state?.price),
-//                                order: state?.configuration.perks,
-//                                action: {
-//                                    if state?.isPremium == false {
-//                                        buy()
-//                                    }
-//                                }
-//                            )
-//                            controller.disposed = {
-//                                updateIsFocused(false)
-//                            }
-//                            present(controller)
-//                            updateIsFocused(true)
                             
                             addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
                         }

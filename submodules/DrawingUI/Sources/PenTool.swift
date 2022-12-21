@@ -2,30 +2,56 @@ import Foundation
 import UIKit
 import Display
 
-final class PenTool: DrawingElement {
+final class PenTool: DrawingElement, Codable {    
     class RenderLayer: SimpleLayer, DrawingRenderLayer {
+        private weak var element: PenTool?
+        
+        private var segmentsCount = 0
+        private var velocity: CGFloat?
+        private var previousRect: CGRect?
+        
+        var displayLink: ConstantDisplayLinkAnimator?
         func setup(size: CGSize) {
             self.shouldRasterize = true
             self.contentsScale = 1.0
             
             let bounds = CGRect(origin: .zero, size: size)
             self.frame = bounds
+            
+            self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+                if let strongSelf = self {
+                    if let element = strongSelf.element, strongSelf.segmentsCount < element.segments.count, let velocity = strongSelf.velocity {
+                        let delta = max(9, Int(velocity / 100.0))
+                        let start = strongSelf.segmentsCount
+                        strongSelf.segmentsCount = min(strongSelf.segmentsCount + delta, element.segments.count)
+                        
+                        let rect = element.boundingRect(from: start, to: strongSelf.segmentsCount)
+                        strongSelf.setNeedsDisplay(rect.insetBy(dx: -80.0, dy: -80.0))
+                    }
+                }
+            })
+            self.displayLink?.frameInterval = 1
+            self.displayLink?.isPaused = false
         }
         
-        
-        private var color: UIColor?
-        private var line: StrokeLine?
-        fileprivate func draw(line: StrokeLine, color: UIColor, rect: CGRect) {
-            self.line = line
-            self.color = color
-            self.setNeedsDisplay(rect.insetBy(dx: -50.0, dy: -50.0))
+
+        fileprivate func draw(element: PenTool, velocity: CGFloat, rect: CGRect) {
+            self.element = element
+            
+            self.previousRect = rect
+            if let previous = self.velocity {
+                self.velocity = velocity * 0.4 + previous * 0.6
+            } else {
+                self.velocity = velocity
+            }
+            self.setNeedsDisplay(rect.insetBy(dx: -80.0, dy: -80.0))
         }
         
         func animateArrowPaths(leftArrowPath: UIBezierPath, rightArrowPath: UIBezierPath, lineWidth: CGFloat, completion: @escaping () -> Void) {
             let leftArrowShape = CAShapeLayer()
             leftArrowShape.path = leftArrowPath.cgPath
             leftArrowShape.lineWidth = lineWidth
-            leftArrowShape.strokeColor = self.color?.cgColor
+            leftArrowShape.strokeColor = self.element?.color.toCGColor()
             leftArrowShape.lineCap = .round
             leftArrowShape.frame = self.bounds
             self.addSublayer(leftArrowShape)
@@ -33,7 +59,7 @@ final class PenTool: DrawingElement {
             let rightArrowShape = CAShapeLayer()
             rightArrowShape.path = rightArrowPath.cgPath
             rightArrowShape.lineWidth = lineWidth
-            rightArrowShape.strokeColor = self.color?.cgColor
+            rightArrowShape.strokeColor = self.element?.color.toCGColor()
             rightArrowShape.lineCap = .round
             rightArrowShape.frame = self.bounds
             self.addSublayer(rightArrowShape)
@@ -48,84 +74,79 @@ final class PenTool: DrawingElement {
         }
         
         override func draw(in ctx: CGContext) {
-            self.line?.drawInContext(ctx)
+            self.element?.drawSegments(in: ctx, upTo: self.segmentsCount)
         }
     }
     
-    let uuid = UUID()
-    
+    let uuid: UUID
     let drawingSize: CGSize
     let color: DrawingColor
-    let lineWidth: CGFloat
-    let arrow: Bool
-    
-    var path: Polyline?
-    var boundingBox: CGRect?
-    
-    private var renderLine: StrokeLine
     let renderLineWidth: CGFloat
+    let renderMinLineWidth: CGFloat
+    
+    let hasArrow: Bool
     let renderArrowLength: CGFloat
     let renderArrowLineWidth: CGFloat
-    
-    var didSetupArrow = false
+        
     var arrowLeftPath: UIBezierPath?
-    var arrowLeftPoint: CGPoint?
     var arrowRightPath: UIBezierPath?
-    var arrowRightPoint: CGPoint?
     
-    var translation = CGPoint()
+    var translation: CGPoint = .zero
     
-    private var currentRenderLayer: DrawingRenderLayer?
+    private weak var currentRenderLayer: DrawingRenderLayer?
     
-    var bounds: CGRect {
-        return self.path?.bounds.offsetBy(dx: self.translation.x, dy: self.translation.y) ?? .zero
-    }
-    
-    var points: [Polyline.Point] {
-        guard let linePath = self.path else {
-            return []
-        }
-        var points: [Polyline.Point] = []
-        for point in linePath.points {
-            points.append(point.offsetBy(self.translation))
-        }
-        return points
-    }
-    
-    func containsPoint(_ point: CGPoint) -> Bool {
-        return false
-        //        return self.renderPath?.contains(point.offsetBy(CGPoint(x: -self.translation.x, y: -self.translation.y))) ?? false
-    }
-    
-    func hasPointsInsidePath(_ path: UIBezierPath) -> Bool {
-        if let linePath = self.path {
-            let pathBoundingBox = path.bounds
-            if self.bounds.intersects(pathBoundingBox) {
-                for point in linePath.points {
-                    if path.contains(point.location.offsetBy(self.translation)) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
-    
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, arrow: Bool) {
+    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, hasArrow: Bool) {
+        self.uuid = UUID()
         self.drawingSize = drawingSize
         self.color = color
-        self.lineWidth = lineWidth
-        self.arrow = arrow
+        self.hasArrow = hasArrow
         
         let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.002)
         let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.07)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderLineWidth = lineWidth
+        self.renderMinLineWidth = minLineWidth + (lineWidth - minLineWidth) * 0.3
         self.renderArrowLength = lineWidth * 3.0
         self.renderArrowLineWidth = lineWidth * 0.8
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawingSize
+        case color
+        case hasArrow
         
-        self.renderLine = StrokeLine(color: color.toUIColor(), minLineWidth: minLineWidth + (lineWidth - minLineWidth) * 0.3, lineWidth: lineWidth)
+        case renderLineWidth
+        case renderMinLineWidth
+        case renderArrowLength
+        case renderArrowLineWidth
+        
+        case renderSegments
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+        self.hasArrow = try container.decode(Bool.self, forKey: .hasArrow)
+        self.renderLineWidth = try container.decode(CGFloat.self, forKey: .renderLineWidth)
+        self.renderMinLineWidth = try container.decode(CGFloat.self, forKey: .renderMinLineWidth)
+        self.renderArrowLength = try container.decode(CGFloat.self, forKey: .renderArrowLength)
+        self.renderArrowLineWidth = try container.decode(CGFloat.self, forKey: .renderArrowLineWidth)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.hasArrow, forKey: .hasArrow)
+        try container.encode(self.renderLineWidth, forKey: .renderLineWidth)
+        try container.encode(self.renderMinLineWidth, forKey: .renderMinLineWidth)
+        try container.encode(self.renderArrowLength, forKey: .renderArrowLength)
+        try container.encode(self.renderArrowLineWidth, forKey: .renderArrowLineWidth)
     }
     
     func finishArrow(_ completion: @escaping () -> Void) {
@@ -150,70 +171,78 @@ final class PenTool: DrawingElement {
         guard case let .polyline(line) = path, let point = line.points.last else {
             return
         }
-        self.path = line
-        
+    
         let filterDistance: CGFloat
-        if point.velocity > 1200 {
+        if point.velocity > 1200.0 {
             filterDistance = 75.0
         } else {
             filterDistance = 35.0
         }
         
-        if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.renderLine.ready {
+        if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.segments.count > 0 {
             return
         }
         self.previousPoint = point.location
         
-        let rect = self.renderLine.draw(at: point)
-        if let currentRenderLayer = self.currentRenderLayer as? RenderLayer {
-            currentRenderLayer.draw(line: self.renderLine, color: self.color.toUIColor(), rect: rect)
+        var velocity = point.velocity
+        if velocity.isZero {
+            velocity = 600.0
+        }
+        
+        var effectiveRenderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth + 1.0 - (velocity / 180.0), self.renderLineWidth))
+        if let previousRenderLineWidth = self.previousRenderLineWidth {
+            effectiveRenderLineWidth = effectiveRenderLineWidth * 0.2 + previousRenderLineWidth * 0.8
+        }
+        self.previousRenderLineWidth = effectiveRenderLineWidth
+        
+        let rect = append(point: Point(position: point.location, width: effectiveRenderLineWidth))
+        
+        if let currentRenderLayer = self.currentRenderLayer as? RenderLayer, let rect = rect {
+            currentRenderLayer.draw(element: self, velocity: point.velocity, rect: rect)
         }
         
         if state == .ended {
-            if self.arrow {
-                let points = self.path?.points ?? []
-                
+            if self.hasArrow {
                 var direction: CGFloat?
-                if points.count > 4 {
-                    let p2 = points[points.count - 1].location
-                    for i in 1 ..< min(points.count - 2, 12) {
-                        let p1 = points[points.count - 1 - i].location
-                        if p1.distance(to: p2) > renderArrowLength * 0.5 {
+                if self.smoothPoints.count > 4 {
+                    let p2 = self.smoothPoints[self.smoothPoints.count - 1].position
+                    for i in 1 ..< min(self.smoothPoints.count - 2, 200) {
+                        let p1 = self.smoothPoints[self.smoothPoints.count - 1 - i].position
+                        if p1.distance(to: p2) > self.renderArrowLength * 0.5 {
                             direction = p2.angle(to: p1)
                             break
                         }
                     }
                 }
                                 
-                if let point = points.last?.location, let direction {
+                if let point = self.smoothPoints.last?.position, let direction {
                     let arrowLeftPath = UIBezierPath()
                     arrowLeftPath.move(to: point)
-                    let leftPoint = point.pointAt(distance: self.renderArrowLength, angle: direction - 0.45)
-                    arrowLeftPath.addLine(to: leftPoint)
+                    arrowLeftPath.addLine(to: point.pointAt(distance: self.renderArrowLength, angle: direction - 0.45))
                     
                     let arrowRightPath = UIBezierPath()
                     arrowRightPath.move(to: point)
-                    let rightPoint = point.pointAt(distance: self.renderArrowLength, angle: direction + 0.45)
-                    arrowRightPath.addLine(to: rightPoint)
+                    arrowRightPath.addLine(to: point.pointAt(distance: self.renderArrowLength, angle: direction + 0.45))
                     
                     self.arrowLeftPath = arrowLeftPath
-                    self.arrowLeftPoint = leftPoint
-                    
                     self.arrowRightPath = arrowRightPath
-                    self.arrowRightPoint = rightPoint
                 }
             }
         }
     }
     
     func draw(in context: CGContext, size: CGSize) {
+        guard !self.segments.isEmpty else {
+            return
+        }
+        
         context.saveGState()
         
         context.translateBy(x: self.translation.x, y: self.translation.y)
         
         context.setShouldAntialias(true)
         
-        self.renderLine.drawInContext(context)
+        self.drawSegments(in: context, upTo: self.segments.count)
         
         if let arrowLeftPath, let arrowRightPath {
             context.setStrokeColor(self.color.toCGColor())
@@ -229,74 +258,37 @@ final class PenTool: DrawingElement {
         
         context.restoreGState()
     }
-}
-
-private class StrokeLine {
-    struct Segment {
+    
+    private struct Segment {
         let a: CGPoint
         let b: CGPoint
         let c: CGPoint
         let d: CGPoint
-        let abWidth: CGFloat
-        let cdWidth: CGFloat
+        let radius1: CGFloat
+        let radius2: CGFloat
+        let rect: CGRect
     }
     
-    struct Point {
+    private struct Point {
         let position: CGPoint
         let width: CGFloat
         
-        init(position: CGPoint, width: CGFloat) {
+        init(
+            position: CGPoint,
+            width: CGFloat
+        ) {
             self.position = position
             self.width = width
         }
     }
     
-    private(set) var points: [Point] = []
+    private var points: [Point] = []
     private var smoothPoints: [Point] = []
     private var segments: [Segment] = []
-
-    private let minLineWidth: CGFloat
-    let lineWidth: CGFloat
-    private var lastWidth: CGFloat?
     
-    var ready = false
+    private var previousRenderLineWidth: CGFloat?
     
-    let color: UIColor
-    
-    init(color: UIColor, minLineWidth: CGFloat, lineWidth: CGFloat) {
-        self.color = color
-        self.minLineWidth = minLineWidth
-        self.lineWidth = lineWidth
-    }
-    
-    func draw(at point: Polyline.Point) -> CGRect {
-        var velocity = point.velocity
-        if velocity.isZero {
-            velocity = 600.0
-        }
-        let width = extractLineWidth(from: velocity)
-        self.lastWidth = width
-        
-        let point = Point(position: point.location, width: width)
-        return appendPoint(point)
-    }
-    
-    func drawInContext(_ context: CGContext) {
-        self.drawSegments(self.segments, inContext: context)
-    }
-    
-    func extractLineWidth(from velocity: CGFloat) -> CGFloat {
-        let minValue = self.minLineWidth
-        let maxValue = self.lineWidth
-        
-        var width = max(minValue, min(maxValue + 1.0 - (velocity / 180.0), maxValue))
-        if let lastWidth = self.lastWidth {
-            width = width * 0.2 + lastWidth * 0.8
-        }
-        return width
-    }
-    
-    func appendPoint(_ point: Point) -> CGRect {
+    private func append(point: Point) -> CGRect? {
         self.points.append(point)
         
         guard self.points.count > 2 else { return .null }
@@ -313,9 +305,11 @@ private class StrokeLine {
         )
         
         let lastOldSmoothPoint = smoothPoints.last
-        smoothPoints.append(contentsOf: newSmoothPoints)
+        self.smoothPoints.append(contentsOf: newSmoothPoints)
         
-        guard smoothPoints.count > 1 else { return .null }
+        guard self.smoothPoints.count > 1 else {
+            return nil
+        }
         
         let newSegments: ([Segment], CGRect) = {
             guard let lastOldSmoothPoint = lastOldSmoothPoint else {
@@ -323,20 +317,18 @@ private class StrokeLine {
             }
             return segments(fromSmoothPoints: [lastOldSmoothPoint] + newSmoothPoints)
         }()
-        segments.append(contentsOf: newSegments.0)
-        
-        self.ready = true
-        
+        self.segments.append(contentsOf: newSegments.0)
+                
         return newSegments.1
     }
     
-    func smoothPoints(fromPoint0 point0: Point, point1: Point, point2: Point) -> [Point] {
-        var smoothPoints = [Point]()
+    private func smoothPoints(fromPoint0 point0: Point, point1: Point, point2: Point) -> [Point] {
+        var smoothPoints: [Point] = []
         
         let midPoint1 = (point0.position + point1.position) * 0.5
         let midPoint2 = (point1.position + point2.position) * 0.5
         
-        let segmentDistance = 3.0
+        let segmentDistance: CGFloat = 3.0
         let distance = midPoint1.distance(to: midPoint2)
         let numberOfSegments = min(128, max(floor(distance / segmentDistance), 32))
         
@@ -354,7 +346,33 @@ private class StrokeLine {
         return smoothPoints
     }
     
-    func segments(fromSmoothPoints smoothPoints: [Point]) -> ([Segment], CGRect) {
+    fileprivate func boundingRect(from: Int, to: Int) -> CGRect {
+        var minX: CGFloat = .greatestFiniteMagnitude
+        var minY: CGFloat = .greatestFiniteMagnitude
+        var maxX: CGFloat = 0.0
+        var maxY: CGFloat = 0.0
+        
+        for i in from ..< to {
+            let segment = self.segments[i]
+            
+            if segment.rect.minX < minX {
+                minX = segment.rect.minX
+            }
+            if segment.rect.maxX > maxX {
+                maxX = segment.rect.maxX
+            }
+            if segment.rect.minY < minY {
+                minY = segment.rect.minY
+            }
+            if segment.rect.maxY > maxY {
+                maxY = segment.rect.maxY
+            }
+        }
+        
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+    
+    private func segments(fromSmoothPoints smoothPoints: [Point]) -> ([Segment], CGRect) {
         var segments: [Segment] = []
         var updateRect = CGRect.null
         for i in 1 ..< smoothPoints.count {
@@ -395,38 +413,44 @@ private class StrokeLine {
             let maxX = max(a.x, b.x, c.x, d.x, ab.x, cd.x)
             let maxY = max(a.y, b.y, c.y, d.y, ab.y, cd.y)
             
-            updateRect = updateRect.union(CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY))
+            let segmentRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+            updateRect = updateRect.union(segmentRect)
             
-            segments.append(Segment(a: a, b: b, c: c, d: d, abWidth: previousWidth, cdWidth: currentWidth))
+            segments.append(Segment(a: a, b: b, c: c, d: d, radius1: previousWidth / 2.0, radius2: currentWidth / 2.0, rect: segmentRect))
         }
         return (segments, updateRect)
     }
     
-    func drawSegments(_ segments: [Segment], inContext context: CGContext) {
-        for segment in segments {
+    private func drawSegments(in context: CGContext, upTo: Int) {
+        context.setStrokeColor(self.color.toCGColor())
+        context.setFillColor(self.color.toCGColor())
+        
+        for i in 0 ..< upTo {
+            let segment = self.segments[i]
             context.beginPath()
-
-            //let color = [UIColor.red, UIColor.green, UIColor.blue, UIColor.yellow].randomElement()!
-            
-            context.setStrokeColor(color.cgColor)
-            context.setFillColor(color.cgColor)
-            
+                        
             context.move(to: segment.b)
             
-            let abStartAngle = atan2(segment.b.y - segment.a.y, segment.b.x - segment.a.x)
+            let abStartAngle = atan2(
+                segment.b.y - segment.a.y,
+                segment.b.x - segment.a.x
+            )
             context.addArc(
                 center: (segment.a + segment.b)/2,
-                radius: segment.abWidth/2,
+                radius: segment.radius1,
                 startAngle: abStartAngle,
                 endAngle: abStartAngle + .pi,
                 clockwise: true
             )
             context.addLine(to: segment.c)
             
-            let cdStartAngle = atan2(segment.c.y - segment.d.y, segment.c.x - segment.d.x)
+            let cdStartAngle = atan2(
+                segment.c.y - segment.d.y,
+                segment.c.x - segment.d.x
+            )
             context.addArc(
                 center: (segment.c + segment.d) / 2,
-                radius: segment.cdWidth/2,
+                radius: segment.radius2,
                 startAngle: cdStartAngle,
                 endAngle: cdStartAngle + .pi,
                 clockwise: true
@@ -438,3 +462,4 @@ private class StrokeLine {
         }
     }
 }
+

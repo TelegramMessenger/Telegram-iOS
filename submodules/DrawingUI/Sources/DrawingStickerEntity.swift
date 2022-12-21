@@ -126,7 +126,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
         super.init(context: context, entity: entity)
         
         self.addSubview(self.imageNode.view)
-        
+                
         self.setup()
     }
     
@@ -340,6 +340,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         self.border.lineCap = .round
         self.border.fillColor = UIColor.clear.cgColor
         self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
+        self.border.shadowColor = UIColor.black.cgColor
+        self.border.shadowRadius = 1.0
+        self.border.shadowOpacity = 0.5
+        self.border.shadowOffset = CGSize()
         self.layer.addSublayer(self.border)
         
         for handle in handles {
@@ -356,6 +360,18 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         panGestureRecognizer.delegate = self
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
+        
+        self.snapTool.onSnapXUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
+        
+        self.snapTool.onSnapYUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToYAxis(snapped)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -376,6 +392,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         return true
     }
     
+    private let snapTool = DrawingEntitySnapTool()
+    
     private var currentHandle: CALayer?
     @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
@@ -383,8 +401,11 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         }
         let location = gestureRecognizer.location(in: self)
         
+
         switch gestureRecognizer.state {
         case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
+            
             if let sublayers = self.layer.sublayers {
                 for layer in sublayers {
                     if layer.frame.contains(location) {
@@ -397,7 +418,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
-            
+            let velocity = gestureRecognizer.velocity(in: entityView.superview)
+                        
             var updatedPosition = entity.position
             var updatedScale = entity.scale
             var updatedRotation = entity.rotation
@@ -419,6 +441,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
+                
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
             }
             
             entity.position = updatedPosition
@@ -428,7 +452,9 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended:
-            break
+            self.snapTool.reset()
+        case .cancelled:
+            self.snapTool.reset()
         default:
             break
         }
@@ -494,8 +520,124 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         self.leftHandle.position = CGPoint(x: inset, y: self.bounds.midY)
         self.rightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.midY)
         
-        self.border.lineDashPattern = [12.0 / self.scale as NSNumber, 12.0 / self.scale as NSNumber]
+
+        let radius = (self.bounds.width - inset * 2.0) / 2.0
+        let circumference: CGFloat = 2.0 * .pi * radius
+        let count = 10
+        let relativeDashLength: CGFloat = 0.25
+        let dashLength = circumference / CGFloat(count)
+        self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
+        
         self.border.lineWidth = 2.0 / self.scale
         self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
+    }
+}
+
+class DrawingEntitySnapTool {
+    private var xState: (skipped: CGFloat, waitForLeave: Bool)?
+    private var yState: (skipped: CGFloat, waitForLeave: Bool)?
+    
+    var onSnapXUpdated: (Bool) -> Void = { _ in }
+    var onSnapYUpdated: (Bool) -> Void = { _ in }
+    
+    func reset() {
+        self.xState = nil
+        self.yState = nil
+        
+        self.onSnapXUpdated(false)
+        self.onSnapYUpdated(false)
+    }
+    
+    func maybeSkipFromStart(entityView: DrawingEntityView, position: CGPoint) {
+        self.xState = nil
+        self.yState = nil
+        
+        let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
+        let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
+        
+        if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
+            if position.x > snapLocation.x - snapXDelta && position.x < snapLocation.x + snapXDelta {
+                self.xState = (0.0, true)
+            }
+            
+            if position.y > snapLocation.y - snapYDelta && position.y < snapLocation.y + snapYDelta {
+                self.yState = (0.0, true)
+            }
+        }
+    }
+    
+    func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint) -> CGPoint {
+        var updatedPosition = updatedPosition
+        
+        let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
+        let snapXVelocity: CGFloat = snapXDelta * 16.0
+        let snapXSkipTranslation: CGFloat = snapXDelta * 2.0
+        
+        if abs(velocity.x) < snapXVelocity || self.xState?.waitForLeave == true {
+            if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
+                if let (skipped, waitForLeave) = self.xState {
+                    if waitForLeave {
+                        if updatedPosition.x > snapLocation.x - snapXDelta * 1.5 && updatedPosition.x < snapLocation.x + snapXDelta * 1.5  {
+                            
+                        } else {
+                            self.xState = nil
+                        }
+                    } else if abs(skipped) < snapXSkipTranslation {
+                        self.xState = (skipped + delta.x, false)
+                        updatedPosition.x = snapLocation.x
+                    } else {
+                        self.xState = (snapXSkipTranslation, true)
+                        self.onSnapXUpdated(false)
+                    }
+                } else {
+                    if updatedPosition.x > snapLocation.x - snapXDelta && updatedPosition.x < snapLocation.x + snapXDelta {
+                        self.xState = (0.0, false)
+                        updatedPosition.x = snapLocation.x
+                        self.onSnapXUpdated(true)
+                    }
+                }
+            }
+        } else {
+            if self.xState != nil {
+                print()
+            }
+            self.xState = nil
+            self.onSnapXUpdated(false)
+        }
+        
+        let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
+        let snapYVelocity: CGFloat = snapYDelta * 16.0
+        let snapYSkipTranslation: CGFloat = snapYDelta * 2.0
+        
+        if abs(velocity.y) < snapYVelocity || self.yState?.waitForLeave == true {
+            if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
+                if let (skipped, waitForLeave) = self.yState {
+                    if waitForLeave {
+                        if updatedPosition.y > snapLocation.y - snapYDelta * 1.5 && updatedPosition.y < snapLocation.y + snapYDelta * 1.5 {
+                            
+                        } else {
+                            self.yState = nil
+                        }
+                    } else if abs(skipped) < snapYSkipTranslation {
+                        self.yState = (skipped + delta.y, false)
+                        updatedPosition.y = snapLocation.y
+                    } else {
+                        self.yState = (snapYSkipTranslation, true)
+                        self.onSnapYUpdated(false)
+                    }
+                } else {
+                    if updatedPosition.y > snapLocation.y - snapYDelta && updatedPosition.y < snapLocation.y + snapYDelta {
+                        self.yState = (0.0, false)
+                        updatedPosition.y = snapLocation.y
+                        self.onSnapYUpdated(true)
+                    }
+                }
+            }
+        } else {
+            self.yState = nil
+            self.onSnapYUpdated(false)
+        }
+        
+        return updatedPosition
     }
 }

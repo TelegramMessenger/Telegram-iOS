@@ -20,7 +20,7 @@
 
 @implementation TGPaintingData
 
-+ (instancetype)dataWithDrawingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage hasAnimation:(bool)hasAnimation
++ (instancetype)dataWithDrawingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage hasAnimation:(bool)hasAnimation stickers:(NSArray *)stickers
 {
     TGPaintingData *paintingData = [[TGPaintingData alloc] init];
     paintingData->_drawingData = data;
@@ -28,14 +28,16 @@
     paintingData->_stillImage = stillImage;
     paintingData->_entitiesData = entitiesData;
     paintingData->_hasAnimation = hasAnimation;
+    paintingData->_stickers = stickers;
     return paintingData;
 }
 
-+ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entitiesData:(NSData *)entitiesData hasAnimation:(bool)hasAnimation {
++ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entitiesData:(NSData *)entitiesData hasAnimation:(bool)hasAnimation stickers:(NSArray *)stickers {
     TGPaintingData *paintingData = [[TGPaintingData alloc] init];
     paintingData->_imagePath = imagePath;
     paintingData->_entitiesData = entitiesData;
     paintingData->_hasAnimation = hasAnimation;
+    paintingData->_stickers = stickers;
     return paintingData;
 }
 
@@ -51,6 +53,7 @@
     TGPaintingData *paintingData = [[TGPaintingData alloc] init];
     paintingData->_entitiesData = _entitiesData;
     paintingData->_hasAnimation = _hasAnimation;
+    paintingData->_stickers = _stickers;
     return paintingData;
 }
 
@@ -120,18 +123,6 @@
         return _stillImageRetrievalBlock();
     else
         return nil;
-}
-
-- (NSArray *)stickers
-{
-    return @[];
-//    NSMutableSet *stickers = [[NSMutableSet alloc] init];
-//    for (TGPhotoPaintEntity *entity in self.entities)
-//    {
-//        if ([entity isKindOfClass:[TGPhotoPaintStickerEntity class]])
-//            [stickers addObject:((TGPhotoPaintStickerEntity *)entity).document];
-//    }
-//    return [stickers allObjects];
 }
 
 - (BOOL)isEqual:(id)object

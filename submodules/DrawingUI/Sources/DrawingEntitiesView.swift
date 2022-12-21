@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import LegacyComponents
 import AccountContext
 
@@ -10,7 +11,7 @@ public protocol DrawingEntity: AnyObject {
     
     var lineWidth: CGFloat { get set }
     var color: DrawingColor { get set }
-    
+        
     func duplicate() -> DrawingEntity
         
     var currentEntityView: DrawingEntityView? { get }
@@ -127,23 +128,56 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private var tapGestureRecognizer: UITapGestureRecognizer!
     private(set) var selectedEntityView: DrawingEntityView?
     
+    public var getEntityCenterPosition: () -> CGPoint = { return .zero }
+    public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
     public var hasSelectionChanged: (Bool) -> Void = { _ in }
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
     var requestedMenuForEntityView: (DrawingEntityView, Bool) -> Void = { _, _ in }
     
+    var entityAdded: (DrawingEntity) -> Void = { _ in }
+    var entityRemoved: (DrawingEntity) -> Void = { _ in }
+    
+    private let xAxisView = UIView()
+    private let yAxisView = UIView()
+    private let hapticFeedback = HapticFeedback()
+    
     public init(context: AccountContext, size: CGSize) {
         self.context = context
         self.size = size
-        
+                
         super.init(frame: CGRect(origin: .zero, size: size))
                 
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
         self.addGestureRecognizer(tapGestureRecognizer)
         self.tapGestureRecognizer = tapGestureRecognizer
+        
+        self.xAxisView.alpha = 0.0
+        self.xAxisView.backgroundColor = UIColor(rgb: 0x5fc1f0)
+        self.xAxisView.isUserInteractionEnabled = false
+        
+        self.yAxisView.alpha = 0.0
+        self.yAxisView.backgroundColor = UIColor(rgb: 0x5fc1f0)
+        self.yAxisView.isUserInteractionEnabled = false
+        
+        self.addSubview(self.xAxisView)
+        self.addSubview(self.yAxisView)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+    
+        let point = self.getEntityCenterPosition()
+        self.xAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 10.0, height: 3000.0))
+        self.xAxisView.center = point
+        self.xAxisView.transform = CGAffineTransform(rotationAngle: self.getEntityInitialRotation())
+        
+        self.yAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 10.0))
+        self.yAxisView.center = point
+        self.yAxisView.transform = CGAffineTransform(rotationAngle: self.getEntityInitialRotation())
     }
     
     var entities: [DrawingEntity] {
@@ -160,13 +194,16 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         if let entitiesData = entitiesData, let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: entitiesData) {
             let entities = codableEntities.map { $0.entity }
             for entity in entities {
-                self.add(entity)
+                self.add(entity, announce: false)
             }
         }
     }
     
     var entitiesData: Data? {
         let entities = self.entities
+        guard !entities.isEmpty else {
+            return nil
+        }
         for entity in entities {
             entity.prepareForRender()
         }
@@ -185,7 +222,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             return entity.center.offsetBy(dx: offset.x, dy: offset.y)
         } else {
             let minimalDistance: CGFloat = round(offsetLength * 0.5)
-            var position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.0) // place good here
+            var position = self.getEntityCenterPosition()
             
             while true {
                 var occupied = false
@@ -214,8 +251,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     func prepareNewEntity(_ entity: DrawingEntity, setup: Bool = true, relativeTo: DrawingEntity? = nil) {
         let center = self.startPosition(relativeTo: relativeTo)
+        let rotation = self.getEntityInitialRotation()
+        
         if let shape = entity as? DrawingSimpleShapeEntity {
             shape.position = center
+            shape.rotation = rotation
             
             if setup {
                 let size = self.newEntitySize()
@@ -237,12 +277,14 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         } else if let sticker = entity as? DrawingStickerEntity {
             sticker.position = center
+            sticker.rotation = rotation
             if setup {
                 sticker.referenceDrawingSize = self.size
                 sticker.scale = 1.0
             }
         } else if let bubble = entity as? DrawingBubbleEntity {
             bubble.position = center
+            bubble.rotation = rotation
             if setup {
                 let size = self.newEntitySize()
                 bubble.referenceDrawingSize = self.size
@@ -251,6 +293,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         } else if let text = entity as? DrawingTextEntity {
             text.position = center
+            text.rotation = rotation
             if setup {
                 text.referenceDrawingSize = self.size
                 text.width = floor(self.size.width * 0.9)
@@ -260,11 +303,45 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     @discardableResult
-    func add(_ entity: DrawingEntity) -> DrawingEntityView {
+    func add(_ entity: DrawingEntity, announce: Bool = true) -> DrawingEntityView {
         let view = entity.makeView(context: self.context)
         view.containerView = self
+        
+        view.onSnapToXAxis = { [weak self] snappedToX in
+            guard let strongSelf = self else {
+                return
+            }
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            if snappedToX {
+                if strongSelf.xAxisView.alpha < 1.0 {
+                    strongSelf.hapticFeedback.impact(.light)
+                }
+                transition.updateAlpha(layer: strongSelf.xAxisView.layer, alpha: 1.0)
+            } else {
+                transition.updateAlpha(layer: strongSelf.xAxisView.layer, alpha: 0.0)
+            }
+        }
+        view.onSnapToYAxis = { [weak self] snappedToY in
+            guard let strongSelf = self else {
+                return
+            }
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            if snappedToY {
+                if strongSelf.yAxisView.alpha < 1.0 {
+                    strongSelf.hapticFeedback.impact(.light)
+                }
+                transition.updateAlpha(layer: strongSelf.yAxisView.layer, alpha: 1.0)
+            } else {
+                transition.updateAlpha(layer: strongSelf.yAxisView.layer, alpha: 0.0)
+            }
+        }
+        
         view.update()
         self.addSubview(view)
+        
+        if announce {
+            self.entityAdded(entity)
+        }
         return view
     }
     
@@ -279,15 +356,35 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return newEntity
     }
     
-    func remove(uuid: UUID) {
+    func remove(uuid: UUID, animated: Bool = false, announce: Bool = true) {
         if let view = self.getView(for: uuid) {
             if self.selectedEntityView === view {
-                self.selectedEntityView?.removeFromSuperview()
                 self.selectedEntityView = nil
                 self.selectionChanged(nil)
                 self.hasSelectionChanged(false)
             }
-            view.removeFromSuperview()
+            if animated {
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
+                    view?.removeFromSuperview()
+                })
+                if !(view.entity is DrawingVectorEntity) {
+                    view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                }
+                if let selectionView = view.selectionView {
+                    selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak selectionView] _ in
+                        selectionView?.removeFromSuperview()
+                    })
+                    if !(view.entity is DrawingVectorEntity) {
+                        selectionView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                    }
+                }
+            } else {
+                view.removeFromSuperview()
+            }
+            
+            if announce {
+                self.entityRemoved(view.entity)
+            }
         }
     }
     
@@ -474,6 +571,9 @@ public class DrawingEntityView: UIView {
     
     weak var selectionView: DrawingEntitySelectionView?
     weak var containerView: DrawingEntitiesView?
+    
+    var onSnapToXAxis: (Bool) -> Void = { _ in }
+    var onSnapToYAxis: (Bool) -> Void = { _ in }
     
     init(context: AccountContext, entity: DrawingEntity) {
         self.context = context

@@ -1378,17 +1378,33 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     interaction.suggestPhoto()
                 }))
                 
-                items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemCustom, text: presentationData.strings.UserInfo_SetCustomPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+                let setText: String
+                if user.photo.first?.isPersonal == true {
+                    setText = presentationData.strings.UserInfo_ChangeCustomPhoto(compactName).string
+                } else {
+                    setText = presentationData.strings.UserInfo_SetCustomPhoto(compactName).string
+                }
+                
+                items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemCustom, text: setText, color: .accent, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
                     interaction.setCustomPhoto()
                 }))
                 
                 if user.photo.first?.isPersonal == true || state.updatingAvatar != nil {
                     var representation: TelegramMediaImageRepresentation?
+                    var originalIsVideo: Bool?
                     if let cachedData = data.cachedData as? CachedUserData, case let .known(photo) = cachedData.photo {
                         representation = photo?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28))
+                        originalIsVideo = !(photo?.videoRepresentations.isEmpty ?? true)
                     }
                     
-                    items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemReset, text: presentationData.strings.UserInfo_ResetCustomPhoto, color: .accent, icon: nil, iconSignal: peerAvatarCompleteImage(account: context.account, peer: EnginePeer(user), forceProvidedRepresentation: true, representation: representation, size: CGSize(width: 28.0, height: 28.0)), action: {
+                    let removeText: String
+                    if let originalIsVideo {
+                        removeText = originalIsVideo ? presentationData.strings.UserInfo_ResetCustomVideo : presentationData.strings.UserInfo_ResetCustomPhoto
+                    } else {
+                        removeText = user.photo.first?.hasVideo == true ? presentationData.strings.UserInfo_RemoveCustomVideo : presentationData.strings.UserInfo_RemoveCustomPhoto
+                    }
+                    
+                    items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemReset, text: removeText, color: .accent, icon: nil, iconSignal: peerAvatarCompleteImage(account: context.account, peer: EnginePeer(user), forceProvidedRepresentation: true, representation: representation, size: CGSize(width: 28.0, height: 28.0)), action: {
                         interaction.resetCustomPhoto()
                     }))
                 }
@@ -3489,10 +3505,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
+                var isPersonal = false
                 var currentIsVideo = false
                 let item = strongSelf.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-                if let item = item, case let .image(_, _, videoRepresentations, _, _) = item {
+                if let item = item, case let .image(_, representations, videoRepresentations, _, _) = item {
+                    if representations.first?.representation.isPersonal == true {
+                        isPersonal = true
+                    }
                     currentIsVideo = !videoRepresentations.isEmpty
+                }
+                guard !isPersonal else {
+                    return
                 }
                 
                 let items: [ContextMenuItem] = [
@@ -6816,6 +6839,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             if let topController = self.controller?.navigationController?.topViewController as? ViewController {
                 topController.presentInGlobalOverlay(statusController)
+            } else if let topController = self.controller?.parentController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
             } else {
                 self.controller?.presentInGlobalOverlay(statusController)
             }
@@ -6990,6 +7015,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 statusController?.dismiss()
             }
             if let topController = self.controller?.navigationController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else if let topController = self.controller?.parentController?.topViewController as? ViewController {
                 topController.presentInGlobalOverlay(statusController)
             } else {
                 self.controller?.presentInGlobalOverlay(statusController)

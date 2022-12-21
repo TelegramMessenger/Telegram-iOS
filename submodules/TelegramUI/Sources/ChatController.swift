@@ -824,6 +824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.push(controller)
                             return true
                         case let .suggestedProfilePhoto(image):
+                            strongSelf.chatDisplayNode.dismissInput()
                             if let image = image {
                                 if message.effectivelyIncoming(strongSelf.context.account.peerId) {
                                     var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?

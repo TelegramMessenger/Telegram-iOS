@@ -8449,7 +8449,11 @@ Sorry for the inconvenience.";
 
 "UserInfo.SuggestPhoto" = "Suggest Photo for %@";
 "UserInfo.SetCustomPhoto" = "Set Photo for %@";
+"UserInfo.ChangeCustomPhoto" = "Change Photo for %@";
 "UserInfo.ResetCustomPhoto" = "Reset to Original Photo";
+"UserInfo.ResetCustomVideo" = "Reset to Original Video";
+"UserInfo.RemoveCustomPhoto" = "Remove Photo";
+"UserInfo.RemoveCustomVideo" = "Remove Video";
 "UserInfo.CustomPhotoInfo" = "You can replace %@’s photo with another photo that only you will see.";
 
 "UserInfo.SuggestPhotoTitle" = "Do you want to suggest a profile picture for %@?";
@@ -8538,3 +8542,20 @@ Sorry for the inconvenience.";
 
 "Attachment.EnableSpoiler" = "Hide With Spoiler";
 "Attachment.DisableSpoiler" = "Disable Spoiler";
+
+"ProfilePhoto.PublicPhoto" = "public photo";
+"ProfilePhoto.PublicVideo" = "public video";
+
+"Paint.Draw" = "Draw";
+"Paint.Sticker" = "Sticker";
+"Paint.Text" = "Text";
+"Paint.ZoomOut" = "Zoom Out";
+
+"Paint.Rectangle" = "Rectangle";
+"Paint.Ellipse" = "Ellipse";
+"Paint.Bubble" = "Bubble";
+"Paint.Star" = "Star";
+"Paint.Arrow" = "Arrow";
+
+"Paint.MoveForward" = "Move Forward";
+

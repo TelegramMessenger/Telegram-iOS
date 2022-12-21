@@ -81,36 +81,13 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         case newYork
         case monospaced
         case round
-        
-        init(font: DrawingTextEntity.Font) {
-            switch font {
-            case .sanFrancisco:
-                self = .sanFrancisco
-            case .newYork:
-                self = .newYork
-            case .monospaced:
-                self = .monospaced
-            case .round:
-                self = .round
-            }
-        }
+        case custom(String, String)
     }
     
     enum Alignment: Codable {
         case left
         case center
         case right
-        
-        init(font: DrawingTextEntity.Alignment) {
-            switch font {
-            case .left:
-                self = .left
-            case .center:
-                self = .center
-            case .right:
-                self = .right
-            }
-        }
         
         var alignment: NSTextAlignment {
             switch self {
@@ -567,7 +544,11 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     
         self.textView.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(fontSize * 0.24)
     
-        let font: UIFont
+        if let (font, name) = availableFonts[text.string.lowercased()] {
+            self.textEntity.font = .custom(font, name)
+        }
+        
+        var font: UIFont
         switch self.textEntity.font {
         case .sanFrancisco:
             font = Font.with(size: fontSize, design: .regular, weight: .semibold)
@@ -577,7 +558,10 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             font = Font.with(size: fontSize, design: .monospace, weight: .semibold)
         case .round:
             font = Font.with(size: fontSize, design: .round, weight: .semibold)
+        case let .custom(fontName, _):
+            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .regular, weight: .semibold)
         }
+        
         text.addAttribute(.font, value: font, range: range)
         self.textView.font = font
         
@@ -761,6 +745,18 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         panGestureRecognizer.delegate = self
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
+        
+        self.snapTool.onSnapXUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
+        
+        self.snapTool.onSnapYUpdated = { [weak self] snapped in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToXAxis(snapped)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -784,16 +780,19 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         return true
     }
     
+    private let snapTool = DrawingEntitySnapTool()
+    
     private var currentHandle: CALayer?
     @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingTextEntity else {
             return
         }
-        
         let location = gestureRecognizer.location(in: self)
         
         switch gestureRecognizer.state {
         case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
+            
             if let sublayers = self.layer.sublayers {
                 for layer in sublayers {
                     if layer.frame.contains(location) {
@@ -806,6 +805,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
+            let velocity = gestureRecognizer.velocity(in: entityView.superview)
             
             var updatedScale = entity.scale
             var updatedPosition = entity.position
@@ -829,6 +829,8 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
+                
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
             }
             
             entity.scale = updatedScale
@@ -838,7 +840,9 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended:
-            break
+            self.snapTool.reset()
+        case .cancelled:
+            self.snapTool.reset()
         default:
             break
         }
@@ -903,10 +907,19 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         
         self.leftHandle.position = CGPoint(x: inset, y: self.bounds.midY)
         self.rightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.midY)
+                
+        let width: CGFloat = self.bounds.width - inset * 2.0
+        let height: CGFloat = self.bounds.height - inset * 2.0
+        let cornerRadius: CGFloat = 12.0 - self.scale
         
-        self.border.lineDashPattern = [12.0 / self.scale as NSNumber, 12.0 / self.scale as NSNumber]
+        let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
+        let count = 12
+        let relativeDashLength: CGFloat = 0.25
+        let dashLength = perimeter / CGFloat(count)
+        self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
+        
         self.border.lineWidth = 2.0 / self.scale
-        self.border.path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0)), cornerRadius: 12.0 / self.scale).cgPath
+        self.border.path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: width, height: height)), cornerRadius: cornerRadius).cgPath
     }
 }
 
@@ -1234,3 +1247,31 @@ class DrawingTextView: UITextView {
         self.typingAttributes = attributes
     }
 }
+
+private var availableFonts: [String: (String, String)] = {
+    let familyNames = UIFont.familyNames
+    var result: [String: (String, String)] = [:]
+    
+    for family in familyNames {
+        let names = UIFont.fontNames(forFamilyName: family)
+        
+        var preferredFont: String?
+        for name in names {
+            let originalName = name
+            let name = name.lowercased()
+            if (!name.contains("-") || name.contains("regular")) && preferredFont == nil {
+                preferredFont = originalName
+            }
+            if name.contains("bold") && !name.contains("italic") {
+                preferredFont = originalName
+            }
+        }
+        
+        if let preferredFont {
+            let shortname = family.lowercased().replacingOccurrences(of: " ", with: "", options: [])
+            result[shortname] = (preferredFont, family)
+        }
+    }
+    print(result)
+    return result
+}()
