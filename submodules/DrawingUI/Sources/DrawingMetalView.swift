@@ -17,9 +17,7 @@ final class DrawingMetalView: MTKView {
     private var render_target_vertex: MTLBuffer!
     private var render_target_uniform: MTLBuffer!
 
-    private var penBrush: Brush?
     private var markerBrush: Brush?
-    private var pencilBrush: Brush?
     
     init?(size: CGSize) {
         var size = size
@@ -75,12 +73,6 @@ final class DrawingMetalView: MTKView {
     }
     
     func drawInContext(_ cgContext: CGContext) {
-//        guard let texture = self.drawable?.texture, let ciImage = CIImage(mtlTexture: texture, options: [.colorSpace: CGColorSpaceCreateDeviceRGB()])?.oriented(forExifOrientation: 1) else {
-//            return
-//        }
-//        let context = CIContext(cgContext: cgContext)
-//        let rect = CGRect(origin: .zero, size: ciImage.extent.size)
-//        context.draw(ciImage, in: rect, from: rect)
         guard let texture = self.drawable?.texture, let image = texture.createCGImage() else {
             return
         }
@@ -123,15 +115,9 @@ final class DrawingMetalView: MTKView {
         } catch {
             fatalError(error.localizedDescription)
         }
-        
-        self.penBrush = Brush(texture: nil, target: self, rotation: .ahead)
-        
+                
         if let url = getAppBundle().url(forResource: "marker", withExtension: "png"), let data = try? Data(contentsOf: url) {
             self.markerBrush = Brush(texture: self.makeTexture(with: data), target: self, rotation: .fixed(-0.55))
-        }
-        
-        if let url = getAppBundle().url(forResource: "pencil", withExtension: "png"), let data = try? Data(contentsOf: url) {
-            self.pencilBrush = Brush(texture: self.makeTexture(with: data), target: self, rotation: .random)
         }
     }
     
@@ -184,30 +170,20 @@ final class DrawingMetalView: MTKView {
     }
         
     enum BrushType {
-        case pen
         case marker
-        case pencil
     }
     
     func updated(_ point: Polyline.Point, state: DrawingGesturePipeline.DrawingGestureState, brush: BrushType, color: DrawingColor, size: CGFloat) {
         switch brush {
-        case .pen:
-            self.penBrush?.updated(point, color: color, state: state, size: size)
         case .marker:
             self.markerBrush?.updated(point, color: color, state: state, size: size)
-        case .pencil:
-            self.pencilBrush?.updated(point, color: color, state: state, size: size)
         }
     }
     
     func setup(_ points: [CGPoint], brush: BrushType, color: DrawingColor, size: CGFloat) {
         switch brush {
-        case .pen:
-            self.penBrush?.setup(points, color: color, size: size)
         case .marker:
             self.markerBrush?.setup(points, color: color, size: size)
-        case .pencil:
-            self.pencilBrush?.setup(points, color: color, size: size)
         }
     }
 }
@@ -353,7 +329,6 @@ private class Brush {
         target.prepareForDraw()
         
         let commandEncoder = target.makeCommandEncoder()
-        
         commandEncoder?.setRenderPipelineState(self.pipelineState)
         
         if let vertex_buffer = stroke.preparedBuffer(rotation: self.rotation) {

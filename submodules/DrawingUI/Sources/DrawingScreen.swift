@@ -2511,6 +2511,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Hide
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     public var drawingView: DrawingView {
@@ -2583,6 +2584,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             image = finalImage
         }
         
+        let drawingData = self.drawingView.drawingData
+        
         let entitiesData = self.entitiesView.entitiesData
         
         var stickers: [Any] = []
@@ -2600,7 +2603,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
         }
         
-        return TGPaintingData(drawing: nil, entitiesData: entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities, stickers: stickers)
+        return TGPaintingData(drawing: drawingData, entitiesData: entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities, stickers: stickers)
     }
     
     public func resultImage() -> UIImage! {

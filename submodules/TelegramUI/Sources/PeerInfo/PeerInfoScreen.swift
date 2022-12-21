@@ -6839,6 +6839,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             if let topController = self.controller?.navigationController?.topViewController as? ViewController {
                 topController.presentInGlobalOverlay(statusController)
+            } else if let topController = self.controller?.parentController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
             } else {
                 self.controller?.presentInGlobalOverlay(statusController)
             }
@@ -7013,6 +7015,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 statusController?.dismiss()
             }
             if let topController = self.controller?.navigationController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else if let topController = self.controller?.parentController?.topViewController as? ViewController {
                 topController.presentInGlobalOverlay(statusController)
             } else {
                 self.controller?.presentInGlobalOverlay(statusController)

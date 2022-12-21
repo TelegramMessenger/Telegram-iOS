@@ -201,6 +201,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     var entitiesData: Data? {
         let entities = self.entities
+        guard !entities.isEmpty else {
+            return nil
+        }
         for entity in entities {
             entity.prepareForRender()
         }

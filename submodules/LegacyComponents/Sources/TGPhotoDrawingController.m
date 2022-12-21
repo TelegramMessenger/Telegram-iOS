@@ -118,7 +118,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 }
 
 - (void)dealloc {
-    NSLog(@"");
+    [_context unlockPortrait];
 }
 
 - (void)loadView
@@ -209,6 +209,8 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
             [strongSelf->_scrollView setZoomScale:strongSelf->_scrollView.normalZoomScale animated:true];
         };
         [_paintingWrapperView addSubview:_drawingView];
+        
+        [_drawingView setupWithDrawingData:_photoEditor.paintingData.drawingData];
     }
     
     _entitiesView.hasSelectionChanged = ^(bool hasSelection) {
@@ -471,6 +473,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 #pragma mark - Transitions
 
 - (void)transitionIn {
+    [_context lockPortrait];
 //    if (self.presentedForAvatarCreation) {
 //        _drawingView.hidden = true;
 //    }

@@ -71,6 +71,8 @@
 
 - (void)updateZoomScale:(CGFloat)scale;
 
+- (void)setupWithDrawingData:(NSData *)drawingData;
+
 @end
 
 @protocol TGPhotoDrawingEntitiesView <NSObject>
