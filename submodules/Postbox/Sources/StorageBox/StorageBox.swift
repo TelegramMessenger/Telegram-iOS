@@ -513,6 +513,10 @@ public final class StorageBox {
                     if self.valueBox.exists(self.peerIdToIdTable, key: peerIdIdKey) {
                         self.valueBox.remove(self.peerIdToIdTable, key: peerIdIdKey, secure: false)
                         
+                        if info.size != 0 {
+                            self.internalAddSize(peerId: peerId, contentType: info.contentType, delta: -info.size)
+                        }
+                        
                         peerIdKey.setInt64(0, value: peerId)
                         if let value = self.valueBox.get(self.peerIdTable, key: peerIdKey) {
                             var peerIdCount: Int32 = 0
