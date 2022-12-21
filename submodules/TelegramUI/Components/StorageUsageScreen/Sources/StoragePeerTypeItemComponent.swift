@@ -205,7 +205,6 @@ final class StoragePeerTypeItemComponent: Component {
             }
             
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: leftInset, y: height), size: CGSize(width: availableSize.width - leftInset, height: UIScreenPixel)))
-            
             transition.setAlpha(layer: self.separatorLayer, alpha: component.hasNext ? 1.0 : 0.0)
             
             self.highlightBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height + (component.hasNext ? UIScreenPixel : 0.0)))

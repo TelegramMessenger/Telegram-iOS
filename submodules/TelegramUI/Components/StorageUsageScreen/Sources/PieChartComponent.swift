@@ -110,10 +110,12 @@ final class PieChartComponent: Component {
             for i in 0 ..< component.chartData.items.count {
                 let item = component.chartData.items[i]
                 var angle = item.value / valueSum * CGFloat.pi * 2.0
-                if angle < minAngle {
-                    angle = minAngle
+                if angle > .ulpOfOne {
+                    if angle < minAngle {
+                        angle = minAngle
+                    }
+                    totalAngle += angle
                 }
-                totalAngle += angle
                 angles.append(angle)
             }
             if totalAngle > CGFloat.pi * 2.0 {
@@ -207,41 +209,160 @@ final class PieChartComponent: Component {
                 }
                 let labelSize = label.update(transition: .immediate, component: AnyComponent(Text(text: "\(fractionString)%", font: Font.with(size: 16.0, design: .round, weight: .semibold), color: component.theme.list.itemCheckColors.foregroundColor)), environment: {}, containerSize: CGSize(width: 100.0, height: 100.0))
                 
-                var centerOffset: CGFloat = 0.5
+                var labelFrame: CGRect?
                 
-                var labelScale: CGFloat = 1.0
-                if angleValue < 0.38 {
-                    labelScale = angleValue / 0.38
-                    centerOffset = labelScale * 0.6 + (1.0 - labelScale) * 0.5
-                }
+                for step in 0 ... 6 {
+                    let stepFraction: CGFloat = CGFloat(step) / 6.0
+                    let centerOffset: CGFloat = 0.5 * (1.0 - stepFraction) + 0.65 * stepFraction
                     
-                let midAngle: CGFloat = (innerStartAngle + innerEndAngle) * 0.5
-                let centerDistance: CGFloat = (innerDiameter * 0.5 + (diameter * 0.5 - innerDiameter * 0.5) * centerOffset)
-                let labelCenter = CGPoint(
-                    x: shapeLayerFrame.midX + cos(midAngle) * centerDistance,
-                    y: shapeLayerFrame.midY + sin(midAngle) * centerDistance
-                )
-                let labelFrame = CGRect(origin: CGPoint(x: labelCenter.x - labelSize.width * 0.5, y: labelCenter.y - labelSize.height * 0.5), size: labelSize)
+                    let midAngle: CGFloat = (innerStartAngle + innerEndAngle) * 0.5
+                    let centerDistance: CGFloat = (innerDiameter * 0.5 + (diameter * 0.5 - innerDiameter * 0.5) * centerOffset)
+                    
+                    let relLabelCenter = CGPoint(
+                        x: cos(midAngle) * centerDistance,
+                        y: sin(midAngle) * centerDistance
+                    )
+                    
+                    let labelCenter = CGPoint(
+                        x: shapeLayerFrame.midX + relLabelCenter.x,
+                        y: shapeLayerFrame.midY + relLabelCenter.y
+                    )
+                    
+                    func lineCircleIntersection(_ center: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ r: CGFloat) -> CGFloat {
+                        let dx: CGFloat = p2.x - p1.x
+                        let dy: CGFloat = p2.y - p1.y
+                        let dr: CGFloat = sqrt(dx * dx + dy * dy)
+                        let D: CGFloat = p1.x * p2.y - p2.x * p1.y
+                        
+                        var minDistance: CGFloat = 10000.0
+                        
+                        for i in 0 ..< 2 {
+                            let signFactor: CGFloat = i == 0 ? 1.0 : (-1.0)
+                            let dysign: CGFloat = dy < 0.0 ? -1.0 : 1.0
+                            let ix: CGFloat = (D * dy + signFactor * dysign * dx * sqrt(r * r * dr * dr - D * D)) / (dr * dr)
+                            let iy: CGFloat = (-D * dx + signFactor * abs(dy) * sqrt(r * r * dr * dr - D * D)) / (dr * dr)
+                            let distance: CGFloat = sqrt(pow(ix - center.x, 2.0) + pow(iy - center.y, 2.0))
+                            minDistance = min(minDistance, distance)
+                        }
+                        
+                        return minDistance
+                    }
+                    
+                    func lineLineIntersection(_ p1: CGPoint, _ p2: CGPoint, _ p3: CGPoint, _ p4: CGPoint) -> CGFloat {
+                        let x1 = p1.x
+                        let y1 = p1.y
+                        let x2 = p2.x
+                        let y2 = p2.y
+                        let x3 = p3.x
+                        let y3 = p3.y
+                        let x4 = p4.x
+                        let y4 = p4.y
+                        
+                        let d: CGFloat = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+                        if abs(d) <= 0.00001 {
+                            return 10000.0
+                        }
+                        
+                        let px: CGFloat = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d
+                        let py: CGFloat = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d
+                        
+                        let distance: CGFloat = sqrt(pow(px - p1.x, 2.0) + pow(py - p1.y, 2.0))
+                        return distance
+                    }
+                    
+                    let intersectionOuterTopRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), diameter * 0.5)
+                    let intersectionInnerTopRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), innerDiameter * 0.5)
+                    let intersectionOuterBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), diameter * 0.5)
+                    let intersectionInnerBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), innerDiameter * 0.5)
+                    
+                    let intersectionLine1TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerStartAngle), y: sin(innerStartAngle)))
+                    let intersectionLine1BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerStartAngle), y: sin(innerStartAngle)))
+                    let intersectionLine2TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerEndAngle), y: sin(innerEndAngle)))
+                    let intersectionLine2BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerEndAngle), y: sin(innerEndAngle)))
+                    
+                    var distances: [CGFloat] = [
+                        intersectionOuterTopRight,
+                        intersectionInnerTopRight,
+                        intersectionOuterBottomRight,
+                        intersectionInnerBottomRight
+                    ]
+                    
+                    if angleValue < CGFloat.pi / 2.0 {
+                        distances.append(contentsOf: [
+                            intersectionLine1TopRight,
+                            intersectionLine1BottomRight,
+                            intersectionLine2TopRight,
+                            intersectionLine2BottomRight
+                        ] as [CGFloat])
+                    }
+                    
+                    var minDistance: CGFloat = 1000.0
+                    for distance in distances {
+                        minDistance = min(minDistance, distance + 1.0)
+                    }
+                    
+                    let diagonalAngle = atan2(labelSize.height, labelSize.width)
+                    
+                    let maxHalfWidth = cos(diagonalAngle) * minDistance
+                    let maxHalfHeight = sin(diagonalAngle) * minDistance
+                    
+                    let maxSize = CGSize(width: maxHalfWidth * 2.0, height: maxHalfHeight * 2.0)
+                    let finalSize = CGSize(width: min(labelSize.width, maxSize.width), height: min(labelSize.height, maxSize.height))
+                    
+                    let currentFrame = CGRect(origin: CGPoint(x: labelCenter.x - finalSize.width * 0.5, y: labelCenter.y - finalSize.height * 0.5), size: finalSize)
+                    
+                    if finalSize.width >= labelSize.width {
+                        labelFrame = currentFrame
+                        break
+                    }
+                    if let labelFrame {
+                        if labelFrame.width > finalSize.width {
+                            continue
+                        }
+                    }
+                    labelFrame = currentFrame
+                }
                 
-                if let labelView = label.view {
+                if let labelView = label.view, let labelFrame {
                     if labelView.superview == nil {
                         self.addSubview(labelView)
                     }
-                    labelView.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
-                    transition.setPosition(view: labelView, position: labelFrame.center)
-                    transition.setScale(view: labelView, scale: labelScale)
                     
-                    let normalAlpha: CGFloat = labelScale < 0.5 ? 0.0 : 1.0
+                    labelView.bounds = CGRect(origin: CGPoint(), size: labelSize)
+                    var labelScale = labelFrame.width / labelSize.width
+                    
+                    let normalAlpha: CGFloat = labelScale < 0.4 ? 0.0 : 1.0
+                    
+                    var relLabelCenter = CGPoint(
+                        x: labelFrame.midX - shapeLayerFrame.midX,
+                        y: labelFrame.midY - shapeLayerFrame.midY
+                    )
                     
                     if let selectedKey = self.selectedKey {
                         if selectedKey == item.id {
                             transition.setAlpha(view: labelView, alpha: normalAlpha)
                         } else {
                             transition.setAlpha(view: labelView, alpha: 0.0)
+                            
+                            let reducedFactor: CGFloat = (reducedDiameter - innerDiameter) / (diameter - innerDiameter)
+                            let reducedDiameterFactor: CGFloat = reducedDiameter / diameter
+                            
+                            labelScale *= reducedFactor
+                            
+                            relLabelCenter.x *= reducedDiameterFactor
+                            relLabelCenter.y *= reducedDiameterFactor
                         }
                     } else {
                         transition.setAlpha(view: labelView, alpha: normalAlpha)
                     }
+                    
+                    let labelCenter = CGPoint(
+                        x: shapeLayerFrame.midX + relLabelCenter.x,
+                        y: shapeLayerFrame.midY + relLabelCenter.y
+                    )
+                    
+                    transition.setPosition(view: labelView, position: labelCenter)
+                    transition.setScale(view: labelView, scale: labelScale)
                 }
             }
             

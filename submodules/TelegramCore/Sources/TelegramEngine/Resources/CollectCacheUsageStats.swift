@@ -52,7 +52,7 @@ private final class CacheUsageStatsState {
     var upperBound: MessageIndex?
 }
 
-public struct StorageUsageStats: Equatable {
+public final class StorageUsageStats {
     public enum CategoryKey: Hashable {
         case photos
         case videos
@@ -71,17 +71,17 @@ public struct StorageUsageStats: Equatable {
         }
     }
     
-    public var categories: [CategoryKey: CategoryData]
+    public fileprivate(set) var categories: [CategoryKey: CategoryData]
     
     public init(categories: [CategoryKey: CategoryData]) {
         self.categories = categories
     }
 }
 
-public struct AllStorageUsageStats: Equatable {
-    public struct PeerStats: Equatable {
-        public var peer: EnginePeer
-        public var stats: StorageUsageStats
+public final class AllStorageUsageStats {
+    public final class PeerStats {
+        public let peer: EnginePeer
+        public let stats: StorageUsageStats
         
         public init(peer: EnginePeer, stats: StorageUsageStats) {
             self.peer = peer
@@ -89,8 +89,8 @@ public struct AllStorageUsageStats: Equatable {
         }
     }
     
-    public var totalStats: StorageUsageStats
-    public var peers: [EnginePeer.Id: PeerStats]
+    public fileprivate(set) var totalStats: StorageUsageStats
+    public fileprivate(set) var peers: [EnginePeer.Id: PeerStats]
     
     public init(totalStats: StorageUsageStats, peers: [EnginePeer.Id: PeerStats]) {
         self.totalStats = totalStats
@@ -98,53 +98,10 @@ public struct AllStorageUsageStats: Equatable {
     }
 }
 
-func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
-    let additionalStats = Signal<Int64, NoError> { subscriber in
-        DispatchQueue.global().async {
-            var totalSize: Int64 = 0
-            
-            let additionalPaths: [String] = [
-                "cache",
-                "animation-cache",
-                "short-cache",
-            ]
-            
-            for path in additionalPaths {
-                let fullPath: String
-                if path.isEmpty {
-                    fullPath = account.postbox.mediaBox.basePath
-                } else {
-                    fullPath = account.postbox.mediaBox.basePath + "/\(path)"
-                }
-                
-                var s = darwin_dirstat()
-                var result = dirstat_np(fullPath, 1, &s, MemoryLayout<darwin_dirstat>.size)
-                if result != -1 {
-                    totalSize += Int64(s.total_size)
-                } else {
-                    result = dirstat_np(fullPath, 0, &s, MemoryLayout<darwin_dirstat>.size)
-                    if result != -1 {
-                        totalSize += Int64(s.total_size)
-                        print(s.descendants)
-                    }
-                }
-            }
-            
-            subscriber.putNext(totalSize)
-            subscriber.putCompletion()
-        }
-        
-        return EmptyDisposable
-    }
-    
-    return combineLatest(
-        additionalStats,
-        account.postbox.mediaBox.storageBox.getStats()
-    )
-    |> deliverOnMainQueue
-    |> mapToSignal { additionalStats, allStats -> Signal<AllStorageUsageStats, NoError> in
+private extension StorageUsageStats {
+    convenience init(_ stats: StorageBox.Stats) {
         var mappedCategories: [StorageUsageStats.CategoryKey: StorageUsageStats.CategoryData] = [:]
-        for (key, value) in allStats.contentTypes {
+        for (key, value) in stats.contentTypes {
             let mappedCategory: StorageUsageStats.CategoryKey
             switch key {
             case MediaResourceUserContentType.image.rawValue:
@@ -165,14 +122,126 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
             mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value)
         }
         
-        if additionalStats != 0 {
-            mappedCategories[.misc, default: StorageUsageStats.CategoryData(size: 0)].size += additionalStats
+        self.init(categories: mappedCategories)
+    }
+}
+
+func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
+    let additionalStats = Signal<Int64, NoError> { subscriber in
+        DispatchQueue.global().async {
+            var totalSize: Int64 = 0
+            
+            let additionalPaths: [String] = [
+                "cache",
+                "animation-cache",
+                "short-cache",
+            ]
+            
+            func statForDirectory(path: String) -> Int64 {
+                var s = darwin_dirstat()
+                var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
+                if result != -1 {
+                    return Int64(s.total_size)
+                } else {
+                    result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+                    if result != -1 {
+                        return Int64(s.total_size)
+                    } else {
+                        return 0
+                    }
+                }
+            }
+            
+            var delayedDirs: [String] = []
+            
+            for path in additionalPaths {
+                let fullPath: String
+                if path.isEmpty {
+                    fullPath = account.postbox.mediaBox.basePath
+                } else {
+                    fullPath = account.postbox.mediaBox.basePath + "/\(path)"
+                }
+                
+                if path == "animation-cache" {
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: fullPath), includingPropertiesForKeys: [.isDirectoryKey], options: .skipsSubdirectoryDescendants) {
+                        for url in enumerator {
+                            guard let url = url as? URL else {
+                                continue
+                            }
+                            delayedDirs.append(fullPath + "/" + url.lastPathComponent)
+                        }
+                    }
+                } else {
+                    totalSize += statForDirectory(path: fullPath)
+                }
+            }
+            
+            if !delayedDirs.isEmpty {
+                let concurrentSize = Atomic<[Int64]>(value: [])
+                
+                DispatchQueue.concurrentPerform(iterations: delayedDirs.count, execute: { index in
+                    let directorySize = statForDirectory(path: delayedDirs[index])
+                    let result = concurrentSize.modify { current in
+                        return current + [directorySize]
+                    }
+                    if result.count == delayedDirs.count {
+                        var aggregatedCount: Int64 = 0
+                        for item in result {
+                            aggregatedCount += item
+                        }
+                        subscriber.putNext(totalSize + aggregatedCount)
+                        subscriber.putCompletion()
+                    }
+                })
+            } else {
+                subscriber.putNext(totalSize)
+                subscriber.putCompletion()
+            }
         }
         
-        return .single(AllStorageUsageStats(
-            totalStats: StorageUsageStats(categories: mappedCategories),
-            peers: [:]
-        ))
+        return EmptyDisposable
+    }
+    
+    return combineLatest(
+        additionalStats,
+        account.postbox.mediaBox.storageBox.getAllStats()
+    )
+    |> deliverOnMainQueue
+    |> mapToSignal { additionalStats, allStats -> Signal<AllStorageUsageStats, NoError> in
+        return account.postbox.transaction { transaction -> AllStorageUsageStats in
+            let total = StorageUsageStats(allStats.total)
+            if additionalStats != 0 {
+                total.categories[.misc, default: StorageUsageStats.CategoryData(size: 0)].size += additionalStats
+            }
+            
+            var peers: [EnginePeer.Id: AllStorageUsageStats.PeerStats] = [:]
+            
+            for (peerId, peerStats) in allStats.peers {
+                if peerId.id._internalGetInt64Value() == 0 {
+                    continue
+                }
+                
+                var peerSize: Int64 = 0
+                for (_, size) in peerStats.contentTypes {
+                    peerSize += size
+                }
+                if peerSize == 0 {
+                    continue
+                }
+                
+                if let peer = transaction.getPeer(peerId), transaction.getPeerChatListIndex(peerId) != nil {
+                    peers[peerId] = AllStorageUsageStats.PeerStats(
+                        peer: EnginePeer(peer),
+                        stats: StorageUsageStats(peerStats)
+                    )
+                }
+            }
+            
+            return AllStorageUsageStats(
+                totalStats: total,
+                peers: peers
+            )
+        }
     }
 }
 
