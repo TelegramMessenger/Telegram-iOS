@@ -206,7 +206,7 @@ final class PenTool: DrawingElement, Codable {
                 var direction: CGFloat?
                 if self.smoothPoints.count > 4 {
                     let p2 = self.smoothPoints[self.smoothPoints.count - 1].position
-                    for i in 1 ..< min(self.smoothPoints.count - 2, 12) {
+                    for i in 1 ..< min(self.smoothPoints.count - 2, 200) {
                         let p1 = self.smoothPoints[self.smoothPoints.count - 1 - i].position
                         if p1.distance(to: p2) > self.renderArrowLength * 0.5 {
                             direction = p2.angle(to: p1)

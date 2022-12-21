@@ -570,7 +570,7 @@ class DrawingEntitySnapTool {
         var updatedPosition = updatedPosition
         
         let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapXVelocity: CGFloat = snapXDelta * 10.0
+        let snapXVelocity: CGFloat = snapXDelta * 16.0
         let snapXSkipTranslation: CGFloat = snapXDelta * 2.0
         
         if abs(velocity.x) < snapXVelocity || self.xState?.waitForLeave == true {
@@ -598,12 +598,15 @@ class DrawingEntitySnapTool {
                 }
             }
         } else {
+            if self.xState != nil {
+                print()
+            }
             self.xState = nil
             self.onSnapXUpdated(false)
         }
         
         let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapYVelocity: CGFloat = snapYDelta * 10.0
+        let snapYVelocity: CGFloat = snapYDelta * 16.0
         let snapYSkipTranslation: CGFloat = snapYDelta * 2.0
         
         if abs(velocity.y) < snapYVelocity || self.yState?.waitForLeave == true {
