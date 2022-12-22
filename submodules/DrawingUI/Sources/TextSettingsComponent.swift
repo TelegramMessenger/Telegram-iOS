@@ -760,6 +760,8 @@ final class TextSizeSliderComponent: Component {
         init() {
             super.init(frame: CGRect())
 
+            self.isExclusiveTouch = true
+            
             let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
             pressGestureRecognizer.minimumPressDuration = 0.01
             pressGestureRecognizer.delegate = self

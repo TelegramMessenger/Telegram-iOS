@@ -51,6 +51,8 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         return self.start
     }
     
+    public var scale: CGFloat = 1.0
+    
     public var renderImage: UIImage?
     
     init(type: VectorType, color: DrawingColor, lineWidth: CGFloat) {

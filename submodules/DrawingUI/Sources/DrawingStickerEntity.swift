@@ -254,6 +254,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
                         self.applyVisibility()
                     }
                 }
+                self.update(animated: false)
             }
         }
     }
@@ -537,15 +538,20 @@ class DrawingEntitySnapTool {
     private var xState: (skipped: CGFloat, waitForLeave: Bool)?
     private var yState: (skipped: CGFloat, waitForLeave: Bool)?
     
+    private var rotationState: (skipped: CGFloat, waitForLeave: Bool)?
+    
     var onSnapXUpdated: (Bool) -> Void = { _ in }
     var onSnapYUpdated: (Bool) -> Void = { _ in }
+    var onSnapRotationUpdated: (CGFloat?) -> Void = { _ in }
     
     func reset() {
         self.xState = nil
         self.yState = nil
+        self.rotationState = nil
         
         self.onSnapXUpdated(false)
         self.onSnapYUpdated(false)
+        self.onSnapRotationUpdated(nil)
     }
     
     func maybeSkipFromStart(entityView: DrawingEntityView, position: CGPoint) {
@@ -565,7 +571,7 @@ class DrawingEntitySnapTool {
             }
         }
     }
-    
+        
     func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint) -> CGPoint {
         var updatedPosition = updatedPosition
         
@@ -639,5 +645,18 @@ class DrawingEntitySnapTool {
         }
         
         return updatedPosition
+    }
+    
+    private let snapRotations: [CGFloat] = [0.0, .pi / 4.0, .pi / 2.0, .pi * 1.5,]
+    func maybeSkipFromStart(entityView: DrawingEntityView, rotation: CGFloat) {
+        self.rotationState = nil
+        
+        let snapDelta: CGFloat = 0.087
+        for snapRotation in self.snapRotations {
+            if rotation > snapRotation - snapDelta && rotation < snapRotation + snapDelta {
+                self.rotationState = (0.0, true)
+                break
+            }
+        }
     }
 }

@@ -342,9 +342,10 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                     for photo in photos {
                         let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                         if result.isEmpty, let first = initialEntries.first {
-                            var videoRepresentations: [VideoRepresentationWithReference] = photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) })
-                            if videoRepresentations.isEmpty {
-                                videoRepresentations = first.videoRepresentations
+                            var videoRepresentations: [VideoRepresentationWithReference] = first.videoRepresentations
+                            let isPersonal = first.representations.first?.representation.isPersonal == true
+                            if videoRepresentations.isEmpty, !isPersonal {
+                                videoRepresentations = photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) })
                             }
                             result.append(.image(photo.image.imageId, photo.image.reference, first.representations, videoRepresentations, peer, secondEntry != nil ? 0 : photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, false))
                         } else {

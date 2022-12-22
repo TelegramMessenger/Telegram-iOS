@@ -495,6 +495,8 @@
             } else {
                 [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
             }
+            
+            commit();
         };
         controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
             if (!hasChanges)

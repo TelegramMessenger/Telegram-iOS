@@ -54,6 +54,7 @@ final class EyedropperView: UIView {
     private let sourceImage: (data: Data, size: CGSize, bytesPerRow: Int, info: CGBitmapInfo)?
     
     var completed: (DrawingColor) -> Void = { _ in }
+    var dismissed: () -> Void = { }
     
     init(containerSize: CGSize, drawingView: DrawingView, sourceImage: UIImage) {
         self.drawingView = drawingView
@@ -160,6 +161,15 @@ final class EyedropperView: UIView {
                 self.gridLayer.contents = generateGridImage(size: self.clipView.frame.size, light: true)?.cgImage
             }
         }
+    }
+    
+    func dismiss() {
+        self.containerView.alpha = 0.0
+        self.containerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+            self?.removeFromSuperview()
+        })
+        self.containerView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
+        self.dismissed()
     }
     
     private func getColorAt(_ point: CGPoint) -> UIColor? {

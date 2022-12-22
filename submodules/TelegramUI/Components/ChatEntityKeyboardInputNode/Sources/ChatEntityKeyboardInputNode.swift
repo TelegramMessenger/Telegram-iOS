@@ -889,8 +889,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         if let controllerInteraction = controllerInteraction {
             stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
                 context: self.context,
-                controllerInteraction: controllerInteraction,
-                chatPeerId: chatPeerId
+                interaction: EmojiContentPeekBehaviorImpl.Interaction(sendSticker: controllerInteraction.sendSticker, presentController: controllerInteraction.presentController, presentGlobalOverlayController: controllerInteraction.presentGlobalOverlayController, navigationController: controllerInteraction.navigationController),
+                chatPeerId: chatPeerId,
+                present: { c, a in
+                    controllerInteraction.presentGlobalOverlayController(c, a)
+                }
             )
         }
         self.stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -1974,21 +1977,37 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
     }
 }
 
-private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
+public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
+    public class Interaction {
+        public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+        public let presentController: (ViewController, Any?) -> Void
+        public let presentGlobalOverlayController: (ViewController, Any?) -> Void
+        public let navigationController: () -> NavigationController?
+        
+        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?) {
+            self.sendSticker = sendSticker
+            self.presentController = presentController
+            self.presentGlobalOverlayController = presentGlobalOverlayController
+            self.navigationController = navigationController
+        }
+    }
+    
     private let context: AccountContext
-    private let controllerInteraction: ChatControllerInteraction
+    private let interaction: Interaction?
     private let chatPeerId: EnginePeer.Id?
+    private let present: (ViewController, Any?) -> Void
     
     private var peekRecognizer: PeekControllerGestureRecognizer?
     private weak var peekController: PeekController?
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, chatPeerId: EnginePeer.Id?) {
+    public init(context: AccountContext, interaction: Interaction?, chatPeerId: EnginePeer.Id?, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.chatPeerId = chatPeerId
+        self.present = present
     }
     
-    func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?) {
+    public func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?) {
         if self.peekRecognizer == nil {
             let peekRecognizer = PeekControllerGestureRecognizer(contentAtPoint: { [weak self, weak view] point in
                 guard let strongSelf = self else {
@@ -2021,125 +2040,116 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                         return nil
                     }
                     var menuItems: [ContextMenuItem] = []
-                    
+
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    
-                    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void = { fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
-                    }
-                    
                     let isLocked = file.isPremiumSticker && !hasPremium
                     
-                    if let chatPeerId = strongSelf.chatPeerId, !isLocked {
-                        if chatPeerId != strongSelf.context.account.peerId && chatPeerId.namespace != Namespaces.Peer.SecretChat  {
-                            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+                    if let interaction = strongSelf.interaction {
+                        let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void = { fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
+                            let _ = interaction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
+                        }
+                                                
+                        if let chatPeerId = strongSelf.chatPeerId, !isLocked {
+                            if chatPeerId != strongSelf.context.account.peerId && chatPeerId.namespace != Namespaces.Peer.SecretChat  {
+                                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    if let strongSelf = self, let peekController = strongSelf.peekController {
+                                        if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                            sendSticker(.standalone(media: file), true, false, nil, false, animationNode.view, animationNode.bounds, nil)
+                                        } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                            sendSticker(.standalone(media: file), true, false, nil, false, imageNode.view, imageNode.bounds, nil)
+                                        }
+                                    }
+                                    f(.default)
+                                })))
+                            }
+                            
+                            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 if let strongSelf = self, let peekController = strongSelf.peekController {
                                     if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        sendSticker(.standalone(media: file), true, false, nil, false, animationNode.view, animationNode.bounds, nil)
+                                        let _ = sendSticker(.standalone(media: file), false, true, nil, false, animationNode.view, animationNode.bounds, nil)
                                     } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        sendSticker(.standalone(media: file), true, false, nil, false, imageNode.view, imageNode.bounds, nil)
+                                        let _ = sendSticker(.standalone(media: file), false, true, nil, false, imageNode.view, imageNode.bounds, nil)
                                     }
                                 }
                                 f(.default)
                             })))
                         }
-                    
-                        menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            if let strongSelf = self, let peekController = strongSelf.peekController {
-                                if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                    let _ = sendSticker(.standalone(media: file), false, true, nil, false, animationNode.view, animationNode.bounds, nil)
-                                } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                    let _ = sendSticker(.standalone(media: file), false, true, nil, false, imageNode.view, imageNode.bounds, nil)
-                                }
-                            }
-                            f(.default)
-                        })))
-                    }
-                    
-                    menuItems.append(
-                        .action(ContextMenuActionItem(text: isStarred ? presentationData.strings.Stickers_RemoveFromFavorites : presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                            f(.default)
-                            
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let _ = (context.engine.stickers.toggleStickerSaved(file: file, saved: !isStarred)
-                            |> deliverOnMainQueue).start(next: { result in
+                        
+                        menuItems.append(
+                            .action(ContextMenuActionItem(text: isStarred ? presentationData.strings.Stickers_RemoveFromFavorites : presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                f(.default)
+                                
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                let _ = (context.engine.stickers.toggleStickerSaved(file: file, saved: !isStarred)
+                                |> deliverOnMainQueue).start(next: { result in
+                                    switch result {
+                                    case .generic:
+                                        interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                    case let .limitExceeded(limit, premiumLimit):
+                                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                                        let text: String
+                                        if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                            text = presentationData.strings.Premium_MaxFavedStickersFinalText
+                                        } else {
+                                            text = presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                        }
+                                        interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { action in
+                                            if case .info = action {
+                                                let controller = PremiumIntroScreen(context: context, source: .savedStickers)
+                                                interaction.navigationController()?.pushViewController(controller)
+                                                return true
+                                            }
+                                            return false
+                                        }), nil)
+                                    }
+                                })
+                            }))
+                        )
+                        menuItems.append(
+                            .action(ContextMenuActionItem(text: presentationData.strings.StickerPack_ViewPack, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.default)
+                                
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 
-                                switch result {
-                                case .generic:
-                                    strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
-                                case let .limitExceeded(limit, premiumLimit):
-                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                                    let text: String
-                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
-                                        text = presentationData.strings.Premium_MaxFavedStickersFinalText
-                                    } else {
-                                        text = presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
-                                    }
-                                    strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { action in
-                                        guard let strongSelf = self else {
-                                            return false
-                                        }
-                                        if case .info = action {
-                                            let controller = PremiumIntroScreen(context: context, source: .savedStickers)
-                                            strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
-                                            return true
-                                        }
-                                        return false
-                                    }), nil)
-                                }
-                            })
-                        }))
-                    )
-                    menuItems.append(
-                        .action(ContextMenuActionItem(text: presentationData.strings.StickerPack_ViewPack, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            f(.default)
-                            
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
                             loop: for attribute in file.attributes {
-                            switch attribute {
-                            case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
-                                if let packReference = packReference {
-                                    let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
-                                        sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
-                                        return true
-                                    })
-                                    
-                                    strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
-                                    strongSelf.controllerInteraction.presentController(controller, nil)
+                                switch attribute {
+                                case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
+                                    if let packReference = packReference {
+                                        let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                            sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
+                                            return true
+                                        })
+                                        
+                                        interaction.navigationController()?.view.window?.endEditing(true)
+                                        interaction.presentController(controller, nil)
+                                    }
+                                    break loop
+                                default:
+                                    break
                                 }
-                                break loop
-                            default:
-                                break
                             }
-                        }
-                        }))
-                    )
+                            }))
+                        )
+                    }
                     
                     guard let view = view else {
                         return nil
                     }
                         
                     return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked && !isStarred, menu: menuItems, openPremiumIntro: {
-                        guard let strongSelf = self else {
+                        guard let strongSelf = self, let interaction = strongSelf.interaction else {
                             return
                         }
                         let controller = PremiumIntroScreen(context: context, source: .stickers)
-                        strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                        interaction.navigationController()?.pushViewController(controller)
                     }))
                 }
             }, present: { [weak self] content, sourceView, sourceRect in
@@ -2157,7 +2167,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                     self?.simulateUpdateLayout(isVisible: !visible)
                 }*/
                 strongSelf.peekController = controller
-                strongSelf.controllerInteraction.presentGlobalOverlayController(controller, nil)
+                strongSelf.present(controller, nil)
                 return controller
             }, updateContent: { [weak self] content in
                 guard let strongSelf = self else {

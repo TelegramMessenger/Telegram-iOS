@@ -22,7 +22,7 @@ final class DrawingMetalView: MTKView {
     init?(size: CGSize) {
         var size = size
         if Int(size.width) % 16 != 0 {
-            size.width = round(size.width / 16.0) * 16.0
+            size.width = ceil(size.width / 16.0) * 16.0
         }
         
         let mainBundle = Bundle(for: DrawingView.self)
@@ -46,11 +46,14 @@ final class DrawingMetalView: MTKView {
         self.commandQueue = commandQueue
         
         self.size = size
-        
+    
         super.init(frame: CGRect(origin: .zero, size: size), device: device)
         
+        self.autoResizeDrawable = false
         self.isOpaque = false
+        self.contentScaleFactor = 1.0
         self.drawableSize = self.size
+        //self.presentsWithTransaction = true
         
         self.setup()
     }
@@ -87,7 +90,7 @@ final class DrawingMetalView: MTKView {
     
     private func setup() {
         self.drawable = Drawable(size: self.size, pixelFormat: self.colorPixelFormat, device: device)
-        
+
         let size = self.size
         let w = size.width, h = size.height
         let vertices = [
@@ -97,32 +100,46 @@ final class DrawingMetalView: MTKView {
             Vertex(position: CGPoint(x: w , y: h), texCoord: CGPoint(x: 1, y: 1)),
         ]
         self.render_target_vertex = self.device?.makeBuffer(bytes: vertices, length: MemoryLayout<Vertex>.stride * vertices.count, options: .cpuCacheModeWriteCombined)
-        
+
         let matrix = Matrix.identity
         matrix.scaling(x: 2.0 / Float(size.width), y: -2.0 / Float(size.height), z: 1)
         matrix.translation(x: -1, y: 1, z: 0)
         self.render_target_uniform = self.device?.makeBuffer(bytes: matrix.m, length: MemoryLayout<Float>.size * 16, options: [])
-        
+
         let vertexFunction = self.library.makeFunction(name: "vertex_render_target")
         let fragmentFunction = self.library.makeFunction(name: "fragment_render_target")
         let pipelineDescription = MTLRenderPipelineDescriptor()
         pipelineDescription.vertexFunction = vertexFunction
         pipelineDescription.fragmentFunction = fragmentFunction
         pipelineDescription.colorAttachments[0].pixelFormat = colorPixelFormat
-        
+
         do {
             self.pipelineState = try self.device?.makeRenderPipelineState(descriptor: pipelineDescription)
         } catch {
             fatalError(error.localizedDescription)
         }
-                
+
         if let url = getAppBundle().url(forResource: "marker", withExtension: "png"), let data = try? Data(contentsOf: url) {
             self.markerBrush = Brush(texture: self.makeTexture(with: data), target: self, rotation: .fixed(-0.55))
         }
+        
+        self.drawable?.clear()
     }
     
-    var clearOnce = false
+
+    override var frame: CGRect {
+        get {
+            return super.frame
+        } set {
+            super.frame = newValue
+            self.drawableSize = self.size
+        }
+    }
+        
     override func draw(_ rect: CGRect) {
+        guard !self.isHidden || (self.drawable?.isClearing ?? false) else {
+            return
+        }
         super.draw(rect)
         
         guard let drawable = self.drawable, let texture = drawable.texture?.texture else {
@@ -135,38 +152,35 @@ final class DrawingMetalView: MTKView {
         attachment?.texture = self.currentDrawable?.texture
         attachment?.loadAction = .clear
         attachment?.storeAction = .store
-        
+
         guard let _ = attachment?.texture else {
             return
         }
-        
+
         let commandBuffer = self.commandQueue.makeCommandBuffer()
         let commandEncoder = commandBuffer?.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
-        
+
         commandEncoder?.setRenderPipelineState(self.pipelineState)
-        
+
         commandEncoder?.setVertexBuffer(self.render_target_vertex, offset: 0, index: 0)
         commandEncoder?.setVertexBuffer(self.render_target_uniform, offset: 0, index: 1)
         commandEncoder?.setFragmentTexture(texture, index: 0)
         commandEncoder?.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-        
+
         commandEncoder?.endEncoding()
         if let drawable = self.currentDrawable {
             commandBuffer?.present(drawable)
         }
         commandBuffer?.commit()
     }
-    
+        
     func clear() {
         guard let drawable = self.drawable else {
             return
         }
         
-        self.clearOnce = true
         drawable.updateBuffer(with: self.size)
         drawable.clear()
-        
-        drawable.commit(wait: true)
     }
         
     enum BrushType {
@@ -215,7 +229,9 @@ private class Drawable {
         self.updateBuffer(with: size)
     }
     
+    var isClearing = false
     func clear() {
+        self.isClearing = true
         self.texture?.clear()
         self.commit(wait: true)
     }
@@ -246,6 +262,10 @@ private class Drawable {
             self.commandBuffer?.waitUntilCompleted()
         }
         self.commandBuffer = nil
+        
+        if self.isClearing && wait {
+            self.isClearing = false
+        }
     }
     
     internal func makeTexture() -> Texture? {
@@ -645,7 +665,7 @@ final class Texture {
             textureDescriptor.height = height
             textureDescriptor.usage = [.renderTarget, .shaderRead]
             textureDescriptor.storageMode = .shared
-            
+        
             guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
                 return nil
             }
@@ -706,7 +726,7 @@ final class Texture {
             bitsPerComponent: 8,
             bitsPerPixel: 8 * 4,
             bytesPerRow: self.bytesPerRow,
-            space: DeviceGraphicsContextSettings.shared.colorSpace,
+            space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: DeviceGraphicsContextSettings.shared.transparentBitmapInfo,
             provider: dataProvider,
             decode: nil,

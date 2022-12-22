@@ -103,6 +103,7 @@
 @property (nonatomic, copy) void(^requestDismiss)(void);
 @property (nonatomic, copy) void(^requestApply)(void);
 @property (nonatomic, copy) UIImage *(^getCurrentImage)(void);
+@property (nonatomic, copy) void(^updateVideoPlayback)(bool);
 
 - (TGPaintingData *)generateResultData;
 - (void)animateOut:(void(^)(void))completion;
@@ -142,7 +143,7 @@
 
 
 - (UIView<TGPhotoSolidRoundedButtonView> *)solidRoundedButton:(NSString *)title action:(void(^)(void))action;
-- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isAvatar:(bool)isAvatar;
+- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isVideo:(bool)isVideo isAvatar:(bool)isAvatar;
 
 - (UIView<TGPhotoDrawingEntitiesView> *)drawingEntitiesViewWithSize:(CGSize)size;
 

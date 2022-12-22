@@ -350,7 +350,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(fontSize: self.displayFontSize * 0.8, textColor: textColor, emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: self.displayFontSize * 0.78, textColor: textColor, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil
@@ -684,7 +684,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         let scale = self.textEntity.scale
         let rotation = self.textEntity.rotation
         
-        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.8 / 17.0)
+        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.78 / 17.0)
         
         var entities: [DrawingStickerEntity] = []
         for (emojiRect, emojiAttribute) in self.emojiRects {
@@ -754,7 +754,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         
         self.snapTool.onSnapYUpdated = { [weak self] snapped in
             if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
+                entityView.onSnapToYAxis(snapped)
             }
         }
     }
@@ -1033,8 +1033,8 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             context.saveGState()
             
             context.translateBy(x: origin.x, y: origin.y)
-            
-            context.setBlendMode(.normal)
+                        
+            context.setBlendMode(.copy)
             context.setFillColor(frameColor.cgColor)
             context.setStrokeColor(frameColor.cgColor)
             

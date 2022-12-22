@@ -277,7 +277,7 @@ private class ColorSliderComponent: Component {
                     self.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:))))
                                         
                     if !self.transparencyLayer.isHidden {
-                        self.transparencyLayer.contents = generateCheckeredImage(size: sliderSize, whiteColor: UIColor(rgb: 0xffffff, alpha: 0.1), blackColor: .clear, length: 12.0)?.cgImage
+                        self.transparencyLayer.contents = generateCheckeredImage(size: sliderSize, whiteColor: UIColor(rgb: 0xffffff, alpha: 1.0), blackColor: .clear, length: 12.0)?.cgImage
                     }
                     
                     self.knob.contents = generateKnobImage()?.cgImage
@@ -435,6 +435,10 @@ private class ColorFieldComponent: Component {
             } else {
                 return false
             }
+        }
+        
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            textField.selectAll(nil)
         }
         
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
@@ -1247,12 +1251,13 @@ private final class ColorSlidersComponent: CombinedComponent {
                     type: .number,
                     value: "\(Int(component.color.red * 255.0))",
                     updated: { value in
-                        if let intValue = Int(value) {
-                            updateColor(currentColor.withUpdatedRed(CGFloat(intValue) / 255.0))
-                        }
+                        let intValue = Int(value) ?? 0
+                        updateColor(currentColor.withUpdatedRed(CGFloat(intValue) / 255.0))
                     },
                     shouldUpdate: { value in
                         if let intValue = Int(value), intValue >= 0 && intValue <= 255 {
+                            return true
+                        } else if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             return true
                         } else {
                             return false
@@ -1313,12 +1318,13 @@ private final class ColorSlidersComponent: CombinedComponent {
                     type: .number,
                     value: "\(Int(component.color.green * 255.0))",
                     updated: { value in
-                        if let intValue = Int(value) {
-                            updateColor(currentColor.withUpdatedGreen(CGFloat(intValue) / 255.0))
-                        }
+                        let intValue = Int(value) ?? 0
+                        updateColor(currentColor.withUpdatedGreen(CGFloat(intValue) / 255.0))
                     },
                     shouldUpdate: { value in
                         if let intValue = Int(value), intValue >= 0 && intValue <= 255 {
+                            return true
+                        } else if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             return true
                         } else {
                             return false
@@ -1379,12 +1385,13 @@ private final class ColorSlidersComponent: CombinedComponent {
                     type: .number,
                     value: "\(Int(component.color.blue * 255.0))",
                     updated: { value in
-                        if let intValue = Int(value) {
-                            updateColor(currentColor.withUpdatedBlue(CGFloat(intValue) / 255.0))
-                        }
+                        let intValue = Int(value) ?? 0
+                        updateColor(currentColor.withUpdatedBlue(CGFloat(intValue) / 255.0))
                     },
                     shouldUpdate: { value in
                         if let intValue = Int(value), intValue >= 0 && intValue <= 255 {
+                            return true
+                        } else if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             return true
                         } else {
                             return false
@@ -2198,8 +2205,19 @@ private final class ColorPickerContent: CombinedComponent {
                     type: .number,
                     value: "\(Int(state.selectedColor.alpha * 100.0))",
                     suffix: "%",
-                    updated: { _ in },
-                    shouldUpdate: { _ in return true }
+                    updated: { value in
+                        let intValue = Int(value) ?? 0
+                        state.updateAlpha(CGFloat(intValue) / 100.0)
+                    },
+                    shouldUpdate: { value in
+                        if let intValue = Int(value), intValue >= 0 && intValue <= 100 {
+                            return true
+                        } else if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
                 ),
                 availableSize: CGSize(width: 77.0, height: 36.0),
                 transition: .immediate

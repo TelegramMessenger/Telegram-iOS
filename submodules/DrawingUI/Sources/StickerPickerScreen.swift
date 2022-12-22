@@ -13,6 +13,8 @@ import EntityKeyboard
 import PagerComponent
 import FeaturedStickersScreen
 import TelegramNotices
+import ChatEntityKeyboardInputNode
+import ContextUI
 
 struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
@@ -440,6 +442,18 @@ class StickerPickerScreen: ViewController {
                 hideBackground: true
             )
             
+            var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
+            if let controller = self.controller {
+                stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
+                    context: controller.context,
+                    interaction: nil,
+                    chatPeerId: nil,
+                    present: { [weak controller] c, a in
+                        controller?.presentInGlobalOverlay(c, with: a)
+                    }
+                )
+            }
+            
             content.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] _, item, _, _, _, _ in
                     guard let strongSelf = self, let file = item.itemFile else {
@@ -541,7 +555,7 @@ class StickerPickerScreen: ViewController {
                 updateSearchQuery: { _, _ in
                 },
                 chatPeerId: nil,
-                peekBehavior: nil,
+                peekBehavior: stickerPeekBehavior,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
@@ -593,6 +607,10 @@ class StickerPickerScreen: ViewController {
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
                 if otherGestureRecognizer is PagerPanGestureRecognizer {
+                    return false
+                } else if otherGestureRecognizer is UIPanGestureRecognizer, let scrollView = otherGestureRecognizer.view, scrollView.frame.width > scrollView.frame.height {
+                    return false
+                } else if otherGestureRecognizer is PeekControllerGestureRecognizer {
                     return false
                 }
                 return true

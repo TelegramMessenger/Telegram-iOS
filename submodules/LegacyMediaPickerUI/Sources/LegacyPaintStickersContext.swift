@@ -485,7 +485,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
     public func entities(for time: CMTime, fps: Int, size: CGSize, completion: (([CIImage]?) -> Void)!) {
         let entities = self.entities
         let maxSide = max(size.width, size.height)
-        let paintingScale = maxSide / 2560.0
+        let paintingScale = maxSide / 1920.0
         
         self.queue.async {
             if entities.isEmpty {
@@ -607,8 +607,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let contentWrapperView: UIView!
         let interfaceController: TGPhotoDrawingInterfaceController!
         
-        init(context: AccountContext, size: CGSize, originalSize: CGSize, isAvatar: Bool) {
-            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isAvatar: isAvatar)
+        init(context: AccountContext, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool) {
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView
@@ -619,8 +619,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         }
     }
     
-    public func drawingAdapter(_ size: CGSize, originalSize: CGSize, isAvatar: Bool) -> TGPhotoDrawingAdapter! {
-        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize, isAvatar: isAvatar)
+    public func drawingAdapter(_ size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool) -> TGPhotoDrawingAdapter! {
+        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar)
     }
     
     public func solidRoundedButton(_ title: String!, action: (() -> Void)!) -> (UIView & TGPhotoSolidRoundedButtonView)! {

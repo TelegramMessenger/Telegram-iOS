@@ -91,6 +91,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode:ChatEntityKeyboardInputNode",
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
         "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/FastBlur:FastBlur",
     ],
     visibility = [
         "//visibility:public",

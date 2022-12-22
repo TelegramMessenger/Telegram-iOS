@@ -45,6 +45,8 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         return self.position
     }
     
+    public var scale: CGFloat = 1.0
+    
     public var renderImage: UIImage?
     
     init(shapeType: ShapeType, drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
@@ -305,7 +307,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         
         self.snapTool.onSnapYUpdated = { [weak self] snapped in
             if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
+                entityView.onSnapToYAxis(snapped)
             }
         }
     }
@@ -407,36 +409,37 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
                 if isAspectLocked {
                     delta = CGPoint(x: delta.x, y: delta.x)
                 }
-                updatedSize.width -= delta.x
+                
+                updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
                 updatedPosition.x -= delta.x * -0.5
-                updatedSize.height -= delta.y
+                updatedSize.height =  max(minimumSize.height, updatedSize.height - delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.topRightHandle {
                 var delta = delta
                 if isAspectLocked {
                     delta = CGPoint(x: delta.x, y: -delta.x)
                 }
-                updatedSize.width += delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width + delta.x)
                 updatedPosition.x += delta.x * 0.5
-                updatedSize.height -= delta.y
+                updatedSize.height =  max(minimumSize.height, updatedSize.height - delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.bottomLeftHandle {
                 var delta = delta
                 if isAspectLocked {
                     delta = CGPoint(x: delta.x, y: -delta.x)
                 }
-                updatedSize.width -= delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
                 updatedPosition.x -= delta.x * -0.5
-                updatedSize.height += delta.y
+                updatedSize.height = max(minimumSize.height, updatedSize.height + delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.bottomRightHandle {
                 var delta = delta
                 if isAspectLocked {
                     delta = CGPoint(x: delta.x, y: delta.x)
                 }
-                updatedSize.width += delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width + delta.x)
                 updatedPosition.x += delta.x * 0.5
-                updatedSize.height += delta.y
+                updatedSize.height = max(minimumSize.height, updatedSize.height + delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x

@@ -255,7 +255,22 @@ class DrawingGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate
 }
 
 class DrawingGesturePipeline {
+    struct Point {
+        let location: CGPoint
+        let velocity: CGFloat
+        let timestamp: Double
+        
+        var x: CGFloat {
+            return self.location.x
+        }
+        
+        var y: CGFloat {
+            return self.location.y
+        }
+    }
+    
     enum Mode {
+        case direct
         case location
         case smoothCurve
         case polyline
@@ -269,6 +284,7 @@ class DrawingGesturePipeline {
     }
     
     enum DrawingResult {
+        case point(DrawingGesturePipeline.Point)
         case location(Polyline.Point)
         case smoothCurve(BezierPath)
         case polyline(Polyline)
@@ -303,6 +319,7 @@ class DrawingGesturePipeline {
         view.addGestureRecognizer(gestureRecognizer)
     }
     
+    var previousPoint: Point?
     @objc private func handleGesture(_ gestureRecognizer: DrawingGestureRecognizer) {
         let state: DrawingGestureState
         switch gestureRecognizer.state {
@@ -322,6 +339,29 @@ class DrawingGesturePipeline {
             state = .cancelled
         }
         
+        if case .direct = self.mode, let touch = self.pendingTouches.first {
+            if state == .began {
+                self.previousPoint = nil
+            }
+            
+            var velocity: Double = 0.0
+            if let previousPoint = self.previousPoint {
+                let distance = touch.location.distance(to: previousPoint.location)
+                let elapsed = max(0.0, touch.timestamp - previousPoint.timestamp)
+                velocity = elapsed > 0.0 ? distance / elapsed : 0.0
+            } else {
+                velocity = 0.0
+            }
+            
+            let point = Point(location: touch.location, velocity: velocity, timestamp: touch.timestamp)
+            self.previousPoint = point
+            
+            self.onDrawing(state, .point(point))
+            
+            self.pendingTouches.removeAll()
+            return
+        }
+        
         let touchDeltas = self.processTouchEvents(self.pendingTouches)
         let polylineDeltas = self.processTouchPaths(inputDeltas: touchDeltas)
         let simplifiedPolylineDeltas = self.simplifyPolylines(inputDeltas: polylineDeltas)
@@ -339,6 +379,8 @@ class DrawingGesturePipeline {
             if let polyline = self.simplifiedPolylines.last {
                 self.onDrawing(state, .polyline(polyline))
             }
+        case .direct:
+            break
         }
         
         self.pendingTouches.removeAll()
