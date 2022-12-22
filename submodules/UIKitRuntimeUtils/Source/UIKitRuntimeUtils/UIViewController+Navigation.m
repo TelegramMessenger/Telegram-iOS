@@ -116,6 +116,9 @@ static bool notyfyingShiftState = false;
 @implementation UIScrollView (FrameRateRangeOverride)
 
 - (void)fixScrollDisplayLink {
+    if (@available(iOS 16.0, *)) {
+        return;
+    }
     static NSString *scrollHeartbeatKey = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{

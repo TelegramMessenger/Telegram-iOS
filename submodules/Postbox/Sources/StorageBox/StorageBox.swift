@@ -19,11 +19,21 @@ private func md5Hash(_ data: Data) -> HashId {
 }
 
 public final class StorageBox {
-    public struct Stats {
-        public var contentTypes: [UInt8: Int64]
+    public final class Stats {
+        public fileprivate(set) var contentTypes: [UInt8: Int64]
         
         public init(contentTypes: [UInt8: Int64]) {
             self.contentTypes = contentTypes
+        }
+    }
+    
+    public final class AllStats {
+        public fileprivate(set) var total: Stats
+        public fileprivate(set) var peers: [PeerId: Stats]
+        
+        public init(total: Stats, peers: [PeerId: Stats]) {
+            self.total = total
+            self.peers = peers
         }
     }
     
@@ -122,6 +132,10 @@ public final class StorageBox {
         }
     }
     
+    private struct Metadata: Codable {
+        var version: Int32
+    }
+    
     private final class Impl {
         let queue: Queue
         let logger: StorageBox.Logger
@@ -133,6 +147,7 @@ public final class StorageBox {
         let peerIdTable: ValueBoxTable
         let peerContentTypeStatsTable: ValueBoxTable
         let contentTypeStatsTable: ValueBoxTable
+        let metadataTable: ValueBoxTable
         
         init(queue: Queue, logger: StorageBox.Logger, basePath: String) {
             self.queue = queue
@@ -157,6 +172,54 @@ public final class StorageBox {
             self.peerIdTable = ValueBoxTable(id: 18, keyType: .binary, compactValuesOnCreation: true)
             self.peerContentTypeStatsTable = ValueBoxTable(id: 19, keyType: .binary, compactValuesOnCreation: true)
             self.contentTypeStatsTable = ValueBoxTable(id: 20, keyType: .binary, compactValuesOnCreation: true)
+            self.metadataTable = ValueBoxTable(id: 21, keyType: .binary, compactValuesOnCreation: true)
+            
+            self.performUpdatesIfNeeded()
+        }
+        
+        private func performUpdatesIfNeeded() {
+            self.valueBox.begin()
+            
+            let mainMetadataKey = ValueBoxKey(length: 2)
+            mainMetadataKey.setUInt8(0, value: 0)
+            mainMetadataKey.setUInt8(1, value: 0)
+            
+            var metadata: Metadata
+            if let value = self.valueBox.get(self.metadataTable, key: mainMetadataKey), let parsedValue = try? JSONDecoder().decode(Metadata.self, from: value.makeData()) {
+                metadata = parsedValue
+            } else {
+                metadata = Metadata(version: 0)
+            }
+            
+            if metadata.version != 2 {
+                self.reindexPeerStats()
+                
+                metadata.version = 2
+                if let data = try? JSONEncoder().encode(metadata) {
+                    self.valueBox.set(self.metadataTable, key: mainMetadataKey, value: MemoryBuffer(data: data))
+                }
+            }
+            
+            self.valueBox.commit()
+        }
+        
+        private func reindexPeerStats() {
+            self.valueBox.removeAllFromTable(self.peerContentTypeStatsTable)
+            
+            let mainKey = ValueBoxKey(length: 16)
+            self.valueBox.scan(self.peerIdToIdTable, keys: { key in
+                let peerId = key.getInt64(0)
+                let hashId = key.getData(8, length: 16)
+                
+                mainKey.setData(0, value: hashId)
+                
+                if let currentInfoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
+                    let info = ItemInfo(buffer: currentInfoValue)
+                    self.internalAddSize(peerId: peerId, contentType: info.contentType, delta: info.size)
+                }
+                
+                return true
+            })
         }
         
         private func internalAddSize(contentType: UInt8, delta: Int64) {
@@ -171,7 +234,7 @@ public final class StorageBox {
             currentSize += delta
             
             if currentSize < 0 {
-                assertionFailure()
+                //assertionFailure()
                 currentSize = 0
             }
             
@@ -184,18 +247,18 @@ public final class StorageBox {
             key.setUInt8(8, value: contentType)
             
             var currentSize: Int64 = 0
-            if let value = self.valueBox.get(self.contentTypeStatsTable, key: key) {
+            if let value = self.valueBox.get(self.peerContentTypeStatsTable, key: key) {
                 value.read(&currentSize, offset: 0, length: 8)
             }
             
             currentSize += delta
             
             if currentSize < 0 {
-                assertionFailure()
+                //assertionFailure()
                 currentSize = 0
             }
             
-            self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+            self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
         }
         
         func add(reference: Reference, to id: Data, contentType: UInt8) {
@@ -224,6 +287,10 @@ public final class StorageBox {
                 if size != 0 {
                     self.internalAddSize(contentType: previousContentType, delta: -size)
                     self.internalAddSize(contentType: contentType, delta: size)
+                    
+                    for peerId in self.peerIdsReferencing(hashId: hashId) {
+                        self.internalAddSize(peerId: peerId, contentType: previousContentType, delta: -size)
+                    }
                 }
             }
             
@@ -274,7 +341,29 @@ public final class StorageBox {
                 }
             }
             
+            if let previousContentType = previousContentType, previousContentType != contentType {
+                if size != 0 {
+                    for peerId in self.peerIdsReferencing(hashId: hashId) {
+                        self.internalAddSize(peerId: peerId, contentType: contentType, delta: size)
+                    }
+                }
+            }
+            
             self.valueBox.commit()
+        }
+        
+        private func peerIdsReferencing(hashId: HashId) -> Set<Int64> {
+            let mainKey = ValueBoxKey(length: 16)
+            mainKey.setData(0, value: hashId.data)
+            
+            var peerIds = Set<Int64>()
+            self.valueBox.range(self.idToReferenceTable, start: mainKey, end: mainKey.successor, keys: { key in
+                let peerId = key.getInt64(16)
+                peerIds.insert(peerId)
+                return true
+            }, limit: 0)
+            
+            return peerIds
         }
         
         func update(id: Data, size: Int64) {
@@ -300,14 +389,8 @@ public final class StorageBox {
                     self.internalAddSize(contentType: info.contentType, delta: sizeDelta)
                 }
                 
-                var peerIds: [Int64] = []
-                self.valueBox.range(self.idToReferenceTable, start: mainKey, end: mainKey.successor, keys: { key in
-                    peerIds.append(key.getInt64(0))
-                    return true
-                }, limit: 0)
-                
-                for peerId in peerIds {
-                    let _ = peerId
+                for peerId in self.peerIdsReferencing(hashId: hashId) {
+                    self.internalAddSize(peerId: peerId, contentType: info.contentType, delta: sizeDelta)
                 }
             }
             
@@ -333,6 +416,8 @@ public final class StorageBox {
                 addedCount += 1
                 
                 self.valueBox.set(self.hashIdToInfoTable, key: mainKey, value: ItemInfo(id: id, contentType: contentType, size: size).serialize())
+                
+                self.internalAddSize(contentType: contentType, delta: size)
                 
                 let idKey = ValueBoxKey(length: hashId.data.count + 8 + 1 + 4)
                 idKey.setData(0, value: hashId.data)
@@ -378,6 +463,8 @@ public final class StorageBox {
                         }
                         peerIdCount += 1
                         self.valueBox.set(self.peerIdTable, key: peerIdKey, value: MemoryBuffer(memory: &peerIdCount, capacity: 4, length: 4, freeWhenDone: false))
+                        
+                        self.internalAddSize(peerId: 0, contentType: contentType, delta: size)
                     }
                 }
             }
@@ -425,6 +512,10 @@ public final class StorageBox {
                     
                     if self.valueBox.exists(self.peerIdToIdTable, key: peerIdIdKey) {
                         self.valueBox.remove(self.peerIdToIdTable, key: peerIdIdKey, secure: false)
+                        
+                        if info.size != 0 {
+                            self.internalAddSize(peerId: peerId, contentType: info.contentType, delta: -info.size)
+                        }
                         
                         peerIdKey.setInt64(0, value: peerId)
                         if let value = self.valueBox.get(self.peerIdTable, key: peerIdKey) {
@@ -564,18 +655,39 @@ public final class StorageBox {
             return result
         }
         
-        func getStats() -> Stats {
-            var contentTypes: [UInt8: Int64] = [:]
+        func getAllStats() -> AllStats {
+            self.valueBox.begin()
+            
+            let allStats = AllStats(total: StorageBox.Stats(contentTypes: [:]), peers: [:])
             
             self.valueBox.scan(self.contentTypeStatsTable, values: { key, value in
                 var size: Int64 = 0
                 value.read(&size, offset: 0, length: 8)
-                contentTypes[key.getUInt8(0)] = size
+                allStats.total.contentTypes[key.getUInt8(0)] = size
                 
                 return true
             })
             
-            return Stats(contentTypes: contentTypes)
+            self.valueBox.scan(self.peerContentTypeStatsTable, values: { key, value in
+                var size: Int64 = 0
+                value.read(&size, offset: 0, length: 8)
+                
+                let peerId = key.getInt64(0)
+                if peerId != 0 {
+                    assert(true)
+                }
+                let contentType = key.getUInt8(0)
+                if allStats.peers[PeerId(peerId)] == nil {
+                    allStats.peers[PeerId(peerId)] = StorageBox.Stats(contentTypes: [:])
+                }
+                allStats.peers[PeerId(peerId)]?.contentTypes[contentType] = size
+                
+                return true
+            })
+            
+            self.valueBox.commit()
+            
+            return allStats
         }
     }
     
@@ -651,9 +763,9 @@ public final class StorageBox {
         }
     }
     
-    public func getStats() -> Signal<Stats, NoError> {
+    public func getAllStats() -> Signal<AllStats, NoError> {
         return self.impl.signalWith { impl, subscriber in
-            subscriber.putNext(impl.getStats())
+            subscriber.putNext(impl.getAllStats())
             subscriber.putCompletion()
             
             return EmptyDisposable

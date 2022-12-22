@@ -41,6 +41,21 @@ private final class StorageUsageScreenComponent: Component {
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
+        
+        override var contentOffset: CGPoint {
+            set(value) {
+                var value = value
+                if value.y > self.contentSize.height - self.bounds.height {
+                    value.y = self.contentSize.height - self.bounds.height
+                    self.bounces = false
+                } else {
+                    self.bounces = true
+                }
+                super.contentOffset = value
+            } get {
+                return super.contentOffset
+            }
+        }
     }
     
     private final class AnimationHint {
@@ -56,6 +71,7 @@ private final class StorageUsageScreenComponent: Component {
         
         private var currentStats: AllStorageUsageStats?
         private var cacheSettings: CacheStorageSettings?
+        private var peerItems: StoragePeerListPanelComponent.Items?
         
         private var selectedCategories: Set<AnyHashable> = Set()
         
@@ -79,10 +95,16 @@ private final class StorageUsageScreenComponent: Component {
         private var keepDurationSectionContainerView: UIView
         private var keepDurationItems: [AnyHashable: ComponentView<Empty>] = [:]
         
+        private let panelContainer = ComponentView<Empty>()
+        
         private var component: StorageUsageScreenComponent?
         private weak var state: EmptyComponentState?
         private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
         private var controller: (() -> ViewController?)?
+        
+        private var enableVelocityTracking: Bool = false
+        private var previousVelocityM1: CGFloat = 0.0
+        private var previousVelocity: CGFloat = 0.0
         
         private var ignoreScrolling: Bool = false
         
@@ -107,7 +129,6 @@ private final class StorageUsageScreenComponent: Component {
             
             super.init(frame: frame)
             
-            self.scrollView.layer.anchorPoint = CGPoint()
             self.scrollView.delaysContentTouches = true
             self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
@@ -144,9 +165,46 @@ private final class StorageUsageScreenComponent: Component {
             self.statsDisposable?.dispose()
         }
         
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.enableVelocityTracking = true
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
+                if self.enableVelocityTracking {
+                    self.previousVelocityM1 = self.previousVelocity
+                    if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
+                        self.previousVelocity = CGFloat(value)
+                    }
+                }
+                
                 self.updateScrolling(transition: .immediate)
+            }
+        }
+        
+        func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            guard let navigationMetrics = self.navigationMetrics else {
+                return
+            }
+            let _ = navigationMetrics
+            
+            let paneAreaExpansionDistance: CGFloat = 32.0
+            let paneAreaExpansionFinalPoint: CGFloat = scrollView.contentSize.height - scrollView.bounds.height
+            if targetContentOffset.pointee.y > paneAreaExpansionFinalPoint - paneAreaExpansionDistance && targetContentOffset.pointee.y < paneAreaExpansionFinalPoint {
+                targetContentOffset.pointee.y = paneAreaExpansionFinalPoint
+                self.enableVelocityTracking = false
+                self.previousVelocity = 0.0
+                self.previousVelocityM1 = 0.0
+            }
+        }
+        
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
+                let _ = panelContainerView
+                let paneAreaExpansionFinalPoint: CGFloat = scrollView.contentSize.height - scrollView.bounds.height
+                if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
+                    //panelContainerView.transferVelocity(self.previousVelocityM1)
+                }
             }
         }
         
@@ -183,6 +241,8 @@ private final class StorageUsageScreenComponent: Component {
             self.component = component
             self.state = state
             
+            let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            
             if self.statsDisposable == nil {
                 self.cacheSettingsDisposable = (component.context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
                 |> map { sharedData -> CacheStorageSettings in
@@ -210,8 +270,38 @@ private final class StorageUsageScreenComponent: Component {
                         return
                     }
                     self.currentStats = stats
+                    
+                    var peerItems: [StoragePeerListPanelComponent.Item] = []
+                    
+                    for item in stats.peers.values.sorted(by: { lhs, rhs in
+                        let lhsSize: Int64 = lhs.stats.categories.values.reduce(0, {
+                            $0 + $1.size
+                        })
+                        let rhsSize: Int64 = rhs.stats.categories.values.reduce(0, {
+                            $0 + $1.size
+                        })
+                        return lhsSize > rhsSize
+                    }) {
+                        let itemSize: Int64 = item.stats.categories.values.reduce(0, {
+                            $0 + $1.size
+                        })
+                        peerItems.append(StoragePeerListPanelComponent.Item(
+                            peer: item.peer,
+                            size: itemSize
+                        ))
+                    }
+                    
+                    self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
+                    
                     self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(isFirstStatsUpdate: true)))
                 })
+            }
+            
+            var wasLockedAtPanels = false
+            if let panelContainerView = self.panelContainer.view, let navigationMetrics = self.navigationMetrics {
+                if abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - navigationMetrics.navigationHeight)) <= UIScreenPixel {
+                    wasLockedAtPanels = true
+                }
             }
             
             let animationHint = transition.userData(AnimationHint.self)
@@ -227,8 +317,6 @@ private final class StorageUsageScreenComponent: Component {
                 transition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
                 transition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
             }
-            
-            let environment = environment[ViewControllerComponentContainer.Environment.self].value
             
             self.controller = environment.controller
             
@@ -300,7 +388,7 @@ private final class StorageUsageScreenComponent: Component {
             var contentHeight: CGFloat = 0.0
             
             let topInset: CGFloat = 19.0
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             contentHeight += environment.statusBarHeight + topInset
             
@@ -682,17 +770,52 @@ private final class StorageUsageScreenComponent: Component {
             contentHeight += keepDurationDescriptionSize.height
             contentHeight += 40.0
             
-            contentHeight += availableSize.height
+            //TODO:localize
+            let panelContainerSize = self.panelContainer.update(
+                transition: transition,
+                component: AnyComponent(StorageUsagePanelContainerComponent(
+                    theme: environment.theme,
+                    strings: environment.strings,
+                    insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+                    items: [
+                        StorageUsagePanelContainerComponent.Item(
+                            id: "peers",
+                            title: "Chats",
+                            panel: AnyComponent(StoragePeerListPanelComponent(
+                                context: component.context,
+                                items: self.peerItems
+                            ))
+                        )
+                    ])
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: availableSize.height - environment.navigationHeight)
+            )
+            if let panelContainerView = self.panelContainer.view {
+                if panelContainerView.superview == nil {
+                    self.scrollView.addSubview(panelContainerView)
+                }
+                transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: panelContainerSize))
+            }
+            contentHeight += panelContainerSize.height
             
             self.ignoreScrolling = true
             
             let contentOffset = self.scrollView.bounds.minY
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setPosition(view: self.scrollView, position: CGRect(origin: CGPoint(), size: availableSize).center)
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
             }
-            if !transition.animation.isImmediate && self.scrollView.bounds.minY != contentOffset {
+            
+            var scrollViewBounds = self.scrollView.bounds
+            scrollViewBounds.size = availableSize
+            if wasLockedAtPanels, let panelContainerView = self.panelContainer.view {
+                scrollViewBounds.origin.y = panelContainerView.frame.minY - environment.navigationHeight
+            }
+            transition.setBounds(view: self.scrollView, bounds: scrollViewBounds)
+            
+            if !wasLockedAtPanels && !transition.animation.isImmediate && self.scrollView.bounds.minY != contentOffset {
                 let deltaOffset = self.scrollView.bounds.minY - contentOffset
                 transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: -deltaOffset), to: CGPoint(), additive: true)
             }
