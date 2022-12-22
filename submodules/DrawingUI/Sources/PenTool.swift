@@ -3,70 +3,68 @@ import UIKit
 import Display
 
 final class PenTool: DrawingElement, Codable {
-    class RenderLayer: SimpleLayer, DrawingRenderLayer {
+    class RenderView: UIView, DrawingRenderView {
         private weak var element: PenTool?
         private var isEraser = false
         
         private var accumulationImage: UIImage?
-        private var activeLayer: ActiveLayer?
+        private var activeView: ActiveView?
         
         private var start = 0
         private var segmentsCount = 0
         private var velocity: CGFloat?
         
-        var displayLink: ConstantDisplayLinkAnimator?
-        func setup(size: CGSize, isEraser: Bool, useDisplayLink: Bool) {
+        private var displayScale: CGFloat = 1.0
+        
+        func setup(size: CGSize, screenSize: CGSize, isEraser: Bool, useDisplayLink: Bool) {
             self.isEraser = isEraser
             
-            self.shouldRasterize = true
-            self.contentsScale = 1.0
-            self.allowsGroupOpacity = true
+            self.backgroundColor = .clear
+            self.isOpaque = false
+            self.contentMode = .redraw
             
-            let bounds = CGRect(origin: .zero, size: size)
-            self.frame = bounds
+            let viewSize = size.aspectFilled(screenSize)
             
-            let activeLayer = ActiveLayer()
-            activeLayer.shouldRasterize = true
-            activeLayer.contentsScale = 1.0
-            activeLayer.frame = bounds
-            activeLayer.parent = self
-            self.addSublayer(activeLayer)
-            self.activeLayer = activeLayer
+            self.displayScale = size.width / viewSize.width
             
-            if useDisplayLink {
-                self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
-                    if let strongSelf = self {
-                        if let element = strongSelf.element, strongSelf.segmentsCount < element.segments.count, let velocity = strongSelf.velocity {
-                            let delta = max(12, Int(velocity / 100.0))
-                            let start = strongSelf.segmentsCount
-                            strongSelf.segmentsCount = min(strongSelf.segmentsCount + delta, element.segments.count)
-                            
-                            let rect = element.boundingRect(from: start, to: strongSelf.segmentsCount)
-                            strongSelf.activeLayer?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0))
-                        }
-                    }
-                })
-                self.displayLink?.frameInterval = 1
-                self.displayLink?.isPaused = false
-            }
+            self.bounds = CGRect(origin: .zero, size: viewSize)
+            self.transform = CGAffineTransform(scaleX: self.displayScale, y: self.displayScale)
+            self.frame = CGRect(origin: .zero, size: size)
+                                    
+            let activeView = ActiveView(frame: CGRect(origin: .zero, size: viewSize))
+            activeView.backgroundColor = .clear
+            activeView.contentMode = .redraw
+            activeView.isOpaque = false
+            activeView.parent = self
+            self.addSubview(activeView)
+            self.activeView = activeView
         }
         
-        func animateArrowPaths(leftArrowPath: UIBezierPath, rightArrowPath: UIBezierPath, lineWidth: CGFloat, completion: @escaping () -> Void) {
+        func animateArrowPaths(start: CGPoint, direction: CGFloat, length: CGFloat, lineWidth: CGFloat, completion: @escaping () -> Void) {
+            let arrowStart = CGPoint(x: start.x / self.displayScale, y: start.y / self.displayScale)
+            let arrowLeftPath = UIBezierPath()
+            arrowLeftPath.move(to: arrowStart)
+            arrowLeftPath.addLine(to: arrowStart.pointAt(distance: length / self.displayScale, angle: direction - 0.45))
+            
+            let arrowRightPath = UIBezierPath()
+            arrowRightPath.move(to: arrowStart)
+            arrowRightPath.addLine(to: arrowStart.pointAt(distance: length / self.displayScale, angle: direction + 0.45))
+            
             let leftArrowShape = CAShapeLayer()
-            leftArrowShape.path = leftArrowPath.cgPath
-            leftArrowShape.lineWidth = lineWidth
+            leftArrowShape.path = arrowLeftPath.cgPath
+            leftArrowShape.lineWidth = lineWidth / self.displayScale
             leftArrowShape.strokeColor = self.element?.color.toCGColor()
             leftArrowShape.lineCap = .round
             leftArrowShape.frame = self.bounds
-            self.addSublayer(leftArrowShape)
+            self.layer.addSublayer(leftArrowShape)
             
             let rightArrowShape = CAShapeLayer()
-            rightArrowShape.path = rightArrowPath.cgPath
-            rightArrowShape.lineWidth = lineWidth
+            rightArrowShape.path = arrowRightPath.cgPath
+            rightArrowShape.lineWidth = lineWidth / self.displayScale
             rightArrowShape.strokeColor = self.element?.color.toCGColor()
             rightArrowShape.lineCap = .round
             rightArrowShape.frame = self.bounds
-            self.addSublayer(rightArrowShape)
+            self.layer.addSublayer(rightArrowShape)
             
             leftArrowShape.animate(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "strokeEnd", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
             rightArrowShape.animate(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "strokeEnd", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, completion: { [weak leftArrowShape, weak rightArrowShape] _ in
@@ -76,12 +74,11 @@ final class PenTool: DrawingElement, Codable {
                 rightArrowShape?.removeFromSuperlayer()
             })
         }
-        
-        var i = 0
+    
         fileprivate func draw(element: PenTool, velocity: CGFloat, rect: CGRect) {
             self.element = element
             
-            self.opacity = Float(element.color.alpha)
+            self.alpha = element.color.alpha
             
             guard !rect.isInfinite && !rect.isEmpty && !rect.isNull else {
                 return
@@ -95,48 +92,53 @@ final class PenTool: DrawingElement, Codable {
                 rect = nil
                 let newStart = self.start + limit
                 let image = generateImage(self.bounds.size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    
                     if let accumulationImage = self.accumulationImage, let cgImage = accumulationImage.cgImage {
                         context.draw(cgImage, in: CGRect(origin: .zero, size: size))
                     }
+                    
                     context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                     context.scaleBy(x: 1.0, y: -1.0)
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    
+                    context.scaleBy(x: 1.0 / self.displayScale, y: 1.0 / self.displayScale)
+                    
+                    context.setBlendMode(.copy)
                     element.drawSegments(in: context, from: self.start, upTo: newStart)
-                }, opaque: false, scale: 1.0)
+                }, opaque: false)
                 self.accumulationImage = image
-                self.contents = image?.cgImage
-                i += 1
-                print("accumulated \(i)")
+                self.layer.contents = image?.cgImage
                 
                 self.start = newStart
             }
             
             self.segmentsCount = element.segments.count
             
-            if let previous = self.velocity {
-                self.velocity = velocity * 0.4 + previous * 0.6
-            } else {
-                self.velocity = velocity
-            }
+//            if let previous = self.velocity {
+//                self.velocity = velocity * 0.4 + previous * 0.6
+//            } else {
+//                self.velocity = velocity
+//            }
             if let rect = rect {
-                self.activeLayer?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0))
+                self.activeView?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0).applying(CGAffineTransform(scaleX: 1.0 / self.displayScale, y: 1.0 / self.displayScale)))
             } else {
-                self.activeLayer?.setNeedsDisplay()
+                self.activeView?.setNeedsDisplay()
             }
         }
         
-        class ActiveLayer: SimpleLayer {
-            weak var parent: RenderLayer?
-            
-            override func draw(in ctx: CGContext) {
-                guard let parent = self.parent, let element = parent.element else {
+        class ActiveView: UIView {
+            weak var parent: RenderView?
+            override func draw(_ rect: CGRect) {
+                guard let context = UIGraphicsGetCurrentContext(), let parent = self.parent, let element = parent.element else {
                     return
                 }
-                element.drawSegments(in: ctx, from: parent.start, upTo: parent.segmentsCount)
+                context.scaleBy(x: 1.0 / parent.displayScale, y: 1.0 / parent.displayScale)
+                element.drawSegments(in: context, from: parent.start, upTo: parent.segmentsCount)
             }
         }
     }
-    
+        
     let uuid: UUID
     let drawingSize: CGSize
     let color: DrawingColor
@@ -161,7 +163,7 @@ final class PenTool: DrawingElement, Codable {
         
     var blurredImage: UIImage?
     
-    private weak var currentRenderLayer: DrawingRenderLayer?
+    private weak var currentRenderView: DrawingRenderView?
         
     var isValid: Bool {
         if self.hasArrow {
@@ -256,9 +258,9 @@ final class PenTool: DrawingElement, Codable {
     
     var isFinishingArrow = false
     func finishArrow(_ completion: @escaping () -> Void) {
-        if let arrowLeftPath, let arrowRightPath {
+        if let arrowStart, let arrowDirection {
             self.isFinishingArrow = true
-            (self.currentRenderLayer as? RenderLayer)?.animateArrowPaths(leftArrowPath: arrowLeftPath, rightArrowPath: arrowRightPath, lineWidth: self.renderArrowLineWidth, completion: { [weak self] in
+            (self.currentRenderView as? RenderView)?.animateArrowPaths(start: arrowStart, direction: arrowDirection, length: self.renderArrowLength, lineWidth: self.renderArrowLineWidth, completion: { [weak self] in
                 self?.isFinishingArrow = false
                 completion()
             })
@@ -267,11 +269,15 @@ final class PenTool: DrawingElement, Codable {
         }
     }
     
+    func setupRenderView(screenSize: CGSize) -> DrawingRenderView? {
+        let view = RenderView()
+        view.setup(size: self.drawingSize, screenSize: screenSize, isEraser: self.isEraser, useDisplayLink: self.color.toUIColor().rgb == 0xbf5af2)
+        self.currentRenderView = view
+        return view
+    }
+    
     func setupRenderLayer() -> DrawingRenderLayer? {
-        let layer = RenderLayer()
-        layer.setup(size: self.drawingSize, isEraser: self.isEraser, useDisplayLink: self.color.toUIColor().rgb == 0xbf5af2)
-        self.currentRenderLayer = layer
-        return layer
+        return nil
     }
     
     var previousPoint: CGPoint?
@@ -282,11 +288,10 @@ final class PenTool: DrawingElement, Codable {
     
         var filterDistance: CGFloat
         if point.velocity > 1200.0 {
-            filterDistance = 90.0
+            filterDistance = 70.0
         } else {
-            filterDistance = 20.0
+            filterDistance = 15.0
         }
-//        filterDistance = 0.0
         
         if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.segments.count > 1 {
             return
@@ -306,8 +311,8 @@ final class PenTool: DrawingElement, Codable {
         
         let rect = append(point: Point(position: point.location, width: effectiveRenderLineWidth))
         
-        if let currentRenderLayer = self.currentRenderLayer as? RenderLayer, let rect = rect {
-            currentRenderLayer.draw(element: self, velocity: point.velocity, rect: rect)
+        if let currentRenderView = self.currentRenderView as? RenderView, let rect = rect {
+            currentRenderView.draw(element: self, velocity: point.velocity, rect: rect)
         }
         
         if state == .ended {

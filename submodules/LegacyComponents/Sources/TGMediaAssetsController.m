@@ -816,16 +816,16 @@
 
 #pragma mark -
 
-- (void)completeWithAvatarImage:(UIImage *)image
+- (void)completeWithAvatarImage:(UIImage *)image commit:(void(^)(void))commit
 {
     if (self.avatarCompletionBlock != nil)
-        self.avatarCompletionBlock(image);
+        self.avatarCompletionBlock(image, commit);
 }
 
-- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
+- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image commit:(void(^)(void))commit
 {
     if (self.avatarVideoCompletionBlock != nil)
-        self.avatarVideoCompletionBlock(image, asset, adjustments);
+        self.avatarVideoCompletionBlock(image, asset, adjustments, commit);
 }
 
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime

@@ -7,11 +7,20 @@ import LegacyComponents
 import AppBundle
 import ImageBlur
 
+protocol DrawingRenderLayer: CALayer {
+    
+}
+
+protocol DrawingRenderView: UIView {
+    
+}
+
 protocol DrawingElement: AnyObject {
     var uuid: UUID { get }
     var translation: CGPoint { get set }
     var isValid: Bool { get }
     
+    func setupRenderView(screenSize: CGSize) -> DrawingRenderView?
     func setupRenderLayer() -> DrawingRenderLayer?
     func updatePath(_ path: DrawingGesturePipeline.DrawingResult, state: DrawingGesturePipeline.DrawingGestureState)
     
@@ -68,7 +77,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private(set) var drawingImage: UIImage?
     private let renderer: UIGraphicsImageRenderer
         
-    private var currentDrawingView: UIImageView
+    private var currentDrawingViewContainer: UIImageView
+    private var currentDrawingRenderView: DrawingRenderView?
     private var currentDrawingLayer: DrawingRenderLayer?
     
     private var pannedSelectionView: UIView
@@ -123,11 +133,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         format.scale = 1.0
         self.renderer = UIGraphicsImageRenderer(size: size, format: format)
                 
-        self.currentDrawingView = UIImageView()
-        self.currentDrawingView.frame = CGRect(origin: .zero, size: size)
-        self.currentDrawingView.contentScaleFactor = 1.0
-        self.currentDrawingView.backgroundColor = .clear
-        self.currentDrawingView.isUserInteractionEnabled = false
+        self.currentDrawingViewContainer = UIImageView()
+        self.currentDrawingViewContainer.frame = CGRect(origin: .zero, size: size)
+        self.currentDrawingViewContainer.contentScaleFactor = 1.0
+        self.currentDrawingViewContainer.backgroundColor = .clear
+        self.currentDrawingViewContainer.isUserInteractionEnabled = false
         
         self.pannedSelectionView = UIView()
         self.pannedSelectionView.frame = CGRect(origin: .zero, size: size)
@@ -159,8 +169,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.contentScaleFactor = 1.0
         self.isExclusiveTouch = true
             
-        self.addSubview(self.currentDrawingView)
-        self.addSubview(self.metalView)
+        self.addSubview(self.currentDrawingViewContainer)
+        //self.addSubview(self.metalView)
 
         self.layer.addSublayer(self.brushSizePreviewLayer)
         
@@ -203,24 +213,46 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     strongSelf.metalView.isHidden = false
                 }
                 
+                if let renderView = newElement.setupRenderView(screenSize: CGSize(width: 414.0, height: 414.0)) {
+                    if let currentDrawingView = strongSelf.currentDrawingRenderView {
+                        strongSelf.currentDrawingRenderView = nil
+                        currentDrawingView.removeFromSuperview()
+                    }
+                    if strongSelf.tool == .eraser {
+                        strongSelf.currentDrawingViewContainer.removeFromSuperview()
+                        strongSelf.currentDrawingViewContainer.backgroundColor = .white
+                        
+                        renderView.layer.compositingFilter = "xor"
+                        
+                        strongSelf.currentDrawingViewContainer.addSubview(renderView)
+                        strongSelf.mask = strongSelf.currentDrawingViewContainer
+                    } else if strongSelf.tool == .blur {
+                        strongSelf.currentDrawingViewContainer.mask = renderView
+                        strongSelf.currentDrawingViewContainer.image = strongSelf.preparedBlurredImage
+                    } else {
+                        strongSelf.currentDrawingViewContainer.addSubview(renderView)
+                    }
+                    strongSelf.currentDrawingRenderView = renderView
+                }
+                
                 if let renderLayer = newElement.setupRenderLayer() {
                     if let currentDrawingLayer = strongSelf.currentDrawingLayer {
                         strongSelf.currentDrawingLayer = nil
                         currentDrawingLayer.removeFromSuperlayer()
                     }
                     if strongSelf.tool == .eraser {
-                        strongSelf.currentDrawingView.removeFromSuperview()
-                        strongSelf.currentDrawingView.backgroundColor = .white
+                        strongSelf.currentDrawingViewContainer.removeFromSuperview()
+                        strongSelf.currentDrawingViewContainer.backgroundColor = .white
                         
                         renderLayer.compositingFilter = "xor"
                         
-                        strongSelf.currentDrawingView.layer.addSublayer(renderLayer)
-                        strongSelf.mask = strongSelf.currentDrawingView
+                        strongSelf.currentDrawingViewContainer.layer.addSublayer(renderLayer)
+                        strongSelf.mask = strongSelf.currentDrawingViewContainer
                     } else if strongSelf.tool == .blur {
-                        strongSelf.currentDrawingView.layer.mask = renderLayer
-                        strongSelf.currentDrawingView.image = strongSelf.preparedBlurredImage
+                        strongSelf.currentDrawingViewContainer.layer.mask = renderLayer
+                        strongSelf.currentDrawingViewContainer.image = strongSelf.preparedBlurredImage
                     } else {
-                        strongSelf.currentDrawingView.layer.addSublayer(renderLayer)
+                        strongSelf.currentDrawingViewContainer.layer.addSublayer(renderLayer)
                     }
                     strongSelf.currentDrawingLayer = renderLayer
                 }
@@ -351,13 +383,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             return nil
         }
         return self.drawingImage?.pngData()
-        
-//        let codableElements = self.elements.compactMap({ CodableDrawingElement(element: $0) })
-//        if let data = try? JSONEncoder().encode(codableElements) {
-//            return data
-//        } else {
-//            return nil
-//        }
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -387,8 +412,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 } else if self.tool == .blur {
                     blurredImage = self.preparedBlurredImage
                 }
-                
-                self.hapticFeedback.tap()
                 
                 let fillCircleLayer = SimpleShapeLayer()
                 self.longPressTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self, weak fillCircleLayer] in
@@ -482,15 +505,29 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 self.drawingImage = updatedImage
                 self.layer.contents = updatedImage.cgImage
                 
+                if let currentDrawingRenderView = self.currentDrawingRenderView {
+                    if case .eraser = self.tool {
+                        currentDrawingRenderView.removeFromSuperview()
+                        self.mask = nil
+                        self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                        self.currentDrawingViewContainer.backgroundColor = .clear
+                    } else if case .blur = self.tool {
+                        self.currentDrawingViewContainer.mask = nil
+                        self.currentDrawingViewContainer.image = nil
+                    } else {
+                        currentDrawingRenderView.removeFromSuperview()
+                    }
+                    self.currentDrawingRenderView = nil
+                }
                 if let currentDrawingLayer = self.currentDrawingLayer {
                     if case .eraser = self.tool {
                         currentDrawingLayer.removeFromSuperlayer()
                         self.mask = nil
-                        self.insertSubview(self.currentDrawingView, at: 0)
-                        self.currentDrawingView.backgroundColor = .clear
+                        self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                        self.currentDrawingViewContainer.backgroundColor = .clear
                     } else if case .blur = self.tool {
-                        self.currentDrawingView.layer.mask = nil
-                        self.currentDrawingView.image = nil
+                        self.currentDrawingViewContainer.layer.mask = nil
+                        self.currentDrawingViewContainer.image = nil
                     } else {
                         currentDrawingLayer.removeFromSuperlayer()
                     }
@@ -527,14 +564,29 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     fileprivate func cancelDrawing() {
         self.uncommitedElement = nil
         
+        if let currentDrawingRenderView = self.currentDrawingRenderView {
+            if case .eraser = self.tool {
+                currentDrawingRenderView.removeFromSuperview()
+                self.mask = nil
+                self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                self.currentDrawingViewContainer.backgroundColor = .clear
+            } else if case .blur = self.tool {
+                self.currentDrawingViewContainer.mask = nil
+                self.currentDrawingViewContainer.image = nil
+            } else {
+                currentDrawingRenderView.removeFromSuperview()
+            }
+            self.currentDrawingRenderView = nil
+        }
         if let currentDrawingLayer = self.currentDrawingLayer {
             if self.tool == .eraser {
                 currentDrawingLayer.removeFromSuperlayer()
                 self.mask = nil
-                self.insertSubview(self.currentDrawingView, at: 0)
-                self.currentDrawingView.backgroundColor = .clear
+                self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                self.currentDrawingViewContainer.backgroundColor = .clear
             } else if self.tool == .blur {
-                self.currentDrawingView.mask = nil
+                self.currentDrawingViewContainer.mask = nil
+                self.currentDrawingViewContainer.image = nil
             } else {
                 currentDrawingLayer.removeFromSuperlayer()
             }
@@ -723,10 +775,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
         if self.tool != previousTool {
             self.updateBlurredImage()
-        } else {
-            self.preparedBlurredImage = nil
         }
- 
     }
     
     func updateBlurredImage() {
@@ -870,8 +919,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
         let scale = self.scale
         let transform = CGAffineTransformMakeScale(scale, scale)
-        self.currentDrawingView.transform = transform
-        self.currentDrawingView.frame = self.bounds
+        self.currentDrawingViewContainer.transform = transform
+        self.currentDrawingViewContainer.frame = self.bounds
         
         self.drawingGesturePipeline?.transform = CGAffineTransformMakeScale(1.0 / scale, 1.0 / scale)
             
@@ -882,7 +931,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
     
     public var isEmpty: Bool {
-        return self.elements.isEmpty
+        return self.elements.isEmpty && !self.hasOpaqueData
     }
     
     public var scale: CGFloat {
@@ -891,5 +940,24 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     public var isTracking: Bool {
         return self.uncommitedElement != nil
+    }
+}
+
+private class UndoSlice {
+    let uuid: UUID
+    
+//    let data: Data
+//    let bounds: CGRect
+    
+    let path: String
+    
+    init(context: DrawingContext, bounds: CGRect) {
+        self.uuid = UUID()
+                
+        self.path = NSTemporaryDirectory() + "/drawing_\(uuid.hashValue).slice"
+    }
+    
+    deinit {
+        try? FileManager.default.removeItem(atPath: self.path)
     }
 }

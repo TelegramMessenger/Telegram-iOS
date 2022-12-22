@@ -1423,7 +1423,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(textSize
-                .position(CGPoint(x: sizeSliderVisible ? textSize.size.width / 2.0 : textSize.size.width / 2.0 - 33.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
+                .position(CGPoint(x: textSize.size.width / 2.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
+                .opacity(sizeSliderVisible ? 1.0 : 0.0)
             )
             
             let undoButton = undoButton.update(

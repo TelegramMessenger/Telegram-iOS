@@ -760,6 +760,7 @@ final class TextSizeSliderComponent: Component {
         init() {
             super.init(frame: CGRect())
 
+            self.layer.allowsGroupOpacity = true
             self.isExclusiveTouch = true
             
             let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))

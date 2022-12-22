@@ -345,7 +345,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                     return emojiViewProvider(emoji)
                 })
                 customEmojiContainerView.isUserInteractionEnabled = false
-                customEmojiContainerView.center = customEmojiContainerView.center.offsetBy(dx: 0.0, dy: 10.0)
+                customEmojiContainerView.center = customEmojiContainerView.center
                 self.addSubview(customEmojiContainerView)
                 self.customEmojiContainerView = customEmojiContainerView
             }
@@ -523,9 +523,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        var rect = self.bounds
-        rect = rect.offsetBy(dx: 0.0, dy: 10.0) // CGRectOffset(rect, 0.0f, 10.0f);
-        self.textView.frame = rect
+        self.textView.frame = self.bounds
     }
         
     private var displayFontSize: CGFloat {
@@ -672,7 +670,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     func getRenderImage() -> UIImage? {
         let rect = self.bounds
         UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
-        self.textView.drawHierarchy(in: rect.offsetBy(dx: 0.0, dy: 10.0), afterScreenUpdates: true)
+        self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
@@ -691,7 +689,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             guard let file = emojiAttribute.file else {
                 continue
             }
-            let emojiTextPosition = emojiRect.offsetBy(dx: 0.0, dy: 10.0).center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
+            let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
             let entity = DrawingStickerEntity(file: file)
             entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
