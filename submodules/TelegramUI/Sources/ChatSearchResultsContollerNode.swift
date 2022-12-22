@@ -12,6 +12,9 @@ import ChatListUI
 import AccountContext
 import ContextUI
 import ChatListSearchItemHeader
+import AnimationCache
+import MultiAnimationRenderer
+
 import PtgForeignAgentNoticeSearchFiltering
 
 private enum ChatListSearchEntryStableId: Hashable {
@@ -136,6 +139,8 @@ private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatLi
 class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
     private let location: SearchMessagesLocation
     private let searchQuery: String
     private var searchResult: SearchMessagesResult
@@ -174,6 +179,9 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true))
         
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
+        
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.listNode.accessibilityPageScrolledString = { row, count in
@@ -206,7 +214,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             return entries
         }
         
-        let interaction = ChatListNodeInteraction(context: context, activateSearch: {
+        let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
         }, peerSelected: { _, _, _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in

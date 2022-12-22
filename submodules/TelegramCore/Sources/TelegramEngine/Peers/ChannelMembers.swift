@@ -91,13 +91,11 @@ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId:
                         switch result {
                             case let .channelParticipants(_, participants, chats, users):
                                 var peers: [PeerId: Peer] = [:]
-                                var presences: [PeerId: PeerPresence] = [:]
+                                var presences: [PeerId: Api.User] = [:]
                                 for user in users {
                                     let peer = TelegramUser(user: user)
                                     peers[peer.id] = peer
-                                    if let presence = TelegramUserPresence(apiUser: user) {
-                                        presences[peer.id] = presence
-                                    }
+                                    presences[peer.id] = user
                                 }
                                 for chat in chats {
                                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
@@ -111,7 +109,11 @@ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId:
                                 
                                 for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                     if let peer = peers[participant.peerId] {
-                                        items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
+                                        var renderedPresences: [PeerId: PeerPresence] = [:]
+                                        if let presence = transaction.getPeerPresence(peerId: participant.peerId) {
+                                            renderedPresences[participant.peerId] = presence
+                                        }
+                                        items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: renderedPresences))
                                     }
                                 }
                             case .channelParticipantsNotModified:

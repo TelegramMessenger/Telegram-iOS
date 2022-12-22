@@ -26,6 +26,7 @@ private final class UsernameSetupControllerArguments {
 
 private enum UsernameSetupSection: Int32 {
     case link
+    case additional
 }
 
 public enum UsernameEntryTag: ItemListItemTag {
@@ -42,30 +43,51 @@ public enum UsernameEntryTag: ItemListItemTag {
 
 
 private enum UsernameSetupEntry: ItemListNodeEntry {
+    case publicLinkHeader(PresentationTheme, String)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String?, String)
     case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String)
     case publicLinkInfo(PresentationTheme, String)
     
+    case additionalLinkHeader(PresentationTheme, String)
+    case additionalLink(PresentationTheme, String, Bool, Int32)
+    case additionalLinkInfo(PresentationTheme, String)
+    
     var section: ItemListSectionId {
         switch self {
-            case .editablePublicLink, .publicLinkStatus, .publicLinkInfo:
+            case .publicLinkHeader, .editablePublicLink, .publicLinkStatus, .publicLinkInfo:
                 return UsernameSetupSection.link.rawValue
+            case .additionalLinkHeader, .additionalLink, .additionalLinkInfo:
+                return UsernameSetupSection.additional.rawValue
         }
     }
     
     var stableId: Int32 {
         switch self {
-            case .editablePublicLink:
+            case .publicLinkHeader:
                 return 0
-            case .publicLinkStatus:
+            case .editablePublicLink:
                 return 1
-            case .publicLinkInfo:
+            case .publicLinkStatus:
                 return 2
+            case .publicLinkInfo:
+                return 3
+            case .additionalLinkHeader:
+                return 4
+            case let .additionalLink(_, _, _, index):
+                return 5 + index
+            case .additionalLinkInfo:
+                return 1000
         }
     }
     
     static func ==(lhs: UsernameSetupEntry, rhs: UsernameSetupEntry) -> Bool {
         switch lhs {
+            case let .publicLinkHeader(lhsTheme, lhsText):
+                if case let .publicLinkHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .editablePublicLink(lhsTheme, lhsStrings, lhsPrefix, lhsCurrentText, lhsText):
                 if case let .editablePublicLink(rhsTheme, rhsStrings, rhsPrefix, rhsCurrentText, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPrefix == rhsPrefix, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
                     return true
@@ -84,6 +106,24 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .additionalLinkHeader(lhsTheme, lhsText):
+                if case let .additionalLinkHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .additionalLink(lhsTheme, lhsLink, lhsActive, lhsIndex):
+                if case let .additionalLink(rhsTheme, rhsLink, rhsActive, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsLink == rhsLink, lhsActive == rhsActive, lhsIndex == rhsIndex {
+                    return true
+                } else {
+                    return false
+                }
+            case let .additionalLinkInfo(lhsTheme, lhsText):
+                if case let .additionalLinkInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -94,6 +134,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! UsernameSetupControllerArguments
         switch self {
+            case let .publicLinkHeader(_, text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .editablePublicLink(theme, _, prefix, currentText, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
@@ -123,6 +165,12 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                         displayActivity = true
                 }
                 return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: string, sectionId: self.section)
+            case let .additionalLinkHeader(_, text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .additionalLink(_, link, _, _):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(link), sectionId: self.section)
+            case let .additionalLinkInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -186,6 +234,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
             }
         }
         
+        entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Username_Username))
         entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Username_Title, peer.addressName, currentAddressName))
         if let status = state.addressNameValidationStatus {
             let statusText: String

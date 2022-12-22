@@ -25,6 +25,8 @@ func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId,
         }
         if let topMessageId = topMessageId {
             transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
+        } else if case .forEveryone = type {
+            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: .max), minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
         }
     }
 }

@@ -652,7 +652,7 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
         firstName = presentationData.strings.Message_Contact
     }
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
     
     if !selecting {
         if let _ = peer {
@@ -727,7 +727,7 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
     
     var addressIndex = 0
     for address in contactData.addresses {
-        let signal = geocodeLocation(dictionary: address.dictionary)
+        let signal = geocodeLocation(address: address.asPostalAddress)
         |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
             if let (latitude, longitude) = coordinates {
                 let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)

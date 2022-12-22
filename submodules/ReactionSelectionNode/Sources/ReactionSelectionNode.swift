@@ -10,6 +10,9 @@ import TelegramAnimatedStickerNode
 import SwiftSignalKit
 import StickerResources
 import AccountContext
+import AnimationCache
+import MultiAnimationRenderer
+import ShimmerEffect
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -46,13 +49,20 @@ protocol ReactionItemNode: ASDisplayNode {
 
 public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
+    let theme: PresentationTheme
     let item: ReactionItem
+    private let loopIdle: Bool
     private let hasAppearAnimation: Bool
     private let useDirectRendering: Bool
     
+    let selectionTintView: UIView
+    let selectionView: UIView
+    
     private var animateInAnimationNode: AnimatedStickerNode?
+    private var staticAnimationPlaceholderView: UIImageView?
     private let staticAnimationNode: AnimatedStickerNode
     private var stillAnimationNode: AnimatedStickerNode?
+    private var customContentsNode: ASDisplayNode?
     private var animationNode: AnimatedStickerNode?
     
     private var dismissedStillAnimationNodes: [AnimatedStickerNode] = []
@@ -68,11 +78,33 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
     var expandedAnimationDidBegin: (() -> Void)?
     
-    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
+    var currentFrameIndex: Int {
+        return self.staticAnimationNode.currentFrameIndex
+    }
+    
+    var currentFrameImage: UIImage? {
+        return self.staticAnimationNode.currentFrameImage
+    }
+    
+    var isAnimationLoaded: Bool {
+        return self.staticAnimationNode.currentFrameImage != nil
+    }
+    
+    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, loopIdle: Bool, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
         self.context = context
+        self.theme = theme
         self.item = item
+        self.loopIdle = loopIdle
         self.hasAppearAnimation = hasAppearAnimation
         self.useDirectRendering = useDirectRendering
+        
+        self.selectionTintView = UIView()
+        self.selectionTintView.backgroundColor = UIColor(white: 1.0, alpha: 0.2)
+        self.selectionTintView.isHidden = true
+        
+        self.selectionView = UIView()
+        self.selectionView.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor
+        self.selectionView.isHidden = true
         
         self.staticAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
     
@@ -94,6 +126,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             }
             if strongSelf.animationNode == nil {
                 strongSelf.staticAnimationNode.isHidden = false
+                if strongSelf.loopIdle {
+                    strongSelf.staticAnimationNode.playLoop()
+                }
             }
             
             strongSelf.animateInAnimationNode?.removeFromSupernode()
@@ -103,7 +138,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.appearAnimation.resource)).start()
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.stillAnimation.resource)).start()
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.listAnimation.resource)).start()
-        self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.applicationAnimation.resource)).start()
+        if let applicationAnimation = item.applicationAnimation {
+            self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: applicationAnimation.resource)).start()
+        }
     }
     
     deinit {
@@ -117,13 +154,37 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     func appear(animated: Bool) {
         if animated {
-            self.animateInAnimationNode?.visibility = true
+            if self.item.isCustom {
+                self.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                
+                if self.animationNode == nil {
+                    self.staticAnimationNode.isHidden = false
+                    if self.loopIdle {
+                        self.staticAnimationNode.playLoop()
+                    }
+                }
+            } else {
+                self.animateInAnimationNode?.visibility = true
+            }
+            
+            self.selectionView.layer.animateAlpha(from: 0.0, to: self.selectionView.alpha, duration: 0.2)
+            self.selectionView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+            
+            self.selectionTintView.layer.animateAlpha(from: 0.0, to: self.selectionTintView.alpha, duration: 0.2)
+            self.selectionTintView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
         } else {
             self.animateInAnimationNode?.completed(true)
         }
     }
     
-    public var mainAnimationCompletion: (() -> Void)?
+    public func setCustomContents(contents: Any) {
+        if self.customContentsNode == nil {
+            let customContentsNode = ASDisplayNode()
+            self.customContentsNode = customContentsNode
+            self.addSubnode(customContentsNode)
+        }
+        self.customContentsNode?.contents = contents
+    }
     
     public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
@@ -143,9 +204,6 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         let expandedAnimationFrame = animationFrame
         
         if isExpanded && !self.hasAppearAnimation {
-            self.staticAnimationNode.completed = { [weak self] _ in
-                self?.mainAnimationCompletion?()
-            }
             self.staticAnimationNode.play(firstFrame: false, fromIndex: 0)
         } else if isExpanded, self.animationNode == nil {
             let animationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
@@ -160,14 +218,14 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     self?.expandedAnimationDidBegin?()
                 }
             }
-            animationNode.completed = { [weak self] _ in
-                self?.mainAnimationCompletion?()
-            }
             
             if largeExpanded {
-                animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource, isVideo: self.item.largeListAnimation.isVideoSticker || self.item.largeListAnimation.isVideoEmoji || self.item.largeListAnimation.isStaticSticker || self.item.largeListAnimation.isStaticEmoji)
+                
+                animationNode.setup(source: source, width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
             } else {
-                animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource, isVideo: self.item.listAnimation.isVideoSticker || self.item.listAnimation.isVideoEmoji || self.item.listAnimation.isVideoSticker || self.item.listAnimation.isStaticSticker || self.item.listAnimation.isStaticEmoji)
+                animationNode.setup(source: source, width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
             }
             animationNode.frame = expandedAnimationFrame
             animationNode.updateLayout(size: expandedAnimationFrame.size)
@@ -214,6 +272,16 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     self.staticAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 }
                 
+                if let customContentsNode = self.customContentsNode, !customContentsNode.isHidden {
+                    transition.animateTransformScale(node: customContentsNode, from: customContentsNode.bounds.width / animationFrame.width)
+                    transition.animatePositionAdditive(node: customContentsNode, offset: CGPoint(x: customContentsNode.frame.midX - animationFrame.midX, y: customContentsNode.frame.midY - animationFrame.midY))
+                    
+                    if self.item.listAnimation.isVideoEmoji || self.item.listAnimation.isVideoSticker || self.item.listAnimation.isAnimatedSticker || self.item.listAnimation.isStaticSticker || self.item.listAnimation.isStaticEmoji {
+                        customContentsNode.alpha = 0.0
+                        customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
+                }
+                
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                 
                 DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.17, execute: {
@@ -241,7 +309,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     self.stillAnimationNode = stillAnimationNode
                     self.addSubnode(stillAnimationNode)
                     
-                    stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                    stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource, isVideo: self.item.stillAnimation.isVideoEmoji || self.item.stillAnimation.isVideoSticker || self.item.stillAnimation.isStaticSticker || self.item.stillAnimation.isStaticEmoji), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: self.loopIdle ? .loop : .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
                     stillAnimationNode.position = animationFrame.center
                     stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                     stillAnimationNode.updateLayout(size: animationFrame.size)
@@ -256,6 +324,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                             animateInAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1)
                             
                             strongSelf.staticAnimationNode.isHidden = false
+                            if strongSelf.loopIdle {
+                                strongSelf.staticAnimationNode.playLoop()
+                            }
                         }
                     }
                     stillAnimationNode.visibility = true
@@ -290,22 +361,55 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             }
         }
         
-        if !self.didSetupStillAnimation {
+        if !self.didSetupStillAnimation && self.customContentsNode == nil {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
+                let staticFile: TelegramMediaFile
                 if !self.hasAppearAnimation {
-                    self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
+                    staticFile = self.item.largeListAnimation
                 } else {
-                    self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                    staticFile = self.item.stillAnimation
+                }
+                
+                if self.staticAnimationPlaceholderView == nil, let immediateThumbnailData = staticFile.immediateThumbnailData {
+                    let staticAnimationPlaceholderView = UIImageView()
+                    self.view.addSubview(staticAnimationPlaceholderView)
+                    self.staticAnimationPlaceholderView = staticAnimationPlaceholderView
+                    
+                    if let image = generateStickerPlaceholderImage(data: immediateThumbnailData, size: animationDisplaySize, scale: min(2.0, UIScreenScale), imageSize: staticFile.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: self.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1)) {
+                        staticAnimationPlaceholderView.image = image
+                    }
+                }
+                
+                self.staticAnimationNode.started = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let staticAnimationPlaceholderView = strongSelf.staticAnimationPlaceholderView {
+                        strongSelf.staticAnimationPlaceholderView = nil
+                        staticAnimationPlaceholderView.removeFromSuperview()
+                    }
+                }
+                
+                self.staticAnimationNode.automaticallyLoadFirstFrame = true
+                if !self.hasAppearAnimation {
+                    self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource, isVideo: self.item.largeListAnimation.isVideoEmoji || self.item.largeListAnimation.isVideoSticker || self.item.largeListAnimation.isStaticSticker || self.item.largeListAnimation.isStaticEmoji), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
+                } else {
+                    self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource, isVideo: self.item.stillAnimation.isVideoEmoji || self.item.stillAnimation.isVideoSticker || self.item.stillAnimation.isStaticSticker || self.item.stillAnimation.isStaticEmoji), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
                 }
                 self.staticAnimationNode.position = animationFrame.center
                 self.staticAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                 self.staticAnimationNode.updateLayout(size: animationFrame.size)
                 self.staticAnimationNode.visibility = true
                 
+                if let staticAnimationPlaceholderView = self.staticAnimationPlaceholderView {
+                    staticAnimationPlaceholderView.center = animationFrame.center
+                    staticAnimationPlaceholderView.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                }
+                
                 if let animateInAnimationNode = self.animateInAnimationNode {
-                    animateInAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.appearAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.appearAnimation.resource.id)))
+                    animateInAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.appearAnimation.resource, isVideo: self.item.appearAnimation.isVideoEmoji || self.item.appearAnimation.isVideoSticker || self.item.appearAnimation.isStaticSticker || self.item.appearAnimation.isStaticEmoji), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.appearAnimation.resource.id)))
                     animateInAnimationNode.position = animationFrame.center
                     animateInAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                     animateInAnimationNode.updateLayout(size: animationFrame.size)
@@ -315,10 +419,19 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             transition.updatePosition(node: self.staticAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
             transition.updateTransformScale(node: self.staticAnimationNode, scale: animationFrame.size.width / self.staticAnimationNode.bounds.width, beginWithCurrentState: true)
             
+            if let staticAnimationPlaceholderView = self.staticAnimationPlaceholderView {
+                transition.updatePosition(layer: staticAnimationPlaceholderView.layer, position: animationFrame.center)
+                transition.updateTransformScale(layer: staticAnimationPlaceholderView.layer, scale: animationFrame.size.width / self.staticAnimationNode.bounds.width)
+            }
+            
             if let animateInAnimationNode = self.animateInAnimationNode {
                 transition.updatePosition(node: animateInAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
                 transition.updateTransformScale(node: animateInAnimationNode, scale: animationFrame.size.width / animateInAnimationNode.bounds.width, beginWithCurrentState: true)
             }
+        }
+        
+        if let customContentsNode = self.customContentsNode {
+            transition.updateFrame(node: customContentsNode, frame: animationFrame)
         }
     }
 }

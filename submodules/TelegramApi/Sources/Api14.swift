@@ -891,7 +891,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PageCaption: TypeConstructorDescription {
+    indirect enum PageCaption: TypeConstructorDescription {
         case pageCaption(text: Api.RichText, credit: Api.RichText)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -935,7 +935,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PageListItem: TypeConstructorDescription {
+    indirect enum PageListItem: TypeConstructorDescription {
         case pageListItemBlocks(blocks: [Api.PageBlock])
         case pageListItemText(text: Api.RichText)
     

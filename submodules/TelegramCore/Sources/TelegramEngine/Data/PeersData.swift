@@ -7,6 +7,34 @@ public typealias EngineSecretChatKeyFingerprint = SecretChatKeyFingerprint
 public enum EnginePeerCachedInfoItem<T> {
     case known(T)
     case unknown
+    
+    public var knownValue: T? {
+        switch self {
+        case let .known(value):
+            return value
+        case .unknown:
+            return nil
+        }
+    }
+}
+
+extension EnginePeerCachedInfoItem: Equatable where T: Equatable {
+    public static func ==(lhs: EnginePeerCachedInfoItem<T>, rhs: EnginePeerCachedInfoItem<T>) -> Bool {
+        switch lhs {
+        case let .known(value):
+            if case .known(value) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .unknown:
+            if case .unknown = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 public enum EngineChannelParticipant: Equatable {
@@ -169,7 +197,7 @@ public extension TelegramEngine.EngineData.Item {
                     peers[mainPeer.id] = EnginePeer(mainPeer)
                 }
 
-                return EngineRenderedPeer(peerId: self.id, peers: peers)
+                return EngineRenderedPeer(peerId: self.id, peers: peers, associatedMedia: view.media)
             }
         }
 
@@ -452,7 +480,7 @@ public extension TelegramEngine.EngineData.Item {
         }
         
         public struct AllowedReactions: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
-            public typealias Result = [String]?
+            public typealias Result = EnginePeerCachedInfoItem<PeerAllowedReactions>
 
             fileprivate var id: EnginePeer.Id
             public var mapKey: EnginePeer.Id {
@@ -476,7 +504,7 @@ public extension TelegramEngine.EngineData.Item {
                 } else if let cachedData = view.cachedPeerData as? CachedGroupData {
                     return cachedData.allowedReactions
                 } else {
-                    return nil
+                    return .unknown
                 }
             }
         }

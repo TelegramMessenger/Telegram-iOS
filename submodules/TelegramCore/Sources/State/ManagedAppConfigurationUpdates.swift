@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     return network.request(Api.functions.help.getAppConfig())
     |> map(Optional.init)
@@ -17,14 +16,6 @@ func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Vo
         }
         return postbox.transaction { transaction -> Void in
             if let data = JSON(apiJson: result) {
-                if let value = data["reactions_default"] as? String {
-                    updateReactionSettings(transaction: transaction, { settings in
-                        var settings = settings
-                        settings.quickReaction = value
-                        return settings
-                    })
-                }
-                
                 updateAppConfiguration(transaction: transaction, { configuration -> AppConfiguration in
                     var configuration = configuration
                     configuration.data = data

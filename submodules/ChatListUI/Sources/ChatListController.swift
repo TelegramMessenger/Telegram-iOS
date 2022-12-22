@@ -30,6 +30,12 @@ import ComponentFlow
 import LottieAnimationComponent
 import ProgressIndicatorComponent
 import PremiumUI
+import ConfettiEffect
+import AnimationCache
+import MultiAnimationRenderer
+import EmojiStatusSelectionComponent
+import EntityKeyboard
+import TelegramStringFormatting
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -109,6 +115,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let controlsHistoryPreload: Bool
     private let hideNetworkActivityStatus: Bool
     
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
+    
     public let groupId: PeerGroupId
     public let filter: ChatListFilter?
     public let previewing: Bool
@@ -164,6 +173,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var didSetupTabs = false
     
+    private weak var emojiStatusSelectionController: ViewController?
+    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
             self.chatListDisplayNode.containerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
@@ -182,7 +193,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
         
-        self.titleView = ChatListTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
+        
+        self.titleView = ChatListTitleView(
+            context: context,
+            theme: self.presentationData.theme,
+            strings: self.presentationData.strings,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer
+        )
         
         self.tabContainerNode = ChatListFilterTabContainerNode()
         
@@ -201,8 +221,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             title = self.presentationData.strings.ChatList_ArchivedChatsTitle
         }
         
-        self.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+        self.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
         self.navigationItem.titleView = self.titleView
+        
+        self.titleView.openStatusSetup = { [weak self] sourceView in
+            self?.openStatusSetup(sourceView: sourceView)
+        }
         
         if !previewing {
             if self.groupId == .root && self.filter == nil {
@@ -304,6 +328,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return (data.isLockable, false)
         }
         
+        let peerStatus: Signal<NetworkStatusTitle.Status?, NoError>
+        if filter != nil || groupId != .root {
+            peerStatus = .single(nil)
+        } else {
+            peerStatus = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> NetworkStatusTitle.Status? in
+                guard case let .user(user) = peer else {
+                    return nil
+                }
+                if let emojiStatus = user.emojiStatus {
+                    return .emoji(emojiStatus)
+                } else if user.isPremium {
+                    return .premium
+                } else {
+                    return nil
+                }
+            }
+            |> distinctUntilChanged
+        }
+        
         let previousEditingAndNetworkStateValue = Atomic<(Bool, AccountNetworkState)?>(value: nil)
         if !self.hideNetworkActivityStatus {
             self.titleDisposable = combineLatest(queue: .mainQueue(),
@@ -311,8 +355,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 hasProxy,
                 passcode,
                 self.chatListDisplayNode.containerNode.currentItemState,
-                self.isReorderingTabsValue.get()
-            ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs in
+                self.isReorderingTabsValue.get(),
+                peerStatus
+            ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs, peerStatus in
                 if let strongSelf = self {
                     let defaultTitle: String
                     if strongSelf.groupId == .root {
@@ -333,7 +378,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 animated = true
                             }
                         }
-                        strongSelf.titleView.setTitle(NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false), animated: animated)
+                        strongSelf.titleView.setTitle(NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus), animated: animated)
                     } else if isReorderingTabs {
                         if strongSelf.groupId == .root {
                             strongSelf.navigationItem.setRightBarButton(nil, animated: true)
@@ -344,17 +389,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let (_, connectsViaProxy) = proxy
                         switch networkState {
                         case .waitingForNetwork:
-                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         case let .connecting(proxy):
                             var text = strongSelf.presentationData.strings.State_Connecting
                             if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
                                 text = strongSelf.presentationData.strings.State_ConnectingToProxy
                             }
-                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         case .updating:
-                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         case .online:
-                            strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false)
+                            strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         }
                     } else {
                         var isRoot = false
@@ -401,7 +446,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         var checkProxy = false
                         switch networkState {
                             case .waitingForNetwork:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
                             case let .connecting(proxy):
                                 var text = strongSelf.presentationData.strings.State_Connecting
                                 if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
@@ -410,11 +455,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 if let proxy = proxy, proxy.hasConnectionIssues {
                                     checkProxy = true
                                 }
-                                strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
                             case .updating:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
+                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
                             case .online:
-                                strongSelf.titleView.setTitle(NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked), animated: (previousEditingAndNetworkState?.0 ?? false) != stateAndFilterId.state.editing)
+                                strongSelf.titleView.setTitle(NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus), animated: (previousEditingAndNetworkState?.0 ?? false) != stateAndFilterId.state.editing)
                         }
                         if groupId == .root && filter == nil && checkProxy {
                             if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil && strongSelf.navigationController?.topViewController === self {
@@ -804,6 +849,46 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.activeDownloadsDisposable?.dispose()
     }
     
+    private func openStatusSetup(sourceView: UIView) {
+        self.emojiStatusSelectionController?.dismiss()
+        var selectedItems = Set<MediaId>()
+        var topStatusTitle = self.presentationData.strings.PeerStatusSetup_NoTimerTitle
+        var currentSelection: Int64?
+        if let peerStatus = self.titleView.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
+            selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+            currentSelection = emojiStatus.fileId
+            
+            if let timestamp = emojiStatus.expirationDate {
+                topStatusTitle = peerStatusExpirationString(statusTimestamp: timestamp, relativeTo: Int32(Date().timeIntervalSince1970), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
+            }
+        }
+        let controller = EmojiStatusSelectionController(
+            context: self.context,
+            mode: .statusSelection,
+            sourceView: sourceView,
+            emojiContent: EmojiPagerContentComponent.emojiInputData(
+                context: self.context,
+                animationCache: self.animationCache,
+                animationRenderer: self.animationRenderer,
+                isStandalone: false,
+                isStatusSelection: true,
+                isReactionSelection: false,
+                topReactionItems: [],
+                areUnicodeEmojiEnabled: false,
+                areCustomEmojiEnabled: true,
+                chatPeerId: self.context.account.peerId,
+                selectedItems: selectedItems,
+                topStatusTitle: topStatusTitle
+            ),
+            currentSelection: currentSelection,
+            destinationItemView: { [weak sourceView] in
+                return sourceView
+            }
+        )
+        self.emojiStatusSelectionController = controller
+        self.present(controller, in: .window(.root))
+    }
+    
     private func updateThemeAndStrings() {
         if case .root = self.groupId {
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
@@ -858,7 +943,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(context: self.context, groupId: EngineChatList.Group(self.groupId), filter: self.filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
+        self.displayNode = ChatListControllerNode(context: self.context, groupId: EngineChatList.Group(self.groupId), filter: self.filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -1527,7 +1612,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
+                
         self.didAppear = true
         
         self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
@@ -1834,6 +1919,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             return true
         })
+        
+        if let emojiStatusSelectionController = self.emojiStatusSelectionController {
+            self.emojiStatusSelectionController = nil
+            emojiStatusSelectionController.dismiss()
+        }
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -3405,13 +3495,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
         })
     }
+    
+    private var playedSignUpCompletedAnimation = false
+    public func playSignUpCompletedAnimation() {
+        guard !self.playedSignUpCompletedAnimation else {
+            return
+        }
+        self.playedSignUpCompletedAnimation = true
+        Queue.mainQueue().after(0.3) {
+            self.view.addSubview(ConfettiView(frame: self.view.bounds))
+        }
+    }
 }
 
 private final class ChatListTabBarContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
-    let centerActionsHorizontally: Bool = true
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode

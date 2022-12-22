@@ -291,7 +291,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
-                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
@@ -371,7 +371,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
                                         
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(logData.count), attributes: [.FileName(fileName: "Log-iOS-Short.txt")])
-                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                                         
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
@@ -457,7 +457,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
-                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
@@ -541,7 +541,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
-                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
@@ -573,7 +573,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .sendNotificationLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
-                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/logs/notification-logs").collectLogs()
+                let logsPath = arguments.sharedContext.basePath + "/logs/notification-logs"
+                let _ = (Logger(rootPath: logsPath, basePath: logsPath).collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -625,7 +626,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
-                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
@@ -678,7 +679,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         let messages = logs.map { (name, path) -> EnqueueMessage in
                                             let id = Int64.random(in: Int64.min ... Int64.max)
                                             let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                            return .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                            return .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                                         }
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                                     }
@@ -721,7 +722,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 
                 var logByType: [Signal<(type: String, logs: [(String, String)]), NoError>] = []
                 for type in logTypes {
-                    logByType.append(Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/logs/\(type)").collectLogs()
+                    let logsPath = arguments.sharedContext.basePath + "/logs/\(type)"
+                    logByType.append(Logger(rootPath: logsPath, basePath: logsPath).collectLogs()
                     |> map { result -> (type: String, logs: [(String, String)]) in
                         return (type, result)
                     })
@@ -786,7 +788,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-All.txt.zip")])
-                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
@@ -1388,7 +1390,7 @@ public func triggerDebugSendLogsUI(context: AccountContext, additionalInfo: Stri
                 context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
                 let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
-                let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
 
                 let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
             }

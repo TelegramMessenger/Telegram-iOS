@@ -212,7 +212,7 @@ func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatP
                                 if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                                     if value.fileId == id {
                                         text.removeAttribute(ChatTextInputAttributes.customEmoji, range: range)
-                                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: file.fileId.id, file: file), range: range)
+                                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file), range: range)
                                     }
                                 }
                             })

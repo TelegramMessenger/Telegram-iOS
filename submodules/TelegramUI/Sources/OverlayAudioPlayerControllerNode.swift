@@ -67,7 +67,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             } else {
                 return false
             }
-        }, openPeer: { _, _, _, _ in
+        }, openPeer: { _, _, _, _, _ in
         }, openPeerMention: { _ in
         }, openMessageContextMenu: { _, _, _, _, _, _ in
         }, openMessageReactionContextMenu: { _, _, _, _ in
@@ -80,8 +80,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
-        }, sendSticker: { _, _, _, _, _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _, _, _, _, _ in
             return false
+        }, sendEmoji: { _, _ in
         }, sendGif: { _, _, _, _, _ in
             return false
         }, sendBotContextResultAsGif: { _, _, _, _, _ in
@@ -282,7 +283,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 if let location = strongSelf.playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(messages, _, loadMore) = location {
                     playlistLocation = .custom(messages: messages, at: id, loadMore: loadMore)
                 }
-                return strongSelf.context.sharedContext.openChatMessage(OpenChatMessageParams(context: strongSelf.context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: playlistLocation))
+                return strongSelf.context.sharedContext.openChatMessage(OpenChatMessageParams(context: strongSelf.context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: playlistLocation))
             }
             return false
         }

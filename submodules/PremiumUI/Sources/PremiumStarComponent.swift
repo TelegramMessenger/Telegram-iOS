@@ -19,7 +19,7 @@ private func rad2deg(_ number: Float) -> Float {
 }
 
 private func generateParticlesTexture() -> UIImage {
-    return UIImage() 
+    return UIImage()
 }
 
 private func generateFlecksTexture() -> UIImage {
@@ -46,16 +46,18 @@ private func generateDiffuseTexture() -> UIImage {
 }
 
 class PremiumStarComponent: Component {
+    let isIntro: Bool
     let isVisible: Bool
     let hasIdleAnimations: Bool
         
-    init(isVisible: Bool, hasIdleAnimations: Bool) {
+    init(isIntro: Bool, isVisible: Bool, hasIdleAnimations: Bool) {
+        self.isIntro = isIntro
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
     }
     
     static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+        return lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -84,7 +86,11 @@ class PremiumStarComponent: Component {
         private var timer: SwiftSignalKit.Timer?
         private var hasIdleAnimations = false
         
-        override init(frame: CGRect) {
+        private let isIntro: Bool
+        
+        init(frame: CGRect, isIntro: Bool) {
+            self.isIntro = isIntro
+            
             self.sceneView = SCNView(frame: CGRect(origin: .zero, size: CGSize(width: 64.0, height: 64.0)))
             self.sceneView.backgroundColor = .clear
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
@@ -202,14 +208,9 @@ class PremiumStarComponent: Component {
                 "rotate",
                 "tapRotate"
             ]
-            if #available(iOS 11.0, *) {
-                for key in keys {
-                    node.removeAnimation(forKey: key, blendOutDuration: 0.1)
-                }
-            } else {
-                for key in keys {
-                    node.removeAnimation(forKey: key)
-                }
+
+            for key in keys {
+                node.removeAnimation(forKey: key)
             }
             
             switch gesture.state {
@@ -369,10 +370,13 @@ class PremiumStarComponent: Component {
                 return
             }
 
+            let fromScale: Float = self.isIntro ? 0.1 : 0.08
+            let toScale: Float = self.isIntro ? 0.115 : 0.092
+            
             let animation = CABasicAnimation(keyPath: "scale")
             animation.duration = 2.0
-            animation.fromValue = NSValue(scnVector3: SCNVector3(x: 0.1, y: 0.1, z: 0.1))
-            animation.toValue = NSValue(scnVector3: SCNVector3(x: 0.115, y: 0.115, z: 0.115))
+            animation.fromValue = NSValue(scnVector3: SCNVector3(x: fromScale, y: fromScale, z: fromScale))
+            animation.toValue = NSValue(scnVector3: SCNVector3(x: toScale, y: toScale, z: toScale))
             animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animation.autoreverses = true
             animation.repeatCount = .infinity
@@ -433,29 +437,45 @@ class PremiumStarComponent: Component {
             self.previousInteractionTimestamp = currentTime
             self.delayTapsTill = currentTime + 0.85
             
-            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particlesLeft = scene.rootNode.childNode(withName: "particles_left", recursively: false), let particlesRight = scene.rootNode.childNode(withName: "particles_right", recursively: false) {
-                if let leftParticleSystem = particlesLeft.particleSystems?.first, let rightParticleSystem = particlesRight.particleSystems?.first {
-                    leftParticleSystem.speedFactor = 1.3
-                    leftParticleSystem.particleVelocity = 2.4
-                    leftParticleSystem.birthRate = 24.0
+            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particlesLeft = scene.rootNode.childNode(withName: "particles_left", recursively: false), let particlesRight = scene.rootNode.childNode(withName: "particles_right", recursively: false), let particlesBottomLeft = scene.rootNode.childNode(withName: "particles_left_bottom", recursively: false), let particlesBottomRight = scene.rootNode.childNode(withName: "particles_right_bottom", recursively: false) {
+                if let leftParticleSystem = particlesLeft.particleSystems?.first, let rightParticleSystem = particlesRight.particleSystems?.first, let leftBottomParticleSystem = particlesBottomLeft.particleSystems?.first, let rightBottomParticleSystem = particlesBottomRight.particleSystems?.first {
+                    leftParticleSystem.speedFactor = 2.0
+                    leftParticleSystem.particleVelocity = 1.6
+                    leftParticleSystem.birthRate = 60.0
                     leftParticleSystem.particleLifeSpan = 4.0
                     
-                    rightParticleSystem.speedFactor = 1.3
-                    rightParticleSystem.particleVelocity = 2.4
-                    rightParticleSystem.birthRate = 24.0
+                    rightParticleSystem.speedFactor = 2.0
+                    rightParticleSystem.particleVelocity = 1.6
+                    rightParticleSystem.birthRate = 60.0
                     rightParticleSystem.particleLifeSpan = 4.0
+                    
+                    leftBottomParticleSystem.particleVelocity = 1.6
+                    leftBottomParticleSystem.birthRate = 24.0
+                    leftBottomParticleSystem.particleLifeSpan = 7.0
+                    
+                    rightBottomParticleSystem.particleVelocity = 1.6
+                    rightBottomParticleSystem.birthRate = 24.0
+                    rightBottomParticleSystem.particleLifeSpan = 7.0
                     
                     node.physicsField?.isActive = true
                     Queue.mainQueue().after(1.0) {
                         node.physicsField?.isActive = false
                         
-                        leftParticleSystem.birthRate = 9.0
+                        leftParticleSystem.birthRate = 12.0
                         leftParticleSystem.particleVelocity = 1.2
                         leftParticleSystem.particleLifeSpan = 3.0
                         
-                        rightParticleSystem.birthRate = 9.0
+                        rightParticleSystem.birthRate = 12.0
                         rightParticleSystem.particleVelocity = 1.2
                         rightParticleSystem.particleLifeSpan = 3.0
+                        
+                        leftBottomParticleSystem.particleVelocity = 1.2
+                        leftBottomParticleSystem.birthRate = 7.0
+                        leftBottomParticleSystem.particleLifeSpan = 5.0
+                        
+                        rightBottomParticleSystem.particleVelocity = 1.2
+                        rightBottomParticleSystem.birthRate = 7.0
+                        rightBottomParticleSystem.particleLifeSpan = 5.0
                         
                         let leftAnimation = POPBasicAnimation()
                         leftAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
@@ -508,9 +528,9 @@ class PremiumStarComponent: Component {
             let to = SCNVector3(x: 0.0, y: toValue, z: 0.0)
             let distance = rad2deg(to.y - from.y)
             
-//            guard !distance.isZero else {
-//                return
-//            }
+            guard !distance.isZero else {
+                return
+            }
             
             let springAnimation = CASpringAnimation(keyPath: "eulerAngles")
             springAnimation.fromValue = NSValue(scnVector3: from)
@@ -541,7 +561,7 @@ class PremiumStarComponent: Component {
     }
     
     func makeView() -> View {
-        return View(frame: CGRect())
+        return View(frame: CGRect(), isIntro: self.isIntro)
     }
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {

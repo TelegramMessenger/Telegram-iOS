@@ -10,6 +10,14 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private var highlightedContentNode: ASDisplayNode?
     private var highlightedColor: UIColor?
     private var highlightReplacesContent = false
+    
+    public var currentFrameImage: UIImage? {
+        if let contents = self.contents {
+            return UIImage(cgImage: contents as! CGImage)
+        } else {
+            return nil
+        }
+    }
         
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, mulAlpha: Bool, completion: @escaping () -> Void) {
         assert(bytesPerRow > 0)

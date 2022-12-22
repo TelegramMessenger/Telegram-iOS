@@ -136,7 +136,7 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
                             emojiView = EmojiTextAttachmentView(
                                 context: item.context,
                                 emoji: ChatTextInputTextCustomEmojiAttribute(
-                                    stickerPack: nil,
+                                    interactivelySelectedFromPackId: nil,
                                     fileId: file.fileId.id,
                                     file: file
                                 ),

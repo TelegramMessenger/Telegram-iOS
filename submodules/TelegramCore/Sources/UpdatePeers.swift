@@ -106,7 +106,40 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
     })
 }
 
-func updatePeerPresences(transaction: Transaction, accountPeerId: PeerId, peerPresences: [PeerId: PeerPresence]) {
+func updatePeerPresences(transaction: Transaction, accountPeerId: PeerId, peerPresences: [PeerId: Api.User]) {
+    var parsedPresences: [PeerId: PeerPresence] = [:]
+    for (peerId, user) in peerPresences {
+        guard let presence = TelegramUserPresence(apiUser: user) else {
+            continue
+        }
+        switch presence.status {
+        case .present:
+            parsedPresences[peerId] = presence
+        default:
+            switch user {
+            case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                let isMin = (flags & (1 << 20)) != 0
+                if isMin, let _ = transaction.getPeerPresence(peerId: peerId) {
+                } else {
+                    parsedPresences[peerId] = presence
+                }
+            default:
+                break
+            }
+        }
+    }
+        
+    parsedPresences.removeValue(forKey: accountPeerId)
+        
+    transaction.updatePeerPresencesInternal(presences: parsedPresences, merge: { previous, updated in
+        if let previous = previous as? TelegramUserPresence, let updated = updated as? TelegramUserPresence, previous.lastActivity != updated.lastActivity {
+            return TelegramUserPresence(status: updated.status, lastActivity: max(previous.lastActivity, updated.lastActivity))
+        }
+        return updated
+    })
+}
+
+func updatePeerPresencesClean(transaction: Transaction, accountPeerId: PeerId, peerPresences: [PeerId: PeerPresence]) {
     var peerPresences = peerPresences
     if peerPresences[accountPeerId] != nil {
         peerPresences.removeValue(forKey: accountPeerId)
@@ -152,7 +185,7 @@ func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
     for user in apiUsers {
         var isContact: Bool?
         switch user {
-        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if (flags & (1 << 20)) == 0 {
                 isContact = (flags & (1 << 11)) != 0
             }

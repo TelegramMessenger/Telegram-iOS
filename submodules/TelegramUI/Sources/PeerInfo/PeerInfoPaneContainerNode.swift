@@ -457,6 +457,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     weak var parentController: ViewController?
     
     private let coveringBackgroundNode: NavigationBackgroundNode
+    private let additionalBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let tabsContainerNode: PeerInfoPaneTabsContainerNode
     private let tabsSeparatorNode: ASDisplayNode
@@ -514,6 +515,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         self.peerId = peerId
         self.isMediaOnly = isMediaOnly
         
+        self.additionalBackgroundNode = ASDisplayNode()
+
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -528,6 +531,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         super.init()
         
 //        self.addSubnode(self.separatorNode)
+        self.addSubnode(self.additionalBackgroundNode)
         self.addSubnode(self.coveringBackgroundNode)
         self.addSubnode(self.tabsContainerNode)
         self.addSubnode(self.tabsSeparatorNode)
@@ -745,9 +749,10 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         
         transition.updateAlpha(node: self.coveringBackgroundNode, alpha: expansionFraction)
         
-        self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         self.coveringBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        self.additionalBackgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.tabsSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
 
         let isScrollingLockedAtTop = expansionFraction < 1.0 - CGFloat.ulpOfOne
@@ -956,6 +961,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.coveringBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
         self.coveringBackgroundNode.update(size: self.coveringBackgroundNode.bounds.size, transition: transition)
+        transition.updateFrame(node: self.additionalBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
 
         transition.updateFrame(node: self.tabsSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: tabsHeight - tabsOffset), size: CGSize(width: size.width, height: UIScreenPixel)))
 

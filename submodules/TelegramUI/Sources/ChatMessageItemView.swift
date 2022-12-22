@@ -85,7 +85,7 @@ struct ChatMessageItemLayoutConstants {
     }
     
     fileprivate static var compact: ChatMessageItemLayoutConstants {
-        let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.85), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0))
+        let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 0.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.85), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0))
         let text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 6.0 + UIScreenPixel, left: 12.0, bottom: 6.0 - UIScreenPixel, right: 12.0))
         let image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 16.0, mergedCornerRadius: 8.0, contentMergedCornerRadius: 0.0, maxDimensions: CGSize(width: 300.0, height: 380.0), minDimensions: CGSize(width: 170.0, height: 74.0))
         let video = ChatMessageItemVideoLayoutConstants(maxHorizontalHeight: 250.0, maxVerticalHeight: 360.0)
@@ -97,7 +97,7 @@ struct ChatMessageItemLayoutConstants {
     }
     
     fileprivate static var regular: ChatMessageItemLayoutConstants {
-        let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.65), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0))
+        let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 0.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.65), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0))
         let text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 6.0 + UIScreenPixel, left: 12.0, bottom: 6.0 - UIScreenPixel, right: 12.0))
         let image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 16.0, mergedCornerRadius: 8.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 440.0, height: 440.0), minDimensions: CGSize(width: 170.0, height: 74.0))
         let video = ChatMessageItemVideoLayoutConstants(maxHorizontalHeight: 250.0, maxVerticalHeight: 360.0)
@@ -689,7 +689,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     var accessibilityData: ChatMessageAccessibilityData?
     var safeInsets = UIEdgeInsets()
     
-    var awaitingAppliedReaction: (String?, () -> Void)?
+    var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -815,7 +815,11 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true, nil, nil)
+                    var concealed = true
+                    if url.hasPrefix("tg://") {
+                        concealed = false
+                    }
+                    item.controllerInteraction.openUrl(url, concealed, nil, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
@@ -854,7 +858,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
-                    item.controllerInteraction.openPeer(peerId, .info, nil, nil)
+                    item.controllerInteraction.openPeer(peerId, .info, nil, false, nil)
                 case let .openWebView(url, simple):
                     item.controllerInteraction.openWebView(button.title, url, simple, false)
             }
@@ -875,7 +879,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     func openMessageContextMenu() {
     }
     
-    public func targetReactionView(value: String) -> UIView? {
+    public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         return nil
     }
     

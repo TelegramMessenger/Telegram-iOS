@@ -177,7 +177,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         for attribute in lhs.attributes {
             if let attribute = attribute as? ReplyMarkupMessageAttribute {
                 if attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
-                    upperStyle = ChatMessageMerge.semanticallyMerged.rawValue
+                    upperStyle = ChatMessageMerge.none.rawValue
                 }
                 break
             }
@@ -305,7 +305,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if let forwardInfo = content.firstMessage.forwardInfo {
                     effectiveAuthor = forwardInfo.author
                     if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
+                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
                     }
                 }
                 displayAuthorInfo = incoming && effectiveAuthor != nil
@@ -328,7 +328,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             isScheduledMessages = true
         }
         
-        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp, alreadyThere in
+        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context, action: { timestamp, alreadyThere in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))

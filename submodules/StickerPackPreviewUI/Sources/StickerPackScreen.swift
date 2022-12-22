@@ -21,6 +21,7 @@ import PresentationDataUtils
 import StickerPeekUI
 import AnimationCache
 import MultiAnimationRenderer
+import Pasteboard
 
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool)
@@ -145,7 +146,22 @@ private final class StickerPackContainer: ASDisplayNode {
     var onReady: () -> Void = {}
     var onError: () -> Void = {}
     
-    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPacks: [StickerPackReference], decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, openMention: @escaping (String) -> Void, controller: StickerPackScreenImpl?) {
+    init(
+        index: Int,
+        context: AccountContext,
+        presentationData: PresentationData,
+        stickerPacks: [StickerPackReference],
+        loadedStickerPacks: [LoadedStickerPack],
+        decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction,
+        requestDismiss: @escaping () -> Void,
+        expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void,
+        presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void,
+        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+        sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
+        longPressEmoji: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?,
+        openMention: @escaping (String) -> Void,
+        controller: StickerPackScreenImpl?)
+    {
         self.index = index
         self.context = context
         self.controller = controller
@@ -201,10 +217,16 @@ private final class StickerPackContainer: ASDisplayNode {
         
         var addStickerPackImpl: ((StickerPackCollectionInfo, [StickerPackItem]) -> Void)?
         var removeStickerPackImpl: ((StickerPackCollectionInfo) -> Void)?
+        var emojiSelectedImpl: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
+        var emojiLongPressedImpl: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?
         self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: true, addStickerPack: { info, items in
             addStickerPackImpl?(info, items)
         }, removeStickerPack: { info in
             removeStickerPackImpl?(info)
+        }, emojiSelected: { text, attribute in
+            emojiSelectedImpl?(text, attribute)
+        }, emojiLongPressed: { text, attribute, node, frame in
+            emojiLongPressedImpl?(text, attribute, node, frame)
         })
         
         super.init()
@@ -215,7 +237,6 @@ private final class StickerPackContainer: ASDisplayNode {
         self.addSubnode(self.actionAreaSeparatorNode)
         self.addSubnode(self.buttonNode)
         
-//        self.addSubnode(self.titleBackgroundnode)
         self.titleContainer.addSubnode(self.titleNode)
         self.addSubnode(self.titleContainer)
         self.addSubnode(self.titleSeparatorNode)
@@ -323,11 +344,18 @@ private final class StickerPackContainer: ASDisplayNode {
             return updatedOffset
         }
         
-        let loadedStickerPacks = combineLatest(stickerPacks.map {
-            context.engine.stickers.loadedStickerPack(reference: $0, forceActualized: true)
+        
+        
+        let fetchedStickerPacks: Signal<[LoadedStickerPack], NoError> = combineLatest(stickerPacks.map { packReference in
+            for pack in loadedStickerPacks {
+                if case let .result(info, _, _) = pack, case let .id(id, _) = packReference, info.id.id == id {
+                    return .single(pack)
+                }
+            }
+            return context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: true)
         })
         
-        self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), loadedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
+        self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), fetchedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
             guard let strongSelf = self else {
                 return
             }
@@ -394,6 +422,14 @@ private final class StickerPackContainer: ASDisplayNode {
                 
                 let _ = strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete).start()
             }
+        }
+        
+        emojiSelectedImpl = { text, attribute in
+            sendEmoji?(text, attribute)
+        }
+        
+        emojiLongPressedImpl = { text, attribute, node, frame in
+            longPressEmoji?(text, attribute, node, frame)
         }
     }
     
@@ -593,7 +629,7 @@ private final class StickerPackContainer: ASDisplayNode {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
         }, action: {  [weak self] _, f in
             f(.default)
-            
+        
             UIPasteboard.general.string = text
             
             if let strongSelf = self {
@@ -691,14 +727,29 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let backgroundAlpha: CGFloat
         switch offset {
-            case let .known(value):
-                let bottomOffsetY = max(0.0, self.gridNode.scrollView.contentSize.height + self.gridNode.scrollView.contentInset.top + self.gridNode.scrollView.contentInset.bottom - value - self.gridNode.scrollView.frame.height - 10.0)
-                backgroundAlpha = min(10.0, bottomOffsetY) / 10.0
+            case .known:
+                let topPosition = self.view.convert(self.topContainerNode.frame, to: self.view).minY
+                let bottomPosition = self.actionAreaBackgroundNode.view.convert(self.actionAreaBackgroundNode.bounds, to: self.view).minY
+                let bottomEdgePosition = topPosition + self.topContainerNode.frame.height + self.gridNode.scrollView.contentSize.height
+                let bottomOffset = bottomPosition - bottomEdgePosition
+
+                backgroundAlpha = min(10.0, max(0.0, -1.0 * bottomOffset)) / 10.0
             case .unknown, .none:
                 backgroundAlpha = 1.0
         }
-        self.actionAreaBackgroundNode.alpha = backgroundAlpha
-        self.actionAreaSeparatorNode.alpha = backgroundAlpha
+        
+        let transition: ContainedViewLayoutTransition
+        var delay: Double = 0.0
+        if backgroundAlpha >= self.actionAreaBackgroundNode.alpha || abs(backgroundAlpha - self.actionAreaBackgroundNode.alpha) < 0.01 {
+            transition = .immediate
+        } else {
+            transition = .animated(duration: 0.2, curve: .linear)
+            if abs(backgroundAlpha - self.actionAreaBackgroundNode.alpha) > 0.9 {
+                delay = 0.2
+            }
+        }
+        transition.updateAlpha(node: self.actionAreaBackgroundNode, alpha: backgroundAlpha, delay: delay)
+        transition.updateAlpha(node: self.actionAreaSeparatorNode, alpha: backgroundAlpha, delay: delay)
     }
     
     private func updateStickerPackContents(_ contents: [LoadedStickerPack], hasPremium: Bool) {
@@ -1013,13 +1064,13 @@ private final class StickerPackContainer: ASDisplayNode {
         if !self.currentStickerPacks.isEmpty {
             var packsHeight = 0.0
             for stickerPack in currentStickerPacks {
-                let layout = ItemLayout(width: fillingWidth, itemsCount: stickerPack.1.count, hasTitle: true)
-                packsHeight += layout.height
+                let layout = ItemLayout(width: fillingWidth, itemsCount: stickerPack.1.count)
+                packsHeight += layout.height + 61.0
             }
             contentHeight = packsHeight + 8.0
         } else if let (info, items, _) = self.currentStickerPack {
             if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                let layout = ItemLayout(width: fillingWidth, itemsCount: items.count, hasTitle: false)
+                let layout = ItemLayout(width: fillingWidth, itemsCount: items.count)
                 contentHeight = layout.height
             } else {
                 let rowCount = items.count / itemsPerRow + ((items.count % itemsPerRow) == 0 ? 0 : 1)
@@ -1182,6 +1233,8 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private let dismissed: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
     private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
+    private let longPressEmoji: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?
     private let openMention: (String) -> Void
     
     private let dimNode: ASDisplayNode
@@ -1203,7 +1256,19 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     var onReady: () -> Void = {}
     var onError: () -> Void = {}
     
-    init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, openMention: @escaping (String) -> Void) {
+    init(
+        context: AccountContext,
+        controller: StickerPackScreenImpl,
+        stickerPacks: [StickerPackReference],
+        initialSelectedStickerPackIndex: Int,
+        modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void,
+        dismissed: @escaping () -> Void,
+        presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void,
+        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+        sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
+        longPressEmoji: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?,
+        openMention: @escaping (String) -> Void)
+    {
         self.context = context
         self.controller = controller
         self.presentationData = controller.presentationData
@@ -1213,6 +1278,8 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.dismissed = dismissed
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.sendSticker = sendSticker
+        self.sendEmoji = sendEmoji
+        self.longPressEmoji = longPressEmoji
         self.openMention = openMention
         
         self.dimNode = ASDisplayNode()
@@ -1273,7 +1340,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                 wasAdded = true
                 containerTransition = .immediate
                 let index = i
-                container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, decideNextAction: { [weak self] container, action in
+                container = StickerPackContainer(index: index, context: self.context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, loadedStickerPacks: self.controller?.loadedStickerPacks ?? [], decideNextAction: { [weak self] container, action in
                     guard let strongSelf = self, let layout = strongSelf.validLayout else {
                         return .dismiss
                     }
@@ -1323,7 +1390,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                             }
                         }
                     }
-                }, presentInGlobalOverlay: presentInGlobalOverlay, sendSticker: sendSticker, openMention: openMention, controller: self.controller)
+                }, presentInGlobalOverlay: presentInGlobalOverlay, sendSticker: self.sendSticker, sendEmoji: self.sendEmoji, longPressEmoji: self.longPressEmoji, openMention: self.openMention, controller: self.controller)
                 container.onReady = { [weak self] in
                     self?.onReady()
                 }
@@ -1511,9 +1578,12 @@ public final class StickerPackScreenImpl: ViewController {
     private var presentationDataDisposable: Disposable?
     
     private let stickerPacks: [StickerPackReference]
+    fileprivate let loadedStickerPacks: [LoadedStickerPack]
+    
     private let initialSelectedStickerPackIndex: Int
     fileprivate weak var parentNavigationController: NavigationController?
     private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     
     private var controllerNode: StickerPackScreenNode {
         return self.displayNode as! StickerPackScreenNode
@@ -1535,27 +1605,29 @@ public final class StickerPackScreenImpl: ViewController {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil) {
+    public init(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        stickerPacks: [StickerPackReference],
+        loadedStickerPacks: [LoadedStickerPack],
+        selectedStickerPackIndex: Int = 0,
+        parentNavigationController: NavigationController? = nil,
+        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
+        sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
+        actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil
+    ) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.stickerPacks = stickerPacks
+        self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
+        self.sendEmoji = sendEmoji
         self.actionPerformed = actionPerformed
-        
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        
-        let animationRenderer: MultiAnimationRenderer
-        /*if #available(iOS 13.0, *) {
-            animationRenderer = MultiAnimationMetalRendererImpl()
-        } else {*/
-            animationRenderer = MultiAnimationRendererImpl()
-        //}
-        
-        self.animationRenderer = animationRenderer
+
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1601,6 +1673,46 @@ public final class StickerPackScreenImpl: ViewController {
                     return false
                 }
             }
+        }, sendEmoji: self.sendEmoji.flatMap { [weak self] sendEmoji in
+            return { text, attribute in
+                sendEmoji(text, attribute)
+                self?.controllerNode.dismiss()
+            }
+        }, longPressEmoji: { [weak self] text, attribute, node, frame in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            var actions: [ContextMenuAction] = []
+
+            actions.append(ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                storeMessageTextInPasteboard(
+                    text,
+                    entities: [
+                        MessageTextEntity(
+                            range: 0 ..< (text as NSString).length,
+                            type: .CustomEmoji(
+                                stickerPack: nil,
+                                fileId: attribute.fileId
+                            )
+                        )
+                    ]
+                )
+                
+                if let strongSelf = self, let file = attribute.file {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: presentationData.strings.Conversation_EmojiCopied, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                }
+            }))
+            
+            let contextMenuController = ContextMenuController(actions: actions)
+            strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (node, frame.insetBy(dx: -40.0, dy: 0.0), strongSelf.controllerNode, strongSelf.controllerNode.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
         }, openMention: { [weak self] mention in
             guard let strongSelf = self else {
                 return
@@ -1714,16 +1826,31 @@ public enum StickerPackScreenPerformedAction {
     case remove(positionInList: Int)
 }
 
-public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
-    //let stickerPacks = [mainStickerPack]
-    let controller = StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker, actionPerformed: actionPerformed)
+public func StickerPackScreen(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    mode: StickerPackPreviewControllerMode = .default,
+    mainStickerPack: StickerPackReference,
+    stickerPacks: [StickerPackReference],
+    loadedStickerPacks: [LoadedStickerPack] = [],
+    parentNavigationController: NavigationController? = nil,
+    sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
+    sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
+    actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil,
+    dismissed: (() -> Void)? = nil) -> ViewController
+{
+    let controller = StickerPackScreenImpl(
+        context: context,
+        stickerPacks: stickerPacks,
+        loadedStickerPacks: loadedStickerPacks,
+        selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0,
+        parentNavigationController: parentNavigationController,
+        sendSticker: sendSticker,
+        sendEmoji: sendEmoji,
+        actionPerformed: actionPerformed
+    )
     controller.dismissed = dismissed
     return controller
-    
-//    let controller = StickerPackPreviewController(context: context, updatedPresentationData: updatedPresentationData, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
-//    controller.dismissed = dismissed
-//    controller.sendSticker = sendSticker
-//    return controller
 }
 
 

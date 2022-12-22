@@ -109,10 +109,10 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         var selectStickerImpl: ((FileMediaReference, UIView, CGRect) -> Bool)?
         
         self.controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+            return false }, openPeer: { _, _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-            }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { fileReference, _, _, _, _, node, rect, _ in return selectStickerImpl?(fileReference, node, rect) ?? false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { fileReference, _, _, _, _, node, rect, _, _ in return selectStickerImpl?(fileReference, node, rect) ?? false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: {
@@ -237,7 +237,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                             } else {
                                 return false
                             }
@@ -350,7 +350,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                             } else {
                                 return false
                             }

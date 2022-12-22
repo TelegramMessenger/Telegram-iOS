@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ItemCollectionId: Comparable, Hashable {
+public struct ItemCollectionId: Comparable, Hashable, Codable {
     public typealias Namespace = Int32
     public typealias Id = Int64
     

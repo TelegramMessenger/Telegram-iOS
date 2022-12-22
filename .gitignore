@@ -62,4 +62,5 @@ bazel-testlogs/*
 */*.swp
 *.swp
 build-input/*
-*/*.pyc
+**/*.pyc
+*.pyc

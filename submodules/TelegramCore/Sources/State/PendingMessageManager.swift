@@ -96,9 +96,9 @@ private func uploadActivityTypeForMessage(_ message: Message) -> PeerInputActivi
         } else if let file = media as? TelegramMediaFile {
             if file.isInstantVideo {
                 return .uploadingInstantVideo(progress: 0)
-            } else if file.isVideo && !file.isAnimated {
+            } else if file.isVideo && !file.isAnimated && !file.isVideoEmoji && !file.isVideoSticker {
                 return .uploadingVideo(progress: 0)
-            } else if !file.isSticker && !file.isVoice && !file.isAnimated {
+            } else if !file.isSticker && !file.isCustomEmoji && !file.isVoice && !file.isAnimated {
                 return .uploadingFile(progress: 0)
             }
         }
@@ -798,12 +798,17 @@ public final class PendingMessageManager {
                         flags |= (1 << 13)
                     }
                     
+                    var bubbleUpEmojiOrStickersets = false
+                    
                     var singleMedias: [Api.InputSingleMedia] = []
                     for (message, content) in messages {
                         var uniqueId: Int64?
                         inner: for attribute in message.attributes {
                             if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                                 uniqueId = outgoingInfo.uniqueId
+                                if !outgoingInfo.bubbleUpEmojiOrStickersets.isEmpty {
+                                    bubbleUpEmojiOrStickersets = true
+                                }
                                 break inner
                             }
                         }
@@ -829,6 +834,10 @@ public final class PendingMessageManager {
                         } else {
                             return failMessages(postbox: postbox, ids: group.map { $0.0 })
                         }
+                    }
+                    
+                    if bubbleUpEmojiOrStickersets {
+                        flags |= Int32(1 << 15)
                     }
                     
                     sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
@@ -1002,6 +1011,7 @@ public final class PendingMessageManager {
                 var replyMessageId: Int32?
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
+                var bubbleUpEmojiOrStickersets = false
                 
                 var flags: Int32 = 0
         
@@ -1010,6 +1020,7 @@ public final class PendingMessageManager {
                         replyMessageId = replyAttribute.messageId.id
                     } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                         uniqueId = outgoingInfo.uniqueId
+                        bubbleUpEmojiOrStickersets = !outgoingInfo.bubbleUpEmojiOrStickersets.isEmpty
                     } else if let attribute = attribute as? ForwardSourceInfoAttribute {
                         forwardSourceInfoAttribute = attribute
                     } else if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -1053,8 +1064,16 @@ public final class PendingMessageManager {
                 let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
                 switch content.content {
                     case .text:
+                        if bubbleUpEmojiOrStickersets {
+                            flags |= Int32(1 << 15)
+                        }
+                    
                         sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
+                        if bubbleUpEmojiOrStickersets {
+                            flags |= Int32(1 << 15)
+                        }
+                        
                         sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):

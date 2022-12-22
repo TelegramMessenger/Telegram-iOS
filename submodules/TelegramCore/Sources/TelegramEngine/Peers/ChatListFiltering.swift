@@ -123,13 +123,9 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
             self.pinnedPeers.insert(peerId, at: 0)
             return true
         } else {
-            if self.peers.count < 100 {
-                self.peers.insert(peerId, at: 0)
-                self.pinnedPeers.insert(peerId, at: 0)
-                return true
-            } else {
-                return false
-            }
+            self.peers.insert(peerId, at: 0)
+            self.pinnedPeers.insert(peerId, at: 0)
+            return true
         }
     }
     
@@ -217,10 +213,7 @@ public struct ChatListFilterData: Equatable, Hashable {
         if self.excludePeers.contains(peerId) {
             return false
         }
-        if self.excludePeers.count >= 100 {
-            return false
-        }
-        
+ 
         let _ = self.includePeers.removePeer(peerId)
         self.excludePeers.append(peerId)
         
@@ -640,7 +633,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
         
         return postbox.transaction { transaction -> Void in
             var peers: [Peer] = []
-            var peerPresences: [PeerId: PeerPresence] = [:]
+            var peerPresences: [PeerId: Api.User] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
             var channelStates: [PeerId: Int32] = [:]
             
@@ -654,9 +647,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
+                    peerPresences[telegramUser.id] = user
                 }
                 
                 var topMessageIds = Set<MessageId>()

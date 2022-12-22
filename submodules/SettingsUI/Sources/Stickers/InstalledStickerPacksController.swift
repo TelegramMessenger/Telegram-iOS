@@ -19,7 +19,7 @@ import WebPBinding
 import ReactionImageComponent
 
 private final class InstalledStickerPacksControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
@@ -37,8 +37,8 @@ private final class InstalledStickerPacksControllerArguments {
     let expandTrendingPacks: () -> Void
     let addPack: (StickerPackCollectionInfo) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openEmoji: @escaping () -> Void, openQuickReaction: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void, toggleSuggestAnimatedEmoji: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void, expandTrendingPacks: @escaping () -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
-        self.account = account
+    init(context: AccountContext, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openEmoji: @escaping () -> Void, openQuickReaction: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void, toggleSuggestAnimatedEmoji: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void, expandTrendingPacks: @escaping () -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
+        self.context = context
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
         self.removePack = removePack
@@ -88,7 +88,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case archived(PresentationTheme, String, Int32, [ArchivedStickerPackItem]?)
     case masks(PresentationTheme, String)
     case emoji(PresentationTheme, String)
-    case quickReaction(String, UIImage?)
+    case quickReaction(String, MessageReaction.Reaction, AvailableReactions)
     case animatedStickers(PresentationTheme, String, Bool)
     case animatedStickersInfo(PresentationTheme, String)
     case suggestAnimatedEmoji(String, Bool)
@@ -171,8 +171,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .quickReaction(lhsText, lhsImage):
-                if case let .quickReaction(rhsText, rhsImage) = rhs, lhsText == rhsText, lhsImage === rhsImage {
+            case let .quickReaction(lhsText, lhsReaction, lhsAvailableReactions):
+                if case let .quickReaction(rhsText, rhsReaction, rhsAvailableReactions) = rhs, lhsText == rhsText, lhsReaction == rhsReaction, lhsAvailableReactions == rhsAvailableReactions {
                     return true
                 } else {
                     return false
@@ -430,14 +430,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openEmoji()
                 })
-            case let .quickReaction(title, image):
-                let labelStyle: ItemListDisclosureLabelStyle
-                if let image = image {
-                    labelStyle = .image(image: image, size: image.size.aspectFitted(CGSize(width: 30.0, height: 30.0)))
-                } else {
-                    labelStyle = .text
-                }
-                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "", labelStyle: labelStyle, sectionId: self.section, style: .blocks, action: {
+            case let .quickReaction(title, reaction, availableReactions):
+                return ItemListReactionItem(context: arguments.context, presentationData: presentationData, title: title, reaction: reaction, availableReactions: availableReactions, sectionId: self.section, style: .blocks, action: {
                     arguments.openQuickReaction()
                 })
             case let .archived(_, text, count, archived):
@@ -457,7 +451,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
             case let .trendingPacksTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .trendingPack(_, _, _, info, topItem, count, animatedStickers, unread, installed):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.context.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
@@ -472,7 +466,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
             case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing, selected):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: editing.editing ? .check(checked: selected ?? false) : .none, editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.context.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: editing.editing ? .check(checked: selected ?? false) : .none, editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -556,7 +550,7 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
 
 private let maxTrendingPacksDisplayedLimit: Int32 = 3
 
-private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, temporaryPackOrder: [ItemCollectionId]?, featured: [FeaturedStickerPackItem], archived: [ArchivedStickerPackItem]?, stickerSettings: StickerSettings, quickReactionImage: UIImage?) -> [InstalledStickerPacksEntry] {
+private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, temporaryPackOrder: [ItemCollectionId]?, featured: [FeaturedStickerPackItem], archived: [ArchivedStickerPackItem]?, stickerSettings: StickerSettings, quickReaction: MessageReaction.Reaction?, availableReactions: AvailableReactions?) -> [InstalledStickerPacksEntry] {
     var entries: [InstalledStickerPacksEntry] = []
     
     var installedPacks = Set<ItemCollectionId>()
@@ -592,7 +586,9 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         
         entries.append(.emoji(presentationData.theme, presentationData.strings.StickersList_EmojiItem))
         
-        entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReactionImage))
+        if let quickReaction = quickReaction, let availableReactions = availableReactions {
+            entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReaction, availableReactions))
+        }
         
         entries.append(.animatedStickers(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickers, stickerSettings.loopAnimatedStickers))
         entries.append(.animatedStickersInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickersInfo))
@@ -733,7 +729,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     var navigationControllerImpl: (() -> NavigationController?)?
     
-    let arguments = InstalledStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
+    let arguments = InstalledStickerPacksControllerArguments(context: context, openStickerPack: { info in
         presentStickerPackController?(info)
     }, setPackIdWithRevealedOptions: { packId, fromPackId in
         updateState { state in
@@ -925,67 +921,38 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     let temporaryPackOrder = Promise<[ItemCollectionId]?>(nil)
     
     let featured = Promise<[FeaturedStickerPackItem]>()
-    let quickReactionImage: Signal<UIImage?, NoError>
+    let quickReaction: Signal<MessageReaction.Reaction?, NoError>
 
     switch mode {
         case .general, .modal:
             featured.set(context.account.viewTracker.featuredStickerPacks())
             archivedPromise.set(.single(archivedPacks) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
-            quickReactionImage = combineLatest(
-                context.engine.stickers.availableReactions(),
+            quickReaction = combineLatest(
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
                 context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
             )
-            |> map { availableReactions, preferencesView -> TelegramMediaFile? in
-                guard let availableReactions = availableReactions else {
-                    return nil
-                }
-                
+            |> map { peer, preferencesView -> MessageReaction.Reaction? in
                 let reactionSettings: ReactionSettings
                 if let entry = preferencesView.values[PreferencesKeys.reactionSettings], let value = entry.get(ReactionSettings.self) {
                     reactionSettings = value
                 } else {
                     reactionSettings = .default
                 }
-                
-                for reaction in availableReactions.reactions {
-                    if reaction.value == reactionSettings.quickReaction {
-                        return reaction.staticIcon
-                    }
+                var hasPremium = false
+                if case let .user(user) = peer {
+                    hasPremium = user.isPremium
                 }
-                
-                return nil
+                return reactionSettings.effectiveQuickReaction(hasPremium: hasPremium)
             }
             |> distinctUntilChanged
-            |> mapToSignal { file -> Signal<UIImage?, NoError> in
-                guard let file = file else {
-                    return .single(nil)
-                }
-                
-                return context.account.postbox.mediaBox.resourceData(file.resource)
-                |> distinctUntilChanged(isEqual: { lhs, rhs in
-                    return lhs.complete == rhs.complete
-                })
-                |> map { data -> UIImage? in
-                    guard data.complete else {
-                        return nil
-                    }
-                    guard let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
-                        return nil
-                    }
-                    guard let image = WebP.convert(fromWebP: dataValue) else {
-                        return nil
-                    }
-                    return image
-                }
-            }
         case .masks:
             featured.set(.single([]))
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .masks) |> map(Optional.init)))
-            quickReactionImage = .single(nil)
+            quickReaction = .single(nil)
         case .emoji:
             featured.set(.single([]))
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .emoji) |> map(Optional.init)))
-            quickReactionImage = .single(nil)
+            quickReaction = .single(nil)
     }
 
     var previousPackCount: Int?
@@ -995,10 +962,11 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         temporaryPackOrder.get(),
         combineLatest(queue: .mainQueue(), featured.get(), archivedPromise.get()),
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]),
-        quickReactionImage
+        quickReaction,
+        context.engine.stickers.availableReactions()
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, temporaryPackOrder, featuredAndArchived, sharedData, quickReactionImage -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, view, temporaryPackOrder, featuredAndArchived, sharedData, quickReaction, availableReactions -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var stickerSettings = StickerSettings.defaultSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
            stickerSettings = value
@@ -1152,7 +1120,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, temporaryPackOrder: temporaryPackOrder, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings, quickReactionImage: quickReactionImage), style: .blocks, ensureVisibleItemTag: focusOnItemTag, toolbarItem: toolbarItem, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, temporaryPackOrder: temporaryPackOrder, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings, quickReaction: quickReaction, availableReactions: availableReactions), style: .blocks, ensureVisibleItemTag: focusOnItemTag, toolbarItem: toolbarItem, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {

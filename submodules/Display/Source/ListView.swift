@@ -505,22 +505,24 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     deinit {
-        self.pauseAnimations()
-        self.displayLink.invalidate()
-        
-        for i in (0 ..< self.itemNodes.count).reversed() {
-            var itemNode: AnyObject? = self.itemNodes[i]
-            self.itemNodes.remove(at: i)
-            ASPerformMainThreadDeallocation(&itemNode)
-        }
-        for key in self.itemHeaderNodes.keys {
-            var itemHeaderNode: AnyObject? = self.itemHeaderNodes[key]
-            self.itemHeaderNodes.removeValue(forKey: key)
-            ASPerformMainThreadDeallocation(&itemHeaderNode)
-        }
-        
-        self.waitingForNodesDisposable.dispose()
-        self.reorderFeedbackDisposable?.dispose()
+        let _ = { () -> Void in
+            self.pauseAnimations()
+            self.displayLink.invalidate()
+            
+            for i in (0 ..< self.itemNodes.count).reversed() {
+                var itemNode: AnyObject? = self.itemNodes[i]
+                self.itemNodes.remove(at: i)
+                ASPerformMainThreadDeallocation(&itemNode)
+            }
+            for key in self.itemHeaderNodes.keys {
+                var itemHeaderNode: AnyObject? = self.itemHeaderNodes[key]
+                self.itemHeaderNodes.removeValue(forKey: key)
+                ASPerformMainThreadDeallocation(&itemHeaderNode)
+            }
+            
+            self.waitingForNodesDisposable.dispose()
+            self.reorderFeedbackDisposable?.dispose()
+        }()
     }
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -3561,10 +3563,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 headerNode = current
                 switch transition.0 {
                     case .immediate:
-                        headerNode.frame = headerFrame
+                        headerNode.updateFrame(headerFrame, within: self.visibleSize)
                     case let .animated(duration, curve):
                         let previousFrame = headerNode.frame
-                        headerNode.frame = headerFrame
+                        headerNode.updateFrame(headerFrame, within: self.visibleSize)
                         var offset = headerFrame.minY - previousFrame.minY + transition.2
                         if headerNode.isRotated {
                             offset = -offset

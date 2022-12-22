@@ -247,7 +247,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                             peerId = message.id.peerId
                         }
                         if let botPeer = botPeer, let addressName = botPeer.addressName {
-                            self.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), subject: nil, peekData: nil), nil, nil)
+                            self.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), subject: nil, peekData: nil), nil, false, nil)
                         }
                     }
                 case .payment:
@@ -259,7 +259,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                 case let .setupPoll(isQuiz):
                     self.controllerInteraction.openPollCreation(isQuiz)
                 case let .openUserProfile(peerId):
-                    self.controllerInteraction.openPeer(peerId, .info, nil, nil)
+                    self.controllerInteraction.openPeer(peerId, .info, nil, false, nil)
                 case let .openWebView(url, simple):
                     self.controllerInteraction.openWebView(markupButton.title, url, simple, false)
             }

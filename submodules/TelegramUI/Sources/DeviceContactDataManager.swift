@@ -429,15 +429,20 @@ private final class DeviceContactDataManagerPrivateImpl {
         for (stableId, basicData) in self.stableIdToBasicContactData {
             for phoneNumber in basicData.phoneNumbers {
                 var replace = false
+                var currentLocalIdentifiers: [String] = []
                 if let current = importableContactData[phoneNumber.value] {
                     if stableId < current.0 {
                         replace = true
+                        currentLocalIdentifiers = current.1.localIdentifiers
                     }
                 } else {
                     replace = true
                 }
                 if replace {
-                    importableContactData[phoneNumber.value] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName))
+                    if !currentLocalIdentifiers.contains(stableId) {
+                        currentLocalIdentifiers.append(stableId)
+                    }
+                    importableContactData[phoneNumber.value] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName, localIdentifiers: currentLocalIdentifiers))
                 }
             }
         }

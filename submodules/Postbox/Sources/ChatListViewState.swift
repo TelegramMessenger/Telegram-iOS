@@ -111,7 +111,7 @@ private func updateMessagePeers(_ message: Message, updatedPeers: [PeerId: Peer]
     return nil
 }
 
-private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [PeerId: Peer]) -> RenderedPeer? {
+private func updatedRenderedPeer(postbox: PostboxImpl, renderedPeer: RenderedPeer, updatedPeers: [PeerId: Peer]) -> RenderedPeer? {
     var updated = false
     for (peerId, currentPeer) in renderedPeer.peers {
         if let updatedPeer = updatedPeers[peerId], !arePeersEqual(currentPeer, updatedPeer) {
@@ -128,7 +128,7 @@ private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [Pe
                 peers[peerId] = currentPeer
             }
         }
-        return RenderedPeer(peerId: renderedPeer.peerId, peers: peers)
+        return RenderedPeer(peerId: renderedPeer.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
     }
     return nil
 }
@@ -687,7 +687,7 @@ private final class ChatListViewSpaceState {
                             hasUpdatedMessages = true
                         }
                     }
-                    let renderedPeer = updatedRenderedPeer(entryRenderedPeer, updatedPeers: transaction.currentUpdatedPeers)
+                    let renderedPeer = updatedRenderedPeer(postbox: postbox, renderedPeer: entryRenderedPeer, updatedPeers: transaction.currentUpdatedPeers)
                     
                     if hasUpdatedMessages || renderedPeer != nil {
                         return .MessageEntry(
@@ -1443,7 +1443,7 @@ struct ChatListViewState {
                             presence = postbox.peerPresenceTable.get(index.messageIndex.id.peerId)
                         }
                     }
-                    let renderedPeer = RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers)
+                    let renderedPeer = RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
                     
                     var tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo] = [:]
                     for (key, component) in self.summaryComponents.components {

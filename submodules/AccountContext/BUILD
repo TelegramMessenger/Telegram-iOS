@@ -23,6 +23,10 @@ swift_library(
         "//submodules/MeshAnimationCache:MeshAnimationCache",
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        
         "//submodules/PtgSettings:PtgSettings",
     ],
     visibility = [

@@ -165,19 +165,11 @@ public struct Font {
     }
     
     public static func medium(_ size: CGFloat) -> UIFont {
-        if #available(iOS 8.2, *) {
-            return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.medium)
-        } else {
-            return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, size, nil)
-        }
+        return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.medium)
     }
     
     public static func semibold(_ size: CGFloat) -> UIFont {
-        if #available(iOS 8.2, *) {
-            return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.semibold)
-        } else {
-            return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, size, nil)
-        }
+        return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.semibold)
     }
     
     public static func bold(_ size: CGFloat) -> UIFont {
@@ -188,17 +180,12 @@ public struct Font {
         }
     }
     
-    
     public static func heavy(_ size: CGFloat) -> UIFont {
         return self.with(size: size, design: .regular, weight: .heavy, traits: [])
     }
     
     public static func light(_ size: CGFloat) -> UIFont {
-        if #available(iOS 8.2, *) {
-            return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.light)
-        } else {
-            return CTFontCreateWithName("HelveticaNeue-Light" as CFString, size, nil)
-        }
+        return UIFont.systemFont(ofSize: size, weight: UIFont.Weight.light)
     }
     
     public static func semiboldItalic(_ size: CGFloat) -> UIFont {

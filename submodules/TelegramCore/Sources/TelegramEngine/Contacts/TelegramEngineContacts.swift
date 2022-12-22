@@ -69,5 +69,32 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func findPeerByLocalContactIdentifier(identifier: String) -> Signal<EnginePeer?, NoError> {
+            return self.account.postbox.transaction { transaction -> EnginePeer? in
+                var foundPeerId: PeerId?
+                transaction.enumerateDeviceContactImportInfoItems({ _, value in
+                    if let value = value as? TelegramDeviceContactImportedData {
+                        switch value {
+                        case let .imported(data, _, peerId):
+                            if data.localIdentifiers.contains(identifier) {
+                                if let peerId = peerId {
+                                    foundPeerId = peerId
+                                    return false
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    return true
+                })
+                if let foundPeerId = foundPeerId {
+                    return transaction.getPeer(foundPeerId).flatMap(EnginePeer.init)
+                } else {
+                    return nil
+                }
+            }
+        }
     }
 }

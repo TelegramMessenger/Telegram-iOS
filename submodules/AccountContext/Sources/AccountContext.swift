@@ -12,6 +12,9 @@ import DeviceLocationManager
 import TemporaryCachedPeerDataManager
 import MeshAnimationCache
 import InAppPurchaseManager
+import AnimationCache
+import MultiAnimationRenderer
+
 import PtgSettings
 import PtgSecretPasscodes
 
@@ -155,6 +158,7 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
     public static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
     public static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
     public static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
+    public static let externalShare = ChatAvailableMessageActionOptions(rawValue: 1 << 10)
 }
 
 public struct ChatAvailableMessageActions {
@@ -184,15 +188,15 @@ public enum ResolvedUrlSettingsSection {
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {
     public var rawValue: UInt32
-
+    
     public init(rawValue: UInt32) {
         self.rawValue = rawValue
     }
-
+    
     public init() {
         self.rawValue = 0
     }
-
+    
     public static let users = ResolvedBotChoosePeerTypes(rawValue: 1)
     public static let bots = ResolvedBotChoosePeerTypes(rawValue: 2)
     public static let groups = ResolvedBotChoosePeerTypes(rawValue: 4)
@@ -471,6 +475,7 @@ public enum PeerInfoControllerMode {
     case calls(messages: [Message])
     case nearbyPeer(distance: Int32)
     case group(PeerId)
+    case reaction(MessageId)
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -756,9 +761,11 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
-
-    func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
-
+    
+    func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
+    
+    func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
+    
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
@@ -788,6 +795,7 @@ public enum PremiumIntroSource {
     case about
     case deeplink(String?)
     case profile(PeerId)
+    case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
 }
 
 #if ENABLE_WALLET
@@ -883,7 +891,7 @@ public protocol AccountContext: AnyObject {
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
     var inAppPurchaseManager: InAppPurchaseManager? { get }
-
+    
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
@@ -891,10 +899,13 @@ public protocol AccountContext: AnyObject {
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
     
+    var animationCache: AnimationCache { get }
+    var animationRenderer: MultiAnimationRenderer { get }
+    
     var animatedEmojiStickers: [String: [StickerPackItem]] { get }
-
+    
     var userLimits: EngineConfiguration.UserLimits { get }
-
+    
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
     
@@ -915,13 +926,13 @@ public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
         return PremiumConfiguration(isPremiumDisabled: true)
     }
-
+    
     public let isPremiumDisabled: Bool
-
+    
     fileprivate init(isPremiumDisabled: Bool) {
         self.isPremiumDisabled = isPremiumDisabled
     }
-
+    
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
         if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
             return PremiumConfiguration(isPremiumDisabled: value)

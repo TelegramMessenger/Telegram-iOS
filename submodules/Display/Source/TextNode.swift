@@ -2136,21 +2136,21 @@ open class TextView: UIView {
                     }
                 }
                 
-                if !line.strikethroughs.isEmpty {
-                    for strikethrough in line.strikethroughs {
-                        var textColor: UIColor?
-                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
-                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
-                                textColor = color
-                            }
-                        }
-                        if let textColor = textColor {
-                            context.setFillColor(textColor.cgColor)
-                        }
-                        let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
-                        context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
-                    }
-                }
+//                if !line.strikethroughs.isEmpty {
+//                    for strikethrough in line.strikethroughs {
+//                        var textColor: UIColor?
+//                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
+//                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+//                                textColor = color
+//                            }
+//                        }
+//                        if let textColor = textColor {
+//                            context.setFillColor(textColor.cgColor)
+//                        }
+//                        let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+//                        context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
+//                    }
+//                }
                 
                 if !line.spoilers.isEmpty {
                     if layout.displaySpoilers {

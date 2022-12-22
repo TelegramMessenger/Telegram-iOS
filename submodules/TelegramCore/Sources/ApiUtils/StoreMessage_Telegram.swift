@@ -256,7 +256,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     return nil
 }
 
-func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId:PeerId) -> (Media?, Int32?, Bool?) {
+func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId: PeerId) -> (Media?, Int32?, Bool?) {
     if let media = media {
         switch media {
         case let .messageMediaPhoto(_, photo, ttlSeconds):
@@ -298,7 +298,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             break
         case let .messageMediaGame(game):
             return (TelegramMediaGame(apiGame: game), nil, nil)
-        case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam):
+        case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam, apiExtendedMedia):
             var parsedFlags = TelegramMediaInvoiceFlags()
             if (flags & (1 << 3)) != 0 {
                 parsedFlags.insert(.isTest)
@@ -306,7 +306,33 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             if (flags & (1 << 1)) != 0 {
                 parsedFlags.insert(.shippingAddressRequested)
             }
-            return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags), nil, nil)
+            
+            let extendedMedia: TelegramExtendedMedia?
+            if let apiExtendedMedia = apiExtendedMedia {
+                switch apiExtendedMedia {
+                    case let .messageExtendedMediaPreview(_, width, height, thumb, videoDuration):
+                        var dimensions: PixelDimensions?
+                        if let width = width, let height = height {
+                            dimensions = PixelDimensions(width: width, height: height)
+                        }
+                        var immediateThumbnailData: Data?
+                        if let thumb = thumb, case let .photoStrippedSize(_, bytes) = thumb {
+                            immediateThumbnailData = bytes.makeData()
+                        }
+                        extendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
+                    case let .messageExtendedMedia(apiMedia):
+                        let (media, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, peerId)
+                        if let media = media {
+                            extendedMedia = .full(media: media)
+                        } else {
+                            extendedMedia = nil
+                        }
+                }
+            } else {
+                extendedMedia = nil
+            }
+            
+            return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, extendedMedia: extendedMedia, flags: parsedFlags), nil, nil)
         case let .messageMediaPoll(poll, results):
             switch poll {
             case let .poll(id, flags, question, answers, closePeriod, _):

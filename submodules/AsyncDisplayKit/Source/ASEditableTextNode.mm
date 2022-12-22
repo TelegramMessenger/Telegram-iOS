@@ -1203,4 +1203,12 @@
   return 0;
 }
 
+- (UIMenu *)textView:(UITextView *)textView editMenuForTextInRange:(NSRange)range suggestedActions:(NSArray<UIMenuElement *> *)suggestedActions API_AVAILABLE(ios(16.0)) {
+    if ([_delegate respondsToSelector:@selector(editableTextNodeMenu:forTextRange:suggestedActions:)]) {
+        return [_delegate editableTextNodeMenu:self forTextRange:range suggestedActions:suggestedActions];
+    } else {
+        return [UIMenu menuWithChildren:suggestedActions];
+    }
+}
+
 @end

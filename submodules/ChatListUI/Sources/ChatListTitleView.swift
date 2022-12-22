@@ -4,19 +4,33 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import ActivityIndicator
+import ComponentFlow
+import EmojiStatusComponent
+import AnimationCache
+import MultiAnimationRenderer
+import TelegramCore
+import ComponentDisplayAdapters
+import AccountContext
 
 private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
 
 struct NetworkStatusTitle: Equatable {
+    enum Status: Equatable {
+        case premium
+        case emoji(PeerEmojiStatus)
+    }
+    
     let text: String
     let activity: Bool
     let hasProxy: Bool
     let connectsViaProxy: Bool
     let isPasscodeSet: Bool
     let isManuallyLocked: Bool
+    let peerStatus: Status?
 }
 
 final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
+    private let context: AccountContext
     private let titleNode: ImmediateTextNode
     private let lockView: ChatListTitleLockView
     private weak var lockSnapshotView: UIView?
@@ -24,10 +38,15 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     private let buttonView: HighlightTrackingButton
     private let proxyNode: ChatTitleProxyNode
     private let proxyButton: HighlightTrackingButton
+    private var titleCredibilityIconView: ComponentHostView<Empty>?
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
+    
+    var openStatusSetup: ((UIView) -> Void)?
     
     private var validLayout: (CGSize, CGRect)?
     
-    private var _title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
+    private var _title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
     var title: NetworkStatusTitle {
         get {
             return self._title
@@ -91,6 +110,66 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
             }
             self.lockView.updateTheme(self.theme)
             
+            let animateStatusTransition = !oldValue.text.isEmpty && oldValue.peerStatus != title.peerStatus
+            
+            if let peerStatus = title.peerStatus {
+                let statusContent: EmojiStatusComponent.Content
+                switch peerStatus {
+                case .premium:
+                    statusContent = .premium(color: self.theme.list.itemAccentColor)
+                case let .emoji(emoji):
+                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
+                }
+                
+                var titleCredibilityIconTransition: Transition
+                if animateStatusTransition {
+                    titleCredibilityIconTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                } else {
+                    titleCredibilityIconTransition = .immediate
+                }
+                let titleCredibilityIconView: ComponentHostView<Empty>
+                if let current = self.titleCredibilityIconView {
+                    titleCredibilityIconView = current
+                } else {
+                    titleCredibilityIconTransition = .immediate
+                    titleCredibilityIconView = ComponentHostView<Empty>()
+                    self.titleCredibilityIconView = titleCredibilityIconView
+                    self.addSubview(titleCredibilityIconView)
+                }
+                
+                let _ = titleCredibilityIconView.update(
+                    transition: titleCredibilityIconTransition,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: self.context,
+                        animationCache: self.animationCache,
+                        animationRenderer: self.animationRenderer,
+                        content: statusContent,
+                        isVisibleForAnimations: true,
+                        action: { [weak self] in
+                            guard let strongSelf = self, let titleCredibilityIconView = strongSelf.titleCredibilityIconView else {
+                                return
+                            }
+                            strongSelf.openStatusSetup?(titleCredibilityIconView)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 22.0, height: 22.0)
+                )
+            } else {
+                if let titleCredibilityIconView = self.titleCredibilityIconView {
+                    self.titleCredibilityIconView = nil
+                    
+                    if animateStatusTransition {
+                        titleCredibilityIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak titleCredibilityIconView] _ in
+                            titleCredibilityIconView?.removeFromSuperview()
+                        })
+                        titleCredibilityIconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    } else {
+                        titleCredibilityIconView.removeFromSuperview()
+                    }
+                }
+            }
+            
             self.setNeedsLayout()
         }
     }
@@ -118,9 +197,13 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) {
+        self.context = context
         self.theme = theme
         self.strings = strings
+        
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -253,7 +336,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         let buttonX = max(0.0, titleFrame.minX - 10.0)
         self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: size.height))
         
-        let lockFrame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 2.0, width: 2.0, height: 2.0)
+        let lockFrame = CGRect(x: titleFrame.minX - 6.0 - 12.0, y: titleFrame.minY + 2.0, width: 2.0, height: 2.0)
         transition.updateFrame(view: self.lockView, frame: lockFrame)
         if let lockSnapshotView = self.lockSnapshotView {
             transition.updateFrame(view: lockSnapshotView, frame: lockFrame)
@@ -261,6 +344,61 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         
         let activityIndicatorFrame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
         transition.updateFrame(node: self.activityIndicator, frame: activityIndicatorFrame)
+        
+        if let peerStatus = self.title.peerStatus {
+            let statusContent: EmojiStatusComponent.Content
+            switch peerStatus {
+            case .premium:
+                statusContent = .premium(color: self.theme.list.itemAccentColor)
+            case let .emoji(emoji):
+                statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
+            }
+            
+            var titleCredibilityIconTransition = Transition(transition)
+            let titleCredibilityIconView: ComponentHostView<Empty>
+            if let current = self.titleCredibilityIconView {
+                titleCredibilityIconView = current
+            } else {
+                titleCredibilityIconTransition = .immediate
+                titleCredibilityIconView = ComponentHostView<Empty>()
+                self.titleCredibilityIconView = titleCredibilityIconView
+                self.addSubview(titleCredibilityIconView)
+            }
+            
+            let titleIconSize = titleCredibilityIconView.update(
+                transition: titleCredibilityIconTransition,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: self.context,
+                    animationCache: self.animationCache,
+                    animationRenderer: self.animationRenderer,
+                    content: statusContent,
+                    isVisibleForAnimations: true,
+                    action: { [weak self] in
+                        guard let strongSelf = self, let titleCredibilityIconView = strongSelf.titleCredibilityIconView else {
+                            return
+                        }
+                        strongSelf.openStatusSetup?(titleCredibilityIconView)
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 22.0, height: 22.0)
+            )
+            titleCredibilityIconTransition.setFrame(view: titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: floorToScreenPixels(titleFrame.midY - titleIconSize.height / 2.0)), size: titleIconSize))
+            titleCredibilityIconView.alpha = self.title.activity ? 0.0 : 1.0
+        } else {
+            if let titleCredibilityIconView = self.titleCredibilityIconView {
+                self.titleCredibilityIconView = nil
+                
+                if transition.isAnimated {
+                    titleCredibilityIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak titleCredibilityIconView] _ in
+                        titleCredibilityIconView?.removeFromSuperview()
+                    })
+                    titleCredibilityIconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                } else {
+                    titleCredibilityIconView.removeFromSuperview()
+                }
+            }
+        }
     }
     
     @objc private func buttonPressed() {
@@ -272,11 +410,10 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     }
     
     func makeTransitionMirrorNode() -> ASDisplayNode {
-        let view = ChatListTitleView(theme: self.theme, strings: self.strings)
-        view.title = self.title
+        let snapshotView = self.snapshotView(afterScreenUpdates: false)
         
         return ASDisplayNode(viewBlock: {
-            return view
+            return snapshotView ?? UIView()
         }, didLoad: nil)
     }
     
@@ -299,6 +436,14 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let titleCredibilityIconView = self.titleCredibilityIconView, !titleCredibilityIconView.isHidden, titleCredibilityIconView.alpha != 0.0 {
+            if titleCredibilityIconView.bounds.insetBy(dx: -8.0, dy: -8.0).contains(self.convert(point, to: titleCredibilityIconView)) {
+                if let result = titleCredibilityIconView.hitTest(titleCredibilityIconView.bounds.center, with: event) {
+                    return result
+                }
+            }
+        }
+        
         if !self.proxyButton.isHidden {
             if let result = self.proxyButton.hitTest(point.offsetBy(dx: -self.proxyButton.frame.minX, dy: -self.proxyButton.frame.minY), with: event) {
                 return result;

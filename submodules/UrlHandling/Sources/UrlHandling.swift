@@ -230,6 +230,15 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     }
                                 }
                                 return .startAttach(peerName, nil, choose)
+                            } else if queryItem.name == "startgroup" || queryItem.name == "startchannel" {
+                                var botAdminRights: ResolvedBotAdminRights?
+                                for queryItem in queryItems {
+                                    if queryItem.name == "admin", let value = queryItem.value {
+                                        botAdminRights = ResolvedBotAdminRights(value)
+                                        break
+                                    }
+                                }
+                                return .peerName(peerName, .groupBotStart("", botAdminRights))
                             }
                         }
                     }
@@ -468,7 +477,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         |> take(1)
                         |> map { botPeer -> ResolvedUrl? in
                             if let botPeer = botPeer?._asPeer() {
-                                return .peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach)))
+                                return .peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false)))
                             } else {
                                 return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
                             }
@@ -502,7 +511,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
                                     if let botPeer = botPeer {
-                                        return .single(.peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload))))
+                                        return .single(.peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false))))
                                     } else {
                                         return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                     }
@@ -793,6 +802,10 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
             for basePath in baseTelegramMePaths {
                 for scheme in schemes {
                     let basePrefix = scheme + basePath + "/"
+                    var url = url
+                    if (url.lowercased().hasPrefix(scheme) && url.lowercased().hasSuffix(".\(basePath)")) {
+                        url = basePrefix + String(url[scheme.endIndex...]).replacingOccurrences(of: ".\(basePath)", with: "")
+                    }
                     if url.lowercased().hasPrefix(basePrefix) {
                         if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
                             return resolveInternalUrl(context: context, url: internalUrl)

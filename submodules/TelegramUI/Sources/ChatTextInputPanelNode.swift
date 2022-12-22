@@ -243,7 +243,6 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                                     } else if case .emoji = previousInputMode {
                                         animationName = "input_anim_smileToSticker"
                                         animationMode = .animating(loop: false)
-//                                        colorKeys = emojiColorKeys
                                     } else {
                                         animationName = "input_anim_keyToSticker"
                                     }
@@ -258,7 +257,6 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                                     } else if case .stickers = previousInputMode {
                                         animationName = "input_anim_stickerToSmile"
                                         animationMode = .animating(loop: false)
-//                                        colorKeys = emojiColorKeys
                                     } else {
                                         animationName = "input_anim_keyToSmile"
                                     }
@@ -1085,7 +1083,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
             if let strongSelf = self {
-                strongSelf.ensureFocusedOnTap()
+                if strongSelf.textInputNode?.isFirstResponder() == true {
+                    Queue.mainQueue().after(0.05) {
+                        strongSelf.ensureFocusedOnTap()
+                    }
+                } else {
+                    strongSelf.ensureFocusedOnTap()
+                }
             }
         }
         recognizer.waitForTouchUp = { [weak self] in
@@ -2543,7 +2547,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.currentEmojiSuggestionView = nil
                 
                 currentEmojiSuggestionView.alpha = 0.0
-                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { [weak currentEmojiSuggestionView] _ in
+                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
                     currentEmojiSuggestionView?.removeFromSuperview()
                 })
             }
@@ -2587,9 +2591,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                             loop: for attribute in file.attributes {
                                 switch attribute {
-                                case let .CustomEmoji(_, displayText, packReference):
+                                case let .CustomEmoji(_, displayText, _):
                                     text = displayText
-                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                                     break loop
                                 default:
                                     break
@@ -2614,7 +2618,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                         if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
                                             break
                                         }
-                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: emojiAttribute.stickerPack, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
                                         replacedUpperBound = replaceRange.lowerBound
                                     } else {
                                         break
@@ -2997,13 +3001,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         else if action == makeSelectorFromString("_accessibilitySpeakLanguageSelection:") || action == makeSelectorFromString("_accessibilityPauseSpeaking:") || action == makeSelectorFromString("_accessibilitySpeakSentence:") {
             return ASEditableTextNodeTargetForAction(target: nil)
         } else if action == makeSelectorFromString("_showTextStyleOptions:") {
-            if case .general = self.inputMenu.state {
-                if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
+            if #available(iOS 16.0, *) {
+                return ASEditableTextNodeTargetForAction(target: nil)
+            } else {
+                if case .general = self.inputMenu.state {
+                    if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
+                        return ASEditableTextNodeTargetForAction(target: nil)
+                    }
+                    return ASEditableTextNodeTargetForAction(target: self)
+                } else {
                     return ASEditableTextNodeTargetForAction(target: nil)
                 }
-                return ASEditableTextNodeTargetForAction(target: self)
-            } else {
-                return ASEditableTextNodeTargetForAction(target: nil)
             }
         } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) {
             if case .format = self.inputMenu.state {
@@ -3042,6 +3050,65 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return ASEditableTextNodeTargetForAction(target: nil)
         }
         return nil
+    }
+    
+    @available(iOS 16.0, *)
+    func editableTextNodeMenu(_ editableTextNode: ASEditableTextNode, forTextRange textRange: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu {
+        var actions = suggestedActions
+        
+        if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
+            
+        } else {
+            var children: [UIAction] = [
+                UIAction(title: self.strings?.TextFormat_Bold ?? "Bold", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesBold(strongSelf)
+                    }
+                },
+                UIAction(title: self.strings?.TextFormat_Italic ?? "Italic", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesItalic(strongSelf)
+                    }
+                },
+                UIAction(title: self.strings?.TextFormat_Monospace ?? "Monospace", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesMonospace(strongSelf)
+                    }
+                },
+                UIAction(title: self.strings?.TextFormat_Link ?? "Link", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesLink(strongSelf)
+                    }
+                },
+                UIAction(title: self.strings?.TextFormat_Strikethrough ?? "Strikethrough", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesStrikethrough(strongSelf)
+                    }
+                },
+                UIAction(title: self.strings?.TextFormat_Underline ?? "Underline", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesUnderline(strongSelf)
+                    }
+                }
+            ]
+            
+            var hasSpoilers = true
+            if self.presentationInterfaceState?.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
+                hasSpoilers = false
+            }
+            
+            if hasSpoilers {
+                children.append(UIAction(title: self.strings?.TextFormat_Spoiler ?? "Spoiler", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesSpoiler(strongSelf)
+                    }
+                })
+            }
+            
+            let formatMenu = UIMenu(title: self.strings?.TextFormat_Format ?? "Format", image: nil, children: children)
+            actions.insert(formatMenu, at: 3)
+        }
+        return UIMenu(children: actions)
     }
     
     @objc func _accessibilitySpeak(_ sender: Any) {
@@ -3334,17 +3401,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.loadTextInputNode()
         }
         
-        self.textInputNode?.becomeFirstResponder()
+        if !self.switching {
+            self.textInputNode?.becomeFirstResponder()
+        }
     }
     
+    private var switching = false
     func ensureFocusedOnTap() {
         if self.textInputNode == nil {
             self.loadTextInputNode()
         }
         
-        self.textInputNode?.becomeFirstResponder()
-        
-        self.switchToTextInputIfNeeded?()
+        if !self.switching {
+            self.switching = true
+            self.textInputNode?.becomeFirstResponder()
+            
+            self.switchToTextInputIfNeeded?()
+            self.switching = false
+        }
     }
     
     func backwardsDeleteText() {
@@ -3462,6 +3536,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func frameForStickersButton() -> CGRect? {
         for (item, button) in self.accessoryItemButtons {
             if case let .input(_, inputMode) = item, case .stickers = inputMode {
+                return button.frame.insetBy(dx: 0.0, dy: 6.0)
+            }
+        }
+        return nil
+    }
+    
+    func frameForEmojiButton() -> CGRect? {
+        for (item, button) in self.accessoryItemButtons {
+            if case let .input(_, inputMode) = item, case .emoji = inputMode {
                 return button.frame.insetBy(dx: 0.0, dy: 6.0)
             }
         }

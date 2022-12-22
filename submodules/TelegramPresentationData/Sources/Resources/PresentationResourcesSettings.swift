@@ -18,7 +18,6 @@ private func renderIcon(name: String) -> UIImage? {
         if let image = UIImage(bundleImageName: name)?.cgImage {
             context.draw(image, in: bounds)
         }
-        drawBorder(context: context, rect: bounds)
     })
 }
 

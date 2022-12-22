@@ -354,25 +354,36 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                     case let .limitExceeded(count, _):
                                         f(.default)
                                         
-                                        if case .filter = location {
-                                            var replaceImpl: ((ViewController) -> Void)?
-                                            let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
-                                                let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
-                                                replaceImpl?(premiumScreen)
-                                            })
-                                            chatListController?.push(controller)
-                                            replaceImpl = { [weak controller] c in
-                                                controller?.replace(with: c)
+                                        let isPremium = limitsData.0?.isPremium ?? false
+                                        if isPremium {
+                                            if case .filter = location {
+                                                let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {})
+                                                chatListController?.push(controller)
+                                            } else {
+                                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
+                                                chatListController?.push(controller)
                                             }
                                         } else {
-                                            var replaceImpl: ((ViewController) -> Void)?
-                                            let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
-                                                let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
-                                                replaceImpl?(premiumScreen)
-                                            })
-                                            chatListController?.push(controller)
-                                            replaceImpl = { [weak controller] c in
-                                                controller?.replace(with: c)
+                                            if case .filter = location {
+                                                var replaceImpl: ((ViewController) -> Void)?
+                                                let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                                    let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                                    replaceImpl?(premiumScreen)
+                                                })
+                                                chatListController?.push(controller)
+                                                replaceImpl = { [weak controller] c in
+                                                    controller?.replace(with: c)
+                                                }
+                                            } else {
+                                                var replaceImpl: ((ViewController) -> Void)?
+                                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                                    let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                                    replaceImpl?(premiumScreen)
+                                                })
+                                                chatListController?.push(controller)
+                                                replaceImpl = { [weak controller] c in
+                                                    controller?.replace(with: c)
+                                                }
                                             }
                                         }
                                     }

@@ -213,6 +213,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                 highlight = false
             }
             
+            //let completeString: NSString = (completeSourceString.string.replacingOccurrences(of: "\n", with: " \n")) as NSString
             let completeString: NSString = completeSourceString.string as NSString
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
             if highlight, let range = completeSourceString.ranges.first?.range {

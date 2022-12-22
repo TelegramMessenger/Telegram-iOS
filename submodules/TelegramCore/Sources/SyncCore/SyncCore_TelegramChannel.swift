@@ -169,8 +169,12 @@ public final class TelegramChannel: Peer, Equatable {
         return .title(title: self.title, addressName: self.username)
     }
     
+    public var associatedMediaIds: [MediaId]? { return nil }
+    
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
+    
+    public var timeoutAttribute: UInt32? { return nil }
     
     public init(id: PeerId, accessHash: TelegramPeerAccessHash?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, defaultBannedRights: TelegramChatBannedRights?) {
         self.id = id

@@ -10,18 +10,22 @@ extension StickerPackReference {
     
     var apiInputStickerSet: Api.InputStickerSet {
         switch self {
-            case let .id(id, accessHash):
-                return .inputStickerSetID(id: id, accessHash: accessHash)
-            case let .name(name):
-                return .inputStickerSetShortName(shortName: name)
-            case .animatedEmoji:
-                return .inputStickerSetAnimatedEmoji
-            case let .dice(emoji):
-                return .inputStickerSetDice(emoticon: emoji)
-            case .animatedEmojiAnimations:
-                return .inputStickerSetAnimatedEmojiAnimations
-            case .premiumGifts:
-                return .inputStickerSetPremiumGifts
+        case let .id(id, accessHash):
+            return .inputStickerSetID(id: id, accessHash: accessHash)
+        case let .name(name):
+            return .inputStickerSetShortName(shortName: name)
+        case .animatedEmoji:
+            return .inputStickerSetAnimatedEmoji
+        case let .dice(emoji):
+            return .inputStickerSetDice(emoticon: emoji)
+        case .animatedEmojiAnimations:
+            return .inputStickerSetAnimatedEmojiAnimations
+        case .premiumGifts:
+            return .inputStickerSetPremiumGifts
+        case .emojiGenericAnimations:
+            return .inputStickerSetEmojiGenericAnimations
+        case .iconStatusEmoji:
+            return .inputStickerSetEmojiDefaultStatuses
         }
     }
 }
@@ -48,7 +52,7 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
             switch result {
             case .stickerSetNotModified:
                 return .complete()
-            case let .stickerSet(set, packs, documents):
+            case let .stickerSet(set, packs, keywords, documents):
                 let namespace: ItemCollectionId.Namespace
                 switch set {
                     case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _, _):
@@ -74,6 +78,20 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
                                     indexKeysByFile[mediaId]!.append(key)
                                 }
                             }
+                    }
+                }
+                for keyword in keywords {
+                    switch keyword {
+                    case let .stickerKeyword(documentId, texts):
+                        for text in texts {
+                            let key = ValueBoxKey(text).toMemoryBuffer()
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: documentId)
+                            if indexKeysByFile[mediaId] == nil {
+                                indexKeysByFile[mediaId] = [key]
+                            } else {
+                                indexKeysByFile[mediaId]!.append(key)
+                            }
+                        }
                     }
                 }
                 

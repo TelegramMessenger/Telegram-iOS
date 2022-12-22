@@ -16,6 +16,8 @@ import AccountContext
 import LegacyComponents
 import AudioBlob
 import PeerInfoAvatarListNode
+import ComponentFlow
+import EmojiStatusComponent
 
 final class VoiceChatParticipantItem: ListViewItem {
     enum ParticipantText: Equatable {
@@ -262,7 +264,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let titleNode: TextNode
     private let statusNode: VoiceChatParticipantStatusNode
     private let expandedStatusNode: VoiceChatParticipantStatusNode
-    private var credibilityIconNode: ASImageNode?
+    private var credibilityIconView: ComponentHostView<Empty>?
     
     private var avatarTransitionNode: ASImageNode?
     private var avatarListContainerNode: ASDisplayNode?
@@ -832,24 +834,30 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             
             var titleIconsWidth: CGFloat = 0.0
-            var currentCredibilityIconImage: UIImage?
-            var credibilityIconOffset: CGFloat = 0.0
+            
+            var credibilityIcon: EmojiStatusComponent.Content?
             if item.peer.isScam {
-                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
-                credibilityIconOffset = 2.0
+                credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
             } else if item.peer.isFake {
-                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
-                credibilityIconOffset = 2.0
+                credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
+            } else if let user = item.peer as? TelegramUser, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
             } else if item.peer.isVerified {
-                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                credibilityIconOffset = 3.0
+                credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
             } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
-                currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
-                credibilityIconOffset = 3.0
+                credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
             }
             
-            if let currentCredibilityIconImage = currentCredibilityIconImage {
-                titleIconsWidth += 4.0 + currentCredibilityIconImage.size.width
+            if let credibilityIcon = credibilityIcon {
+                titleIconsWidth += 4.0
+                switch credibilityIcon {
+                case let .text(_, string):
+                    let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
+                    let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                    titleIconsWidth += floor(stringRect.width) + 11.0
+                default:
+                    titleIconsWidth += 16.0
+                }
             }
             
             var expandedRightInset: CGFloat = 30.0
@@ -1008,23 +1016,38 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout))
                     transition.updateFrame(node: strongSelf.expandedStatusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: expandedStatusLayout))
                     
-                    if let currentCredibilityIconImage = currentCredibilityIconImage {
-                        let iconNode: ASImageNode
-                        if let current = strongSelf.credibilityIconNode {
-                            iconNode = current
+                    if let credibilityIcon = credibilityIcon {
+                        let animationCache = item.context.animationCache
+                        let animationRenderer = item.context.animationRenderer
+                        
+                        let credibilityIconView: ComponentHostView<Empty>
+                        if let current = strongSelf.credibilityIconView {
+                            credibilityIconView = current
                         } else {
-                            iconNode = ASImageNode()
-                            iconNode.isLayerBacked = true
-                            iconNode.displaysAsynchronously = false
-                            iconNode.displayWithoutProcessing = true
-                            strongSelf.offsetContainerNode.addSubnode(iconNode)
-                            strongSelf.credibilityIconNode = iconNode
+                            credibilityIconView = ComponentHostView<Empty>()
+                            strongSelf.offsetContainerNode.view.addSubview(credibilityIconView)
+                            strongSelf.credibilityIconView = credibilityIconView
                         }
-                        iconNode.image = currentCredibilityIconImage
-                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + 3.0, y: verticalInset + credibilityIconOffset), size: currentCredibilityIconImage.size))
-                    } else if let credibilityIconNode = strongSelf.credibilityIconNode {
-                        strongSelf.credibilityIconNode = nil
-                        credibilityIconNode.removeFromSupernode()
+                        
+                        let iconSize = credibilityIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(EmojiStatusComponent(
+                                context: item.context,
+                                animationCache: animationCache,
+                                animationRenderer: animationRenderer,
+                                content: credibilityIcon,
+                                isVisibleForAnimations: true,
+                                action: nil,
+                                emojiFileUpdated: nil
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: 20.0, height: 20.0)
+                        )
+                        
+                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: leftInset + titleLayout.size.width + 3.0, y: verticalInset + floor((titleFrame.height - iconSize.height) / 2.0)), size: iconSize))
+                    } else if let credibilityIconView = strongSelf.credibilityIconView {
+                        strongSelf.credibilityIconView = nil
+                        credibilityIconView.removeFromSuperview()
                     }
                     
                     transition.updateFrameAsPositionAndBounds(node: strongSelf.avatarNode, frame: avatarFrame)

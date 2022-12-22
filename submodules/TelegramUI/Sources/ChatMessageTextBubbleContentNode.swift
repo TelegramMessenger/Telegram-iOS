@@ -159,7 +159,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.topMessage)
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.topMessage)
                 
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
@@ -322,7 +322,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
                     
                     for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
-                        guard case let .CustomEmoji(stickerPack, fileId) = entity.type else {
+                        guard case let .CustomEmoji(_, fileId) = entity.type else {
                             continue
                         }
                         
@@ -331,7 +331,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
                         var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
                         updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-                        updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
+                        updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
                         
                         let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
                         updatedString.replaceCharacters(in: range, with: insertString)
@@ -367,7 +367,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
-                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
@@ -381,10 +381,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
+                        displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        animationCache: item.controllerInteraction.presentationContext.animationCache,
+                        animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
                 }
                 
@@ -777,7 +780,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: String) -> UIView? {
+    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionView(value: value)
         }

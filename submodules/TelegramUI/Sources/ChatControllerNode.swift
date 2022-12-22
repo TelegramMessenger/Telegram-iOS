@@ -740,7 +740,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.emptyNode = emptyNode
             self.historyNodeContainer.supernode?.insertSubnode(emptyNode, aboveSubnode: self.historyNodeContainer)
             if let (size, insets) = self.validEmptyNodeLayout {
-                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, size: size, insets: insets, transition: .immediate)
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, backgroundNode: self.backgroundNode, size: size, insets: insets, transition: .immediate)
             }
             if animated {
                 emptyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -762,6 +762,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.isInFocus = isInFocus
         
         self.inputMediaNode?.simulateUpdateLayout(isVisible: isInFocus)
+        if let inputNode = self.inputNode as? ChatEntityKeyboardInputNode {
+            inputNode.simulateUpdateLayout(isVisible: isInFocus)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, ContainedViewLayoutTransition) -> Void) {
@@ -1341,7 +1344,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: false, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
         }
         
-        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 66.0)))
+        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 100.0)))
         
         transition.updateFrame(node: self.inputContextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         transition.updateFrame(node: self.inputContextOverTextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
@@ -1382,7 +1385,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let restrictedNode = self.restrictedNode {
             transition.updateFrame(node: restrictedNode, frame: contentBounds)
-            restrictedNode.updateLayout(size: contentBounds.size, transition: transition)
+            restrictedNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
+            restrictedNode.updateLayout(backgroundNode: self.backgroundNode, size: contentBounds.size, transition: transition)
         }
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -1482,7 +1486,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let inputBackgroundInset: CGFloat
         if cleanInsets.bottom < insets.bottom {
-            inputBackgroundInset = 0.0
+            if case .regular = layout.metrics.widthClass, insets.bottom < 88.0 {
+                inputBackgroundInset = insets.bottom
+            } else {
+                inputBackgroundInset = 0.0
+            }
         } else {
             inputBackgroundInset = cleanInsets.bottom
         }
@@ -1506,8 +1514,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         emptyNodeInsets.bottom += inputPanelsHeight
         self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
         if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
-            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: nil, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: nil, backgroundNode: self.backgroundNode, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
+            emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }
         
         var contentBottomInset: CGFloat = inputPanelsHeight + 4.0
@@ -2559,6 +2568,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
+    func frameForEmojiButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForEmojiButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
     var isTextInputPanelActive: Bool {
         return self.inputPanelNode is ChatTextInputPanelNode
     }
@@ -2957,10 +2975,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var inlineStickers: [MediaId: Media] = [:]
                 var firstLockedPremiumEmoji: TelegramMediaFile?
+                var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
                 effectiveInputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: effectiveInputText.length), using: { value, _, _ in
                     if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                         if let file = value.file {
                             inlineStickers[file.fileId] = file
+                            if let packId = value.interactivelySelectedFromPackId {
+                                bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                            }
                             if file.isPremiumEmoji && !self.chatPresentationInterfaceState.isPremium && self.chatPresentationInterfaceState.chatLocation.peerId != self.context.account.peerId {
                                 if firstLockedPremiumEmoji == nil {
                                     firstLockedPremiumEmoji = file
@@ -3003,7 +3025,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 let peerId = effectivePresentationInterfaceState.chatLocation.peerId
                 if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
-                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
                     
@@ -3020,8 +3042,23 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
+                            
+                            var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                            for entity in entities {
+                                if case let .CustomEmoji(_, fileId) = entity.type {
+                                    if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                        if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                            bubbleUpEmojiOrStickersets.append(packId)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if bubbleUpEmojiOrStickersets.count > 1 {
+                                bubbleUpEmojiOrStickersets.removeAll()
+                            }
 
-                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
                         }
                     }
 

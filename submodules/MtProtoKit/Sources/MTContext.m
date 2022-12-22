@@ -22,7 +22,7 @@
 
 #import <MtProtoKit/MTApiEnvironment.h>
 
-#import <libkern/OSAtomic.h>
+#import <os/lock.h>
 
 #import "MTDiscoverConnectionSignals.h"
 
@@ -176,7 +176,7 @@ static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key
     
     NSMutableDictionary *_periodicTasksTimerByDatacenterId;
     
-    volatile OSSpinLock _passwordEntryRequiredLock;
+    os_unfair_lock _passwordEntryRequiredLock;
     NSMutableDictionary *_passwordRequiredByDatacenterId;
     
     NSMutableDictionary *_transportSchemeDisposableByDatacenterId;
@@ -680,20 +680,20 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
 
 - (bool)isPasswordInputRequiredForDatacenterWithId:(NSInteger)datacenterId
 {
-    OSSpinLockLock(&_passwordEntryRequiredLock);
+    os_unfair_lock_lock(&_passwordEntryRequiredLock);
     bool currentValue = [_passwordRequiredByDatacenterId[@(datacenterId)] boolValue];
-    OSSpinLockUnlock(&_passwordEntryRequiredLock);
+    os_unfair_lock_unlock(&_passwordEntryRequiredLock);
     
     return currentValue;
 }
 
 - (bool)updatePasswordInputRequiredForDatacenterWithId:(NSInteger)datacenterId required:(bool)required
 {
-    OSSpinLockLock(&_passwordEntryRequiredLock);
+    os_unfair_lock_lock(&_passwordEntryRequiredLock);
     bool currentValue = [_passwordRequiredByDatacenterId[@(datacenterId)] boolValue];
     bool updated = currentValue != required;
     _passwordRequiredByDatacenterId[@(datacenterId)] = @(required);
-    OSSpinLockUnlock(&_passwordEntryRequiredLock);
+    os_unfair_lock_unlock(&_passwordEntryRequiredLock);
     
     if (updated)
     {
@@ -733,7 +733,7 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
             
             for (id<MTContextChangeListener> listener in currentListeners) {
                 if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:shouldReset:)])
-                    [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:true];
+                    [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:false];
             }
         }
     }];

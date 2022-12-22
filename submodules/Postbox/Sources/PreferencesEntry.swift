@@ -68,7 +68,7 @@ public final class PreferencesEntry: Equatable {
     public func get<T: Decodable>(_ type: T.Type) -> T? {
         let decoder = PostboxDecoder(buffer: MemoryBuffer(data: self.data))
         let result = decoder.decode(T.self, forKey: "_")
-        assert(result != nil)
+        //assert(result != nil)
         return result
     }
 

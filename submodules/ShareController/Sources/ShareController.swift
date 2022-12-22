@@ -540,7 +540,7 @@ public final class ShareController: ViewController {
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues)
         self.controllerNode.completed = self.completed
         self.controllerNode.present = { [weak self] c in
-            self?.present(c, in: .window(.root))
+            self?.presentInGlobalOverlay(c)
         }
         self.controllerNode.dismiss = { [weak self] shared in
             self?.dismissed?(shared)
@@ -585,9 +585,9 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     if !text.isEmpty {
-                        messages.append(.message(text: url + "\n\n" + text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messages.append(.message(text: url + "\n\n" + text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     } else {
-                        messages.append(.message(text: url, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messages.append(.message(text: url, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
@@ -596,9 +596,9 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     if !text.isEmpty {
-                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
-                    messages.append(.message(text: string, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: string, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
@@ -606,19 +606,19 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     if !text.isEmpty {
-                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
                     let attributedText = NSMutableAttributedString(string: string, attributes: [ChatTextInputAttributes.italic: true as NSNumber])
                     attributedText.append(NSAttributedString(string: "\n\n\(url)"))
                     let entities = generateChatInputTextEntities(attributedText)
-                    messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .image(representations):
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
-                    messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
@@ -631,9 +631,9 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     if !text.isEmpty && !sendTextAsCaption {
-                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
-                    messages.append(.message(text: sendTextAsCaption ? text : "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: sendTextAsCaption ? text : "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
@@ -641,9 +641,9 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     if !text.isEmpty {
-                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
-                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
@@ -651,7 +651,7 @@ public final class ShareController: ViewController {
                 for peerId in peerIds {
                     var messagesToEnqueue: [EnqueueMessage] = []
                     if !text.isEmpty {
-                        messagesToEnqueue.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                        messagesToEnqueue.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
                     for message in messages {
                         messagesToEnqueue.append(.forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil))

@@ -8,6 +8,7 @@ import Markdown
 import AppBundle
 import TextFormat
 import TextNodeWithEntities
+import SwiftSignalKit
 
 private final class ContextActionsSelectionGestureRecognizer: UIPanGestureRecognizer {
     var updateLocation: ((CGPoint, Bool) -> Void)?
@@ -351,6 +352,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let iconNode: ASImageNode
     private let placeholderNode: ASDisplayNode
     
+    var tip: ContextController.Tip
+    
     private let text: String
     private var arguments: TextNodeWithEntities.Arguments?
     private var file: TelegramMediaFile?
@@ -362,6 +365,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     var requestDismiss: (@escaping () -> Void) -> Void = { _ in }
     
     init(presentationData: PresentationData, tip: ContextController.Tip) {
+        self.tip = tip
         self.presentationData = presentationData
         
         self.highlightBackgroundNode = ASDisplayNode()
@@ -469,6 +473,32 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         })
     }
     
+    func animateTransitionInside(other: InnerTextSelectionTipContainerNode) {
+        let nodes: [ASDisplayNode] = [
+            self.textNode.textNode,
+            self.iconNode,
+            self.placeholderNode
+        ]
+        
+        for node in nodes {
+            other.addSubnode(node)
+            node.layer.animateAlpha(from: node.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                node?.removeFromSupernode()
+            })
+        }
+    }
+    
+    func animateContentIn() {
+        let nodes: [ASDisplayNode] = [
+            self.textNode.textNode,
+            self.iconNode
+        ]
+        
+        for node in nodes {
+            node.layer.animateAlpha(from: 0.0, to: node.alpha, duration: 0.25)
+        }
+    }
+    
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         switch widthClass {
         case .compact:
@@ -514,7 +544,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         if let file = self.file {
             let range = (attributedText.string as NSString).range(of: "#")
             if range.location != NSNotFound {
-                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: file.fileId.id, file: file), range: range)
+                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file), range: range)
             }
         }
         
@@ -572,10 +602,13 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         }
         
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
-        self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         
         return size
+    }
+    
+    func setActualSize(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     func updateTheme(presentationData: PresentationData) {
@@ -645,13 +678,18 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
 }
 
 final class ContextActionsContainerNode: ASDisplayNode {
+    private let presentationData: PresentationData
+    private let getController: () -> ContextControllerProtocol?
     private let blurBackground: Bool
     private let shadowNode: ASImageNode
     private let additionalShadowNode: ASImageNode?
     private let additionalActionsNode: InnerActionsContainerNode?
     private let actionsNode: InnerActionsContainerNode
-    private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
     private let scrollNode: ASScrollNode
+    
+    private var tip: ContextController.Tip?
+    private var textSelectionTipNode: InnerTextSelectionTipContainerNode?
+    private var textSelectionTipNodeDisposable: Disposable?
     
     var panSelectionGestureEnabled: Bool = true {
         didSet {
@@ -666,6 +704,8 @@ final class ContextActionsContainerNode: ASDisplayNode {
     }
     
     init(presentationData: PresentationData, items: ContextController.Items, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
+        self.presentationData = presentationData
+        self.getController = getController
         self.blurBackground = blurBackground
         self.shadowNode = ASImageNode()
         self.shadowNode.displaysAsynchronously = false
@@ -698,15 +738,8 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
         
         self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: itemList, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
-        if let tip = items.tip {
-            let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-            textSelectionTipNode.requestDismiss = { completion in
-                getController()?.dismiss(completion: completion)
-            }
-            self.textSelectionTipNode = textSelectionTipNode
-        } else {
-            self.textSelectionTipNode = nil
-        }
+        
+        self.tip = items.tip
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
@@ -722,8 +755,23 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.additionalShadowNode.flatMap(self.addSubnode)
         self.additionalActionsNode.flatMap(self.scrollNode.addSubnode)
         self.scrollNode.addSubnode(self.actionsNode)
-        self.textSelectionTipNode.flatMap(self.scrollNode.addSubnode)
         self.addSubnode(self.scrollNode)
+        
+        if let tipSignal = items.tipSignal {
+            self.textSelectionTipNodeDisposable = (tipSignal
+            |> deliverOnMainQueue).start(next: { [weak self] tip in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.tip = tip
+                requestLayout()
+            })
+        }
+    }
+    
+    deinit {
+        self.textSelectionTipNodeDisposable?.dispose()
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -756,10 +804,34 @@ final class ContextActionsContainerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.actionsNode, frame: bounds)
         
+        if let tip = self.tip {
+            if let textSelectionTipNode = self.textSelectionTipNode, textSelectionTipNode.tip == tip {
+            } else {
+                if let textSelectionTipNode = self.textSelectionTipNode {
+                    self.textSelectionTipNode = nil
+                    textSelectionTipNode.removeFromSupernode()
+                }
+                
+                let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: self.presentationData, tip: tip)
+                let getController = self.getController
+                textSelectionTipNode.requestDismiss = { completion in
+                    getController()?.dismiss(completion: completion)
+                }
+                self.textSelectionTipNode = textSelectionTipNode
+                self.scrollNode.addSubnode(textSelectionTipNode)
+            }
+        } else {
+            if let textSelectionTipNode = self.textSelectionTipNode {
+                self.textSelectionTipNode = nil
+                textSelectionTipNode.removeFromSupernode()
+            }
+        }
+        
         if let textSelectionTipNode = self.textSelectionTipNode {
             contentSize.height += 8.0
             let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsSize.width, transition: transition)
             transition.updateFrame(node: textSelectionTipNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: textSelectionTipSize))
+            textSelectionTipNode.setActualSize(size: textSelectionTipSize, transition: transition)
             contentSize.height += textSelectionTipSize.height
         }
         

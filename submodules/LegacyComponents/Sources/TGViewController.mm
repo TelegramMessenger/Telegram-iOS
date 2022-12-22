@@ -1117,7 +1117,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 + (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation hasOnScreenNavigation:(bool)hasOnScreenNavigation
 {
     int height = (int)TGScreenSize().height;
-    if (!TGIsPad() && (height != 812 && height != 896 && height != 780 && height != 844 && height != 926) && !hasOnScreenNavigation)
+    if (!TGIsPad() && (height != 812 && height != 896 && height != 780 && height != 844 && height != 852 && height != 926 && height != 932) && !hasOnScreenNavigation)
         return UIEdgeInsetsZero;
     
     if (TGIsPad()) {

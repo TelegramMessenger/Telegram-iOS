@@ -73,7 +73,7 @@ private struct StickerEntry: Identifiable, Comparable {
         return HorizontalStickerGridItem(account: account, file: self.file, theme: theme, isPreviewed: { item in
             return false//stickersInteraction.previewedStickerItem == item
         }, sendSticker: { file, node, rect in
-            let _ = interfaceInteraction.sendSticker(file, true, node, rect, nil)
+            let _ = interfaceInteraction.sendSticker(file, true, node, rect, nil, [])
         })
     }
 }
@@ -181,7 +181,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                 .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                     f(.default)
                                 
-                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode.view, itemNode.bounds, nil)
+                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode.view, itemNode.bounds, nil, [])
                                 })),
                                 .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                     f(.default)
@@ -225,7 +225,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                                 if let packReference = packReference {
                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect, nil)
+                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect, nil, [])
                                                         } else {
                                                             return false
                                                         }

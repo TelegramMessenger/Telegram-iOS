@@ -23,7 +23,7 @@ class ChatReplyCountItem: ListViewItem {
         self.isComments = isComments
         self.count = count
         self.presentationData = presentationData
-        self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, context: context)
+        self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context)
         self.controllerInteraction = controllerInteraction
     }
     

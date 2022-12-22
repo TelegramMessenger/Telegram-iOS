@@ -1,15 +1,84 @@
 public extension Api {
-    enum ReactionCount: TypeConstructorDescription {
-        case reactionCount(flags: Int32, reaction: String, count: Int32)
+    enum Reaction: TypeConstructorDescription {
+        case reactionCustomEmoji(documentId: Int64)
+        case reactionEmoji(emoticon: String)
+        case reactionEmpty
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .reactionCount(let flags, let reaction, let count):
+                case .reactionCustomEmoji(let documentId):
                     if boxed {
-                        buffer.appendInt32(1873957073)
+                        buffer.appendInt32(-1992950669)
+                    }
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
+                    break
+                case .reactionEmoji(let emoticon):
+                    if boxed {
+                        buffer.appendInt32(455247544)
+                    }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    break
+                case .reactionEmpty:
+                    if boxed {
+                        buffer.appendInt32(2046153753)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reactionCustomEmoji(let documentId):
+                return ("reactionCustomEmoji", [("documentId", String(describing: documentId))])
+                case .reactionEmoji(let emoticon):
+                return ("reactionEmoji", [("emoticon", String(describing: emoticon))])
+                case .reactionEmpty:
+                return ("reactionEmpty", [])
+    }
+    }
+    
+        public static func parse_reactionCustomEmoji(_ reader: BufferReader) -> Reaction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Reaction.reactionCustomEmoji(documentId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_reactionEmoji(_ reader: BufferReader) -> Reaction? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Reaction.reactionEmoji(emoticon: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_reactionEmpty(_ reader: BufferReader) -> Reaction? {
+            return Api.Reaction.reactionEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum ReactionCount: TypeConstructorDescription {
+        case reactionCount(flags: Int32, chosenOrder: Int32?, reaction: Api.Reaction, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reactionCount(let flags, let chosenOrder, let reaction, let count):
+                    if boxed {
+                        buffer.appendInt32(-1546531968)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(reaction, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(chosenOrder!, buffer: buffer, boxed: false)}
+                    reaction.serialize(buffer, true)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     break
     }
@@ -17,23 +86,28 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .reactionCount(let flags, let reaction, let count):
-                return ("reactionCount", [("flags", String(describing: flags)), ("reaction", String(describing: reaction)), ("count", String(describing: count))])
+                case .reactionCount(let flags, let chosenOrder, let reaction, let count):
+                return ("reactionCount", [("flags", String(describing: flags)), ("chosenOrder", String(describing: chosenOrder)), ("reaction", String(describing: reaction)), ("count", String(describing: count))])
     }
     }
     
         public static func parse_reactionCount(_ reader: BufferReader) -> ReactionCount? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Api.Reaction?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ReactionCount.reactionCount(flags: _1!, reaction: _2!, count: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ReactionCount.reactionCount(flags: _1!, chosenOrder: _2, reaction: _3!, count: _4!)
             }
             else {
                 return nil
@@ -83,7 +157,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum RecentMeUrl: TypeConstructorDescription {
+    indirect enum RecentMeUrl: TypeConstructorDescription {
         case recentMeUrlChat(url: String, chatId: Int64)
         case recentMeUrlChatInvite(url: String, chatInvite: Api.ChatInvite)
         case recentMeUrlStickerSet(url: String, set: Api.StickerSetCovered)

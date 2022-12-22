@@ -4,6 +4,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
+import Postbox
 import Display
 import TelegramUIPreferences
 import AccountContext
@@ -13,6 +14,7 @@ import ChatInterfaceState
 import UndoUI
 import TelegramPresentationData
 import ChatPresentationInterfaceState
+import TextFormat
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -49,7 +51,7 @@ public enum ChatControllerInteractionSwipeAction {
 
 public enum ChatControllerInteractionReaction {
     case `default`
-    case reaction(String)
+    case reaction(MessageReaction.Reaction)
 }
 
 struct UnreadMessageRangeKey: Hashable {
@@ -59,11 +61,11 @@ struct UnreadMessageRangeKey: Hashable {
 
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void
+    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool, Peer?) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
     let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
-    let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, String) -> Void
+    let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void
     let activateMessagePinch: (PinchSourceContainerNode) -> Void
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
@@ -73,7 +75,8 @@ public final class ChatControllerInteraction {
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool
+    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+    let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
     let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
@@ -164,10 +167,10 @@ public final class ChatControllerInteraction {
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
-        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void,
+        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool, Peer?) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
-        openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, String) -> Void,
+        openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void,
         updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,
         activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
@@ -178,7 +181,8 @@ public final class ChatControllerInteraction {
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
+        sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
@@ -267,6 +271,7 @@ public final class ChatControllerInteraction {
         self.sendCurrentMessage = sendCurrentMessage
         self.sendMessage = sendMessage
         self.sendSticker = sendSticker
+        self.sendEmoji = sendEmoji
         self.sendGif = sendGif
         self.sendBotContextResultAsGif = sendBotContextResultAsGif
         self.requestMessageActionCallback = requestMessageActionCallback

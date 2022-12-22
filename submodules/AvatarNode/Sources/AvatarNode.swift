@@ -287,7 +287,7 @@ public final class AvatarNode: ASDisplayNode {
         self.imageNode.isHidden = true
     }
     
-    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false) {
+    public func setPeer(context genericContext: AccountContext, account: Account? = nil, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -317,7 +317,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .phoneIcon
             }
-        } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
+        } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.displayLetters ?? [], representation)
@@ -328,7 +328,9 @@ public final class AvatarNode: ASDisplayNode {
             
             let parameters: AvatarNodeParameters
             
-            if let peer = peer, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, round: clipStyle == .round, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
+            let account = account ?? genericContext.account
+            
+            if let peer = peer, let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, round: clipStyle == .round, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
                 self.contents = nil
                 self.displaySuspended = true
                 self.imageReady.set(self.imageNode.contentReady)
@@ -355,7 +357,7 @@ public final class AvatarNode: ASDisplayNode {
                     self.editOverlayNode?.isHidden = true
                 }
                 
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
@@ -364,7 +366,7 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 self.editOverlayNode?.isHidden = true
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters

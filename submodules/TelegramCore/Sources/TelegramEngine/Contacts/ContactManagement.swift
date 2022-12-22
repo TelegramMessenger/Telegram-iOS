@@ -73,7 +73,7 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
                 
                 transaction.replaceRemoteContactCount(totalCount)
                 
-                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                updatePeerPresencesClean(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                 
                 if wasEmpty {
                     var insertSignal: Signal<Void, NoError> = .complete()

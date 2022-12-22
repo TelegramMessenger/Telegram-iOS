@@ -661,6 +661,26 @@ public final class PostboxEncoder {
         let (data, valueType) = innerEncoder.makeData(addHeader: true, isDictionary: false)
         self.encodeInnerObjectData(data, valueType: valueType, forKey: key)
     }
+    
+    public func encodeArray<T: Encodable>(_ value: [T], forKey key: String) {
+        self.encodeKey(key)
+        var t: Int8 = ValueType.ObjectArray.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        for object in value {
+            let typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
+            try! object.encode(to: innerEncoder)
+
+            let (data, _) = innerEncoder.makeData(addHeader: true, isDictionary: false)
+            
+            var length: Int32 = Int32(data.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(data)
+        }
+    }
 
     func encodeInnerObjectData(_ value: Data, valueType: ValueType, forKey key: String) {
         self.encodeKey(key)
@@ -696,76 +716,82 @@ public final class PostboxDecoder {
         self.buffer = buffer
     }
     
-    private class func skipValue(_ bytes: UnsafePointer<Int8>, offset: inout Int, length: Int, valueType: ValueType) {
+    private class func skipValue(_ bytes: UnsafePointer<Int8>, offset: inout Int, length: Int, valueType: ValueType) -> Bool {
         switch valueType {
-            case .Int32:
-                offset += 4
-            case .Int64:
-                offset += 8
-            case .Bool:
-                offset += 1
-            case .Double:
-                offset += 8
-            case .String:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4 + Int(length)
-            case .Object:
-                var length: Int32 = 0
-                memcpy(&length, bytes + (offset + 4), 4)
-                offset += 8 + Int(length)
-            case .Int32Array:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4 + Int(length) * 4
-            case .Int64Array:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4 + Int(length) * 8
-            case .ObjectArray:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4
-                var i: Int32 = 0
-                while i < length {
-                    var objectLength: Int32 = 0
-                    memcpy(&objectLength, bytes + (offset + 4), 4)
-                    offset += 8 + Int(objectLength)
-                    i += 1
+        case .Int32:
+            offset += 4
+        case .Int64:
+            offset += 8
+        case .Bool:
+            offset += 1
+        case .Double:
+            offset += 8
+        case .String:
+            var length: Int32 = 0
+            memcpy(&length, bytes + offset, 4)
+            offset += 4 + Int(length)
+        case .Object:
+            var length: Int32 = 0
+            memcpy(&length, bytes + (offset + 4), 4)
+            offset += 8 + Int(length)
+        case .Int32Array:
+            var length: Int32 = 0
+            memcpy(&length, bytes + offset, 4)
+            offset += 4 + Int(length) * 4
+        case .Int64Array:
+            var length: Int32 = 0
+            memcpy(&length, bytes + offset, 4)
+            offset += 4 + Int(length) * 8
+        case .ObjectArray:
+            var subLength: Int32 = 0
+            memcpy(&subLength, bytes + offset, 4)
+            offset += 4
+            var i: Int32 = 0
+            while i < subLength {
+                var objectLength: Int32 = 0
+                memcpy(&objectLength, bytes + (offset + 4), 4)
+                offset += 8 + Int(objectLength)
+                if offset < 0 || offset > length {
+                    offset = 0
+                    return false
                 }
-            case .ObjectDictionary:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4
-                var i: Int32 = 0
-                while i < length {
-                    var keyLength: Int32 = 0
-                    memcpy(&keyLength, bytes + (offset + 4), 4)
-                    offset += 8 + Int(keyLength)
-                    
-                    var valueLength: Int32 = 0
-                    memcpy(&valueLength, bytes + (offset + 4), 4)
-                    offset += 8 + Int(valueLength)
-                    i += 1
-                }
-            case .Bytes:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4 + Int(length)
-            case .Nil:
-                break
-            case .StringArray, .BytesArray:
-                var length: Int32 = 0
-                memcpy(&length, bytes + offset, 4)
-                offset += 4
-                var i: Int32 = 0
-                while i < length {
-                    var stringLength: Int32 = 0
-                    memcpy(&stringLength, bytes + offset, 4)
-                    offset += 4 + Int(stringLength)
-                    i += 1
-                }
+                i += 1
+            }
+            return true
+        case .ObjectDictionary:
+            var length: Int32 = 0
+            memcpy(&length, bytes + offset, 4)
+            offset += 4
+            var i: Int32 = 0
+            while i < length {
+                var keyLength: Int32 = 0
+                memcpy(&keyLength, bytes + (offset + 4), 4)
+                offset += 8 + Int(keyLength)
+                
+                var valueLength: Int32 = 0
+                memcpy(&valueLength, bytes + (offset + 4), 4)
+                offset += 8 + Int(valueLength)
+                i += 1
+            }
+        case .Bytes:
+            var length: Int32 = 0
+            memcpy(&length, bytes + offset, 4)
+            offset += 4 + Int(length)
+        case .Nil:
+            break
+        case .StringArray, .BytesArray:
+            var length: Int32 = 0
+            memcpy(&length, bytes + offset, 4)
+            offset += 4
+            var i: Int32 = 0
+            while i < length {
+                var stringLength: Int32 = 0
+                memcpy(&stringLength, bytes + offset, 4)
+                offset += 4 + Int(stringLength)
+                i += 1
+            }
         }
+        return true
     }
 
     private class func positionOnKey(_ rawBytes: UnsafeRawPointer, offset: inout Int, maxOffset: Int, length: Int, key: String, valueType: ValueType) -> Bool {
@@ -795,7 +821,9 @@ public final class PostboxDecoder {
             if keyLength != Int(readKeyLength) {
                 /*let keyString = String(data: Data(bytes: bytes + (offset - Int(readKeyLength) - 1), count: Int(readKeyLength)), encoding: .utf8)
                 print("\(String(describing: keyString))")*/
-                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                if !skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!) {
+                    return false
+                }
                 continue
             }
 
@@ -809,7 +837,9 @@ public final class PostboxDecoder {
                     } else if readValueType == ValueType.Nil.rawValue {
                         return false
                     } else {
-                        skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                        if !skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!) {
+                            return false
+                        }
                     }
                 } else {
                     if !consumeKey {
@@ -819,7 +849,9 @@ public final class PostboxDecoder {
                     return true
                 }
             } else {
-                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                if !skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!) {
+                    return false
+                }
             }
         }
 
@@ -857,10 +889,14 @@ public final class PostboxDecoder {
                     } else if readValueType == ValueType.Nil.rawValue {
                         return false
                     } else {
-                        skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                        if !skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!) {
+                            return false
+                        }
                     }
                 } else {
-                    skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                    if !skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!) {
+                        return false
+                    }
                 }
             }
             
@@ -889,7 +925,9 @@ public final class PostboxDecoder {
             offset += 1
             
             if readValueType != valueType.rawValue || keyLength != Int(readKeyLength) || memcmp(bytes + (offset - Int(readKeyLength) - 1), &keyValue, keyLength) != 0 {
-                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                if !skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!) {
+                    return false
+                }
             } else {
                 return true
             }
@@ -1085,7 +1123,9 @@ public final class PostboxDecoder {
                 return (innerData, .Object(hash: hash))
             } else {
                 let initialOffset = self.offset
-                PostboxDecoder.skipValue(self.buffer.memory.assumingMemoryBound(to: Int8.self), offset: &self.offset, length: self.buffer.length, valueType: actualValueType)
+                if !PostboxDecoder.skipValue(self.buffer.memory.assumingMemoryBound(to: Int8.self), offset: &self.offset, length: self.buffer.length, valueType: actualValueType) {
+                    return nil
+                }
 
                 let data = ReadBuffer(memory: UnsafeMutableRawPointer(mutating: self.buffer.memory.advanced(by: initialOffset)), length: self.offset - initialOffset, freeWhenDone: false).makeData()
 
@@ -1810,6 +1850,46 @@ public final class PostboxDecoder {
                 //assertionFailure("Decoding error: \(error)")
                 return nil
             }
+        } else {
+            return nil
+        }
+    }
+    
+    public func decodeArray<T: Decodable>(_ type: [T].Type, forKey key: String) -> [T]? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [T] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var typeHash: Int32 = 0
+                memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var objectLength: Int32 = 0
+                memcpy(&objectLength, self.buffer.memory + self.offset, 4)
+                
+                let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)
+                let innerData = innerBuffer.makeData()
+                self.offset += 4 + Int(length)
+
+                do {
+                    let result = try AdaptedPostboxDecoder().decode(T.self, from: innerData)
+                    array.append(result)
+                } catch let error {
+                    postboxLog("Decoding error: \(error)")
+                    //assertionFailure("Decoding error: \(error)")
+                    return nil
+                }
+                
+                i += 1
+            }
+            
+            return array
         } else {
             return nil
         }

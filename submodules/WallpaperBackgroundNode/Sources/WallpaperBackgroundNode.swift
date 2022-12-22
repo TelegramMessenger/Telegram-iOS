@@ -61,6 +61,8 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
     func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
     
+    func hasExtraBubbleBackground() -> Bool
+    
     func makeDimmedNode() -> ASDisplayNode?
 }
 
@@ -393,7 +395,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 if isInvertedGradient {
                     switch self.bubbleType {
                     case .free:
-                        needsCleanBackground = false
+                        self.contentNode.backgroundColor = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill[0]
+//                        needsCleanBackground = false
                     case .incoming, .outgoing:
                         break
                     }
@@ -591,6 +594,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
     private struct ValidPatternImage {
         let wallpaper: TelegramWallpaper
+        let invertPattern: Bool
         let generate: (TransformImageArguments) -> DrawingContext?
     }
     private var validPatternImage: ValidPatternImage?
@@ -893,10 +897,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             var updated = true
             let brightness = UIColor.average(of: file.settings.colors.map(UIColor.init(rgb:))).hsb.b
             patternIsLight = brightness > 0.3
+            
+            let intensity = CGFloat(file.settings.intensity ?? 50) / 100.0
+            invertPattern = intensity < 0
+            
             if let previousWallpaper = self.validPatternImage?.wallpaper {
                 switch previousWallpaper {
                 case let .file(previousFile):
-                    if file.file.id == previousFile.file.id {
+                    if file.file.id == previousFile.file.id && self.validPatternImage?.invertPattern == invertPattern {
                         updated = false
                     }
                 default:
@@ -908,8 +916,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.validPatternGeneratedImage = nil
                 self.validPatternImage = nil
 
-                if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
-                    self.validPatternImage = ValidPatternImage(wallpaper: cachedValidPatternImage.generated.wallpaper, generate: cachedValidPatternImage.generate)
+                if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper && cachedValidPatternImage.generated.invertPattern == invertPattern {
+                    self.validPatternImage = ValidPatternImage(wallpaper: cachedValidPatternImage.generated.wallpaper, invertPattern: invertPattern, generate: cachedValidPatternImage.generate)
                 } else {
                     func reference(for resource: EngineMediaResource, media: EngineMedia) -> MediaResourceReference {
                         return .wallpaper(wallpaper: .slug(file.slug), resource: resource._asResource())
@@ -945,7 +953,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                                 return context
                             }*/
                             
-                            strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
+                            strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, invertPattern: invertPattern, generate: generator)
                             strongSelf.validPatternGeneratedImage = nil
                             if let size = strongSelf.validLayout {
                                 strongSelf.loadPatternForSizeIfNeeded(size: size, transition: .immediate)
@@ -958,8 +966,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     }))
                 }
             }
-            let intensity = CGFloat(file.settings.intensity ?? 50) / 100.0
-            invertPattern = intensity < 0
         default:
             self.updatePatternPresentation()
         }
@@ -1163,6 +1169,19 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func hasExtraBubbleBackground() -> Bool {
+        var isInvertedGradient = false
+        switch self.wallpaper {
+        case let .file(file):
+            if let intensity = file.settings.intensity, intensity < 0 {
+                isInvertedGradient = true
+            }
+        default:
+            break
+        }
+        return isInvertedGradient
     }
     
     func makeDimmedNode() -> ASDisplayNode? {
@@ -1986,6 +2005,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         let node = WallpaperBackgroundNodeMergedImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func hasExtraBubbleBackground() -> Bool {
+        return false
     }
 
     func makeDimmedNode() -> ASDisplayNode? {

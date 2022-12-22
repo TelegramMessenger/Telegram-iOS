@@ -112,9 +112,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                 }, action: { _, f in
                                     if let strongSelf = self, let peekController = strongSelf.peekController {
                                         if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, animationNode.view, animationNode.bounds, nil)
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, animationNode.view, animationNode.bounds, nil, [])
                                         } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, imageNode.view, imageNode.bounds, nil)
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, imageNode.view, imageNode.bounds, nil, [])
                                         }
                                     }
                                     f(.default)
@@ -126,9 +126,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                             }, action: { _, f in
                                 if let strongSelf = self, let peekController = strongSelf.peekController {
                                     if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, animationNode.view, animationNode.bounds, nil)
+                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, animationNode.view, animationNode.bounds, nil, [])
                                     } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, imageNode.view, imageNode.bounds, nil)
+                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, imageNode.view, imageNode.bounds, nil, [])
                                     }
                                 }
                                 f(.default)
@@ -180,7 +180,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 if let packReference = packReference {
                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
-                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect, nil)
+                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect, nil, [])
                                                         } else {
                                                             return false
                                                         }
@@ -577,7 +577,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.controllerInteraction?.sendSticker(file, false, false, strongSelf.query, true, node, rect, nil)
+            let _ = strongSelf.controllerInteraction?.sendSticker(file, false, false, strongSelf.query, true, node, rect, nil, [])
         }
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true

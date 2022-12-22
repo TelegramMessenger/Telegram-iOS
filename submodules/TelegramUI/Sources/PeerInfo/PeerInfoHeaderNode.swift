@@ -22,6 +22,11 @@ import PeerInfoAvatarListNode
 import AnimationUI
 import ContextUI
 import ManagedAnimationNode
+import ComponentFlow
+import EmojiStatusComponent
+import AnimationCache
+import MultiAnimationRenderer
+import ComponentDisplayAdapters
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -1985,8 +1990,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let titleNodeContainer: ASDisplayNode
     let titleNodeRawContainer: ASDisplayNode
     let titleNode: MultiScaleTextNode
-    let titleCredibilityIconNode: ASImageNode
-    let titleExpandedCredibilityIconNode: ASImageNode
+    let titleCredibilityIconView: ComponentHostView<Empty>
+    var credibilityIconSize: CGSize?
+    let titleExpandedCredibilityIconView: ComponentHostView<Empty>
+    var titleExpandedCredibilityIconSize: CGSize?
     let subtitleNodeContainer: ASDisplayNode
     let subtitleNodeRawContainer: ASDisplayNode
     let subtitleNode: MultiScaleTextNode
@@ -2019,7 +2026,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool, Bool) -> Void)?
     
-    var displayPremiumIntro: ((UIView, Bool) -> Void)?
+    var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
@@ -2027,6 +2034,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var isExpandedForPhoneAndId: Bool = false
+    
+    let animationCache: AnimationCache
+    let animationRenderer: MultiAnimationRenderer
+    
+    var emojiStatusPackDisposable = MetaDisposable()
+    var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, LoadedStickerPack)?>()
     
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool) {
         self.context = context
@@ -2042,15 +2055,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.titleNode.displaysAsynchronously = false
         
-        self.titleCredibilityIconNode = ASImageNode()
-        self.titleCredibilityIconNode.displaysAsynchronously = false
-        self.titleCredibilityIconNode.displayWithoutProcessing = true
-        self.titleNode.stateNode(forKey: TitleNodeStateRegular)?.addSubnode(self.titleCredibilityIconNode)
+        self.titleCredibilityIconView = ComponentHostView<Empty>()
+        self.titleNode.stateNode(forKey: TitleNodeStateRegular)?.view.addSubview(self.titleCredibilityIconView)
         
-        self.titleExpandedCredibilityIconNode = ASImageNode()
-        self.titleExpandedCredibilityIconNode.displaysAsynchronously = false
-        self.titleExpandedCredibilityIconNode.displayWithoutProcessing = true
-        self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.addSubnode(self.titleExpandedCredibilityIconNode)
+        self.titleExpandedCredibilityIconView = ComponentHostView<Empty>()
+        self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.view.addSubview(self.titleExpandedCredibilityIconView)
         
         self.subtitleNodeContainer = ASDisplayNode()
         self.subtitleNodeRawContainer = ASDisplayNode()
@@ -2108,6 +2117,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
+        
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         super.init()
         
@@ -2188,6 +2200,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
     }
     
+    deinit {
+        self.emojiStatusPackDisposable.dispose()
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -2199,12 +2215,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let idGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleIdLongPress(_:)))
         self.idNodeRawContainer.view.addGestureRecognizer(idGestureRecognizer)
-        
-        let premiumGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleStarTap(_:)))
-        self.titleCredibilityIconNode.view.addGestureRecognizer(premiumGestureRecognizer)
-        
-        let expandedPremiumGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleStarTap(_:)))
-        self.titleExpandedCredibilityIconNode.view.addGestureRecognizer(expandedPremiumGestureRecognizer)
     }
     
     @objc private func handleUsernameLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -2225,11 +2235,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
     }
     
-    @objc private func handleStarTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let view = gestureRecognizer.view, self.currentCredibilityIcon == .premium else {
-            return
-        }
-        self.displayPremiumIntro?(view, view == self.titleExpandedCredibilityIconNode.view)
+    func invokeDisplayPremiumIntro() {
+        self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, nil, .never(), self.isAvatarExpanded)
     }
     
     func initiateAvatarExpansion(gallery: Bool, first: Bool) {
@@ -2288,12 +2295,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
         
-    private enum CredibilityIcon {
+    private enum CredibilityIcon: Equatable {
         case none
         case premium
         case verified
         case fake
         case scam
+        case emojiStatus(PeerEmojiStatus)
     }
     
     private var currentCredibilityIcon: CredibilityIcon?
@@ -2331,6 +2339,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .fake
             } else if peer.isScam {
                 credibilityIcon = .scam
+            } else if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                credibilityIcon = .emojiStatus(emojiStatus)
             } else if peer.isVerified {
                 credibilityIcon = .verified
             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings) {
@@ -2344,75 +2354,112 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if themeUpdated || self.currentCredibilityIcon != credibilityIcon {
             self.currentCredibilityIcon = credibilityIcon
-            let image: UIImage?
-            var expandedImage: UIImage?
             
-            if case .fake = credibilityIcon {
-                image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-            } else if case .scam = credibilityIcon {
-                image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-            } else if case .verified = credibilityIcon {
-                if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconForeground") {
-                    image = generateImage(backgroundImage.size, contextGenerator: { size, context in
-                        if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.saveGState()
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
-
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                            context.restoreGState()
-                            
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                    expandedImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
-                        if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.saveGState()
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
-                            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                            context.restoreGState()
-                            
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                            context.setBlendMode(.clear)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                } else {
-                    image = nil
-                }
-            } else if case .premium = credibilityIcon {
-                if let sourceImage = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
-                    image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                        if let cgImage = sourceImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                            
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                    expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in
-                        if let cgImage = sourceImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                } else {
-                    image = nil
-                }
-            } else {
-                image = nil
+            var currentEmojiStatus: PeerEmojiStatus?
+            let emojiRegularStatusContent: EmojiStatusComponent.Content
+            let emojiExpandedStatusContent: EmojiStatusComponent.Content
+            switch credibilityIcon {
+            case .none:
+                emojiRegularStatusContent = .none
+                emojiExpandedStatusContent = .none
+            case .premium:
+                emojiRegularStatusContent = .premium(color: presentationData.theme.list.itemAccentColor)
+                emojiExpandedStatusContent = .premium(color: UIColor(rgb: 0xffffff, alpha: 0.75))
+            case .verified:
+                emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
+                emojiExpandedStatusContent = .verified(fillColor: UIColor(rgb: 0xffffff, alpha: 0.75), foregroundColor: .clear, sizeType: .large)
+            case .fake:
+                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
+                emojiExpandedStatusContent = emojiRegularStatusContent
+            case .scam:
+                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_ScamAccount.uppercased())
+                emojiExpandedStatusContent = emojiRegularStatusContent
+            case let .emojiStatus(emojiStatus):
+                currentEmojiStatus = emojiStatus
+                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
+                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15), themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
             }
             
-            self.titleCredibilityIconNode.image = image
-            self.titleExpandedCredibilityIconNode.image = expandedImage ?? image
+            let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
+            
+            let iconSize = self.titleCredibilityIconView.update(
+                transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: self.context,
+                    animationCache: self.animationCache,
+                    animationRenderer: self.animationRenderer,
+                    content: emojiRegularStatusContent,
+                    isVisibleForAnimations: true,
+                    useSharedAnimation: true,
+                    action: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), false)
+                    },
+                    emojiFileUpdated: { [weak self] emojiFile in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if let emojiFile = emojiFile {
+                            strongSelf.emojiStatusFileAndPackTitle.set(.never())
+                            
+                            for attribute in emojiFile.attributes {
+                                if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                    strongSelf.emojiStatusPackDisposable.set((strongSelf.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
+                                    |> filter { result in
+                                        if case .result = result {
+                                            return true
+                                        } else {
+                                            return false
+                                        }
+                                    }
+                                    |> mapToSignal { result -> Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError> in
+                                        if case let .result(_, items, _) = result {
+                                            return .single(items.first.flatMap { ($0.file, result) })
+                                        } else {
+                                            return .complete()
+                                        }
+                                    }).start(next: { fileAndPackTitle in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.emojiStatusFileAndPackTitle.set(.single(fileAndPackTitle))
+                                    }))
+                                    break
+                                }
+                            }
+                        } else {
+                            strongSelf.emojiStatusFileAndPackTitle.set(.never())
+                        }
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 34.0, height: 34.0)
+            )
+            let expandedIconSize = self.titleExpandedCredibilityIconView.update(
+                transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: self.context,
+                    animationCache: self.animationCache,
+                    animationRenderer: self.animationRenderer,
+                    content: emojiExpandedStatusContent,
+                    isVisibleForAnimations: true,
+                    useSharedAnimation: true,
+                    action: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 34.0, height: 34.0)
+            )
+            
+            self.credibilityIconSize = iconSize
+            self.titleExpandedCredibilityIconSize = expandedIconSize
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
@@ -2523,8 +2570,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             }
 
-            titleString = NSAttributedString(string: title, font: Font.medium(29.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-            smallTitleString = NSAttributedString(string: title, font: Font.semibold(28.0), textColor: .white)
+            titleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            smallTitleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: .white)
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(user.phone ?? "")
                 
@@ -2647,10 +2694,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
         
         var titleHorizontalOffset: CGFloat = 0.0
-        if let image = self.titleCredibilityIconNode.image {
-            titleHorizontalOffset = -(image.size.width + 4.0) / 2.0
-            transition.updateFrame(node: self.titleCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
-            transition.updateFrame(node: self.titleExpandedCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
+        if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
+            titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
+            
+            var collapsedTransitionOffset: CGFloat = 0.0
+            if let navigationTransition = self.navigationTransition {
+                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
+            }
+            
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0) + 2.0), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
         }
         
         var titleFrame: CGRect
@@ -2670,7 +2723,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             idFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0 + subtitleSize.height), size: idSize)
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
-            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 7.0 + 11.0), size: titleSize)
+            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0), size: titleSize)
                         
             let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
             if usernameSize.width == 0.0 {
@@ -2873,7 +2926,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
         
-        let panelWithAvatarHeight: CGFloat = 20.0 + avatarSize + (!isSettings || self.isExpandedForPhoneAndId ? subtitleSize.height + idSize.height : 0.0)
+        let panelWithAvatarHeight: CGFloat = 15.0 + avatarSize + (!isSettings || self.isExpandedForPhoneAndId ? subtitleSize.height + idSize.height : 0.0)
         
         let rawHeight: CGFloat
         let height: CGFloat
@@ -3146,21 +3199,27 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
-        if result.isDescendant(of: self.navigationButtonContainer.view) {
-            return result
-        }
         if !self.backgroundNode.frame.contains(point) {
             return nil
         }
         
-        if self.currentCredibilityIcon == .premium && !(self.state?.isEditing ?? false) {
-            let iconFrame = self.titleCredibilityIconNode.view.convert(self.titleCredibilityIconNode.bounds, to: self.view)
-            let expandedIconFrame = self.titleExpandedCredibilityIconNode.view.convert(self.titleExpandedCredibilityIconNode.bounds, to: self.view)
-            if expandedIconFrame.contains(point) && self.isAvatarExpanded {
-                return self.titleExpandedCredibilityIconNode.view
-            } else if iconFrame.contains(point) {
-                return self.titleCredibilityIconNode.view
+        if !(self.state?.isEditing ?? false) {
+            switch self.currentCredibilityIcon {
+            case .premium, .emojiStatus:
+                let iconFrame = self.titleCredibilityIconView.convert(self.titleCredibilityIconView.bounds, to: self.view)
+                let expandedIconFrame = self.titleExpandedCredibilityIconView.convert(self.titleExpandedCredibilityIconView.bounds, to: self.view)
+                if expandedIconFrame.contains(point) && self.isAvatarExpanded {
+                    return self.titleExpandedCredibilityIconView.hitTest(self.view.convert(point, to: self.titleExpandedCredibilityIconView), with: event)
+                } else if iconFrame.contains(point) {
+                    return self.titleCredibilityIconView.hitTest(self.view.convert(point, to: self.titleCredibilityIconView), with: event)
+                }
+            default:
+                break
             }
+        }
+        
+        if result.isDescendant(of: self.navigationButtonContainer.view) {
+            return result
         }
         
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {
