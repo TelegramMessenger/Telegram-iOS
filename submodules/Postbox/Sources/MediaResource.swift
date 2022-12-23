@@ -55,7 +55,6 @@ public enum MediaResourceUserContentType: UInt8, Equatable {
     case video = 2
     case audio = 3
     case file = 4
-    case gif = 5
     case sticker = 6
     case avatar = 7
 }

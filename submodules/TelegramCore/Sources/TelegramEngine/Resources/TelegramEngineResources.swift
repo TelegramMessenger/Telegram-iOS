@@ -16,7 +16,7 @@ public extension MediaResourceUserContentType {
             self = .sticker
         } else if file.isVideo {
             if file.isAnimated {
-                self = .gif
+                self = .other
             } else {
                 self = .video
             }
@@ -227,16 +227,35 @@ public extension TelegramEngine {
             return _internal_collectStorageUsageStats(account: self.account)
         }
 
-        public func renderStorageUsageStatsMessages(stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey]) -> Signal<[EngineMessage.Id: Message], NoError> {
-            return _internal_renderStorageUsageStatsMessages(account: self.account, stats: stats, categories: categories)
+        public func renderStorageUsageStatsMessages(stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
+            return _internal_renderStorageUsageStatsMessages(account: self.account, stats: stats, categories: categories, existingMessages: existingMessages)
+        }
+        
+        public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
+            return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories)
+        }
+        
+        public func clearStorage(peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
+            _internal_clearStorage(account: self.account, peerIds: peerIds)
+        }
+        
+        public func clearStorage(messages: [Message]) -> Signal<Never, NoError> {
+            _internal_clearStorage(account: self.account, messages: messages)
         }
 
         public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
             return _internal_clearCachedMediaResources(account: self.account, mediaResourceIds: mediaResourceIds)
         }
         
-        public func reindexCacheInBackground() -> Signal<Never, NoError> {
-            return _internal_reindexCacheInBackground(account: self.account)
+        public func reindexCacheInBackground(lowImpact: Bool) -> Signal<Never, NoError> {
+            let mediaBox = self.account.postbox.mediaBox
+            
+            return _internal_reindexCacheInBackground(account: self.account, lowImpact: lowImpact)
+            |> then(Signal { subscriber in
+                return mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                    subscriber.putCompletion()
+                })
+            })
         }
 
         public func data(id: EngineMediaResource.Id, attemptSynchronously: Bool = false) -> Signal<EngineMediaResource.ResourceData, NoError> {

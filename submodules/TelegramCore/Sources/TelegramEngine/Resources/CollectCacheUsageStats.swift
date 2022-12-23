@@ -250,7 +250,7 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
     }
 }
 
-func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey]) -> Signal<[EngineMessage.Id: Message], NoError> {
+func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
     return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
         var result: [EngineMessage.Id: Message] = [:]
         for (category, value) in stats.categories {
@@ -259,7 +259,9 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
             }
             for id in value.messages.keys {
                 if result[id] == nil {
-                    if let message = transaction.getMessage(id) {
+                    if let message = existingMessages[id] {
+                        result[id] = message
+                    } else if let message = transaction.getMessage(id) {
                         result[id] = message
                     }
                 }
@@ -270,7 +272,155 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
     }
 }
 
-func _internal_reindexCacheInBackground(account: Account) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
+    let mediaBox = account.postbox.mediaBox
+    return Signal { subscriber in
+        mediaBox.storageBox.remove(peerId: peerId, contentTypes: categories.map { item -> UInt8 in
+            let mappedItem: MediaResourceUserContentType
+            switch item {
+            case .photos:
+                mappedItem = .image
+            case .videos:
+                mappedItem = .video
+            case .files:
+                mappedItem = .file
+            case .music:
+                mappedItem = .audio
+            case .stickers:
+                mappedItem = .sticker
+            case .avatars:
+                mappedItem = .avatar
+            case .misc:
+                mappedItem = .other
+            }
+            return mappedItem.rawValue
+        }, completion: { ids in
+            var resourceIds: [MediaResourceId] = []
+            for id in ids {
+                if let value = String(data: id, encoding: .utf8) {
+                    resourceIds.append(MediaResourceId(value))
+                }
+            }
+            let _ = mediaBox.removeCachedResources(resourceIds).start(completed: {
+                if peerId == nil && categories.contains(.misc) {
+                    let additionalPaths: [String] = [
+                        "cache",
+                        "animation-cache",
+                        "short-cache",
+                    ]
+                    
+                    for item in additionalPaths {
+                        let fullPath = mediaBox.basePath + "/\(item)"
+                        if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: fullPath), includingPropertiesForKeys: [.isDirectoryKey], options: .skipsSubdirectoryDescendants) {
+                            for url in enumerator {
+                                guard let url = url as? URL else {
+                                    continue
+                                }
+                                let _ = try? FileManager.default.removeItem(at: url)
+                            }
+                        }
+                    }
+                    
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putCompletion()
+                }
+            })
+        })
+        
+        return ActionDisposable {
+        }
+    }
+}
+
+func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
+    let mediaBox = account.postbox.mediaBox
+    return Signal { subscriber in
+        mediaBox.storageBox.remove(peerIds: peerIds, completion: { ids in
+            var resourceIds: [MediaResourceId] = []
+            for id in ids {
+                if let value = String(data: id, encoding: .utf8) {
+                    resourceIds.append(MediaResourceId(value))
+                }
+            }
+            let _ = mediaBox.removeCachedResources(resourceIds).start(completed: {
+                subscriber.putCompletion()
+            })
+        })
+        
+        return ActionDisposable {
+        }
+    }
+}
+
+func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Never, NoError> {
+    let mediaBox = account.postbox.mediaBox
+    
+    return Signal { subscriber in
+        DispatchQueue.global().async {
+            var resourceIds = Set<MediaResourceId>()
+            for message in messages {
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
+                        for representation in image.representations {
+                            resourceIds.insert(representation.resource.id)
+                        }
+                    } else if let file = media as? TelegramMediaFile {
+                        for representation in file.previewRepresentations {
+                            resourceIds.insert(representation.resource.id)
+                        }
+                        resourceIds.insert(file.resource.id)
+                    } else if let webpage = media as? TelegramMediaWebpage {
+                        if case let .Loaded(content) = webpage.content {
+                            if let image = content.image {
+                                for representation in image.representations {
+                                    resourceIds.insert(representation.resource.id)
+                                }
+                            }
+                            if let file = content.file {
+                                for representation in file.previewRepresentations {
+                                    resourceIds.insert(representation.resource.id)
+                                }
+                                resourceIds.insert(file.resource.id)
+                            }
+                        }
+                    } else if let game = media as? TelegramMediaGame {
+                        if let image = game.image {
+                            for representation in image.representations {
+                                resourceIds.insert(representation.resource.id)
+                            }
+                        }
+                        if let file = game.file {
+                            for representation in file.previewRepresentations {
+                                resourceIds.insert(representation.resource.id)
+                            }
+                            resourceIds.insert(file.resource.id)
+                        }
+                    }
+                }
+            }
+            
+            var removeIds: [Data] = []
+            for resourceId in resourceIds {
+                if let id = resourceId.stringRepresentation.data(using: .utf8) {
+                    removeIds.append(id)
+                }
+            }
+            
+            mediaBox.storageBox.remove(ids: removeIds)
+            let _ = mediaBox.removeCachedResources(Array(resourceIds)).start(completed: {
+                subscriber.putCompletion()
+            })
+        }
+        
+        return ActionDisposable {
+        }
+    }
+}
+
+func _internal_reindexCacheInBackground(account: Account, lowImpact: Bool) -> Signal<Never, NoError> {
+    let postbox = account.postbox
+    
     let queue = Queue(name: "ReindexCacheInBackground")
     return Signal { subscriber in
         let isCancelled = Atomic<Bool>(value: false)
@@ -280,7 +430,7 @@ func _internal_reindexCacheInBackground(account: Account) -> Signal<Never, NoErr
                 return
             }
             
-            let _ = (account.postbox.transaction { transaction -> (messagesByMediaId: [MediaId: [MessageId]], mediaMap: [MediaId: Media], nextLowerBound: MessageIndex?) in
+            let _ = (postbox.transaction { transaction -> (messagesByMediaId: [MediaId: [MessageId]], mediaMap: [MediaId: Media], nextLowerBound: MessageIndex?) in
                 return transaction.enumerateMediaMessages(lowerBound: lowerBound, upperBound: nil, limit: 1000)
             }
             |> deliverOn(queue)).start(next: { result in
@@ -288,7 +438,7 @@ func _internal_reindexCacheInBackground(account: Account) -> Signal<Never, NoErr
                 
                 var storageItems: [(reference: StorageBox.Reference, id: Data, contentType: UInt8, size: Int64)] = []
                 
-                let mediaBox = account.postbox.mediaBox
+                let mediaBox = postbox.mediaBox
                 
                 let processResource: ([MessageId], MediaResource, MediaResourceUserContentType) -> Void = { messageIds, resource, contentType in
                     let size = mediaBox.fileSizeForId(resource.id)
@@ -352,7 +502,13 @@ func _internal_reindexCacheInBackground(account: Account) -> Signal<Never, NoErr
                 }
                 
                 if let nextLowerBound = result.nextLowerBound {
-                    process(lowerBound: nextLowerBound)
+                    if lowImpact {
+                        queue.after(0.4, {
+                            process(lowerBound: nextLowerBound)
+                        })
+                    } else {
+                        process(lowerBound: nextLowerBound)
+                    }
                 } else {
                     subscriber.putCompletion()
                 }
