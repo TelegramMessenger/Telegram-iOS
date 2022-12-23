@@ -321,6 +321,19 @@ public class CheckLayer: CALayer {
         self.isOpaque = false
     }
     
+    public override init(layer: Any) {
+        guard let layer = layer as? CheckLayer else {
+            preconditionFailure()
+        }
+        
+        self.theme = layer.theme
+        self.content = layer.content
+        
+        super.init(layer: layer)
+        
+        self.isOpaque = false
+    }
+    
     public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
         self.theme = theme
         self.content = content

@@ -75,7 +75,7 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
                 userLocation: userLocation,
-                userContentType: .gif,
+                userContentType: .other,
                 fileReference: self.file,
                 automaticallyFetchHeader: true
             )

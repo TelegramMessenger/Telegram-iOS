@@ -65,7 +65,7 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
                 userLocation: userLocation,
-                userContentType: .gif,
+                userContentType: .other,
                 fileReference: self.file,
                 automaticallyFetchHeader: true
             )
@@ -301,7 +301,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                     self.imageNode.layer.addSublayer(sampleBufferLayer.layer)
                 }
                 
-                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: .peer(item.message.id.peerId), userContentType: .gif, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
+                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: .peer(item.message.id.peerId), userContentType: .other, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
                 self.videoLayerFrameManager?.start()
             }
         } else {

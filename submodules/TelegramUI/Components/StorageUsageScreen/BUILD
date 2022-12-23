@@ -31,6 +31,8 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/AnimatedAvatarSetNode",
         "//submodules/AvatarNode",
+        "//submodules/PhotoResources",
+        "//submodules/SemanticStatusNode",
     ],
     visibility = [
         "//visibility:public",

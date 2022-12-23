@@ -155,6 +155,15 @@ public final class ComponentView<EnvironmentType> {
         self.currentSize = size
         return size
     }
+    
+    public func updateEnvironment(transition: Transition, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>) -> CGSize? {
+        guard let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize else {
+            return nil
+        }
+        let size = self._update(transition: transition, component: currentComponent, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: false, containerSize: currentContainerSize)
+        self.currentSize = size
+        return size
+    }
 
     private func _update(transition: Transition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, forceUpdate: Bool, containerSize: CGSize) -> CGSize {
         precondition(!self.isUpdating)

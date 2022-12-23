@@ -950,7 +950,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 }
                 self.scrollNode.bounds = updatedBounds
             }
-            transition.animateHorizontalOffsetAdditive(node: self.scrollNode, offset: previousScrollBounds.minX - self.scrollNode.bounds.minX)
+            if abs(previousScrollBounds.minX - self.scrollNode.bounds.minX) > .ulpOfOne {
+                transition.animateHorizontalOffsetAdditive(node: self.scrollNode, offset: previousScrollBounds.minX - self.scrollNode.bounds.minX)
+            }
             
             self.previousSelectedAbsFrame = selectedFrame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
             self.previousSelectedFrame = selectedFrame
