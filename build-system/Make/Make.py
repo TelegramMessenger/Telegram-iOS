@@ -437,6 +437,9 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
         profile_source.copy_profiles_to_destination(destination_path=additional_codesigning_output_path + '/profiles')
         profile_source.copy_certificates_to_destination(destination_path=additional_codesigning_output_path + '/certs')
 
+    if build_configuration.is_non_dev_account:
+        return ResolvedCodesigningData(aps_environment="")
+
     return ResolvedCodesigningData(aps_environment=profile_source.resolve_aps_environment())
 
 

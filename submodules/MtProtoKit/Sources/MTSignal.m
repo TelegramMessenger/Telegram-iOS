@@ -8,7 +8,7 @@
 
 @interface MTSubscriberDisposable : NSObject <MTDisposable>
 {
-    OSSpinLock _lock;
+    os_unfair_lock _lock;
     __weak MTSubscriber *_subscriber;
     id<MTDisposable> _disposable;
 }
@@ -32,10 +32,10 @@
 {
     id<MTDisposable> disposable;
     
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     disposable = _disposable;
     _disposable = nil;
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     [_subscriber _markTerminatedWithoutDisposal];
     [disposable dispose];

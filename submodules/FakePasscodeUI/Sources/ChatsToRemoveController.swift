@@ -230,7 +230,7 @@ func getPeers(context: AccountContext, peerIds: [PeerId]) -> Signal<[RenderedPee
             if let peer = transaction.getPeer(peerId) {
                 if let associatedPeerId = peer.associatedPeerId {
                     if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                        return RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]))
+                        return RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]), associatedMedia: [:])
                     }
                 } else {
                     return RenderedPeer(peer: peer)
@@ -596,6 +596,8 @@ private final class ChatsToRemoveSearchItemNode: ItemListControllerSearchNode {
         
         let contentNode = ChatListSearchContainerNode(
             context: self.context,
+            animationCache: self.context.animationCache,
+            animationRenderer: self.context.animationRenderer,
             filter: [.excludeRecent, .doNotSearchMessages],
             groupId: EngineChatList.Group(.root),
             displaySearchFilters: false,

@@ -20,7 +20,10 @@ class BuildConfiguration:
         app_specific_url_scheme,
         premium_iap_product_id,
         enable_siri,
-        enable_icloud
+        enable_icloud,
+        is_non_dev_account,
+        bundle_name,
+        bundle_display_name
     ):
         self.bundle_id = bundle_id
         self.api_id = api_id
@@ -34,6 +37,9 @@ class BuildConfiguration:
         self.premium_iap_product_id = premium_iap_product_id
         self.enable_siri = enable_siri
         self.enable_icloud = enable_icloud
+        self.is_non_dev_account = is_non_dev_account
+        self.bundle_name = bundle_name
+        self.bundle_display_name = bundle_display_name
 
     def write_to_variables_file(self, aps_environment, path):
         string = ''
@@ -51,6 +57,9 @@ class BuildConfiguration:
         string += 'telegram_enable_siri = {}\n'.format(self.enable_siri)
         string += 'telegram_enable_icloud = {}\n'.format(self.enable_icloud)
         string += 'telegram_enable_watch = True\n'
+        string += 'telegram_is_non_dev_account = {}\n'.format(self.is_non_dev_account)
+        string += 'telegram_bundle_name = "{}"\n'.format(self.bundle_name)
+        string += 'telegram_bundle_display_name = "{}"\n'.format(self.bundle_display_name)
 
         if os.path.exists(path):
             os.remove(path)
@@ -76,7 +85,10 @@ def build_configuration_from_json(path):
             'app_specific_url_scheme',
             'premium_iap_product_id',
             'enable_siri',
-            'enable_icloud'
+            'enable_icloud',
+            'is_non_dev_account',
+            'bundle_name',
+            'bundle_display_name'
         ]
         for key in required_keys:
             if key not in configuration_dict:
@@ -93,7 +105,10 @@ def build_configuration_from_json(path):
             app_specific_url_scheme=configuration_dict['app_specific_url_scheme'],
             premium_iap_product_id=configuration_dict['premium_iap_product_id'],
             enable_siri=configuration_dict['enable_siri'],
-            enable_icloud=configuration_dict['enable_icloud']
+            enable_icloud=configuration_dict['enable_icloud'],
+            is_non_dev_account=configuration_dict['is_non_dev_account'],
+            bundle_name=configuration_dict['bundle_name'],
+            bundle_display_name=configuration_dict['bundle_display_name']
         )
 
 

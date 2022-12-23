@@ -76,10 +76,10 @@ jobs:
           # use the official release configuration
           rm -rf $HOME/telegram-configuration
           mkdir -p $HOME/telegram-configuration
-          cp -R build-system/example-configuration/* $HOME/telegram-configuration/
+          cp build-system/appstore-configuration.json $HOME/telegram-configuration/
 
           # prepare provisioning profiles
-          PROVISIONING_PATH=$HOME/telegram-configuration/provisioning
+          PROVISIONING_PATH=$HOME/telegram-configuration/provisioning/profiles
           find "$PROVISIONING_PATH" -type f -name "*.mobileprovision" -delete
 
           echo "$PROVISIONING_PROFILE_APP_DATA" | base64 -di - > "$PROVISIONING_PATH/Telegram.mobileprovision"
@@ -97,9 +97,10 @@ jobs:
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
             --disableParallelSwiftmoduleGeneration \
-            --configurationPath="$HOME/telegram-configuration" \
+            --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
+            --codesigningInformationPath="$HOME/telegram-configuration/provisioning" \
             --buildNumber=$BUILD_NUMBER \
-            --configuration=release_universal
+            --configuration=release_arm64
 
           # collect ipa
           OUTPUT_PATH="build/artifacts"
