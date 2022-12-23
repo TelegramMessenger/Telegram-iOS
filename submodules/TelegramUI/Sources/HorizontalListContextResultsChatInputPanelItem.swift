@@ -399,7 +399,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             layerHolder.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.layer.addSublayer(layerHolder.layer)
                             
-                            let manager = SoftwareVideoLayerFrameManager(account: item.account, userLocation: .other, userContentType: .gif, fileReference: .standalone(media: videoFile), layerHolder: layerHolder)
+                            let manager = SoftwareVideoLayerFrameManager(account: item.account, userLocation: .other, userContentType: .other, fileReference: .standalone(media: videoFile), layerHolder: layerHolder)
                             strongSelf.videoLayer = (thumbnailLayer, manager, layerHolder)
                             thumbnailLayer.ready = { [weak thumbnailLayer, weak manager] in
                                 if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {

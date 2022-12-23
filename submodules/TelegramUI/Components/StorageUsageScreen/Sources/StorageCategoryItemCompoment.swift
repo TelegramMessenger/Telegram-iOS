@@ -27,7 +27,7 @@ final class StorageCategoryItemComponent: Component {
     let isExpandedLevel: Bool
     let isExpanded: Bool
     let hasNext: Bool
-    let action: (AnyHashable, ActionType) -> Void
+    let action: (StorageUsageScreenComponent.Category, ActionType) -> Void
     
     init(
         theme: PresentationTheme,
@@ -36,7 +36,7 @@ final class StorageCategoryItemComponent: Component {
         isExpandedLevel: Bool,
         isExpanded: Bool,
         hasNext: Bool,
-        action: @escaping (AnyHashable, ActionType) -> Void
+        action: @escaping (StorageUsageScreenComponent.Category, ActionType) -> Void
     ) {
         self.theme = theme
         self.strings = strings
@@ -80,7 +80,7 @@ final class StorageCategoryItemComponent: Component {
         private let checkButtonArea: HighlightTrackingButton
         
         private let subcategoryClippingContainer: UIView
-        private var itemViews: [AnyHashable: ComponentView<Empty>] = [:]
+        private var itemViews: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
         
         private var component: StorageCategoryItemComponent?
         
@@ -306,7 +306,7 @@ final class StorageCategoryItemComponent: Component {
             
             self.highlightBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height + ((component.isExpanded || component.hasNext) ? UIScreenPixel : 0.0)))
             
-            var validKeys = Set<AnyHashable>()
+            var validKeys = Set<StorageUsageScreenComponent.Category>()
             if component.isExpanded {
                 for i in 0 ..< component.category.subcategories.count {
                     let category = component.category.subcategories[i]
@@ -358,7 +358,7 @@ final class StorageCategoryItemComponent: Component {
                 }
             }
             
-            var removeKeys: [AnyHashable] = []
+            var removeKeys: [StorageUsageScreenComponent.Category] = []
             for (key, itemView) in self.itemViews {
                 if !validKeys.contains(key) {
                     if let itemComponentView = itemView.view {
