@@ -1,6 +1,7 @@
 import UIKit
 import AccountContext
 import EsimAuth
+import NGAppContext
 import NGAuth
 import NGPhoneFormatter
 import NGModels
@@ -20,24 +21,21 @@ public class MyEsimsBuilderImpl: MyEsimsBuilder {
     
     //  MARK: - Dependencies
     
+    private let appContext: AppContext
     private let tgAccountContext: AccountContext
     private let auth: EsimAuth
     private let esimRepository: EsimRepository
     
     private let ngTheme: NGThemeColors
     
-    //  MARK: - Listeners
-    
-    private weak var loginListener: LoginListener?
-    
     //  MARK: - Lifecycle
     
-    public init(tgAccountContext: AccountContext, auth: EsimAuth, esimRepository: EsimRepository, ngTheme: NGThemeColors, loginListener: LoginListener?) {
+    public init(appContext: AppContext, tgAccountContext: AccountContext, auth: EsimAuth, esimRepository: EsimRepository, ngTheme: NGThemeColors) {
+        self.appContext = appContext
         self.tgAccountContext = tgAccountContext
         self.auth = auth
         self.esimRepository = esimRepository
         self.ngTheme = ngTheme
-        self.loginListener = loginListener
     }
     
     //  MARK: - Public Functions
@@ -47,6 +45,7 @@ public class MyEsimsBuilderImpl: MyEsimsBuilder {
 
         let router = MyEsimsRouter(
             purchaseEsimBuilder: PurchaseEsimBuilderImpl(
+                appContext: appContext,
                 tgAccountContext: tgAccountContext,
                 auth: auth,
                 esimRepository: esimRepository,
@@ -79,9 +78,6 @@ public class MyEsimsBuilderImpl: MyEsimsBuilder {
         controller.output = interactor
         
         router.purchaseEsimListener = interactor
-        
-        router.loginListener = interactor
-        interactor.loginListener = loginListener
 
         return controller
     }

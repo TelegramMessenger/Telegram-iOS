@@ -118,6 +118,7 @@ public final class EntityKeyboardComponent: Component {
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode?
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
+    public let inputHeight: CGFloat
     public let displayBottomPanel: Bool
     public let isExpanded: Bool
     
@@ -146,6 +147,7 @@ public final class EntityKeyboardComponent: Component {
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode?,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
+        inputHeight: CGFloat,
         displayBottomPanel: Bool,
         isExpanded: Bool
     ) {
@@ -173,6 +175,7 @@ public final class EntityKeyboardComponent: Component {
         self.makeSearchContainerNode = makeSearchContainerNode
         self.deviceMetrics = deviceMetrics
         self.hiddenInputHeight = hiddenInputHeight
+        self.inputHeight = inputHeight
         self.displayBottomPanel = displayBottomPanel
         self.isExpanded = isExpanded
     }
@@ -218,6 +221,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.hiddenInputHeight != rhs.hiddenInputHeight {
+            return false
+        }
+        if lhs.inputHeight != rhs.inputHeight {
             return false
         }
         if lhs.displayBottomPanel != rhs.displayBottomPanel {
@@ -355,16 +361,16 @@ public final class EntityKeyboardComponent: Component {
                     }
                 ))))
                 contentIcons.append(PagerComponentContentIcon(id: "gifs", imageName: "Chat/Input/Media/EntityInputGifsIcon"))
-                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Media/EntityInputSearchIcon",
-                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                        maxSize: nil
-                    )),
-                    action: { [weak self] in
-                        self?.openSearch()
-                    }
-                ).minSize(CGSize(width: 38.0, height: 38.0)))))
+//                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
+//                    content: AnyComponent(BundleIconComponent(
+//                        name: "Chat/Input/Media/EntityInputSearchIcon",
+//                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+//                        maxSize: nil
+//                    )),
+//                    action: { [weak self] in
+//                        self?.openSearch()
+//                    }
+//                ).minSize(CGSize(width: 38.0, height: 38.0)))))
             }
             
             if let stickerContent = component.stickerContent {
@@ -469,16 +475,16 @@ public final class EntityKeyboardComponent: Component {
                     }
                 ))))
                 contentIcons.append(PagerComponentContentIcon(id: "stickers", imageName: "Chat/Input/Media/EntityInputStickersIcon"))
-                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Media/EntityInputSearchIcon",
-                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                        maxSize: nil
-                    )),
-                    action: { [weak self] in
-                        self?.openSearch()
-                    }
-                ).minSize(CGSize(width: 38.0, height: 38.0)))))
+//                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
+//                    content: AnyComponent(BundleIconComponent(
+//                        name: "Chat/Input/Media/EntityInputSearchIcon",
+//                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+//                        maxSize: nil
+//                    )),
+//                    action: { [weak self] in
+//                        self?.openSearch()
+//                    }
+//                ).minSize(CGSize(width: 38.0, height: 38.0)))))
                 contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Chat/Input/Media/EntityInputSettingsIcon",
@@ -702,7 +708,8 @@ public final class EntityKeyboardComponent: Component {
                         EntitySearchContentEnvironment(
                             context: component.emojiContent.context,
                             theme: component.theme,
-                            deviceMetrics: component.deviceMetrics
+                            deviceMetrics: component.deviceMetrics,
+                            inputHeight: component.inputHeight
                         )
                     },
                     containerSize: availableSize
@@ -769,7 +776,7 @@ public final class EntityKeyboardComponent: Component {
             component.hideTopPanelUpdated(self.isTopPanelHidden, transition)
         }
         
-        private func openSearch() {
+        public func openSearch() {
             guard let component = self.component else {
                 return
             }

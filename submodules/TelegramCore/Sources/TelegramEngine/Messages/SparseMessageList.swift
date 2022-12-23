@@ -712,111 +712,6 @@ public final class SparseMessageList {
     }
 }
 
-public final class SparseMessageScrollingContext {
-    public struct State: Equatable {
-        public var totalCount: Int
-        public var minTimestamp: Int32
-    }
-
-    private final class Impl {
-        private let queue: Queue
-        private let account: Account
-        private let peerId: PeerId
-
-        let statePromise = Promise<State>()
-
-        private let disposable = MetaDisposable()
-
-        init(queue: Queue, account: Account, peerId: PeerId) {
-            self.queue = queue
-            self.account = account
-            self.peerId = peerId
-
-            self.reload()
-        }
-
-        deinit {
-            self.disposable.dispose()
-        }
-
-        private func reload() {
-            let account = self.account
-            let peerId = self.peerId
-
-            let signal: Signal<State?, NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
-                return transaction.getPeer(peerId).flatMap(apiInputPeer)
-            }
-            |> mapToSignal { inputPeer -> Signal<State?, NoError> in
-                guard let inputPeer = inputPeer else {
-                    return .single(nil)
-                }
-                return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 1, offsetDate: 0, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
-                |> map { result -> State? in
-                    let messages: [Api.Message]
-                    let totalCount: Int
-
-                    switch result {
-                    case let .messages(apiMessages, _, _):
-                        messages = apiMessages
-                        totalCount = messages.count
-                    case let .messagesSlice(_, count, _, _, apiMessages, _, _):
-                        messages = apiMessages
-                        totalCount = Int(count)
-                    case let .channelMessages(_, _, count, _, apiMessages, _, _):
-                        messages = apiMessages
-                        totalCount = Int(count)
-                    case .messagesNotModified:
-                        messages = []
-                        totalCount = 0
-                    }
-
-                    if let apiMessage = messages.first, let message = StoreMessage(apiMessage: apiMessage) {
-                        return State(totalCount: totalCount, minTimestamp: message.timestamp)
-                    } else {
-                        return State(totalCount: 0, minTimestamp: 0)
-                    }
-                }
-                |> `catch` { _ -> Signal<State?, NoError> in
-                    return .single(nil)
-                }
-            }
-
-            self.disposable.set((signal |> deliverOn(self.queue)).start(next: { [weak self] state in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let state = state {
-                    strongSelf.statePromise.set(.single(state))
-                }
-            }))
-        }
-    }
-
-    private let queue: Queue
-    private let impl: QueueLocalObject<Impl>
-
-    public var state: Signal<State, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-
-            self.impl.with { impl in
-                disposable.set(impl.statePromise.get().start(next: subscriber.putNext))
-            }
-
-            return disposable
-        }
-    }
-
-    init(account: Account, peerId: PeerId) {
-        let queue = Queue()
-        self.queue = queue
-
-        self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, peerId: peerId)
-        })
-    }
-}
-
 public final class SparseMessageCalendar {
     private final class Impl {
         struct InternalState {
@@ -908,11 +803,14 @@ public final class SparseMessageCalendar {
             let account = self.account
             let peerId = self.peerId
             let messageTag = self.messageTag
-            self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
-                return transaction.getPeer(peerId).flatMap(apiInputPeer)
+            self.disposable.set((self.account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(peerId)
             }
-            |> mapToSignal { inputPeer -> Signal<LoadResult, NoError> in
-                guard let inputPeer = inputPeer else {
+            |> mapToSignal { peer -> Signal<LoadResult, NoError> in
+                guard let peer = peer else {
+                    return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
+                }
+                guard let inputPeer = apiInputPeer(peer) else {
                     return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
                 }
                 guard let messageFilter = messageFilterForTagMask(messageTag) else {
@@ -947,7 +845,7 @@ public final class SparseMessageCalendar {
                             }
 
                             for message in messages {
-                                if let parsedMessage = StoreMessage(apiMessage: message) {
+                                if let parsedMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                                     parsedMessages.append(parsedMessage)
                                 }
                             }

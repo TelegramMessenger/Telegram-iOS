@@ -14,6 +14,7 @@ from ProjectGeneration import generate
 from BazelLocation import locate_bazel
 from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, BuildConfiguration, build_configuration_from_json
 import RemoteBuild
+import GenerateProfiles
 
 
 class ResolvedCodesigningData:
@@ -922,6 +923,12 @@ if __name__ == '__main__':
         help='DarwinContainers host address.'
     )
     remote_build_parser.add_argument(
+        '--darwinContainers',
+        required=True,
+        type=str,
+        help='DarwinContainers script path.'
+    )
+    remote_build_parser.add_argument(
         '--configuration',
         choices=[
             'debug_universal',
@@ -941,12 +948,27 @@ if __name__ == '__main__':
         help='Bazel remote cache host address.'
     )
 
+    generate_profiles_build_parser = subparsers.add_parser('generate-verification-profiles', help='Generate provisioning profiles that can be used to build a veritication IPA.')
+    add_codesigning_common_arguments(generate_profiles_build_parser)
+    generate_profiles_build_parser.add_argument(
+        '--destination',
+        required=True,
+        type=str,
+        help='Path to the destination directory.'
+    )
+
     remote_upload_testflight_parser = subparsers.add_parser('remote-deploy-testflight', help='Build the app using a remote environment.')
     remote_upload_testflight_parser.add_argument(
         '--darwinContainersHost',
         required=True,
         type=str,
         help='DarwinContainers host address.'
+    )
+    remote_upload_testflight_parser.add_argument(
+        '--darwinContainers',
+        required=True,
+        type=str,
+        help='DarwinContainers script path.'
     )
     remote_upload_testflight_parser.add_argument(
         '--ipa',
@@ -967,6 +989,12 @@ if __name__ == '__main__':
         required=True,
         type=str,
         help='DarwinContainers host address.'
+    )
+    remote_ipadiff_parser.add_argument(
+        '--darwinContainers',
+        required=True,
+        type=str,
+        help='DarwinContainers script path.'
     )
     remote_ipadiff_parser.add_argument(
         '--ipa1',
@@ -1025,11 +1053,33 @@ if __name__ == '__main__':
             shutil.copyfile(args.configurationPath, remote_input_path + '/configuration.json')
 
             RemoteBuild.remote_build(
+                darwin_containers_path=args.darwinContainers,
                 darwin_containers_host=args.darwinContainersHost,
                 bazel_cache_host=args.cacheHost,
                 configuration=args.configuration,
                 build_input_data_path=remote_input_path
             )
+        elif args.commandName == 'generate-verification-profiles':
+            base_path = os.getcwd()
+            remote_input_path = '{}/build-input/remote-input'.format(base_path)
+            if os.path.exists(remote_input_path):
+                shutil.rmtree(remote_input_path)
+            os.makedirs(remote_input_path)
+            os.makedirs(remote_input_path + '/certs')
+            os.makedirs(remote_input_path + '/profiles')
+
+            if os.path.exists(args.destination):
+                shutil.rmtree(args.destination)
+            os.makedirs(args.destination)
+
+            resolve_configuration(
+                base_path=os.getcwd(),
+                bazel_command_line=None,
+                arguments=args,
+                additional_codesigning_output_path=remote_input_path
+            )
+
+            GenerateProfiles.generate_provisioning_profiles(source_path=remote_input_path + '/profiles', destination_path=args.destination)
         elif args.commandName == 'remote-deploy-testflight':
             env = os.environ
             if 'APPSTORE_CONNECT_USERNAME' not in env:
@@ -1040,6 +1090,7 @@ if __name__ == '__main__':
                 sys.exit(1)
 
             RemoteBuild.remote_deploy_testflight(
+                darwin_containers_path=args.darwinContainers,
                 darwin_containers_host=args.darwinContainersHost,
                 ipa_path=args.ipa,
                 dsyms_path=args.dsyms,
@@ -1048,6 +1099,7 @@ if __name__ == '__main__':
             )
         elif args.commandName == 'remote-ipa-diff':
             RemoteBuild.remote_ipa_diff(
+                darwin_containers_path=args.darwinContainers,
                 darwin_containers_host=args.darwinContainersHost,
                 ipa1_path=args.ipa1,
                 ipa2_path=args.ipa2

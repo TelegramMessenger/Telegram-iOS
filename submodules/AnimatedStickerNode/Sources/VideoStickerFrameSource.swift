@@ -345,7 +345,9 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
         self.currentFrame += 1
         if draw {
             if let image = self.image {
-                let context = DrawingContext(size: CGSize(width: self.width, height: self.height), scale: 1.0, opaque: false, clear: true, bytesPerRow: self.bytesPerRow)
+                guard let context = DrawingContext(size: CGSize(width: self.width, height: self.height), scale: 1.0, opaque: false, clear: true, bytesPerRow: self.bytesPerRow) else {
+                    return nil
+                }
                 context.withFlippedContext { c in
                     c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: context.size))
                 }

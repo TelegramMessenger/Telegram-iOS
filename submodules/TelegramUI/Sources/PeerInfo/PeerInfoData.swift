@@ -929,12 +929,15 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
     }
 }
 
-func canEditPeerInfo(context: AccountContext, peer: Peer?, threadData: MessageHistoryThreadData?) -> Bool {
+func canEditPeerInfo(context: AccountContext, peer: Peer?, chatLocation: ChatLocation, threadData: MessageHistoryThreadData?) -> Bool {
     if context.account.peerId == peer?.id {
         return true
     }
     if let channel = peer as? TelegramChannel {
         if let threadData = threadData {
+            if chatLocation.threadId == 1 {
+                return false
+            }
             if channel.hasPermission(.manageTopics) {
                 return true
             }
@@ -1151,7 +1154,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             }
             
             var canReport = true
-            if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
+            if channel.adminRights != nil || channel.flags.contains(.isCreator)  {
                 canReport = false
             }
             
@@ -1204,7 +1207,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
     return result
 }
 
-func peerInfoCanEdit(peer: Peer?, threadData: MessageHistoryThreadData?, cachedData: CachedPeerData?, isContact: Bool?) -> Bool {
+func peerInfoCanEdit(peer: Peer?, chatLocation: ChatLocation, threadData: MessageHistoryThreadData?, cachedData: CachedPeerData?, isContact: Bool?) -> Bool {
     if let user = peer as? TelegramUser {
         if user.isDeleted {
             return false
@@ -1214,10 +1217,10 @@ func peerInfoCanEdit(peer: Peer?, threadData: MessageHistoryThreadData?, cachedD
         }
         return true
     } else if let peer = peer as? TelegramChannel {
-        if peer.flags.contains(.isForum) {
+        if peer.flags.contains(.isForum), let threadData = threadData {
             if peer.flags.contains(.isCreator) {
                 return true
-            } else if let threadData = threadData, threadData.isOwnedByMe {
+            } else if threadData.isOwnedByMe {
                 return true
             } else if peer.hasPermission(.manageTopics) {
                 return true

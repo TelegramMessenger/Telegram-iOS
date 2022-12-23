@@ -96,13 +96,7 @@ public final class EsimAuth {
 //  MARK: - Telegram SignIn
 
 public extension EsimAuth {
-    func trySignInWithTelegram(completion: ((Result<EsimUser, TelegramSignInError>) -> ())?) {
-        if let currentUser = currentUser {
-            telegramAuthenticator.clear()
-            completion?(.success(currentUser))
-            return
-        }
-        
+    func trySignInWithTelegram(completion: ((Result<EsimUser, TelegramSignInError>) -> ())?) {        
         telegramAuthenticator.signIn { [weak self] result in
             // TODO: !Duplicated code
             guard let self = self else { return }

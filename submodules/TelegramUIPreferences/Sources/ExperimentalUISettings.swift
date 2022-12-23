@@ -45,6 +45,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var inlineStickers: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
+    public var inlineForums: Bool
     public var accountReactionEffectOverrides: [AccountReactionOverrides]
     public var accountStickerEffectOverrides: [AccountReactionOverrides]
     
@@ -70,6 +71,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             inlineStickers: false,
             localTranscription: false,
             enableReactionOverrides: false,
+            inlineForums: false,
             accountReactionEffectOverrides: [],
             accountStickerEffectOverrides: []
         )
@@ -95,6 +97,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         inlineStickers: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
+        inlineForums: Bool,
         accountReactionEffectOverrides: [AccountReactionOverrides],
         accountStickerEffectOverrides: [AccountReactionOverrides]
     ) {
@@ -117,6 +120,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
+        self.inlineForums = inlineForums
         self.accountReactionEffectOverrides = accountReactionEffectOverrides
         self.accountStickerEffectOverrides = accountStickerEffectOverrides
     }
@@ -143,6 +147,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
+        self.inlineForums = try container.decodeIfPresent(Bool.self, forKey: "inlineForums") ?? false
         self.accountReactionEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
         self.accountStickerEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
     }
@@ -169,6 +174,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
+        try container.encode(self.inlineForums, forKey: "inlineForums")
         try container.encode(self.accountReactionEffectOverrides, forKey: "accountReactionEffectOverrides")
         try container.encode(self.accountStickerEffectOverrides, forKey: "accountStickerEffectOverrides")
     }

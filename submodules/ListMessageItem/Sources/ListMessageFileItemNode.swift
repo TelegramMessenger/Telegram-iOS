@@ -20,6 +20,8 @@ import ContextUI
 import FileMediaResourceStatus
 import ManagedAnimationNode
 import ShimmerEffect
+import ComponentFlow
+import EmojiStatusComponent
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -159,6 +161,167 @@ final class CachedChatListSearchResult {
 }
 
 public final class ListMessageFileItemNode: ListMessageNode {
+    public final class DescriptionNode: ASDisplayNode {
+        let descriptionNode: TextNode
+        var titleTopicArrowNode: ASImageNode?
+        var topicTitleNode: TextNode?
+        var titleTopicIconView: ComponentHostView<Empty>?
+        var titleTopicIconComponent: EmojiStatusComponent?
+        
+        var visibilityStatus: Bool = false {
+            didSet {
+                if self.visibilityStatus != oldValue {
+                    if let titleTopicIconView = self.titleTopicIconView, let titleTopicIconComponent = self.titleTopicIconComponent {
+                        let _ = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                            environment: {},
+                            containerSize: titleTopicIconView.bounds.size
+                        )
+                    }
+                }
+            }
+        }
+        
+        override init() {
+            self.descriptionNode = TextNode()
+            self.descriptionNode.displaysAsynchronously = true
+            
+            super.init()
+            
+            self.addSubnode(self.descriptionNode)
+        }
+        
+        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topic: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)?) -> (CGSize, () -> Void) {
+            let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
+            let makeTopicTitleLayout = TextNode.asyncLayout(self.topicTitleNode)
+            
+            return { [weak self] context, constrainedWidth, theme, authorTitle, topic in
+                var maxTitleWidth = constrainedWidth
+                if let _ = topic {
+                    maxTitleWidth = floor(constrainedWidth * 0.7)
+                }
+                
+                let descriptionLayout = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: authorTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+                
+                var remainingWidth = constrainedWidth - descriptionLayout.0.size.width
+                
+                var topicTitleArguments: TextNodeLayoutArguments?
+                var arrowIconImage: UIImage?
+                if let topic = topic {
+                    remainingWidth -= 22.0 + 2.0
+                    
+                    if authorTitle != nil {
+                        arrowIconImage = PresentationResourcesItemList.topicArrowDescriptionIcon(theme)
+                        if let arrowIconImage = arrowIconImage {
+                            remainingWidth -= arrowIconImage.size.width + 6.0 * 2.0
+                        }
+                    }
+                    
+                    topicTitleArguments = TextNodeLayoutArguments(attributedString: topic.title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: remainingWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+                }
+                
+                let topicTitleLayout = topicTitleArguments.flatMap(makeTopicTitleLayout)
+                
+                var size = descriptionLayout.0.size
+                if let topicTitleLayout = topicTitleLayout {
+                    size.height = max(size.height, topicTitleLayout.0.size.height)
+                    size.width += 10.0 + topicTitleLayout.0.size.width
+                }
+                
+                return (size, {
+                    guard let self else {
+                        return
+                    }
+                    
+                    let _ = descriptionLayout.1()
+                    let authorFrame = CGRect(origin: CGPoint(), size: descriptionLayout.0.size)
+                    self.descriptionNode.frame = authorFrame
+                    
+                    var nextX = authorFrame.maxX - 1.0
+                    if authorTitle == nil {
+                        nextX = 0.0
+                    }
+                    
+                    if let arrowIconImage = arrowIconImage {
+                        let titleTopicArrowNode: ASImageNode
+                        if let current = self.titleTopicArrowNode {
+                            titleTopicArrowNode = current
+                        } else {
+                            titleTopicArrowNode = ASImageNode()
+                            self.titleTopicArrowNode = titleTopicArrowNode
+                            self.addSubnode(titleTopicArrowNode)
+                        }
+                        titleTopicArrowNode.image = arrowIconImage
+                        nextX += 6.0
+                        titleTopicArrowNode.frame = CGRect(origin: CGPoint(x: nextX, y: 5.0), size: arrowIconImage.size)
+                        nextX += arrowIconImage.size.width + 6.0
+                    } else {
+                        if let titleTopicArrowNode = self.titleTopicArrowNode {
+                            self.titleTopicArrowNode = nil
+                            titleTopicArrowNode.removeFromSupernode()
+                        }
+                    }
+                    
+                    if let topic, topic.showIcon {
+                        let titleTopicIconView: ComponentHostView<Empty>
+                        if let current = self.titleTopicIconView {
+                            titleTopicIconView = current
+                        } else {
+                            titleTopicIconView = ComponentHostView<Empty>()
+                            self.titleTopicIconView = titleTopicIconView
+                            self.view.addSubview(titleTopicIconView)
+                        }
+                        
+                        let titleTopicIconContent: EmojiStatusComponent.Content
+                        if let fileId = topic.iconId, fileId != 0 {
+                            titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(2))
+                        } else {
+                            titleTopicIconContent = .topic(title: String(topic.title.string.prefix(1)), color: topic.iconColor, size: CGSize(width: 22.0, height: 22.0))
+                        }
+                        
+                        let titleTopicIconComponent = EmojiStatusComponent(
+                            context: context,
+                            animationCache: context.animationCache,
+                            animationRenderer: context.animationRenderer,
+                            content: titleTopicIconContent,
+                            isVisibleForAnimations: self.visibilityStatus,
+                            action: nil
+                        )
+                        self.titleTopicIconComponent = titleTopicIconComponent
+                        
+                        let iconSize = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent),
+                            environment: {},
+                            containerSize: CGSize(width: 22.0, height: 22.0)
+                        )
+                        titleTopicIconView.frame = CGRect(origin: CGPoint(x: nextX, y: UIScreenPixel), size: iconSize)
+                        nextX += iconSize.width + 2.0
+                    } else {
+                        if let titleTopicIconView = self.titleTopicIconView {
+                            self.titleTopicIconView = nil
+                            titleTopicIconView.removeFromSuperview()
+                        }
+                    }
+                    
+                    if let topicTitleLayout = topicTitleLayout {
+                        let topicTitleNode = topicTitleLayout.1()
+                        if topicTitleNode.supernode == nil {
+                            self.addSubnode(topicTitleNode)
+                            self.topicTitleNode = topicTitleNode
+                        }
+                        
+                        topicTitleNode.frame = CGRect(origin: CGPoint(x: nextX - 1.0, y: 0.0), size: topicTitleLayout.0.size)
+                    } else if let topicTitleNode = self.topicTitleNode {
+                        self.topicTitleNode = nil
+                        topicTitleNode.removeFromSupernode()
+                    }
+                })
+            }
+        }
+    }
+    
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let extractedBackgroundImageNode: ASImageNode
@@ -175,9 +338,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     private var selectionNode: ItemListSelectableControlNode?
     
-    public let titleNode: TextNode
+    public let titleNode: DescriptionNode
     public let textNode: TextNode
-    public let descriptionNode: TextNode
+    public let descriptionNode: DescriptionNode
     private let descriptionProgressNode: ImmediateTextNode
     public let dateNode: TextNode
     
@@ -216,6 +379,30 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var currentIsRestricted = false
     private var cachedSearchResult: CachedChatListSearchResult?
     
+    public override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = self.visibilityStatus
+            let isVisible: Bool
+            switch self.visibility {
+                case let .visible(fraction, _):
+                    isVisible = fraction > 0.2
+                case .none:
+                    isVisible = false
+            }
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.descriptionNode.visibilityStatus = self.visibilityStatus
+            }
+        }
+    }
+    
     public required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -236,7 +423,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        self.titleNode = TextNode()
+        self.titleNode = DescriptionNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.isUserInteractionEnabled = false
 
@@ -244,7 +431,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
         
-        self.descriptionNode = TextNode()
+        self.descriptionNode = DescriptionNode()
         self.descriptionNode.displaysAsynchronously = false
         self.descriptionNode.isUserInteractionEnabled = false
         
@@ -374,9 +561,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
     }
     
     override public func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
+        let titleNodeMakeLayout = self.titleNode.asyncLayout()
         let textNodeMakeLayout = TextNode.asyncLayout(self.textNode)
-        let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
+        let descriptionNodeMakeLayout = self.descriptionNode.asyncLayout()
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
         let dateNodeMakeLayout = TextNode.asyncLayout(self.dateNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
@@ -432,6 +619,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let message = item.message
             
+            var titleExtraData: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
+            var descriptionExtraData: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
+            var globalAuthorTitle: String?
+            
             var selectedMedia: Media?
             if let message = message {
                 for media in message.media {
@@ -462,10 +653,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 
                                 if item.isGlobalSearchResult || item.isDownloadList {
                                     let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                    if authorString.count > 1 {
+                                        globalAuthorTitle = authorString.last ?? ""
+                                    }
                                     if descriptionString.isEmpty {
-                                        descriptionString = authorString
+                                        descriptionString = authorString.first ?? ""
                                     } else {
-                                        descriptionString = "\(descriptionString) • \(authorString)"
+                                        descriptionString = "\(descriptionString) • \(authorString.first ?? "")"
                                     }
                                 }
                                 
@@ -505,7 +699,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                             
                             if item.isGlobalSearchResult || item.isDownloadList {
-                                authorName = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                if authorString.count > 1 {
+                                    globalAuthorTitle = authorString.last ?? ""
+                                }
+                                authorName = authorString.first ?? ""
                             }
                             
                             titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
@@ -562,10 +760,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             if item.isGlobalSearchResult || item.isDownloadList {
                                 let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                if authorString.count > 1 {
+                                    globalAuthorTitle = authorString.last ?? ""
+                                }
                                 if descriptionString.isEmpty {
-                                    descriptionString = authorString
+                                    descriptionString = authorString.first ?? ""
                                 } else {
-                                    descriptionString = "\(descriptionString) • \(authorString)"
+                                    descriptionString = "\(descriptionString) • \(authorString.first ?? "")"
                                 }
                             }
                         
@@ -590,12 +791,15 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionString = "\(dateString)"
                         }
                         
-                        if item.isGlobalSearchResult || item.isDownloadList {
+                        if item.isGlobalSearchResult || item.isDownloadList {                            
                             let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                            if authorString.count > 1 {
+                                globalAuthorTitle = authorString.last ?? ""
+                            }
                             if descriptionString.isEmpty {
-                                descriptionString = authorString
+                                descriptionString = authorString.first ?? ""
                             } else {
-                                descriptionString = "\(descriptionString) • \(authorString)"
+                                descriptionString = "\(descriptionString) • \(authorString.first ?? "")"
                             }
                         }
                     
@@ -612,6 +816,20 @@ public final class ListMessageFileItemNode: ListMessageNode {
             } else {
                 titleText = NSAttributedString(string: " ", font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                 descriptionText = NSAttributedString(string: " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+            }
+            
+            if let _ = item.message?.threadId, let threadInfo = item.message?.associatedThreadInfo {
+                if isInstantVideo || isVoice {
+                    titleExtraData = (NSAttributedString(string: threadInfo.title, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
+                } else {
+                    descriptionExtraData = (NSAttributedString(string: threadInfo.title, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
+                }
+            } else if let globalAuthorTitle = globalAuthorTitle {
+                if isInstantVideo || isVoice {
+                    titleExtraData = (NSAttributedString(string: globalAuthorTitle, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor), false, nil, 0)
+                } else {
+                    descriptionExtraData = (NSAttributedString(string: globalAuthorTitle, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), false, nil, 0)
+                }
             }
             
             var mediaUpdated = false
@@ -749,11 +967,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let (dateNodeLayout, dateNodeApply) = dateNodeMakeLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(item.context, params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, item.presentationData.theme.theme, titleText, titleExtraData)
             
             let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(item.context, params.width - leftInset - rightInset - 30.0, item.presentationData.theme.theme, descriptionText, descriptionExtraData)
             
             var (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             if extensionTextLayout.truncated, let text = extensionText?.string  {
@@ -813,7 +1031,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 insets.bottom += 35.0
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.size.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.height - 5.0 + descriptionNodeLayout.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
             
             return (nodeLayout, { animation in
                 if let strongSelf = self {
@@ -937,7 +1155,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 9.0), size: titleNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: 7.0), size: titleNodeLayout))
                     let _ = titleNodeApply()
                     
                     var descriptionOffset: CGFloat = 0.0
@@ -958,7 +1176,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     transition.updateFrame(node: strongSelf.textNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0), size: textNodeLayout.size))
                     let _ = textNodeApply()
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset - 1.0, y: strongSelf.titleNode.frame.maxY - 3.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout))
                     let _ = descriptionNodeApply()
                     
                     let _ = dateNodeApply()
@@ -969,7 +1187,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 12.0, y: 8.0), size: iconSize)
                     transition.updateFrame(node: strongSelf.extensionIconNode, frame: iconFrame)
                     strongSelf.extensionIconNode.image = extensionIconImage
-                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - extensionTextLayout.size.width) / 2.0), y: iconFrame.minY + 7.0 + floor((iconFrame.height - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
+                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - extensionTextLayout.size.width) / 2.0), y: iconFrame.minY + 7.0 + floorToScreenPixels((iconFrame.height - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
                     
                     transition.updateFrame(node: strongSelf.iconStatusNode, frame: iconFrame)
                     
@@ -1018,7 +1236,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
 
                     if let downloadStatusIconNode = strongSelf.downloadStatusIconNode {
-                        transition.updateFrame(node: downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 3.0, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 18.0) / 2.0)), size: CGSize(width: 18.0, height: 18.0)))
+                        transition.updateFrame(node: downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 3.0, y: strongSelf.descriptionNode.frame.minY + floorToScreenPixels((strongSelf.descriptionNode.frame.height - 18.0) / 2.0) + UIScreenPixel), size: CGSize(width: 18.0, height: 18.0)))
                     }
                     
                     if let updatedFetchControls = updatedFetchControls {
@@ -1063,10 +1281,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         let lineDiameter: CGFloat = 8.0
 
                         let titleFrame = strongSelf.titleNode.frame
-                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
                         
                         let descriptionFrame = strongSelf.descriptionNode.frame
-                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: descriptionFrame.minX, y: descriptionFrame.minY + floor((descriptionFrame.height - lineDiameter) / 2.0)), width: descriptionLineWidth, diameter: lineDiameter))
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: descriptionFrame.minX, y: descriptionFrame.minY + floorToScreenPixels((descriptionFrame.height - lineDiameter) / 2.0)), width: descriptionLineWidth, diameter: lineDiameter))
                         
                         if let media = selectedMedia as? TelegramMediaFile, media.isInstantVideo {
                             shapes.append(.circle(iconFrame))
@@ -1236,7 +1454,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             switch maybeFetchStatus {
                 case .Fetching(_, let progress), .Paused(let progress):
-                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 3.0, width: floor((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
+                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 3.0, width: floorToScreenPixels((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
                     let linearProgressNode: LinearProgressNode
                     if let current = self.linearProgressNode {
                         linearProgressNode = current
@@ -1326,10 +1544,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
             alphaTransition.updateAlpha(node: self.descriptionNode, alpha: 1.0)
         }
         
-        let descriptionFont = Font.with(size: floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
+        let descriptionFont = Font.with(size: floorToScreenPixels(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
         self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
         let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
-        transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))
+        transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: CGPoint(x: self.descriptionNode.frame.minX, y: self.descriptionNode.frame.minY + floorToScreenPixels((self.descriptionNode.bounds.height - descriptionSize.height) / 2.0)), size: descriptionSize))
     }
     
     public func activateMedia() {

@@ -133,6 +133,22 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 return nil
             }
             return Message.AssociatedThreadInfo(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor)
+        },
+        decodeAutoremoveTimeout: { cachedData in
+            if let cachedData = cachedData as? CachedUserData {
+                if case let .known(value) = cachedData.autoremoveTimeout {
+                    return value?.effectiveValue
+                }
+            } else if let cachedData = cachedData as? CachedGroupData {
+                if case let .known(value) = cachedData.autoremoveTimeout {
+                    return value?.effectiveValue
+                }
+            } else if let cachedData = cachedData as? CachedChannelData {
+                if case let .known(value) = cachedData.autoremoveTimeout {
+                    return value?.effectiveValue
+                }
+            }
+            return nil
         }
     )
 }()

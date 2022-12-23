@@ -33,6 +33,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func disclosureOptionArrowsImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.disclosureOptionArrowsImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/ContextDisclosureArrow"), color: theme.list.disclosureArrowColor)
+        })
+    }
+    
     public static func disclosureLockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDisclosureLocked.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.list.disclosureArrowColor)
@@ -297,6 +303,12 @@ public struct PresentationResourcesItemList {
     public static func uploadToneIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.uploadToneIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Settings/UploadTone"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func topicArrowDescriptionIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListTopicArrowIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/TopicArrowIcon"), color: theme.list.itemSecondaryTextColor)
         })
     }
 }

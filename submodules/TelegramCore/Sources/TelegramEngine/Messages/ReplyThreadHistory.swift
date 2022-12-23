@@ -138,12 +138,15 @@ private class ReplyThreadHistoryContextImpl {
             }
         })
         
-        let updateInitialState: Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> = account.postbox.transaction { transaction -> Api.InputPeer? in
-            return transaction.getPeer(data.messageId.peerId).flatMap(apiInputPeer)
+        let updateInitialState: Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> = account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(data.messageId.peerId)
         }
         |> castError(FetchChannelReplyThreadMessageError.self)
-        |> mapToSignal { inputPeer -> Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> in
-            guard let inputPeer = inputPeer else {
+        |> mapToSignal { peer -> Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> in
+            guard let peer = peer else {
+                return .fail(.generic)
+            }
+            guard let inputPeer = apiInputPeer(peer) else {
                 return .fail(.generic)
             }
             
@@ -156,7 +159,7 @@ private class ReplyThreadHistoryContextImpl {
                     switch discussionMessage {
                     case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                         let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                            StoreMessage(apiMessage: message)
+                            StoreMessage(apiMessage: message, peerIsForum: peer.isForum)
                         }
                         
                         guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
@@ -590,6 +593,14 @@ public struct ChatReplyThreadMessage: Equatable {
         self.initialAnchor = initialAnchor
         self.isNotAvailable = isNotAvailable
     }
+    
+    public var normalized: ChatReplyThreadMessage {
+        if self.isForumPost {
+            return ChatReplyThreadMessage(messageId: self.messageId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+        } else {
+            return self
+        }
+    }
 }
 
 public enum FetchChannelReplyThreadMessageError {
@@ -597,12 +608,15 @@ public enum FetchChannelReplyThreadMessageError {
 }
 
 func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: MessageId, atMessageId: MessageId?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(messageId.peerId)
     }
     |> castError(FetchChannelReplyThreadMessageError.self)
-    |> mapToSignal { inputPeer -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> in
-        guard let inputPeer = inputPeer else {
+    |> mapToSignal { peer -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> in
+        guard let peer = peer else {
+            return .fail(.generic)
+        }
+        guard let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
         
@@ -624,7 +638,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                 switch discussionMessage {
                 case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                     let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                        StoreMessage(apiMessage: message)
+                        StoreMessage(apiMessage: message, peerIsForum: peer.isForum)
                     }
                     
                     guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {

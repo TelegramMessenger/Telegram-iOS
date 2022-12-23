@@ -1,5 +1,6 @@
 import UIKit
 import EsimAuth
+import NGCore
 import NGLocalization
 import NGRemoteConfig
 import NGSpecialOffer
@@ -18,6 +19,8 @@ protocol AssistantPresenterOutput: AnyObject {
     func display(specialOffer: SpecialOfferViewModel, animated: Bool)
     func displaySuccessToast()
     func displayCommunitySection(isHidden: Bool)
+    func displayLottery(_: Bool, animated: Bool)
+    func displayLottery(jackpot: Money)
     
     func onLogout()
 }
@@ -112,6 +115,14 @@ final class AssistantPresenter: AssistantPresenterInput {
     
     func handleSuccessSignInWithTelegram() {
         output?.displaySuccessToast()
+    }
+    
+    func presentLottery(_ flag: Bool) {
+        output?.displayLottery(flag, animated: viewDidAppear)
+    }
+    
+    func presentLottery(jackpot: Money) {
+        output?.displayLottery(jackpot: jackpot)
     }
 }
 

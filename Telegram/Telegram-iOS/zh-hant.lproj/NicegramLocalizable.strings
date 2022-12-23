@@ -1,7 +1,138 @@
-/* 
-  NicegramLocalization.strings
-  Telegram
+/*EsimModule*/
+"Error.Default" = "出了點問題。請稍後再試一次";
 
-  Created by user on 1.06.22.
-  
-*/
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Nicegram 助手";
+"Nicegram.Assistant.MobileData" = "行動數據";
+"Nicegram.Assistant.MobileData.Esim" = "(eSIM)";
+"Nicegram.Assistant.MobileData.Description" = "直接在應用程式中取得行動數據";
+"Nicegram.Assistant.NicegramCommunity" = "Nicegram 社群";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "官方頻道";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "官方聊天";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "所有頻道";
+"Nicegram.Assistant.Support" = "支援";
+"Nicegram.Assistant.Rate us" = "為我們評分";
+"Nicegram.Assistant.Logout" = "登出";
+"Nicegram.Assistant.Swipe" = "向上滑動以關閉助手";
+"Nicegram.Assistant.SignIn" = "登入";
+"Nicegram.Assistant.SpecialOffer" = "特別優惠";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Nicegram 助手";
+"Nicegram.Assistant.Hint.Subtitle" = "可用功能";
+"Nicegram.Assistant.Hint.MobileData" = "行動數據 (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "虛擬手機號碼";
+"Nicegram.Assistant.Hint.Wallet" = "加密貨幣錢包";
+"Nicegram.Assistant.Hint.Support" = "支援";
+"Nicegram.Assistant.Hint.Footer" = "點選助手圖示來瞭解更多資訊";
+"Nicegram.Assistant.Hint.Comming" = "即將推出";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "用電子信箱登入";
+"Nicegram.Login.Email.Title" = "電子信箱";
+"Nicegram.Login.Email.Placeholder" = "輸入您的電子郵件地址";
+"Nicegram.Login.Password.Placeholder" = "輸入您的密碼";
+"Nicegram.Login.OrContinue" = "或以 (sth.) 繼續";
+"Nicegram.Login.Button" = "登入";
+"Nicegram.Login.ForgotPass" = "忘記密碼？";
+"Nicegram.Login.isRegister" = "尚未註冊？";
+"Nicegram.Login.SignUp" = "註冊";
+"Nicegram.Login.Action.Error" = "密碼無效或是使用者沒有密碼。";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "忘記密碼？";
+"Nicegram.ForgotPass.Subtitle" = "輸入您已經註冊的電子郵件地址";
+"Nicegram.ForgotPass.Email.Title" = "電子信箱";
+"Nicegram.ForgotPass.Email.Placeholder" = "輸入您的電子郵件地址";
+"Nicegram.ForgotPass.Button" = "傳送代碼至電子信箱";
+
+/*Nicegram Registration*/
+"Nicegram.Registration.Title" = "註冊您的帳戶";
+"Nicegram.Registration.Email" = "電子信箱";
+"Nicegram.Registration.Email.Error" = "沒有與此識別碼對應的使用者記錄。該使用者可能已遭刪除。";
+"Nicegram.Registration.Password" = "密碼";
+"Nicegram.Registration.FirstName" = "名";
+"Nicegram.Registration.LastName" = "姓";
+"Nicegram.Registration.Button" = "註冊";
+"Nicegram.Registration.Question" = "已經註冊了嗎？";
+"Nicegram.Registration.LogIn" = "登入";
+
+/*Nicegram alert and errors*/
+"Nicegram.Alert.InboxCheck" = "我們已向您寄送了一封驗證電子郵件。\n請查看您的收件匣！";
+"Nicegram.Alert.Continue" = "繼續";
+"Nicegram.Alert.BaseError" = "出了點問題。請稍後再試一次";
+"Nicegram.Alert.Success" = "成功！";
+"Nicegram.Alert.TryAgain" = "再試一次";
+
+/*Nicegram how to install*/
+"Nicegram.Install.Title" = "設定您的手機";
+"Nicegram.Install.VideoInstructions.Title" = "播放影片教學";
+"Nicegram.Install.Manual.Title" = "手動安裝";
+"Nicegram.Install.Manual.Subtitle" = "設定 → 行動數據 → 新增流量方案";
+"Nicegram.Install.Manual.Scan" = "掃描";
+"Nicegram.Install.Manual.Address" = "SM-DP+ 位址";
+"Nicegram.Install.Manual.Code" = "啟用碼";
+"Nicegram.Install.APN.Title" = "安裝 APN";
+"Nicegram.Install.APN.Subtitle" = "設定 → 行動數據 → 方案 → SMTH";
+"Nicegram.Install.APN" = "APN";
+"Nicegram.Install.Roaming.Title" = "開啟數據漫遊";
+"Nicegram.Install.Roaming.Subtitle" = "設定 → 行動數據";
+"Nicegram.Install.Roaming.Data" = "數據漫遊";
+"Nicegram.Install.Done" = "完成";
+
+/*Nicegram qrcode*/
+"Nicegram.QRCode.Title" = "掃描 QR";
+"Nicegram.QRCode.Description" = "使用手機相機掃描 QR code 來啟用裝置上的 eSIM 卡。歡迎與他人分享代碼！";
+"Nicegram.QRCode.Share" = "分享 QR code";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "行動數據";
+"Nicegram.MobileData.NoData" = "到目前為止沒有購買過行動數據流量";
+"Nicegram.MobileData.Action.Add" = "增加更多數據流量";
+
+"Nicegram.MobileData.MyEsim.Title" = "我的 eSIM";
+"Nicegram.MobileData.MyEsim.Worldwide" = "全球";
+"Nicegram.MobileData.MyEsim.Add" = "增加更多數據流量";
+"Nicegram.MobileData.MyEsim.Duration" = "期間";
+"Nicegram.MobileData.MyEsim.Duration.Status" = "吃到飽";
+"Nicegram.MobileData.MyEsim.Status" = "可用";
+"Nicegram.MobileData.MyEsim.Mb" = "Mb";
+
+"Nicegram.Internet.Trafic" = "網路流量";
+"Nicegram.Internet.Duration" = "期間";
+"Nicegram.Internet.Number" = "手機號碼";
+"Nicegram.Internet.Info.Title" = "額外資訊";
+"Nicegram.Internet.Plan.Title" = "流量方案優點";
+"Nicegram.Internet.Plan.Description" = "您可以無限存取高速且安全的網路連線";
+"Nicegram.Internet.Coverage.Title" = "國家覆蓋率";
+"Nicegram.Internet.Coverage.Description" = "此流量方案在 %@ 個國家有效。請注意，行動數據價格可能因國家而有所不同";
+"Nicegram.Internet.Start.Title" = "開始入門";
+"Nicegram.Internet.Start.Description" = "要開始使用 eSIM+，請先儲值餘額，之後無論您身在何處皆能享受不間斷的網路連線";
+"Nicegram.Internet.Countries.Title" = "支援的國家";
+"Nicegram.Internet.Countries.SeeAll" = "查看全部";
+"Nicegram.Internet.Countries.Search" = "搜尋國家";
+"Nicegram.Internet.Countries.Price" = "%@/mb";
+
+/*Nicegram Add Mobile Data*/
+"Nicegram.AddMobileData.Subtitle" = "立即增加行動數據流量 - 稍後使用";
+"Nicegram.AddMobileData.Button" = "取得 %@ 的方案";
+"Nicegram.AddMobileData.Countries" = "支援的國家";
+
+/*Updates*/
+"Nicegram.MobileData.MyEsim.FAQ" = "常見問答集";
+"Nicegram.Internet.Number.Included" = "包含";
+"Nicegram.Alert.Copied" = "已複製";
+"Nicegram.Alert.Ok" = "好";
+"Nicegram.Error.NotSupportedDataPlan" = "不再支援此流量方案";
+"Auth.ErrorUserNotFound" = "沒有與此識別碼對應的使用者記錄。該使用者可能已遭刪除。";
+"Auth.ErrorWrongPassword" = "密碼無效或是使用者沒有密碼。";
+"Auth.ErrorAlreadyInUse" = "此電子郵件地址已有其他帳戶使用";
+"Error.EsimProfileBlocked" = "您的 esim profile 已遭封鎖";
+"Error.EsimProfileExpired" = "您的 esim profile 已過期";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "您現在可獲得最新優惠，立即查看！";
+"Alert.TelegramLogin.PositiveBtn" = "繼續";

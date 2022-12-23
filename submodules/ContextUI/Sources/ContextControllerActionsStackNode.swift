@@ -88,7 +88,6 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.titleLabelNode = ImmediateTextNode()
         self.titleLabelNode.isAccessibilityElement = false
         self.titleLabelNode.displaysAsynchronously = false
-        self.titleLabelNode.isUserInteractionEnabled = false
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.isAccessibilityElement = false
@@ -172,6 +171,16 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.pressed()
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.titleLabelNode.tapAttributeAction != nil {
+            if let result = self.titleLabelNode.hitTest(self.view.convert(point, to: self.titleLabelNode.view), with: event) {
+                return result
+            }
+        }
+        
+        return super.hitTest(point, with: event)
+    }
+    
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
         let verticalInset: CGFloat = 11.0
@@ -232,16 +241,31 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                     body: MarkdownAttributeSet(font: titleFont, textColor: titleColor),
                     bold: MarkdownAttributeSet(font: titleBoldFont, textColor: titleColor),
                     link: MarkdownAttributeSet(font: titleBoldFont, textColor: presentationData.theme.list.itemAccentColor),
-                    linkAttribute: { _ in return nil }
+                    linkAttribute: { value in return ("URL", value) }
                 )
             )
             self.titleLabelNode.attributedText = attributedText
+            self.titleLabelNode.linkHighlightColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5)
+            self.titleLabelNode.highlightAttributeAction = { attributes in
+                if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                    return NSAttributedString.Key(rawValue: "URL")
+                } else {
+                    return nil
+                }
+            }
+            self.titleLabelNode.tapAttributeAction = { [weak item] attributes, _ in
+                if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                    item?.textLinkAction()
+                }
+            }
         } else {
             self.titleLabelNode.attributedText = NSAttributedString(
                 string: self.item.text,
                 font: titleFont,
                 textColor: titleColor)
         }
+        
+        self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil
         
         self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
             return NSAttributedString(

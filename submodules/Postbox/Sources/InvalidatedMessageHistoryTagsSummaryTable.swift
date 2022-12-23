@@ -4,11 +4,13 @@ public struct InvalidatedMessageHistoryTagsSummaryKey: Equatable, Hashable {
     public let peerId: PeerId
     public let namespace: MessageId.Namespace
     public let tagMask: MessageTags
+    public let threadId: Int64?
     
-    public init(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
+    public init(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags, threadId: Int64?) {
         self.peerId = peerId
         self.namespace = namespace
         self.tagMask = tagMask
+        self.threadId = threadId
     }
 }
 
@@ -28,11 +30,20 @@ final class InvalidatedMessageHistoryTagsSummaryTable: Table {
     }
     
     private func key(_ key: InvalidatedMessageHistoryTagsSummaryKey) -> ValueBoxKey {
-        let result = ValueBoxKey(length: 4 + 4 + 8)
-        result.setUInt32(0, value: key.tagMask.rawValue)
-        result.setInt32(4, value: key.namespace)
-        result.setInt64(4 + 4, value: key.peerId.toInt64())
-        return result
+        if let threadId = key.threadId {
+            let result = ValueBoxKey(length: 4 + 4 + 8 + 8)
+            result.setUInt32(0, value: key.tagMask.rawValue)
+            result.setInt32(4, value: key.namespace)
+            result.setInt64(4 + 4, value: key.peerId.toInt64())
+            result.setInt64(4 + 4 + 8, value: threadId)
+            return result
+        } else {
+            let result = ValueBoxKey(length: 4 + 4 + 8)
+            result.setUInt32(0, value: key.tagMask.rawValue)
+            result.setInt32(4, value: key.namespace)
+            result.setInt64(4 + 4, value: key.peerId.toInt64())
+            return result
+        }
     }
     
     private func lowerBound(tagMask: MessageTags, namespace: MessageId.Namespace) -> ValueBoxKey {
@@ -51,10 +62,20 @@ final class InvalidatedMessageHistoryTagsSummaryTable: Table {
         self.valueBox.range(self.table, start: self.lowerBound(tagMask: tagMask, namespace: namespace), end: self.upperBound(tagMask: tagMask, namespace: namespace), values: { key, value in
             var version: Int32 = 0
             value.read(&version, offset: 0, length: 4)
-            entries.append(InvalidatedMessageHistoryTagsSummaryEntry(key: InvalidatedMessageHistoryTagsSummaryKey(peerId: PeerId(key.getInt64(4 + 4)), namespace: key.getInt32(4), tagMask: MessageTags(rawValue: key.getUInt32(0))), version: version))
+            
+            var threadId: Int64?
+            if key.length >= 4 + 4 + 8 + 8 {
+                threadId = key.getInt64(4 + 4 + 8)
+            }
+            
+            entries.append(InvalidatedMessageHistoryTagsSummaryEntry(key: InvalidatedMessageHistoryTagsSummaryKey(peerId: PeerId(key.getInt64(4 + 4)), namespace: key.getInt32(4), tagMask: MessageTags(rawValue: key.getUInt32(0)), threadId: threadId), version: version))
             return true
         }, limit: 0)
         return entries
+    }
+    
+    func get(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace) -> InvalidatedMessageHistoryTagsSummaryEntry? {
+        return self.get(InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: namespace, tagMask: tagMask, threadId: threadId))
     }
     
     private func get(_ key: InvalidatedMessageHistoryTagsSummaryKey) -> InvalidatedMessageHistoryTagsSummaryEntry? {

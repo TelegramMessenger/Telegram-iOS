@@ -86,7 +86,18 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
 
 public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false, blurred: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
-    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, clipStyle: round ? .round : .none, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
+    
+    let clipStyle: AvatarNodeClipStyle
+    if round {
+        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            clipStyle = .roundedRect
+        } else {
+            clipStyle = .round
+        }
+    } else {
+        clipStyle = .none
+    }
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, clipStyle: clipStyle, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
         if fullSize, let fullSizeSignal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.last, displayDimensions: size, emptyColor: nil, synchronousLoad: true) {
             iconSignal = combineLatest(.single(nil) |> then(signal), .single(nil) |> then(fullSizeSignal))
             |> mapToSignal { thumbnailImage, fullSizeImage -> Signal<UIImage?, NoError> in
@@ -174,25 +185,26 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                             }
                             if shouldBlur {
                                 let imageContextSize = size.width > 200.0 ? CGSize(width: 192.0, height: 192.0) : CGSize(width: 64.0, height: 64.0)
-                                let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, clear: true)
-                                imageContext.withFlippedContext { c in
-                                    c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
+                                if let imageContext = DrawingContext(size: imageContextSize, scale: 1.0, clear: true) {
+                                    imageContext.withFlippedContext { c in
+                                        c.draw(dataImage, in: CGRect(origin: CGPoint(), size: imageContextSize))
+                                        
+                                        context.setBlendMode(.saturation)
+                                        context.setFillColor(UIColor(rgb: 0xffffff, alpha: 1.0).cgColor)
+                                        context.fill(CGRect(origin: CGPoint(), size: size))
+                                        context.setBlendMode(.copy)
+                                    }
                                     
-                                    context.setBlendMode(.saturation)
-                                    context.setFillColor(UIColor(rgb: 0xffffff, alpha: 1.0).cgColor)
-                                    context.fill(CGRect(origin: CGPoint(), size: size))
-                                    context.setBlendMode(.copy)
+                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                    if size.width > 200.0 {
+                                        telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                        telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                        telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                        telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                    }
+                                    
+                                    dataImage = imageContext.generateImage()!.cgImage!
                                 }
-
-                                telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
-                                if size.width > 200.0 {
-                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
-                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
-                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
-                                    telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
-                                }
-                                
-                                dataImage = imageContext.generateImage()!.cgImage!
                             }
                             
                             context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))

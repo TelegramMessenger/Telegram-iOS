@@ -25,6 +25,8 @@
 "NiceFeatures.Account.Header" = "CÀI ĐẶT TÀI KHOẢN";
 "NiceFeatures.Folders.TgFolders" = "Đặt mục chia tin nhắn ở dưới cùng";
 "NiceFeatures.Folders.TgFolders.Notice" = "Danh sách thư mục kiểu cho hệ điều hành iOS";
+
+"NiceFeatures.RoundVideos.Header" = "ROUND VIDEOS";
 "NiceFeatures.RoundVideos.UseRearCamera" = "Bắt đầu với camera sau";
 
 "NiceFeatures.InstantLock" = "Tức thì";

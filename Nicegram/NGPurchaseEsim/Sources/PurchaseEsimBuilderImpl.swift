@@ -4,6 +4,7 @@ import EsimAuth
 import EsimMobileDataPurchaseProvider
 import EsimMobileDataPayments
 import NGApiClient
+import NGAppContext
 import NGAuth
 import NGCountriesList
 import NGMappers
@@ -16,7 +17,7 @@ import NGTheme
 import NGEnv
 
 public protocol PurchaseEsimBuilder {
-    func build(icc: String?, regionId: Int, deeplink: Deeplink?, listener: PurchaseEsimListener?, loginListener: LoginListener?) -> UIViewController
+    func build(icc: String?, regionId: Int, deeplink: Deeplink?, listener: PurchaseEsimListener?) -> UIViewController
 }
 
 @available(iOS 13, *)
@@ -24,6 +25,7 @@ public class PurchaseEsimBuilderImpl: PurchaseEsimBuilder {
     
     //  MARK: - Dependencies
     
+    private let appContext: AppContext
     private let tgAccountContext: AccountContext
     private let auth: EsimAuth
     private let esimRepository: EsimRepository
@@ -32,7 +34,8 @@ public class PurchaseEsimBuilderImpl: PurchaseEsimBuilder {
     
     //  MARK: - Lifecycle
     
-    public init(tgAccountContext: AccountContext, auth: EsimAuth, esimRepository: EsimRepository, ngTheme: NGThemeColors) {
+    public init(appContext: AppContext, tgAccountContext: AccountContext, auth: EsimAuth, esimRepository: EsimRepository, ngTheme: NGThemeColors) {
+        self.appContext = appContext
         self.tgAccountContext = tgAccountContext
         self.auth = auth
         self.esimRepository = esimRepository
@@ -41,16 +44,10 @@ public class PurchaseEsimBuilderImpl: PurchaseEsimBuilder {
     
     //  MARK: - Public Functions
 
-    public func build(icc: String?, regionId: Int, deeplink: Deeplink?, listener: PurchaseEsimListener?, loginListener: LoginListener?) -> UIViewController {
+    public func build(icc: String?, regionId: Int, deeplink: Deeplink?, listener: PurchaseEsimListener?) -> UIViewController {
         let controller = PurchaseEsimViewController(ngTheme: ngTheme)
 
         let router = PurchaseEsimRouter(
-            loginBuilder: LoginBuilderImpl(
-                tgAccountContext: tgAccountContext,
-                esimAuth: auth,
-                ngTheme: ngTheme,
-                loginListener: loginListener
-            ),
             countriesListBuilder: CountriesListBuilderImpl(
                 ngTheme: ngTheme
             )
@@ -82,10 +79,11 @@ public class PurchaseEsimBuilderImpl: PurchaseEsimBuilder {
             deeplink: deeplink,
             esimRepository: esimRepository,
             purchaseEsimUseCase: PurchaseEsimUseCase(
-                auth: auth,
+                getCurrentUserUseCase: appContext.resolveGetCurrentUserUseCase(),
                 userEsimsRepository: esimRepository,
                 purchaseEsimService: purchaseService
-            )
+            ),
+            initiateLoginWithTelegramUseCase: appContext.resolveInitiateLoginWithTelegramUseCase()
         )
         interactor.output = presenter
         interactor.router = router

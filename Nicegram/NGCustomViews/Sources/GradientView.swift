@@ -54,6 +54,6 @@ public extension CustomButton {
         gradientView.colors = colors
         gradientView.startPoint = startPoint
         gradientView.endPoint = endPoint
-        self.backgrounView = gradientView
+        self.backgroundView = gradientView
     }
 }

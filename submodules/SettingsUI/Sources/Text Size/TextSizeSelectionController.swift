@@ -219,10 +219,10 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         var items: [ChatListItem] = []
         
         let interaction = ChatListNodeInteraction(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
-        }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in
-        }, activateChatPreview: { _, _, gesture, _ in
+        }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in
+        }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
-        }, present: { _ in })
+        }, present: { _ in }, openForumThread: { _, _ in })
 
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
 
@@ -242,7 +242,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
                 chatListLocation: .chatList(groupId: .root),
                 filterData: nil,
                 index: .chatList(ChatListIndex(pinningIndex: isPinned ? 0 : nil, messageIndex: MessageIndex(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 0), timestamp: timestamp))),
-                content: .peer(
+                content: .peer(ChatListItemContent.PeerData(
                     messages: [
                         EngineMessage(
                             stableId: 0,
@@ -284,8 +284,10 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
                     ignoreUnreadBadge: false,
                     displayAsMessage: false,
                     hasFailedMessages: false,
-                    forumTopicData: nil
-                ),
+                    forumTopicData: nil,
+                    topForumTopicItems: [],
+                    autoremoveTimeout: nil
+                )),
                 editing: false,
                 hasActiveRevealControls: false,
                 selected: false,

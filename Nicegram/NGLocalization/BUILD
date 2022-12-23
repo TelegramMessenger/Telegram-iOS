@@ -7,7 +7,7 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-		"//Vendor/CrowdinSDK:CrowdinSDK",
+        
     ],
     visibility = ["//visibility:public"],
 

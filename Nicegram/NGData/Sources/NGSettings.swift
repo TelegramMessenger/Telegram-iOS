@@ -90,9 +90,6 @@ public struct NGSettings {
     @NGStorage(key: "showRegDate", defaultValue: true)
     public static var showRegDate: Bool
     
-    @NGStorage(key: "showAssistantHint", defaultValue: true)
-    public static var showAssistantHint: Bool
-    
     @NGStorage(key: "shouldDownloadVideo", defaultValue: false)
     public static var shouldDownloadVideo: Bool
     

@@ -317,7 +317,7 @@ final class AuthorizedApplicationContext {
                     if let _ = threadData, let threadId = firstMessage.threadId {
                         chatLocation = .replyThread(ChatReplyThreadMessage(
                             messageId: MessageId(peerId: firstMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
-                        ))
+                        ).normalized)
                     } else {
                         guard let peer = firstMessage.peers[firstMessage.id.peerId] else {
                             return

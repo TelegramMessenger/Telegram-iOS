@@ -7,7 +7,8 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/AccountContext:AccountContext"
+        "//submodules/AccountContext:AccountContext",
+		"//Nicegram/NGCore:NGCore",
     ],
     visibility = [
         "//visibility:public",

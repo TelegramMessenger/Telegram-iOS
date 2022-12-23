@@ -31,7 +31,7 @@ public struct EsimApiOptionalDate: Decodable {
             if let dateFromString = formatter.date(from: string) {
                 wrappedValue = dateFromString
             } else {
-                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Expected \(formatter.dateFormat ?? ""), but found \(string) instead")
+                wrappedValue = nil
             }
         } else {
             wrappedValue = nil

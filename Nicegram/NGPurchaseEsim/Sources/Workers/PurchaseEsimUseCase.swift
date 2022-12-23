@@ -1,5 +1,6 @@
 import UIKit
 import EsimAuth
+import NGAuth
 import NGModels
 import NGRepositories
 
@@ -7,14 +8,14 @@ class PurchaseEsimUseCase {
     
     //  MARK: - Dependencies
     
-    private let auth: EsimAuth
+    private let getCurrentUserUseCase: GetCurrentUserUseCase
     private let userEsimsRepository: UserEsimsRepository
     private let purchaseEsimService: PurchaseEsimService
     
     //  MARK: - Lifecycle
     
-    init(auth: EsimAuth, userEsimsRepository: UserEsimsRepository, purchaseEsimService: PurchaseEsimService) {
-        self.auth = auth
+    init(getCurrentUserUseCase: GetCurrentUserUseCase, userEsimsRepository: UserEsimsRepository, purchaseEsimService: PurchaseEsimService) {
+        self.getCurrentUserUseCase = getCurrentUserUseCase
         self.userEsimsRepository = userEsimsRepository
         self.purchaseEsimService = purchaseEsimService
     }
@@ -22,7 +23,7 @@ class PurchaseEsimUseCase {
     //  MARK: - Public Functions
 
     func topUpEsim(icc: String, offer: EsimOffer, from vc: UIViewController,  completion: ((Result<UserEsim, PurchaseEsimError>) -> ())?) {
-        guard auth.isAuthorized else {
+        guard getCurrentUserUseCase.isAuthorized() else {
             completion?(.failure(.notAuthorized))
             return
         }
@@ -41,7 +42,7 @@ class PurchaseEsimUseCase {
         }
     }
     func purchaseEsim(offer: EsimOffer, from vc: UIViewController, completion: ((Result<UserEsim, PurchaseEsimError>) -> ())?) {
-        guard auth.isAuthorized else {
+        guard getCurrentUserUseCase.isAuthorized() else {
             completion?(.failure(.notAuthorized))
             return
         }

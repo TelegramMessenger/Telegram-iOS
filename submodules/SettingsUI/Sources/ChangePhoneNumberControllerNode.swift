@@ -165,13 +165,13 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
                 let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.presentationData.strings) ?? country.name
                 strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 
-                let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
+                let maskFont = Font.with(size: 17.0, design: .regular, traits: [.monospacedNumbers])
                 if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: strongSelf.presentationData.theme.list.itemPlaceholderTextColor) }) {
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = nil
                     strongSelf.phoneInputNode.mask = mask
                 } else {
                     strongSelf.phoneInputNode.mask = nil
-                    strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strongSelf.presentationData.strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: strongSelf.presentationData.theme.list.itemPlaceholderTextColor)
+                    strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strongSelf.presentationData.strings.Login_PhonePlaceholder, font: Font.regular(17.0), textColor: strongSelf.presentationData.theme.list.itemPlaceholderTextColor)
                 }
                 return true
             } else {

@@ -1364,7 +1364,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let heightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: inputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: self.isInFocus, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
             
-            let boundedHeight = min(heightAndOverflow.0, layout.standardInputHeight)
+            let boundedHeight = inputNode.followsDefaultHeight ? min(heightAndOverflow.0, layout.standardInputHeight) : heightAndOverflow.0
             
             inputNodeHeightAndOverflow = (
                 boundedHeight,
@@ -1461,7 +1461,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let restrictedNode = self.restrictedNode {
             transition.updateFrame(node: restrictedNode, frame: contentBounds)
             restrictedNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
-            restrictedNode.updateLayout(backgroundNode: self.backgroundNode, size: contentBounds.size, transition: transition)
+            restrictedNode.updateLayout(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: self.chatPresentationInterfaceState.theme, wallpaper: self.chatPresentationInterfaceState.chatWallpaper), fontSize: self.chatPresentationInterfaceState.fontSize, strings: self.chatPresentationInterfaceState.strings, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), backgroundNode: self.backgroundNode, size: contentBounds.size, transition: transition)
         }
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -1876,6 +1876,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 adjustedForPreviousInputHeightFrame.origin.y += heightDifference
                 inputNode.frame = adjustedForPreviousInputHeightFrame
                 transition.updateFrame(node: inputNode, frame: inputNodeFrame)
+                
+                inputNode.updateAbsoluteRect(inputNodeFrame, within: layout.size, transition: transition)
                 
                 if let externalTopPanelContainer = inputNode.externalTopPanelContainer {
                     externalTopPanelContainer.frame = CGRect(origin: adjustedForPreviousInputHeightFrame.offsetBy(dx: 0.0, dy:  externalTopPanelContainerOffset).origin, size: CGSize(width: adjustedForPreviousInputHeightFrame.width, height: 0.0))
@@ -2371,7 +2373,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.historyNodeContainer.isHidden = true
                 self.navigateButtons.isHidden = true
                 self.loadingNode.isHidden = true
+                self.loadingPlaceholderNode?.isHidden = true
                 self.emptyNode?.isHidden = true
+                self.updateIsLoading(isLoading: false, earlier: false, animated: false)
             } else if let restrictedNode = self.restrictedNode {
                 self.restrictedNode = nil
                 restrictedNode.removeFromSupernode()

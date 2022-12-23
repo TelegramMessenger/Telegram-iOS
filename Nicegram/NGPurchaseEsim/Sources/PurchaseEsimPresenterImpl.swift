@@ -106,6 +106,10 @@ extension PurchaseEsimPresenter: PurchaseEsimInteractorOutput {
     func handleOrientation() {
         output.handleOrienation()
     }
+    
+    func presentLoginLoading(_ isLoading: Bool) {
+        output.displayButton(isLoading: isLoading)
+    }
 }
 
 //  MARK: - Mapping

@@ -86,7 +86,9 @@ private class StatusBarItemNode: ASDisplayNode {
     
     func update() {
         let containingBounds = maxSubviewBounds(self.targetView)
-        let context = DrawingContext(size: containingBounds.size, clear: true)
+        guard let context = DrawingContext(size: containingBounds.size, clear: true) else {
+            return
+        }
         
         if let contents = self.targetView.layer.contents, (self.targetView.layer.sublayers?.count ?? 0) == 0 && CFGetTypeID(contents as CFTypeRef) == CGImage.typeID && false {
             let image = contents as! CGImage

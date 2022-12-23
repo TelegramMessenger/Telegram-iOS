@@ -11,6 +11,10 @@ public enum NGTheme {
 public struct NGThemeColors {
     public let theme: NGTheme
     
+    public init(theme: NGTheme) {
+        self.theme = theme
+    }
+    
     public init(telegramTheme: PresentationThemeStatusBarStyle, statusBarStyle: StatusBarStyle) {
         switch statusBarStyle {
         case .White:

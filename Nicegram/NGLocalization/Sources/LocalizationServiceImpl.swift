@@ -1,4 +1,3 @@
-import CrowdinSDK
 import Foundation
 
 public class LocalizationServiceImpl {
@@ -6,6 +5,8 @@ public class LocalizationServiceImpl {
     //  MARK: - Logic
     
     private let tableName: String = "NicegramLocalizable"
+    
+    private var languageCode: String = Locale.currentAppLocale.langCode
     
     //  MARK: - Lifecycle
     
@@ -15,19 +16,48 @@ public class LocalizationServiceImpl {
     
     private init() {}
     
-    public func setup(hash: String, sourceLanguage: String, completion: (() -> ())?) {
-        let providerConfig = CrowdinProviderConfig(hashString: hash, sourceLanguage: sourceLanguage)
-        let config = CrowdinSDKConfig.config()
-            .with(crowdinProviderConfig: providerConfig)
-        DispatchQueue.global().async {
-            CrowdinSDK.startWithConfig(config, completion: completion ?? {})
+    //  MARK: - Public Functions
+
+    public func setLanguageCode(_ langCode: String) {
+        self.languageCode = self.mapLanguageCode(langCode)
+    }
+
+    //  MARK: - Private Functions
+
+    private func localizedString(key: String, langCode: String) -> String {
+        guard let path = Bundle.main.path(forResource: langCode, ofType: "lproj"),
+              let bundle = Bundle(path: path) else {
+            return key
+        }
+        return bundle.localizedString(forKey: key, value: nil, table: tableName)
+    }
+
+    private func mapLanguageCode(_ langCode: String) -> String {
+        var result = langCode
+        
+        let rawSuffix = "-raw"
+        if langCode.hasSuffix(rawSuffix) {
+            result = String(langCode.dropLast(rawSuffix.count))
+        }
+        
+        switch result {
+        case "pt-br":
+            return "pt"
+        default:
+            return result
         }
     }
 }
 
 extension LocalizationServiceImpl: LocalizationService {
     public func localized(_ key: String) -> String {
-        return NSLocalizedString(key, tableName: tableName, comment: "")
+        let localizedString = self.localizedString(key: key, langCode: self.languageCode)
+        
+        if localizedString != key {
+            return localizedString
+        } else {
+            return self.localizedString(key: key, langCode: "en")
+        }
     }
     
     public func localized(_ key: String, with args: CVarArg...) -> String {

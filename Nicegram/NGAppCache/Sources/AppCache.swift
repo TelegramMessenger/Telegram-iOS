@@ -26,6 +26,9 @@ public final class AppCache {
     
     @UserDefaultsBacked(key: "wasOnboardingShown", storage: .standard, defaultValue: false)
     public static var wasOnboardingShown: Bool
+    
+    @UserDefaultsBacked(key: "wasLotteryShown", storage: .standard, defaultValue: false)
+    public static var wasLotteryShown: Bool
 
     public static var wasLauchedBefore: Bool {
         get {

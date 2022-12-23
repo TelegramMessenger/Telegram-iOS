@@ -1254,23 +1254,25 @@ public final class PresentationThemeInputButtonPanel {
     public let panelSeparatorColor: UIColor
     public let panelBackgroundColor: UIColor
     public let buttonFillColor: UIColor
+    public let buttonHighlightColor: UIColor
     public let buttonStrokeColor: UIColor
     public let buttonHighlightedFillColor: UIColor
     public let buttonHighlightedStrokeColor: UIColor
     public let buttonTextColor: UIColor
     
-    public init(panelSeparatorColor: UIColor, panelBackgroundColor: UIColor, buttonFillColor: UIColor, buttonStrokeColor: UIColor, buttonHighlightedFillColor: UIColor, buttonHighlightedStrokeColor: UIColor, buttonTextColor: UIColor) {
+    public init(panelSeparatorColor: UIColor, panelBackgroundColor: UIColor, buttonFillColor: UIColor, buttonHighlightColor: UIColor, buttonStrokeColor: UIColor, buttonHighlightedFillColor: UIColor, buttonHighlightedStrokeColor: UIColor, buttonTextColor: UIColor) {
         self.panelSeparatorColor = panelSeparatorColor
         self.panelBackgroundColor = panelBackgroundColor
         self.buttonFillColor = buttonFillColor
+        self.buttonHighlightColor = buttonHighlightColor
         self.buttonStrokeColor = buttonStrokeColor
         self.buttonHighlightedFillColor = buttonHighlightedFillColor
         self.buttonHighlightedStrokeColor = buttonHighlightedStrokeColor
         self.buttonTextColor = buttonTextColor
     }
     
-    public func withUpdated(panelSeparatorColor: UIColor? = nil, panelBackgroundColor: UIColor? = nil, buttonFillColor: UIColor? = nil, buttonStrokeColor: UIColor? = nil, buttonHighlightedFillColor: UIColor? = nil, buttonHighlightedStrokeColor: UIColor? = nil, buttonTextColor: UIColor? = nil) -> PresentationThemeInputButtonPanel {
-        return PresentationThemeInputButtonPanel(panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelBackgroundColor: panelBackgroundColor ?? self.panelBackgroundColor, buttonFillColor: buttonFillColor ?? self.buttonFillColor, buttonStrokeColor: buttonStrokeColor ?? self.buttonStrokeColor, buttonHighlightedFillColor: buttonHighlightedFillColor ?? self.buttonHighlightedFillColor, buttonHighlightedStrokeColor: buttonHighlightedStrokeColor ?? self.buttonHighlightedStrokeColor, buttonTextColor: buttonTextColor ?? self.buttonTextColor)
+    public func withUpdated(panelSeparatorColor: UIColor? = nil, panelBackgroundColor: UIColor? = nil, buttonFillColor: UIColor? = nil, buttonHighlightColor: UIColor? = nil, buttonStrokeColor: UIColor? = nil, buttonHighlightedFillColor: UIColor? = nil, buttonHighlightedStrokeColor: UIColor? = nil, buttonTextColor: UIColor? = nil) -> PresentationThemeInputButtonPanel {
+        return PresentationThemeInputButtonPanel(panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelBackgroundColor: panelBackgroundColor ?? self.panelBackgroundColor, buttonFillColor: buttonFillColor ?? self.buttonFillColor, buttonHighlightColor: buttonHighlightColor ?? self.buttonHighlightColor, buttonStrokeColor: buttonStrokeColor ?? self.buttonStrokeColor, buttonHighlightedFillColor: buttonHighlightedFillColor ?? self.buttonHighlightedFillColor, buttonHighlightedStrokeColor: buttonHighlightedStrokeColor ?? self.buttonHighlightedStrokeColor, buttonTextColor: buttonTextColor ?? self.buttonTextColor)
     }
 }
 

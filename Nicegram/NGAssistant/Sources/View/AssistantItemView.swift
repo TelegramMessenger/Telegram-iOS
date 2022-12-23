@@ -48,7 +48,7 @@ open class AssistantItemView: UIView {
         addSubview(itemImageView)
         itemImageView.snp.makeConstraints {
             $0.top.equalToSuperview()
-            $0.leading.equalToSuperview().inset(16.0)
+            $0.leading.equalToSuperview()
             $0.height.width.equalTo(29.0)
         }
 
@@ -80,7 +80,7 @@ open class AssistantItemView: UIView {
             $0.height.equalTo(15.0)
             $0.width.equalTo(8.5)
             $0.centerY.equalToSuperview()
-            $0.trailing.equalToSuperview().inset(20.0)
+            $0.trailing.equalToSuperview()
         }
         
         let gesture = UITapGestureRecognizer(target: self, action: #selector(touchUpInside(_:)))

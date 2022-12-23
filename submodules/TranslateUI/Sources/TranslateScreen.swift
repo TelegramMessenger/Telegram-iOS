@@ -38,11 +38,11 @@ private final class TranslateScreenComponent: CombinedComponent {
     let text: String
     let fromLanguage: String?
     let toLanguage: String
-    let copyTranslation: (String) -> Void
+    let copyTranslation: ((String) -> Void)?
     let changeLanguage: (String, String, @escaping (String, String) -> Void) -> Void
     let expand: () -> Void
     
-    init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String, copyTranslation: @escaping (String) -> Void, changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void, expand: @escaping () -> Void) {
+    init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String, copyTranslation: ((String) -> Void)?, changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void, expand: @escaping () -> Void) {
         self.context = context
         self.text = text
         self.fromLanguage = fromLanguage
@@ -458,20 +458,31 @@ private final class TranslateScreenComponent: CombinedComponent {
                 )
             }
             
+            let buttonsSpacing: CGFloat = 24.0
+            let smallSectionSpacing: CGFloat = 8.0
+            
+            var buttonsHeight: CGFloat = 0.0
+            
             let component = context.component
-            let copyButton = copyButton.update(
-                component: TranslateButtonComponent(
-                    theme: theme,
-                    title: strings.Translate_CopyTranslation,
-                    icon: "Chat/Context Menu/Copy",
-                    isEnabled: state.translatedText != nil,
-                    action: { [weak component] in
-                        component?.copyTranslation(state.translatedText ?? "")
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: itemHeight),
-                transition: context.transition
-            )
+            if component.copyTranslation != nil {
+                let copyButton = copyButton.update(
+                    component: TranslateButtonComponent(
+                        theme: theme,
+                        title: strings.Translate_CopyTranslation,
+                        icon: "Chat/Context Menu/Copy",
+                        isEnabled: state.translatedText != nil,
+                        action: { [weak component] in
+                            component?.copyTranslation?(state.translatedText ?? "")
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: itemHeight),
+                    transition: context.transition
+                )
+                context.add(copyButton
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + copyButton.size.height / 2.0))
+                )
+                buttonsHeight += copyButton.size.height + smallSectionSpacing
+            }
             
             let changeLanguageButton = changeLanguageButton.update(
                 component: TranslateButtonComponent(
@@ -489,18 +500,12 @@ private final class TranslateScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            let buttonsSpacing: CGFloat = 24.0
-            let smallSectionSpacing: CGFloat = 8.0
-            
-            context.add(copyButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + copyButton.size.height / 2.0))
-            )
-            
             context.add(changeLanguageButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + copyButton.size.height + smallSectionSpacing + changeLanguageButton.size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + buttonsHeight + changeLanguageButton.size.height / 2.0))
             )
+            buttonsHeight += changeLanguageButton.size.height
             
-            let contentSize = CGSize(width: context.availableSize.width, height: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + copyButton.size.height + smallSectionSpacing + changeLanguageButton.size.height + environment.safeInsets.bottom + 44.0)
+            let contentSize = CGSize(width: context.availableSize.width, height: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + buttonsHeight + environment.safeInsets.bottom + 44.0)
             
             return contentSize
         }
@@ -992,7 +997,7 @@ public class TranslateScreen: ViewController {
     public var pushController: (ViewController) -> Void = { _ in }
     public var presentController: (ViewController) -> Void = { _ in }
     
-    public convenience init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
+    public convenience init(context: AccountContext, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var baseLanguageCode = presentationData.strings.baseLanguageCode
@@ -1010,7 +1015,7 @@ public class TranslateScreen: ViewController {
         var copyTranslationImpl: ((String) -> Void)?
         var changeLanguageImpl: ((String, String, @escaping (String, String) -> Void) -> Void)?
         var expandImpl: (() -> Void)?
-        self.init(context: context, component: TranslateScreenComponent(context: context, text: text, fromLanguage: fromLanguage, toLanguage: toLanguage, copyTranslation: { text in
+        self.init(context: context, component: TranslateScreenComponent(context: context, text: text, fromLanguage: fromLanguage, toLanguage: toLanguage, copyTranslation: !canCopy ? nil : { text in
             copyTranslationImpl?(text)
         }, changeLanguage: { fromLang, toLang, completion in
             changeLanguageImpl?(fromLang, toLang, completion)
@@ -1037,7 +1042,7 @@ public class TranslateScreen: ViewController {
             let pushController = self?.pushController
             let presentController = self?.presentController
             let controller = languageSelectionController(context: context, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
-                let controller = TranslateScreen(context: context, text: text, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true)
+                let controller = TranslateScreen(context: context, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true)
                 controller.pushController = pushController ?? { _ in }
                 controller.presentController = presentController ?? { _ in }
                 presentController?(controller)

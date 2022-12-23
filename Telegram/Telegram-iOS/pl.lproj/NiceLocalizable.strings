@@ -110,6 +110,11 @@
 "Messages.TranslateError" = "Tłumaczenie niedostępne.";
 "Messages.SpeechToText" = "Mowa na tekst";
 "Messages.UndoSpeechToText" = "Cofnij mowę na tekst";
+"Messages.SelectAllFromUser" = "Zaznacz wszystkie od tego użytkownika";
+"Messages.ToLanguage" = "Na język";
+"Messages.ToLanguage.WithCode" = "Na język: %@";
+"Messages.ReplyPrivately" = "Odpowiedz prywatnie";
+"Messages.DeleteAllSystemMessages" = "Usuń wszystkie";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Uzyskaj datę rejestracji";
@@ -153,6 +158,8 @@
 "NicegramSettings.Unblock.Button" = "Odblokuj przewodnik";
 "NicegramSettings.Other.hideReactions" = "Ukryj reakcje";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Pobierz filmy do galerii";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Ignorowane języki";
+"NicegramSettings.ShareChannelsInfoToggle" = "Udostępnij informacje o kanale";
 "Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "Aplikacja wykrywa język każdej wiadomości na urządzeniu. Jest to zadanie o wysokim stopniu zaawansowania, które może mieć wpływ na żywotność baterii.";
 "Premium.rememberFolderOnExit" = "Zapamiętaj bieżący folder przy wyjściu";
 
@@ -180,6 +187,7 @@
 "NicePremium.MentionAll.Desc" = "Szybko poinformuj wszystkich członków grupy i upewnij się, że wszyscy przeczytają twoją wiadomość";
 
 "NicePremium.Renews" = "Automatyczne odnawianie subskrypcji";
+"NicePremium.PricePerMonth" = "Subskrybuj za %@ na miesiąc";
 
 /*Onboarding*/
 "NicegramOnboarding.Continue" = "Kontynuuj";

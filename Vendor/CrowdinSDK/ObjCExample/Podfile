@@ -1,6 +1,0 @@
-platform :ios, '9.0'
-
-target 'CrowdinSDK' do
-  use_frameworks!
-  pod 'CrowdinSDK', :path => '../'
-end

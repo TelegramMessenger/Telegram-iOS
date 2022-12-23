@@ -3,3 +3,9 @@ public var hideUnblock: Bool {
     let defaultValue = false
     return remoteValue ?? defaultValue
 }
+
+public var hideLottery: Bool {
+    let remoteValue = RemoteConfigServiceImpl.shared.get(Bool.self, byKey: "hideLottery")
+    let defaultValue = false
+    return remoteValue ?? defaultValue
+}

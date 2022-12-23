@@ -1,7 +1,138 @@
-/* 
-  NicegramLocalization.strings
-  Telegram
+/*EsimModule*/
+"Error.Default" = "Qualcosa è andato storto. Per favore riprova più tardi";
 
-  Created by user on 1.06.22.
-  
-*/
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Assistente Nicegram";
+"Nicegram.Assistant.MobileData" = "Dati mobili";
+"Nicegram.Assistant.MobileData.Esim" = "(eSIM)";
+"Nicegram.Assistant.MobileData.Description" = "Ricevi dati mobili direttamente nell'app";
+"Nicegram.Assistant.NicegramCommunity" = "Comunità Nicegram";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Canale ufficiale";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Chat ufficiale";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Tutti i canali";
+"Nicegram.Assistant.Support" = "Supporto";
+"Nicegram.Assistant.Rate us" = "Valutaci";
+"Nicegram.Assistant.Logout" = "Esci";
+"Nicegram.Assistant.Swipe" = "Scorri verso l'alto per chiudere l'assistente";
+"Nicegram.Assistant.SignIn" = "Accedi";
+"Nicegram.Assistant.SpecialOffer" = "Offerta speciale";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Assistente Nicegram";
+"Nicegram.Assistant.Hint.Subtitle" = "Funzionalità disponibili";
+"Nicegram.Assistant.Hint.MobileData" = "Dati mobili (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "Numeri di telefono virtuali";
+"Nicegram.Assistant.Hint.Wallet" = "Portafoglio per le criptovalute";
+"Nicegram.Assistant.Hint.Support" = "Supporto";
+"Nicegram.Assistant.Hint.Footer" = "Clicca sull'icona dell'assistente per saperne di più";
+"Nicegram.Assistant.Hint.Comming" = "Prossimamente";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "Accedi tramite Email";
+"Nicegram.Login.Email.Title" = "E-mail";
+"Nicegram.Login.Email.Placeholder" = "Inserisci il tuo indirizzo email";
+"Nicegram.Login.Password.Placeholder" = "Inserisci la tua password";
+"Nicegram.Login.OrContinue" = "o continua con";
+"Nicegram.Login.Button" = "Accedi";
+"Nicegram.Login.ForgotPass" = "Hai dimenticato la password?";
+"Nicegram.Login.isRegister" = "Non sei ancora registrato?";
+"Nicegram.Login.SignUp" = "Registrati";
+"Nicegram.Login.Action.Error" = "La password non è valida o l'utente non ha una password";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "Hai dimenticato la password?";
+"Nicegram.ForgotPass.Subtitle" = "Inserisci l'indirizzo email con cui ti sei già registrato";
+"Nicegram.ForgotPass.Email.Title" = "E-mail";
+"Nicegram.ForgotPass.Email.Placeholder" = "Inserisci il tuo indirizzo email";
+"Nicegram.ForgotPass.Button" = "Invia il codice tramite email";
+
+/*Nicegram Registration*/
+"Nicegram.Registration.Title" = "Registra il tuo account";
+"Nicegram.Registration.Email" = "E-mail";
+"Nicegram.Registration.Email.Error" = "Non esiste alcun utente registrato corrispondente a questo identificatore. L'utente potrebbe essere stato cancellato";
+"Nicegram.Registration.Password" = "Password";
+"Nicegram.Registration.FirstName" = "Nome";
+"Nicegram.Registration.LastName" = "Cognome";
+"Nicegram.Registration.Button" = "Registrati";
+"Nicegram.Registration.Question" = "Già registrato?";
+"Nicegram.Registration.LogIn" = "Accedi";
+
+/*Nicegram alert and errors*/
+"Nicegram.Alert.InboxCheck" = "Ti abbiamo inviato un'email di verifica. \nControlla la tua casella di posta!";
+"Nicegram.Alert.Continue" = "Continua";
+"Nicegram.Alert.BaseError" = "Qualcosa è andato storto. Per favore riprova più tardi";
+"Nicegram.Alert.Success" = "Successo!";
+"Nicegram.Alert.TryAgain" = "Riprova";
+
+/*Nicegram how to install*/
+"Nicegram.Install.Title" = "Configura il tuo telefono";
+"Nicegram.Install.VideoInstructions.Title" = "Riproduci il video con le istruzioni";
+"Nicegram.Install.Manual.Title" = "Installa manualmente";
+"Nicegram.Install.Manual.Subtitle" = "Impostazioni → Dati mobili → Aggiungi piano dati";
+"Nicegram.Install.Manual.Scan" = "Scansiona";
+"Nicegram.Install.Manual.Address" = "Indirizzo SM-DP+";
+"Nicegram.Install.Manual.Code" = "Codice di attivazione";
+"Nicegram.Install.APN.Title" = "Installa l'APN";
+"Nicegram.Install.APN.Subtitle" = "Impostazioni → Dati mobili → Piano → SMTH";
+"Nicegram.Install.APN" = "APN";
+"Nicegram.Install.Roaming.Title" = "Attiva il roaming dati";
+"Nicegram.Install.Roaming.Subtitle" = "Impostazioni → Dati mobili";
+"Nicegram.Install.Roaming.Data" = "Roaming dati";
+"Nicegram.Install.Done" = "Fatto";
+
+/*Nicegram qrcode*/
+"Nicegram.QRCode.Title" = "Scansiona QR";
+"Nicegram.QRCode.Description" = "Scansiona un codice QR con la fotocamera del tuo telefono per attivare una scheda eSIM sul tuo dispositivo. Sentiti libero di condividere il codice con gli altri!";
+"Nicegram.QRCode.Share" = "Condividi il codice QR";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "Dati mobili";
+"Nicegram.MobileData.NoData" = "Nessun dato mobile acquistato finora";
+"Nicegram.MobileData.Action.Add" = "Aggiungi dati mobili";
+
+"Nicegram.MobileData.MyEsim.Title" = "La mia eSIM";
+"Nicegram.MobileData.MyEsim.Worldwide" = "In tutto il mondo";
+"Nicegram.MobileData.MyEsim.Add" = "Aggiungi più dati";
+"Nicegram.MobileData.MyEsim.Duration" = "Durata";
+"Nicegram.MobileData.MyEsim.Duration.Status" = "Illimitato";
+"Nicegram.MobileData.MyEsim.Status" = "Disponibile";
+"Nicegram.MobileData.MyEsim.Mb" = "Mb";
+
+"Nicegram.Internet.Trafic" = "Traffico Internet";
+"Nicegram.Internet.Duration" = "Durata";
+"Nicegram.Internet.Number" = "Numero di telefono";
+"Nicegram.Internet.Info.Title" = "Informazioni aggiuntive";
+"Nicegram.Internet.Plan.Title" = "Vantaggio del piano dati";
+"Nicegram.Internet.Plan.Description" = "Ti viene concesso un accesso illimitato a una connessione Internet sicura e ad alta velocità";
+"Nicegram.Internet.Coverage.Title" = "Copertura paesi";
+"Nicegram.Internet.Coverage.Description" = "Questo piano dati è valido in %@ paesi. Si prega di notare che i prezzi dei dati mobili possono variare a seconda del paese";
+"Nicegram.Internet.Start.Title" = "Per iniziare";
+"Nicegram.Internet.Start.Description" = "Per iniziare a usare eSIM+, ricarica il tuo saldo e poi goditi una connessione Internet senza interruzioni ovunque tu sia";
+"Nicegram.Internet.Countries.Title" = "Paesi supportati";
+"Nicegram.Internet.Countries.SeeAll" = "Mostra tutto";
+"Nicegram.Internet.Countries.Search" = "Cerca il paese";
+"Nicegram.Internet.Countries.Price" = "%@/mb";
+
+/*Nicegram Add Mobile Data*/
+"Nicegram.AddMobileData.Subtitle" = "Aggiungi i dati mobili ora - usali più tardi";
+"Nicegram.AddMobileData.Button" = "Ottieni un piano per %@";
+"Nicegram.AddMobileData.Countries" = "Paesi supportati";
+
+/*Updates*/
+"Nicegram.MobileData.MyEsim.FAQ" = "Domande frequenti";
+"Nicegram.Internet.Number.Included" = "Incluso";
+"Nicegram.Alert.Copied" = "Copiato";
+"Nicegram.Alert.Ok" = "OK";
+"Nicegram.Error.NotSupportedDataPlan" = "Questo piano dati non è più supportato";
+"Auth.ErrorUserNotFound" = "Non esiste alcun utente registrato corrispondente a questo identificativo. L'utente potrebbe essere stato eliminato.";
+"Auth.ErrorWrongPassword" = "La password non è valida o l'utente non ha una password.";
+"Auth.ErrorAlreadyInUse" = "L'indirizzo email è già utilizzato da un altro account.";
+"Error.EsimProfileBlocked" = "Il tuo profilo esim è bloccato";
+"Error.EsimProfileExpired" = "Il tuo profilo esim è scaduto";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "È disponibile una nuova offerta speciale per te; dai un'occhiata!";
+"Alert.TelegramLogin.PositiveBtn" = "Continua";

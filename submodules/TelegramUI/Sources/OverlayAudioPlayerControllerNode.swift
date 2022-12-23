@@ -76,6 +76,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in
         }, navigateToMessageStandalone: { _ in
+        }, navigateToThreadMessage: { _, _, _ in
         }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
@@ -138,6 +139,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _, _ in
         }, displayPremiumStickerTooltip: { _, _ in
+        }, displayEmojiPackTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in

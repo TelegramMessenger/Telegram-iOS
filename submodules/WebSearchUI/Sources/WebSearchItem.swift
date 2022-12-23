@@ -167,7 +167,9 @@ final class WebSearchItemNode: GridItemNode {
                 |> map { image in
                     if let image = image {
                         return { arguments in
-                            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                            guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                                return nil
+                            }
                             let drawingRect = arguments.drawingRect
                             let imageSize = image.size
                             let fittedSize = imageSize.aspectFilled(arguments.boundingSize).fitted(imageSize)

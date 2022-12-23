@@ -32,6 +32,10 @@ public extension TelegramEngine {
         public func updateAccountRemovalTimeout(timeout: Int32) -> Signal<Void, NoError> {
             return _internal_updateAccountRemovalTimeout(account: self.account, timeout: timeout)
         }
+        
+        public func updateGlobalMessageRemovalTimeout(timeout: Int32?) -> Signal<Void, NoError> {
+            return _internal_updateMessageRemovalTimeout(account: self.account, timeout: timeout)
+        }
 
         public func updatePhoneNumberDiscovery(value: Bool) -> Signal<Void, NoError> {
             return _internal_updatePhoneNumberDiscovery(account: self.account, value: value)

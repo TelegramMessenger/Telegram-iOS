@@ -20,6 +20,7 @@ swift_library(
         "//Nicegram/NGCustomViews:NGCustomViews",
         "//Nicegram/NGLocalization:NGLocalization",
         "//Nicegram/NGLogging:NGLogging",
+        "//Nicegram/NGLotteryUI:NGLotteryUI",
         "//Nicegram/NGMyEsims:NGMyEsims",
         "//Nicegram/NGSpecialOffer:NGSpecialOffer",
         "//Nicegram/NGTheme:NGTheme",

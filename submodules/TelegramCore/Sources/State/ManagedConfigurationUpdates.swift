@@ -7,9 +7,11 @@ import MtProtoKit
 
 func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
-        return (network.request(Api.functions.help.getConfig())
-        |> retryRequest
-        |> mapToSignal { result -> Signal<Void, NoError> in
+        return (combineLatest(
+            network.request(Api.functions.help.getConfig()) |> retryRequest,
+            network.request(Api.functions.messages.getDefaultHistoryTTL()) |> retryRequest
+        )
+        |> mapToSignal { result, defaultHistoryTtl -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
                 case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, stickersFavedLimit, _, _, pinnedDialogsCountMax, pinnedInfolderCountMax, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, captionLengthMax, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion, defaultReaction):
@@ -70,6 +72,21 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                                 return settings
                             })
                         }
+                    
+                        let messageAutoremoveSeconds: Int32?
+                        switch defaultHistoryTtl {
+                        case let .defaultHistoryTTL(period):
+                            if period != 0 {
+                                messageAutoremoveSeconds = period
+                            } else {
+                                messageAutoremoveSeconds = nil
+                            }
+                        }
+                        updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
+                            var settings = settings
+                            settings.messageAutoremoveTimeout = messageAutoremoveSeconds
+                            return settings
+                        })
                     
                         return accountManager.transaction { transaction -> Signal<Void, NoError> in
                             let (primary, secondary) = getLocalization(transaction)

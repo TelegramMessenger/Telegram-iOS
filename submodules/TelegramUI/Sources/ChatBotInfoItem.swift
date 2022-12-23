@@ -171,7 +171,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         break
                     case .ignore:
                         return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji:
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
                         return .waitForSingleTap
                 }
             }
@@ -457,7 +457,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                         let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                         |> deliverOnMainQueue).start(next: { [weak self] peer in
                                             if let peer = peer {
-                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                             }
                                         })
                                     }
@@ -544,7 +544,9 @@ private final class VideoDecoration: UniversalVideoDecoration {
             let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
             let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
             let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
-            let context = DrawingContext(size: size, clear: true)
+            guard let context = DrawingContext(size: size, clear: true) else {
+                return
+            }
             context.withContext { ctx in
                 ctx.setFillColor(UIColor.black.cgColor)
                 ctx.fill(arguments.drawingRect)

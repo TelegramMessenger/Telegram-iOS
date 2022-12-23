@@ -908,7 +908,15 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
         }
         
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        TGPhotoEditorControllerIntent intent = TGPhotoEditorControllerAvatarIntent;
+        if (_disableStickers) {
+            intent = TGPhotoEditorControllerSignupAvatarIntent;
+        }
+        if (_forum) {
+            intent |= TGPhotoEditorControllerForumAvatarIntent;
+        }
+        
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = _editingContext;
         controller.stickersContext = _stickersContext;
         controller.dontHideStatusBar = true;

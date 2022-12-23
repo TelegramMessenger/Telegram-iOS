@@ -30,10 +30,6 @@ final class MyEsimsInteractor {
     
     private let esimRepository: EsimRepository
     
-    //  MARK: - Listeners
-    
-    weak var loginListener: LoginListener?
-    
     //  MARK: - Logic
     
     private var esims: [UserEsim] = []
@@ -105,17 +101,6 @@ extension MyEsimsInteractor: PurchaseEsimListener {
     
     func didTopUp(esim: UserEsim) {
         updateEsims()
-    }
-}
-
-extension MyEsimsInteractor: LoginListener {
-    func onOpenTelegamBot(session: String) {
-        router.dismissWithBot(session: session)
-    }
-    
-    func onLogin() {
-        fetchAllEsims()
-        loginListener?.onLogin()
     }
 }
 

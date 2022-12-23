@@ -93,7 +93,10 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
     if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), let moreInfoNavigationButton = moreInfoNavigationButton {
         if case .replyThread = presentationInterfaceState.chatLocation {
         } else {
-            return moreInfoNavigationButton
+            if case .pinnedMessages = presentationInterfaceState.subject {
+            } else {
+                return moreInfoNavigationButton
+            }
         }
     }
     

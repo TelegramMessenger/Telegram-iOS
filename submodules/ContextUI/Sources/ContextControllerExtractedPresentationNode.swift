@@ -627,7 +627,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
         case let .reference(reference):
             if let transitionInfo = reference.transitionInfo() {
-                contentRect = convertFrame(transitionInfo.referenceView.bounds, from: transitionInfo.referenceView, to: self.view).insetBy(dx: -2.0, dy: 0.0)
+                contentRect = convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view).insetBy(dx: -2.0, dy: 0.0)
                 contentRect.size.width += 5.0
                 contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.minX), size: CGSize(width: layout.size.width, height: contentRect.height))
             } else {
@@ -811,7 +811,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             transition.updateFrame(node: self.actionsStackNode, frame: actionsFrame.offsetBy(dx: 0.0, dy: additionalVisibleOffsetY), beginWithCurrentState: true)
             
             if let contentNode = contentNode {
-                contentTransition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX, y: contentRect.minY - contentNode.containingItem.contentRect.minY + contentVerticalOffset + additionalVisibleOffsetY), size: contentNode.containingItem.view.bounds.size), beginWithCurrentState: true)
+                var contentFrame = CGRect(origin: CGPoint(x: contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX, y: contentRect.minY - contentNode.containingItem.contentRect.minY + contentVerticalOffset + additionalVisibleOffsetY), size: contentNode.containingItem.view.bounds.size)
+                if case let .extracted(extracted) = self.source, extracted.centerVertically, contentFrame.midX > layout.size.width / 2.0 {
+                    contentFrame.origin.x = layout.size.width - contentFrame.maxX
+                }
+                contentTransition.updateFrame(node: contentNode, frame: contentFrame, beginWithCurrentState: true)
             }
             
             let contentHeight: CGFloat
@@ -876,20 +880,38 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             
-            let animationInContentDistance: CGFloat
+            let animationInContentYDistance: CGFloat
             let currentContentScreenFrame: CGRect
             if let contentNode = contentNode {
                 if let animateClippingFromContentAreaInScreenSpace = contentNode.animateClippingFromContentAreaInScreenSpace {
                     self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(x: 0.0, y: animateClippingFromContentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: animateClippingFromContentAreaInScreenSpace.height)), to: CGRect(origin: CGPoint(), size: layout.size), duration: 0.2)
                     self.clippingNode.layer.animateBoundsOriginYAdditive(from: animateClippingFromContentAreaInScreenSpace.minY, to: 0.0, duration: 0.2)
                 }
-                
+                                
                 currentContentScreenFrame = convertFrame(contentNode.containingItem.contentRect, from: contentNode.containingItem.view, to: self.view)
                 let currentContentLocalFrame = convertFrame(contentRect, from: self.scrollNode.view, to: self.view)
-                animationInContentDistance = currentContentLocalFrame.maxY - currentContentScreenFrame.maxY
+                animationInContentYDistance = currentContentLocalFrame.maxY - currentContentScreenFrame.maxY
+
+                var animationInContentXDistance: CGFloat = 0.0
+                let contentX = contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX
+                let contentWidth = contentNode.containingItem.view.bounds.size.width
+                if case let .extracted(extracted) = self.source, extracted.centerVertically, contentX + contentWidth > layout.size.width / 2.0 {
+                    let fixedContentX = layout.size.width - (contentX + contentWidth)
+                    animationInContentXDistance = fixedContentX - contentX
+                    
+                    contentNode.layer.animateSpring(
+                        from: -animationInContentXDistance as NSNumber, to: 0.0 as NSNumber,
+                        keyPath: "position.x",
+                        duration: duration,
+                        delay: 0.0,
+                        initialVelocity: 0.0,
+                        damping: springDamping,
+                        additive: true
+                    )
+                }
                 
                 contentNode.layer.animateSpring(
-                    from: -animationInContentDistance as NSNumber, to: 0.0 as NSNumber,
+                    from: -animationInContentYDistance as NSNumber, to: 0.0 as NSNumber,
                     keyPath: "position.y",
                     duration: duration,
                     delay: 0.0,
@@ -898,7 +920,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     additive: true
                 )
             } else {
-                animationInContentDistance = 0.0
+                animationInContentYDistance = 0.0
                 currentContentScreenFrame = contentRect
             }
             
@@ -921,6 +943,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
             
+            if case .reference = self.source {
+                actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
+            }
+            
             let actionsVerticalTransitionDirection: CGFloat
             if let contentNode = contentNode {
                 if contentNode.frame.minY < self.actionsStackNode.frame.minY {
@@ -935,7 +961,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     actionsVerticalTransitionDirection = 1.0
                 }
             }
-            let actionsPositionDeltaYDistance = -animationInContentDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
+            let actionsPositionDeltaYDistance = -animationInContentYDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
             self.actionsStackNode.layer.animateSpring(
                 from: NSValue(cgPoint: CGPoint(x: actionsPositionDeltaXDistance, y: actionsPositionDeltaYDistance)),
                 to: NSValue(cgPoint: CGPoint()),
@@ -948,7 +974,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             )
             
             if let reactionContextNode = self.reactionContextNode {
-                let reactionsPositionDeltaYDistance = -animationInContentDistance
+                let reactionsPositionDeltaYDistance = -animationInContentYDistance
                 reactionContextNode.layer.animateSpring(
                     from: NSValue(cgPoint: CGPoint(x: 0.0, y: reactionsPositionDeltaYDistance)),
                     to: NSValue(cgPoint: CGPoint()),
@@ -1027,7 +1053,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(), size: layout.size), to: CGRect(origin: CGPoint(x: 0.0, y: putBackInfo.contentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: putBackInfo.contentAreaInScreenSpace.height)), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
                     self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
                     
-                    currentContentScreenFrame = convertFrame(putBackInfo.referenceView.bounds, from: putBackInfo.referenceView, to: self.view)
+                    currentContentScreenFrame = convertFrame(putBackInfo.referenceView.bounds.inset(by: putBackInfo.insets), from: putBackInfo.referenceView, to: self.view)
                 } else {
                     return
                 }
@@ -1052,13 +1078,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             let currentContentLocalFrame = convertFrame(contentRect, from: self.scrollNode.view, to: self.view)
             
-            let animationInContentDistance: CGFloat
+            let animationInContentYDistance: CGFloat
             
             switch result {
             case .default, .custom:
-                animationInContentDistance = currentContentLocalFrame.minY - currentContentScreenFrame.minY
+                animationInContentYDistance = currentContentLocalFrame.minY - currentContentScreenFrame.minY
             case .dismissWithoutContent:
-                animationInContentDistance = 0.0
+                animationInContentYDistance = 0.0
                 if let contentNode = contentNode {
                     contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
                 }
@@ -1084,10 +1110,28 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let contentNode = contentNode {
                 contentNode.containingItem.willUpdateIsExtractedToContextPreview?(false, transition)
                 
-                contentNode.offsetContainerNode.position = contentNode.offsetContainerNode.position.offsetBy(dx: 0.0, dy: -animationInContentDistance)
+                var animationInContentXDistance: CGFloat = 0.0
+                let contentX = contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX
+                let contentWidth = contentNode.containingItem.view.bounds.size.width
+                if case let .extracted(extracted) = self.source, extracted.centerVertically, contentX + contentWidth > layout.size.width / 2.0 {
+                    let fixedContentX = layout.size.width - (contentX + contentWidth)
+                    animationInContentXDistance = contentX - fixedContentX
+                    
+                    contentNode.offsetContainerNode.layer.animate(
+                        from: -animationInContentXDistance as NSNumber,
+                        to: 0.0 as NSNumber,
+                        keyPath: "position.x",
+                        timingFunction: timingFunction,
+                        duration: duration,
+                        delay: 0.0,
+                        additive: true
+                    )
+                }
+                
+                contentNode.offsetContainerNode.position = contentNode.offsetContainerNode.position.offsetBy(dx: animationInContentXDistance, dy: -animationInContentYDistance)
                 let reactionContextNodeIsAnimatingOut = self.reactionContextNodeIsAnimatingOut
                 contentNode.offsetContainerNode.layer.animate(
-                    from: animationInContentDistance as NSNumber,
+                    from: animationInContentYDistance as NSNumber,
                     to: 0.0 as NSNumber,
                     keyPath: "position.y",
                     timingFunction: timingFunction,
@@ -1136,7 +1180,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if case .center = actionsHorizontalAlignment {
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
-            let actionsPositionDeltaYDistance = -animationInContentDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
+            
+            if case .reference = self.source {
+                actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
+            }
+            
+            let actionsPositionDeltaYDistance = -animationInContentYDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
             self.actionsStackNode.layer.animate(
                 from: NSValue(cgPoint: CGPoint()),
                 to: NSValue(cgPoint: CGPoint(x: actionsPositionDeltaXDistance, y: actionsPositionDeltaYDistance)),

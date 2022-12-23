@@ -1,23 +1,58 @@
 
 final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView {
+    private let peerId: PeerId?
+    private let threadId: Int64?
     private let namespace: MessageId.Namespace
     private let tagMask: MessageTags
     
     var entries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
     
-    init(postbox: PostboxImpl, tagMask: MessageTags, namespace: MessageId.Namespace) {
+    init(postbox: PostboxImpl, peerId: PeerId?, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace) {
+        self.peerId = peerId
+        self.threadId = threadId
         self.tagMask = tagMask
         self.namespace = namespace
         
-        for entry in postbox.invalidatedMessageHistoryTagsSummaryTable.get(tagMask: tagMask, namespace: namespace) {
-            self.entries.insert(entry)
+        if let peerId = self.peerId {
+            if let entry = postbox.invalidatedMessageHistoryTagsSummaryTable.get(peerId: peerId, threadId: self.threadId, tagMask: self.tagMask, namespace: self.namespace) {
+                self.entries.insert(entry)
+            }
+        } else {
+            for entry in postbox.invalidatedMessageHistoryTagsSummaryTable.get(tagMask: tagMask, namespace: namespace) {
+                self.entries.insert(entry)
+            }
         }
     }
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
-        for operation in transaction.currentInvalidateMessageTagSummaries {
-            switch operation {
+        
+        if let peerId = self.peerId {
+            var maybeUpdated = false
+            loop: for operation in transaction.currentInvalidateMessageTagSummaries {
+                switch operation {
+                case let .add(entry):
+                    if entry.key.peerId == peerId && entry.key.threadId == self.threadId {
+                        maybeUpdated = true
+                        break loop
+                    }
+                case let .remove(key):
+                    if key.peerId == peerId && key.threadId == self.threadId {
+                        maybeUpdated = true
+                        break loop
+                    }
+                }
+            }
+            if maybeUpdated {
+                self.entries.removeAll()
+                if let entry = postbox.invalidatedMessageHistoryTagsSummaryTable.get(peerId: peerId, threadId: self.threadId, tagMask: self.tagMask, namespace: self.namespace) {
+                    self.entries.insert(entry)
+                }
+                updated = true
+            }
+        } else {
+            for operation in transaction.currentInvalidateMessageTagSummaries {
+                switch operation {
                 case let .add(entry):
                     if entry.key.namespace == self.namespace && entry.key.tagMask == self.tagMask {
                         self.entries.insert(entry)
@@ -33,8 +68,10 @@ final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView
                         }
                         updated = true
                     }
+                }
             }
         }
+        
         return updated
     }
 

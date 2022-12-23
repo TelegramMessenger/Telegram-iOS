@@ -9,6 +9,9 @@ import NGTheme
 import Postbox
 import TelegramCore
 import NGAuth
+import NGCore
+import NGCoreUI
+import NGLotteryUI
 import NGToast
 
 typealias AssistantViewControllerInput = AssistantPresenterOutput
@@ -25,6 +28,8 @@ protocol AssistantViewControllerOutput {
     
     func handleTelegramBot(session: String)
     func handleSpecialOffer()
+    func handleLottery()
+    func handleLotteryReferral()
 }
 
 extension AssistantViewController: ClosureBindable { }
@@ -35,6 +40,9 @@ final class AssistantViewController: UIViewController {
     private let containerView: RoundedContainerView
     private let blurEffectView = UIVisualEffectView()
     private let titleLabel = UILabel()
+    private let lotteryBannerView = LotteryBannerView()
+    private let referralBannerView: ReferralBannerView
+    private let lotteryContainerView = UIView()
     private let nicegramComunityLabel = UILabel()
     private let assistantItemsStackView = UIStackView()
     private let specialOfferView = SpecialOfferView()
@@ -63,6 +71,7 @@ final class AssistantViewController: UIViewController {
         self.rateView = AssistantItemView(ngTheme: ngTheme)
         self.logoutView = AssistantItemView(ngTheme: ngTheme)
         self.loginButton = NGButton(ngTheme: ngTheme)
+        self.referralBannerView = ReferralBannerView(ngTheme: ngTheme)
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -91,7 +100,7 @@ final class AssistantViewController: UIViewController {
         view.addSubview(containerView)
         containerView.snp.makeConstraints {
             $0.top.leading.trailing.equalToSuperview()
-            $0.bottom.lessThanOrEqualToSuperview()
+            $0.bottom.lessThanOrEqualTo(view.safeAreaLayoutGuide)
         }
 
         containerView.addSubview(titleLabel)
@@ -99,24 +108,60 @@ final class AssistantViewController: UIViewController {
             $0.leading.trailing.equalToSuperview().inset(16.0)
         }
         
+        let scrollContent = UIView()
+        let scrollView = UIScrollView()
+        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.addSubview(scrollContent)
+        scrollContent.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+            make.width.equalToSuperview()
+            make.height.equalToSuperview().priority(1)
+        }
+        containerView.addSubview(scrollView)
+        scrollView.snp.makeConstraints { make in
+            make.top.equalTo(titleLabel.snp.bottom).offset(24)
+            make.leading.trailing.bottom.equalToSuperview()
+        }
+        
         assistantStackView.alignment = .fill
         assistantStackView.axis = .vertical
         assistantStackView.distribution = .fill
         assistantStackView.spacing = 20.0
         assistantStackView.backgroundColor = .clear
-        containerView.addSubview(assistantStackView)
+        scrollContent.addSubview(assistantStackView)
         assistantStackView.snp.makeConstraints {
-            $0.top.equalTo(titleLabel.snp.bottom).offset(24.0)
-            $0.leading.trailing.equalToSuperview()
+            $0.top.equalToSuperview()
+            $0.leading.trailing.equalToSuperview().inset(16)
             $0.bottom.equalToSuperview().inset(54.0)
         }
+        
+        lotteryBannerView.setCloseButton(hidden: true)
+        
+        let lotterySeparator = UIView()
+        lotterySeparator.backgroundColor = ngTheme.separatorColor
+        let lotteryStack = UIStackView(
+            arrangedSubviews: [lotteryBannerView, lotterySeparator, referralBannerView],
+            axis: .vertical,
+            spacing: 12,
+            alignment: .fill
+        )
+        lotterySeparator.snp.makeConstraints { make in
+            make.height.equalTo(0.66)
+        }
+        
+        lotteryContainerView.isHidden = true
+        lotteryContainerView.addSubview(lotteryStack)
+        lotteryStack.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        
+        assistantStackView.addArrangedSubview(lotteryContainerView)
         
         let firstSeparatorView = UIView()
         firstSeparatorView.backgroundColor = ngTheme.separatorColor
         assistantStackView.addArrangedSubview(firstSeparatorView)
         firstSeparatorView.snp.makeConstraints {
             $0.height.equalTo(0.66)
-            $0.leading.trailing.equalToSuperview().inset(16.0)
         }
         
         assistantStackView.addArrangedSubview(mobileDataView)
@@ -128,7 +173,6 @@ final class AssistantViewController: UIViewController {
         assistantStackView.addArrangedSubview(secondSeparatorView)
         secondSeparatorView.snp.makeConstraints {
             $0.height.equalTo(0.66)
-            $0.leading.trailing.equalToSuperview().inset(16.0)
         }
         
         specialOfferContainerView.isHidden = true
@@ -138,54 +182,32 @@ final class AssistantViewController: UIViewController {
             make.edges.equalToSuperview()
         }
         assistantStackView.addArrangedSubview(specialOfferContainerView)
-        specialOfferContainerView.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview().inset(16.0)
-        }
+
 
         nicegramComunityLabel.textColor = ngTheme.subtitleColor
         nicegramComunityLabel.textAlignment = .natural
         nicegramComunityLabel.font = .systemFont(ofSize: 12.0, weight: .semibold)
         assistantStackView.addArrangedSubview(nicegramComunityLabel)
-        nicegramComunityLabel.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview().inset(16.0)
-        }
         assistantStackView.addArrangedSubview(telegramChannelView)
-        telegramChannelView.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview()
-        }
         
         assistantStackView.addArrangedSubview(telegramChatView)
-        telegramChatView.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview()
-        }
         
         let thirdSeparatorView = UIView()
         thirdSeparatorView.backgroundColor = ngTheme.separatorColor
         assistantStackView.addArrangedSubview(thirdSeparatorView)
         thirdSeparatorView.snp.makeConstraints {
             $0.height.equalTo(0.66)
-            $0.leading.trailing.equalToSuperview().inset(16.0)
         }
         
         assistantStackView.addArrangedSubview(supportView)
-        supportView.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview()
-        }
         
         assistantStackView.addArrangedSubview(rateView)
-        rateView.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview()
-        }
         
         assistantStackView.addArrangedSubview(logoutView)
-        logoutView.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview()
-        }
         
         assistantStackView.addArrangedSubview(loginButton)
         loginButton.snp.makeConstraints {
             $0.height.equalTo(54.0)
-            $0.leading.trailing.equalToSuperview().inset(16.0)
         }
         
         containerView.setupFooter(type: .withFooter)
@@ -212,6 +234,14 @@ final class AssistantViewController: UIViewController {
         
         specialOfferView.onTap = { [weak self] in
             self?.output.handleSpecialOffer()
+        }
+        
+        lotteryBannerView.onTap = { [weak self] in
+            self?.output.handleLottery()
+        }
+        
+        referralBannerView.onInviteTap = { [weak self] in
+            self?.output.handleLotteryReferral()
         }
         
         mobileDataView.onTouchUpInside = { [weak self] itemTag in
@@ -450,15 +480,23 @@ extension AssistantViewController: AssistantViewControllerInput {
         telegramChannelView.isHidden = isHidden
         telegramChatView.isHidden = isHidden
     }
-}
-
-extension AssistantViewController: LoginListener {
-    func onLogin() {
-        output.handleAuth(isAnimated: false)
+    
+    func displayLottery(_ flag: Bool, animated: Bool) {
+        lotteryContainerView.isHidden = !flag
+        
+        let block = {
+            self.view.layoutIfNeeded()
+        }
+        
+        if animated {
+            UIView.animate(withDuration: 0.3, animations: block)
+        } else {
+            block()
+        }
     }
     
-    func onOpenTelegamBot(session: String) {
-        output.handleTelegramBot(session: session)
+    func displayLottery(jackpot: Money) {
+        lotteryBannerView.display(jackpot: jackpot)
     }
 }
 

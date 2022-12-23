@@ -90,7 +90,7 @@ func _internal_canPurchasePremium(account: Account, purpose: AppStoreTransaction
             }
         }
         |> `catch` { _ -> Signal<Bool, NoError> in
-            return.single(false)
+            return .single(false)
         }
     }
 }

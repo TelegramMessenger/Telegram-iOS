@@ -5,7 +5,7 @@ import EsimAuth
 import NGAppCache
 import NGEnv
 
-public func createNicegramApiClient(auth: EsimAuth?, trackMobileIdentifier: Bool = true) -> EsimApiClientProtocol {
+public func createNicegramApiClient(auth: EsimAuth?, trackMobileIdentifier: Bool = true) -> EsimApiClient {
     let baseUrl = URL(string: NGENV.esim_api_url)!
     let apiKey = NGENV.esim_api_key
     let mobileIdentifier = trackMobileIdentifier ? AppCache.mobileIdentifier : ""

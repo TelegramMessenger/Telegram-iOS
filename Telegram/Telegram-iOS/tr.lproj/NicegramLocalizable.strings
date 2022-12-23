@@ -1,7 +1,138 @@
-/* 
-  NicegramLocalization.strings
-  Telegram
+/*EsimModule*/
+"Error.Default" = "Bir şeyler yanlış gitti. Lütfen daha sonra tekrar deneyin";
 
-  Created by user on 1.06.22.
-  
-*/
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Nicegram Asistanı";
+"Nicegram.Assistant.MobileData" = "Mobil Veri";
+"Nicegram.Assistant.MobileData.Esim" = "(eSIM)";
+"Nicegram.Assistant.MobileData.Description" = "Doğrudan uygulamada mobil veri alın";
+"Nicegram.Assistant.NicegramCommunity" = "Nicegram topluluğu";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Resmi Kanal";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Resmi Sohbet";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Tüm Kanallar";
+"Nicegram.Assistant.Support" = "Destek";
+"Nicegram.Assistant.Rate us" = "Bizi değerlendirin";
+"Nicegram.Assistant.Logout" = "Çıkış Yap";
+"Nicegram.Assistant.Swipe" = "Asistanı kapatmak için yukarı kaydırın";
+"Nicegram.Assistant.SignIn" = "Oturum Aç";
+"Nicegram.Assistant.SpecialOffer" = "Özel Teklif";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Nicegram Asistanı";
+"Nicegram.Assistant.Hint.Subtitle" = "Mevcut özellikler";
+"Nicegram.Assistant.Hint.MobileData" = "Mobil Veri (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "Sanal Telefon Numaraları";
+"Nicegram.Assistant.Hint.Wallet" = "Kripto Cüzdanı";
+"Nicegram.Assistant.Hint.Support" = "Destek";
+"Nicegram.Assistant.Hint.Footer" = "Daha fazlasını öğrenmek için Asistan simgesine tıklayın";
+"Nicegram.Assistant.Hint.Comming" = "Çok yakında";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "E-posta ile giriş yap";
+"Nicegram.Login.Email.Title" = "E-posta";
+"Nicegram.Login.Email.Placeholder" = "E-posta adresinizi giriniz";
+"Nicegram.Login.Password.Placeholder" = "Şifrenizi girin";
+"Nicegram.Login.OrContinue" = "veya şununla devam et";
+"Nicegram.Login.Button" = "Giriş yap";
+"Nicegram.Login.ForgotPass" = "Şifrenizi mi unuttunuz?";
+"Nicegram.Login.isRegister" = "Henüz kayıt olmadınız mı?";
+"Nicegram.Login.SignUp" = "Kaydol";
+"Nicegram.Login.Action.Error" = "Şifre geçersiz veya kullanıcının şifresi yok";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "Şifrenizi mi unuttunuz?";
+"Nicegram.ForgotPass.Subtitle" = "Zaten kayıtlı olduğunuz e-posta adresini girin";
+"Nicegram.ForgotPass.Email.Title" = "E-posta";
+"Nicegram.ForgotPass.Email.Placeholder" = "E-posta adresinizi giriniz";
+"Nicegram.ForgotPass.Button" = "E-postaya kod gönder";
+
+/*Nicegram Registration*/
+"Nicegram.Registration.Title" = "Hesabınızı kaydedin";
+"Nicegram.Registration.Email" = "E-posta";
+"Nicegram.Registration.Email.Error" = "Bu tanımlayıcıya karşılık gelen kullanıcı kaydı yok. Kullanıcı silinmiş olabilir";
+"Nicegram.Registration.Password" = "Şifre";
+"Nicegram.Registration.FirstName" = "Ad";
+"Nicegram.Registration.LastName" = "Soyad";
+"Nicegram.Registration.Button" = "Kaydol";
+"Nicegram.Registration.Question" = "Zaten kayıtlı mısınız?";
+"Nicegram.Registration.LogIn" = "Giriş yap";
+
+/*Nicegram alert and errors*/
+"Nicegram.Alert.InboxCheck" = "Size bir doğrulama e-postası gönderdik. \nGelen kutunuzu kontrol edin!";
+"Nicegram.Alert.Continue" = "Devam et";
+"Nicegram.Alert.BaseError" = "Bir şeyler yanlış gitti. Lütfen daha sonra tekrar deneyin";
+"Nicegram.Alert.Success" = "Başarılı!";
+"Nicegram.Alert.TryAgain" = "Tekrar dene";
+
+/*Nicegram how to install*/
+"Nicegram.Install.Title" = "Telefonunuzu Kurun";
+"Nicegram.Install.VideoInstructions.Title" = "Video talimatını oynat";
+"Nicegram.Install.Manual.Title" = "Manuel Olarak Kur";
+"Nicegram.Install.Manual.Subtitle" = "Ayarlar → Mobil Veri → Veri Planı Ekle";
+"Nicegram.Install.Manual.Scan" = "Tara";
+"Nicegram.Install.Manual.Address" = "SM-DP+ Adresi";
+"Nicegram.Install.Manual.Code" = "Aktivasyon kodu";
+"Nicegram.Install.APN.Title" = "APN'yi yükle";
+"Nicegram.Install.APN.Subtitle" = "Ayarlar → Mobil Veri → Plan → SMTH";
+"Nicegram.Install.APN" = "APN";
+"Nicegram.Install.Roaming.Title" = "Veri Dolaşımını Aç";
+"Nicegram.Install.Roaming.Subtitle" = "Ayarlar → Mobil Veri";
+"Nicegram.Install.Roaming.Data" = "Veri Dolaşımı";
+"Nicegram.Install.Done" = "Tamamlandı";
+
+/*Nicegram qrcode*/
+"Nicegram.QRCode.Title" = "QR tara";
+"Nicegram.QRCode.Description" = "Cihazınızda bir eSIM kartı etkinleştirmek için telefonunuzun kamerasıyla bir QR kodu tarayın. Kodu başkalarıyla paylaşmaktan çekinmeyin!";
+"Nicegram.QRCode.Share" = "QR kodunu paylaş";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "Mobil Veri";
+"Nicegram.MobileData.NoData" = "Şimdiye kadar satın alınan mobil veri yok";
+"Nicegram.MobileData.Action.Add" = "Mobil veri ekle";
+
+"Nicegram.MobileData.MyEsim.Title" = "eSIM'im";
+"Nicegram.MobileData.MyEsim.Worldwide" = "Dünya çapında";
+"Nicegram.MobileData.MyEsim.Add" = "Daha fazla veri ekle";
+"Nicegram.MobileData.MyEsim.Duration" = "Süre";
+"Nicegram.MobileData.MyEsim.Duration.Status" = "Sınırsız";
+"Nicegram.MobileData.MyEsim.Status" = "Mevcut";
+"Nicegram.MobileData.MyEsim.Mb" = "Mb";
+
+"Nicegram.Internet.Trafic" = "İnternet trafiği";
+"Nicegram.Internet.Duration" = "Süre";
+"Nicegram.Internet.Number" = "Telefon numarası";
+"Nicegram.Internet.Info.Title" = "Ek Bilgiler";
+"Nicegram.Internet.Plan.Title" = "Veri Planı avantajı";
+"Nicegram.Internet.Plan.Description" = "Size yüksek hızlı ve güvenli bir internet bağlantısına sınırsız erişim verilir";
+"Nicegram.Internet.Coverage.Title" = "Ülke kapsamı";
+"Nicegram.Internet.Coverage.Description" = "Bu veri planı %@ ülkelerde geçerlidir. Lütfen mobil veri fiyatlarının ülkeye göre değişebileceğini unutmayın.";
+"Nicegram.Internet.Start.Title" = "Başlarken";
+"Nicegram.Internet.Start.Description" = "eSIM+ ile başlamak için önce bakiyenizi doldurun ve ardından nerede olursanız olun kesintisiz internet bağlantısının keyfini çıkarın.";
+"Nicegram.Internet.Countries.Title" = "Desteklenen ülkeler";
+"Nicegram.Internet.Countries.SeeAll" = "Tümünü gör";
+"Nicegram.Internet.Countries.Search" = "Ülkeyi ara";
+"Nicegram.Internet.Countries.Price" = "%@/mb";
+
+/*Nicegram Add Mobile Data*/
+"Nicegram.AddMobileData.Subtitle" = "Mobil veriyi şimdi ekleyin - daha sonra kullanın";
+"Nicegram.AddMobileData.Button" = "Planı %@ karşlılığında alın";
+"Nicegram.AddMobileData.Countries" = "Desteklenen ülkeler";
+
+/*Updates*/
+"Nicegram.MobileData.MyEsim.FAQ" = "SSS";
+"Nicegram.Internet.Number.Included" = "Dahil";
+"Nicegram.Alert.Copied" = "Kopyalandı";
+"Nicegram.Alert.Ok" = "TAMAM";
+"Nicegram.Error.NotSupportedDataPlan" = "Bu veri planı artık desteklenmiyor";
+"Auth.ErrorUserNotFound" = "Bu tanımlayıcıya karşılık gelen kullanıcı kaydı yok. Kullanıcı silinmiş olabilir.";
+"Auth.ErrorWrongPassword" = "Şifre geçersiz veya kullanıcının şifresi yok.";
+"Auth.ErrorAlreadyInUse" = "E-posta adresi zaten başka bir hesap tarafından kullanılıyor.";
+"Error.EsimProfileBlocked" = "E-sim profiliniz engellendi";
+"Error.EsimProfileExpired" = "E-sim profilinizin süresi doldu";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "Senin için yeni, özel bir teklifimiz var. Teklife göz at!";
+"Alert.TelegramLogin.PositiveBtn" = "Devam et";

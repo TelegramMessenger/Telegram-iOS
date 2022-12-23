@@ -439,7 +439,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             }
             var existingIds = Set<String>()
             
-            var showTranslate = true
+            var showTranslate = false
             var ignoredLanguages: [String] = []
             if let translationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
                 showTranslate = translationSettings.showTranslate

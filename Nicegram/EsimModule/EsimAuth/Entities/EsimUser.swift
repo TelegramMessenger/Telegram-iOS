@@ -77,13 +77,17 @@ public extension EsimUser {
 
 public extension EsimUser {
     var linkedProviders: Set<AuthProvider> {
+        var result = Set<AuthProvider>()
+        
         if let firebaseUser = Auth.auth().currentUser {
-            return Set(firebaseUser.providerData.compactMap({ self.mapProviderId($0.providerID) }))
-        } else if telegramToken != nil {
-            return [.telegram]
-        } else {
-            return []
+            result = result.union(firebaseUser.providerData.compactMap { self.mapProviderId($0.providerID) })
         }
+         
+        if telegramToken != nil {
+            result.insert(.telegram)
+        }
+        
+        return result
     }
     
     enum AuthProvider {

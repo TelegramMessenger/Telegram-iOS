@@ -379,5 +379,26 @@ public extension TelegramEngine.EngineData.Item {
                 return premiumPromoConfiguration
             }
         }
+        
+        public struct GlobalAutoremoveTimeout: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Int32?
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.globalMessageAutoremoveTimeoutSettings]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let settings = view.values[PreferencesKeys.globalMessageAutoremoveTimeoutSettings]?.get(GlobalMessageAutoremoveTimeoutSettings.self) else {
+                    return GlobalMessageAutoremoveTimeoutSettings.default.messageAutoremoveTimeout
+                }
+                return settings.messageAutoremoveTimeout
+            }
+        }
     }
 }

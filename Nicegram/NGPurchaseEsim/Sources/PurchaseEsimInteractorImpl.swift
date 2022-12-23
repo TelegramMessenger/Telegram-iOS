@@ -1,6 +1,9 @@
 import Foundation
+import NGAuth
+import NGCoreUI
 import NGModels
 import NGRepositories
+import UIKit
 
 typealias PurchaseEsimInteractorInput = PurchaseEsimViewControllerOutput
 
@@ -14,6 +17,7 @@ protocol PurchaseEsimInteractorOutput {
     func present(isLoading: Bool)
     func present(fetchError: Error)
     func handleOrientation()
+    func presentLoginLoading(_: Bool)
 }
 
 final class PurchaseEsimInteractor {
@@ -28,6 +32,7 @@ final class PurchaseEsimInteractor {
     private let esimRepository: EsimRepository
     
     private let purchaseEsimUseCase: PurchaseEsimUseCase
+    private let initiateLoginWithTelegramUseCase: InitiateLoginWithTelegramUseCase
     
     //  MARK: - Listener
     
@@ -35,12 +40,13 @@ final class PurchaseEsimInteractor {
     
     //  MARK: - Lifecycle
     
-    public init(icc: String?, regionId: Int, deeplink: Deeplink?, esimRepository: EsimRepository, purchaseEsimUseCase: PurchaseEsimUseCase) {
+    public init(icc: String?, regionId: Int, deeplink: Deeplink?, esimRepository: EsimRepository, purchaseEsimUseCase: PurchaseEsimUseCase, initiateLoginWithTelegramUseCase: InitiateLoginWithTelegramUseCase) {
         self.icc = icc
         self.regionId = regionId
         self.deeplink = deeplink
         self.esimRepository = esimRepository
         self.purchaseEsimUseCase = purchaseEsimUseCase
+        self.initiateLoginWithTelegramUseCase = initiateLoginWithTelegramUseCase
     }
     
     //  MARK: - Logic
@@ -186,9 +192,31 @@ private extension PurchaseEsimInteractor {
         case .cancelled:
             break
         case .notAuthorized:
-            self.router.routeToAuth()
+            Alerts.show(.needLoginWithTelegram(onConfirm: { [weak self] in
+                self?.initiateLoginWithTelegram()
+            }))
         case .underlying(let error):
             self.output.present(purchaseError: error)
+        }
+    }
+    
+    func initiateLoginWithTelegram() {
+        DispatchQueue.main.async {
+            self.output.presentLoginLoading(true)
+        }
+        initiateLoginWithTelegramUseCase.initiateLoginWithTelegram { [weak self] result in
+            guard let self else { return }
+            
+            DispatchQueue.main.async {
+                self.output.presentLoginLoading(false)
+                
+                switch result {
+                case .success(let url):
+                    UIApplication.shared.open(url)
+                case .failure(let error):
+                    Alerts.show(.error(error))
+                }
+            }
         }
     }
     

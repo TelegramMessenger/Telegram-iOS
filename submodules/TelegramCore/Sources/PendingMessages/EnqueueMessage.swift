@@ -576,6 +576,10 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                         }
                     }
+                
+                    if threadId == nil, let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                        threadId = 1
+                    }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source, threadId, grouping, requestedAttributes, _, _):
@@ -804,6 +808,10 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         
                         if peerId.namespace == Namespaces.Peer.SecretChat {
                             augmentedMediaList = augmentedMediaList.map(convertForwardedMediaForSecretChat)
+                        }
+                        
+                        if threadId == nil, let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                            threadId = 1
                         }
                                                 
                         storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: augmentedMediaList))

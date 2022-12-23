@@ -1,3 +1,6 @@
+/*EsimModule*/
+"Error.Default" = "Algo deu errado. Tente novamente mais tarde";
+
 /*Nicegram plus*/
 /*Nicegram assistant*/
 
@@ -9,6 +12,7 @@
 "Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
 "Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Canal oficial";
 "Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Chat oficial";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Todos os canais";
 "Nicegram.Assistant.Support" = "Suporte";
 "Nicegram.Assistant.Rate us" = "Avalie-nos";
 "Nicegram.Assistant.Logout" = "Desconectar-se";
@@ -128,3 +132,73 @@
 "Auth.ErrorAlreadyInUse" = "O endereço de e-mail já está em uso por outra conta.";
 "Error.EsimProfileBlocked" = "Seu perfil está bloqueado";
 "Error.EsimProfileExpired" = "Seu perfil expirou";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "Uma nova oferta especial está disponível para você, confira!";
+
+/*Lottery*/
+"Lottery.Banner.Title" = "Loteria Feliz Nicegram";
+"Lottery.Banner.Desc" = "Prêmio Powerball";
+
+"Assistant.Referral.Desc" = "Convide os seus amigos para **Nicegram** para ter uma chance maior de ganhar o jackpot!";
+"Assistant.Referral.Btn" = "Convidar";
+
+"Lottery.Header.Title" = "Loteria Feliz Nicegram";
+"Lottery.Header.Desc" = "Teste sua sorte e compita pelo prêmio do Powerball valendo";
+"Lottery.NextDrawWaiting.Title" = "O próximo sorteio acontecerá em:";
+"Lottery.NextDrawStarted.Title" = "Vamos jogar!";
+"Lottery.NextDrawStarted.Desc" = "O resultado desse sorteio será anunciado muito em breve. Você poderá gerar bilhetes para o próximo Powerball daqui a algumas horas.";
+"Lottery.NextDraw.Day" = "Dias";
+"Lottery.NextDraw.Hour" = "Horas";
+"Lottery.NextDraw.Min" = "Min";
+"Lottery.NextDraw.Sec" = "Seg";
+"Lottery.GetTicket.Btn" = "Obter meu bilhete";
+"Lottery.InfoTab" = "Informações";
+"Lottery.TicketsTab" = "Meus bilhetes";
+"Lottery.PastDraws" = "Últimos Números Vencedores";
+"Lottery.ActiveTickets.Title" = "Bilhetes disponíveis";
+"Lottery.ActiveTickets.Desc" = "O sorteio será realizado em %@";
+"Lottery.AvailableTickets.Title" = "Disponível para Geração";
+"Lottery.AvailableTicketsNotEmpty.Desc" = "Gere um bilhete para o próximo Powerball agora mesmo ou aproveite a oportunidade depois se você quer participar do próximo sorteio. O bilhete de loteria gerado será usado apenas uma vez – no próximo sorteio.";
+"Lottery.AvailableTickets.Btn" = "Gerar um bilhete";
+"Lottery.AvailableTicketsEmpty.Desc" = "Você não tem nenhum bilhete de loteria disponível para ser gerado. Convide seus amigos para participar do Nicegram ou assine o Nicegram Premium para uma chance de ganhar seu prêmio dos sonhos!";
+"Lottery.PastTickets" = "Meu histórico de bilhetes";
+"Lottery.MoreInfo" = "Mais informações";
+"Lottery.Or" = "ou";
+
+"LotteryTicket.YourNumbers" = "Seus números";
+"LotteryTicket.LastWin" = "Último Número da Sorte";
+"LotteryTicket.Link" = "[https://powerball.com](https://powerball.com)";
+
+"Lottery.DrawSection.Title" = "Como os sorteios são realizados?";
+"Lottery.DrawSection.Desc" = "Os sorteios acontecem todas as quartas-feiras. O jackpot continua acumulando até encontrar o vencedor sortudo. Se isso acontecer, no momento do próximo sorteio o jackpot será de %@.\n\nO dono do bilhete da sorte que tiver todos os seis números coincidentes com os anunciados no sorteio leva o jackpot. Observe que a ordem dos cinco primeiros números não tem importância, enquanto o último número anunciado no sorteio também deve ser o último do seu bilhete.";
+
+"Lottery.HowToGetTicketSection.Title" = "Como faço para adquirir um bilhete?";
+"Lottery.HowToGetTicketSection.Desc" = "1. Todos os assinantes do Nicegram Premium têm direito a um bilhete grátis por mês. Para se juntar a eles, assine o Nicegram Premium, vá para a seção Meus Bilhetes e pressione o botão Obter Meu Bilhete.\n\n2. Convide três amigos para o Nicegram. Três referências bem-sucedidas proporcionam a você um bilhete de loteria grátis. Quanto mais amigos você persuadir a se juntar ao Nicegram, mais bilhetes de loteria grátis você receberá.";
+
+"Lottery.WinnerSection.Title" = "Como faço para descobrir quem ganhou?";
+"Lottery.WinnerSection.Desc" = "Os resultados de cada jogo da Powerball serão publicados no site oficial [https://powerball.com](https://powerball.com). O bilhete premiado será adicionalmente carregado nesta página e postado no canal oficial do Nicegram. Você também pode visualizar todas as informações sobre os seus bilhetes na seção Meus Bilhetes.";
+
+"Lottery.ReferralSection.Title" = "Convide seus amigos para o Nicegram";
+"Lottery.ReferralSection.Desc" = "Convide seus amigos para o Nicegram com um link pessoal. Três indicações bem-sucedidas valem um bilhete de loteria grátis. Uma indicação conta como bem-sucedida assim que a pessoa que você convidou instalar o app do Nicegram e verificar a conta. Os amigos que você convidar também receberão um bilhete adicional de bônus após eles ativarem o primeiro!";
+"Lottery.ReferralSection.Btn" = "Convidar Meus Amigos para o Nicegram";
+
+"Lottery.PremiumSection.Title" = "Ganhe bilhetes grátis como assinante do Nicegram Premium";
+"Lottery.PremiumSection.Subscribe.Desc" = "Receba um bilhete de loteria grátis todos os meses como assinante do Nicegram Premium!\n\nPor enquanto, você não é assinante do Nicegram Premium! Considere clicar no botão Inscrever-se para obter acesso ilimitado a todos os recursos exclusivos que o Nicegram tem a oferecer! A assinatura Premium também garante bilhetes de loteria regulares — totalmente grátis!";
+"Lottery.PremiumSection.Subscribe.Btn" = "Assine o Nicegram Premium";
+"Lottery.PremiumSection.Get.Desc" = "Receba um bilhete de loteria grátis todos os meses como assinante do Nicegram Premium!\n\nVocê já é assinante do Nicegram Premium. Sinta-se à vontade para reivindicar o seu ingresso a qualquer momento!";
+"Lottery.PremiumSection.Get.Btn" = "Solicitar meu bilhete grátis";
+"Lottery.PremiumSection.Wait.Desc" = "Receba um bilhete de loteria grátis todos os meses como assinante do Nicegram Premium!\n\nVocê já é assinante do Nicegram Premium. Este mês, você já reivindicou o seu bilhete de loteria grátis. O próximo ficará disponível em %@.";
+"Lottery.PremiumSection.Wait.Btn" = "Solicitar meu bilhete grátis";
+
+"CreateTicket.Title" = "Criar seu bilhete de loteria";
+"CreateTicket.Desc" = "Insira 5 números únicos de 1 a 69 e um número separado de 1 a 26 para criar seu próprio bilhete ou gere todos os números aleatoriamente.";
+"CreateTicket.DrawDate" = "Data do sorteio: **%@**";
+"CreateTicket.NumbersDesc" = "Células 1-5: números de 1 a 69\nCélula 6: número de 1 a 26";
+"CreateTicket.RandomBtn" = "Combinação aleatória";
+"CreateTicket.CreateBtn" = "Gerar meu bilhete";
+
+"Alert.TelegramLogin.Title" = "Verificação Necessária";
+"Alert.TelegramLogin.Desc" = "Verifique sua conta do Telegram pelo bot do Nicegram para continuar.";
+"Alert.TelegramLogin.PositiveBtn" = "Continuar";
+"Alert.TelegramLogin.NegativeBtn" = "Fechar";

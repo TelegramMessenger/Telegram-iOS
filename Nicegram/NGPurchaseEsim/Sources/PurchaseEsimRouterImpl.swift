@@ -3,7 +3,6 @@ import NGCountriesList
 import NGModels
 
 protocol PurchaseEsimRouterInput: AnyObject {
-    func routeToAuth()
     func routeToCountriesList(_ countries: [EsimCountry])
     func dismiss()
 }
@@ -11,22 +10,15 @@ protocol PurchaseEsimRouterInput: AnyObject {
 final class PurchaseEsimRouter: PurchaseEsimRouterInput {
     weak var parentViewController: PurchaseEsimViewController?
     
-    private let loginBuilder: LoginBuilder
     private let countriesListBuilder: CountriesListBuilder
     
     //  MARK: - Lifecycle
     
-    init(loginBuilder: LoginBuilder, countriesListBuilder: CountriesListBuilder) {
-        self.loginBuilder = loginBuilder
+    init(countriesListBuilder: CountriesListBuilder) {
         self.countriesListBuilder = countriesListBuilder
     }
     
     //  MARK: - Public Functions
-    
-    func routeToAuth() {
-        let vc = loginBuilder.build()
-        parentViewController?.navigationController?.pushViewController(vc, animated: true)
-    }
     
     func routeToCountriesList(_ countries: [EsimCountry]) {
         let vc = countriesListBuilder.build(countries: countries)

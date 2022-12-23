@@ -138,6 +138,7 @@ lane :update_nice_localization do |options|
   project_path = options[:project]
 
   FileUtils.rm_rf(Dir.glob("#{project_path}/Telegram/Telegram-iOS/*/NiceLocalizable.strings"))
+  FileUtils.rm_rf(Dir.glob("#{project_path}/Telegram/Telegram-iOS/*/NicegramLocalizable.strings"))
   FileUtils.cp_r("#{translations_path}/master/Telegram-iOS", "#{project_path}/Telegram")
   FileUtils.remove_dir(translations_path)
 end

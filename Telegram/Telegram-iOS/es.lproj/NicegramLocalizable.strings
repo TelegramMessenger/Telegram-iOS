@@ -1,7 +1,204 @@
-/* 
-  NicegramLocalization.strings
-  Telegram
+/*EsimModule*/
+"Error.Default" = "Algo salió mal. Inténtelo de nuevo más tarde";
 
-  Created by user on 1.06.22.
-  
-*/
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Asistente de Nicegram";
+"Nicegram.Assistant.MobileData" = "Datos móviles";
+"Nicegram.Assistant.MobileData.Esim" = "(eSIM)";
+"Nicegram.Assistant.MobileData.Description" = "Consiga datos móviles directamente en la aplicación";
+"Nicegram.Assistant.NicegramCommunity" = "Comunidad de Nicegram";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Canal oficial";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Chat oficial";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Todos los canales";
+"Nicegram.Assistant.Support" = "Asistencia";
+"Nicegram.Assistant.Rate us" = "Valórenos";
+"Nicegram.Assistant.Logout" = "Cerrar sesión";
+"Nicegram.Assistant.Swipe" = "Deslice el dedo hacia arriba para cerrar el asistente";
+"Nicegram.Assistant.SignIn" = "Iniciar sesión";
+"Nicegram.Assistant.SpecialOffer" = "Oferta especial";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Asistente de Nicegram";
+"Nicegram.Assistant.Hint.Subtitle" = "Funciones disponibles";
+"Nicegram.Assistant.Hint.MobileData" = "Datos móviles (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "Números de teléfono virtuales";
+"Nicegram.Assistant.Hint.Wallet" = "Monedero de criptomonedas";
+"Nicegram.Assistant.Hint.Support" = "Asistencia";
+"Nicegram.Assistant.Hint.Footer" = "Haga clic en el icono del asistente para conseguir más información.";
+"Nicegram.Assistant.Hint.Comming" = "Próximamente";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "Iniciar sesión con el correo electrónico";
+"Nicegram.Login.Email.Title" = "Correo electrónico";
+"Nicegram.Login.Email.Placeholder" = "Introduzca su dirección de correo electrónico";
+"Nicegram.Login.Password.Placeholder" = "Introduzca su contraseña";
+"Nicegram.Login.OrContinue" = "o continuar con";
+"Nicegram.Login.Button" = "Iniciar sesión";
+"Nicegram.Login.ForgotPass" = "¿Ha olvidado la contraseña?";
+"Nicegram.Login.isRegister" = "¿Aún no está registrado?";
+"Nicegram.Login.SignUp" = "Registrarse";
+"Nicegram.Login.Action.Error" = "La contraseña no es válida o el usuario no tiene contraseña";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "¿Ha olvidado la contraseña?";
+"Nicegram.ForgotPass.Subtitle" = "Introduzca la dirección de correo electrónico con la que ya esté registrado";
+"Nicegram.ForgotPass.Email.Title" = "Correo electrónico";
+"Nicegram.ForgotPass.Email.Placeholder" = "Introduzca su dirección de correo electrónico";
+"Nicegram.ForgotPass.Button" = "Enviar el código al correo electrónico";
+
+/*Nicegram Registration*/
+"Nicegram.Registration.Title" = "Registre su cuenta";
+"Nicegram.Registration.Email" = "Correo electrónico";
+"Nicegram.Registration.Email.Error" = "No existe un registro de usuario correspondiente a este identificador. El usuario puede haber sido eliminado";
+"Nicegram.Registration.Password" = "Contraseña";
+"Nicegram.Registration.FirstName" = "Nombre";
+"Nicegram.Registration.LastName" = "Apellidos";
+"Nicegram.Registration.Button" = "Registro";
+"Nicegram.Registration.Question" = "¿Ya está registrado?";
+"Nicegram.Registration.LogIn" = "Iniciar sesión";
+
+/*Nicegram alert and errors*/
+"Nicegram.Alert.InboxCheck" = "Le hemos enviado un correo electrónico de verificación. \nCompruebe su bandeja de entrada";
+"Nicegram.Alert.Continue" = "Continuar";
+"Nicegram.Alert.BaseError" = "Algo salió mal. Inténtelo de nuevo más tarde";
+"Nicegram.Alert.Success" = "Éxito";
+"Nicegram.Alert.TryAgain" = "Intentar otra vez";
+
+/*Nicegram how to install*/
+"Nicegram.Install.Title" = "Configure el teléfono";
+"Nicegram.Install.VideoInstructions.Title" = "Reproducir las instrucciones en vídeo";
+"Nicegram.Install.Manual.Title" = "Instalar manualmente";
+"Nicegram.Install.Manual.Subtitle" = "Configuración → Datos móviles → Añadir un plan de datos";
+"Nicegram.Install.Manual.Scan" = "Escanear";
+"Nicegram.Install.Manual.Address" = "Dirección SM‑DP+";
+"Nicegram.Install.Manual.Code" = "Código de activación";
+"Nicegram.Install.APN.Title" = "Instalar APN";
+"Nicegram.Install.APN.Subtitle" = "Configuración → Datos móviles → Plan → SMTH";
+"Nicegram.Install.APN" = "APN";
+"Nicegram.Install.Roaming.Title" = "Activar la itinerancia de datos";
+"Nicegram.Install.Roaming.Subtitle" = "Configuración → Datos móviles";
+"Nicegram.Install.Roaming.Data" = "Itinerancia de datos";
+"Nicegram.Install.Done" = "Hecho";
+
+/*Nicegram qrcode*/
+"Nicegram.QRCode.Title" = "Escanear el código QR";
+"Nicegram.QRCode.Description" = "Escanee un código QR con la cámara del teléfono para activar una tarjeta eSIM en su dispositivo. No dude en compartir el código con otras personas";
+"Nicegram.QRCode.Share" = "Compartir el código QR";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "Datos móviles";
+"Nicegram.MobileData.NoData" = "No se han comprado datos móviles hasta ahora";
+"Nicegram.MobileData.Action.Add" = "Añadir datos móviles";
+
+"Nicegram.MobileData.MyEsim.Title" = "Mi eSIM";
+"Nicegram.MobileData.MyEsim.Worldwide" = "En todo el mundo";
+"Nicegram.MobileData.MyEsim.Add" = "Añadir más datos";
+"Nicegram.MobileData.MyEsim.Duration" = "Duración";
+"Nicegram.MobileData.MyEsim.Duration.Status" = "Ilimitado";
+"Nicegram.MobileData.MyEsim.Status" = "Disponible";
+"Nicegram.MobileData.MyEsim.Mb" = "MB";
+
+"Nicegram.Internet.Trafic" = "Tráfico de internet";
+"Nicegram.Internet.Duration" = "Duración";
+"Nicegram.Internet.Number" = "Número de teléfono";
+"Nicegram.Internet.Info.Title" = "Información adicional";
+"Nicegram.Internet.Plan.Title" = "Ventaja del plan de datos";
+"Nicegram.Internet.Plan.Description" = "Se le otorga acceso ilimitado a una conexión a internet segura y de alta velocidad.";
+"Nicegram.Internet.Coverage.Title" = "Cobertura de países";
+"Nicegram.Internet.Coverage.Description" = "Este plan de datos es válido en %@ países. Tenga en cuenta que los precios de los datos móviles pueden variar según el país.";
+"Nicegram.Internet.Start.Title" = "Primeros pasos";
+"Nicegram.Internet.Start.Description" = "Para comenzar con eSIM+, primero recargue su saldo y luego disfrute de una conexión a internet sin interrupciones desde cualquier lugar";
+"Nicegram.Internet.Countries.Title" = "Países compatibles";
+"Nicegram.Internet.Countries.SeeAll" = "Ver todo";
+"Nicegram.Internet.Countries.Search" = "Buscar el país";
+"Nicegram.Internet.Countries.Price" = "%@/MB";
+
+/*Nicegram Add Mobile Data*/
+"Nicegram.AddMobileData.Subtitle" = "Añada datos móviles ahora y utilícelos más tarde";
+"Nicegram.AddMobileData.Button" = "Conseguir un plan para %@";
+"Nicegram.AddMobileData.Countries" = "Países compatibles";
+
+/*Updates*/
+"Nicegram.MobileData.MyEsim.FAQ" = "Preguntas frecuentes";
+"Nicegram.Internet.Number.Included" = "Incluido";
+"Nicegram.Alert.Copied" = "Copiado";
+"Nicegram.Alert.Ok" = "Vale";
+"Nicegram.Error.NotSupportedDataPlan" = "Este plan de datos ya no es compatible";
+"Auth.ErrorUserNotFound" = "No existe un registro de usuario correspondiente a este identificador. Es posible que el usuario haya sido eliminado.";
+"Auth.ErrorWrongPassword" = "La contraseña no es válida o el usuario no tiene contraseña.";
+"Auth.ErrorAlreadyInUse" = "La dirección de correo electrónico ya la usa otra cuenta.";
+"Error.EsimProfileBlocked" = "Su perfil esim está bloqueado";
+"Error.EsimProfileExpired" = "Su perfil esim ha caducado";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "¡Nueva oferta especial disponible para ti, échale un vistazo!";
+
+/*Lottery*/
+"Lottery.Banner.Title" = "Feliz lotería de Nicegram";
+"Lottery.Banner.Desc" = "El bote de Powerball";
+
+"Assistant.Referral.Desc" = "¡Invita a tus amigos a **Nicegram** para tener más opciones de ganar el premio gordo!";
+"Assistant.Referral.Btn" = "Invitar";
+
+"Lottery.Header.Title" = "Feliz lotería de Nicegram";
+"Lottery.Header.Desc" = "Prueba tu suerte y compite por el valor del bote de Powerball";
+"Lottery.NextDrawWaiting.Title" = "El próximo sorteo tendrá lugar en:";
+"Lottery.NextDrawStarted.Title" = "Juego conectado";
+"Lottery.NextDrawStarted.Desc" = "Los resultados de este sorteo se anunciarán muy pronto. Podrás generar boletos para el próximo juego de Powerball dentro de unas horas.";
+"Lottery.NextDraw.Day" = "Días";
+"Lottery.NextDraw.Hour" = "Horas";
+"Lottery.NextDraw.Min" = "Min";
+"Lottery.NextDraw.Sec" = "S";
+"Lottery.GetTicket.Btn" = "Obtener mi boleto";
+"Lottery.InfoTab" = "Información";
+"Lottery.TicketsTab" = "Mis boletos";
+"Lottery.PastDraws" = "Últimos números ganadores";
+"Lottery.ActiveTickets.Title" = "Boletos disponibles";
+"Lottery.ActiveTickets.Desc" = "El sorteo se realizará en %@";
+"Lottery.AvailableTickets.Title" = "Disponible para generación";
+"Lottery.AvailableTicketsNotEmpty.Desc" = "Genera un boleto para el próximo juego de Powerball ahora mismo o aprovecha esta oportunidad más adelante si deseas participar en el próximo sorteo. El boleto de lotería que generes se usará solo una vez, en el próximo sorteo.";
+"Lottery.AvailableTickets.Btn" = "Generar un boleto";
+"Lottery.AvailableTicketsEmpty.Desc" = "No tienes billetes de lotería disponibles para generar. Invita a tus amigos a unirse a Nicegram o suscríbete a Nicegram prémium para tener la oportunidad de ganar el bote de tus sueños.";
+"Lottery.PastTickets" = "Mi historial de boletos";
+"Lottery.MoreInfo" = "Más información";
+"Lottery.Or" = "o";
+
+"LotteryTicket.YourNumbers" = "Tus numeros";
+"LotteryTicket.LastWin" = "Último número ganador";
+"LotteryTicket.Link" = "[https://powerball.com](https://powerball.com)";
+
+"Lottery.DrawSection.Title" = "¿Cómo se llevan a cabo los sorteos?";
+"Lottery.DrawSection.Desc" = "Los sorteos tienen lugar todos los miércoles.  El premio gordo seguirá acumulándose hasta que encuentre a su afortunado ganador. Si lo hace, para el momento del próximo sorteo, el premio gordo será de %@.\n\nEl propietario del boleto de la suerte que tenga los seis números que coincidan con los anunciados en el sorteo se llevará el premio gordo. Ten en cuenta que el orden de los primeros cinco números no tiene importancia, mientras que el último número anunciado en el sorteo también debe ser el último en tu boleto.";
+
+"Lottery.HowToGetTicketSection.Title" = "¿Cómo puedo conseguir un boleto?";
+"Lottery.HowToGetTicketSection.Desc" = "1. Todos los suscriptores de Nicegram Premium tienen derecho a un boleto gratis al mes. Para unirte a ellos, suscríbete a Nicegram Premium, dirígete a la sección ''Mis boletos'' y presiona el botón ''Obtener mi boleto''.\n\n2. Invita a tres amigos a Nicegram. Tres recomendaciones exitosas te darán un boleto de lotería gratis. Cuantos más amigos convenzas para que se unan a Nicegram, más boletos de lotería gratis recibirás.";
+
+"Lottery.WinnerSection.Title" = "¿Cómo puedo saber el ganador?";
+"Lottery.WinnerSection.Desc" = "Los resultados de cada juego de Powerball se publicarán en la página web oficial [https://powerball.com](https://powerball.com). El boleto ganador se subirá a esta página y se publicará en el canal oficial de Nicegram. También puedes consultar toda la información relativa a tus entradas en la sección ''Mis boletos''.";
+
+"Lottery.ReferralSection.Title" = "Invita a tus amigos a Nicegram";
+"Lottery.ReferralSection.Desc" = "Invita a tus amigos a unirse a Nicegram por medio de un enlace personal. Tres referencias satisfactorias te otorgan un boleto de lotería gratis. Una referencia cuenta como satisfactoria en cuanto la persona que has invitado instala la aplicación Nicegram y verifica su cuenta. Los amigos que has invitado también recibirán un boleto de lotería de bonificación adicional después de que activen el primero de los suyos.";
+"Lottery.ReferralSection.Btn" = "Invitar a mis amigos a Nicegram";
+
+"Lottery.PremiumSection.Title" = "Consigue boletos gratis como suscriptor de Nicegram prémium";
+"Lottery.PremiumSection.Subscribe.Desc" = "¡Consigue un boleto de lotería gratis cada mes como suscriptor de Nicegram Premium!\n\nPor ahora, ¡no estás suscrito a Nicegram Premium! ¡Presiona el botón ''Suscribirse'' para conseguir acceso ilimitado a todas las funciones exclusivas que Nicegram tiene para ofrecer! La suscripción a Premium también garantiza boletos de lotería regulares totalmente gratis.";
+"Lottery.PremiumSection.Subscribe.Btn" = "Suscríbete a Nicegram prémium";
+"Lottery.PremiumSection.Get.Desc" = "¡Consigue un boleto de lotería gratis cada mes como suscriptor de Nicegram Premium!\n\nYa estás suscrito a Nicegram Premium. ¡Solicita tu boleto en cualquier momento!";
+"Lottery.PremiumSection.Get.Btn" = "Solicitar mi boleto gratis";
+"Lottery.PremiumSection.Wait.Desc" = "¡Consigue un boleto de lotería gratis cada mes como suscriptor de Nicegram Premium!\n\nYa estás suscrito a Nicegram Premium. Este mes, ya has solicitado tu boleto de lotería gratis. El próximo estará disponible en %@.";
+"Lottery.PremiumSection.Wait.Btn" = "Solicitar mi boleto gratis";
+
+"CreateTicket.Title" = "Crea tu boleto de lotería";
+"CreateTicket.Desc" = "Indica 5 números únicos del 1 al 69 y un número independiente del 1 al 26 para crear tu propio boleto o generar todos los números al azar.";
+"CreateTicket.DrawDate" = "Fecha del sorteo: **%@**";
+"CreateTicket.NumbersDesc" = "Celdas 1-5: números del 1 al 69\nCelda 6: número del 1 al 26";
+"CreateTicket.RandomBtn" = "Combinación aleatoria";
+"CreateTicket.CreateBtn" = "Generar mi boleto";
+
+"Alert.TelegramLogin.Title" = "Se requiere verificación";
+"Alert.TelegramLogin.Desc" = "Verifica tu cuenta de Telegram por medio del bot de Nicegram para continuar.";
+"Alert.TelegramLogin.PositiveBtn" = "Continuar";
+"Alert.TelegramLogin.NegativeBtn" = "Cerrar";

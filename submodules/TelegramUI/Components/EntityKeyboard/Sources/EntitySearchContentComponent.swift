@@ -22,15 +22,18 @@ final class EntitySearchContentEnvironment: Equatable {
     let context: AccountContext
     let theme: PresentationTheme
     let deviceMetrics: DeviceMetrics
+    let inputHeight: CGFloat
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        deviceMetrics: DeviceMetrics
+        deviceMetrics: DeviceMetrics,
+        inputHeight: CGFloat
     ) {
         self.context = context
         self.theme = theme
         self.deviceMetrics = deviceMetrics
+        self.inputHeight = inputHeight
     }
     
     static func ==(lhs: EntitySearchContentEnvironment, rhs: EntitySearchContentEnvironment) -> Bool {
@@ -43,7 +46,9 @@ final class EntitySearchContentEnvironment: Equatable {
         if lhs.deviceMetrics != rhs.deviceMetrics {
             return false
         }
-        
+        if lhs.inputHeight != rhs.inputHeight {
+            return false
+        }
         return true
     }
 }
@@ -98,7 +103,7 @@ final class EntitySearchContentComponent: Component {
                     leftInset: 0.0,
                     rightInset: 0.0,
                     bottomInset: 0.0,
-                    inputHeight: 0.0,
+                    inputHeight: environmentValue.inputHeight,
                     deviceMetrics: environmentValue.deviceMetrics,
                     transition: transition.containedViewLayoutTransition
                 )

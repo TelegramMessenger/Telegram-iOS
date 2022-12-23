@@ -208,7 +208,7 @@
 "NicePremium.MentionAll.Desc" = "Швидко повідомляйте всіх учасників групи та переконайтеся, що кожен прочитає ваше повідомлення";
 
 "NicePremium.Renews" = "Підписка автоматично поновлюється";
-"NicePremium.PricePerMonth" = "Підписатися на %@ на місяць";
+"NicePremium.PricePerMonth" = "Підписатися за %@/місяць";
 
 /*Onboarding*/
 "NicegramOnboarding.Continue" = "Продовжити";

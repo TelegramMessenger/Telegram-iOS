@@ -25,7 +25,6 @@ final class MyEsimsRouter: MyEsimsRouterInput {
     //  MARK: - Listener
     
     weak var purchaseEsimListener: PurchaseEsimListener?
-    weak var loginListener: LoginListener?
     
     //  MARK: - Lifecycle
     
@@ -35,12 +34,12 @@ final class MyEsimsRouter: MyEsimsRouterInput {
     }
     
     func routeToPurchaseEsim(regionId: Int, deeplink: Deeplink?) {
-        let vc = purchaseEsimBuilder.build(icc: nil, regionId: regionId, deeplink: deeplink, listener: self, loginListener: loginListener)
+        let vc = purchaseEsimBuilder.build(icc: nil, regionId: regionId, deeplink: deeplink, listener: self)
         parentViewController?.navigationController?.pushViewController(vc, animated: true)
     }
     
     func routeToTopUpEsim(icc: String, regionId: Int) {
-        let vc = purchaseEsimBuilder.build(icc: icc, regionId: regionId, deeplink: nil, listener: self, loginListener: loginListener)
+        let vc = purchaseEsimBuilder.build(icc: icc, regionId: regionId, deeplink: nil, listener: self)
         parentViewController?.navigationController?.pushViewController(vc, animated: true)
     }
     

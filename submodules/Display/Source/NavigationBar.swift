@@ -110,24 +110,24 @@ public final class NavigationBarPresentationData {
     }
 }
 
-enum NavigationPreviousAction: Equatable {
+public enum NavigationPreviousAction: Equatable {
     case item(UINavigationItem)
     case close
     
-    static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
+    public static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
         switch lhs {
-            case let .item(lhsItem):
-                if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
-                    return true
-                } else {
-                    return false
-                }
-            case .close:
-                if case .close = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case let .item(lhsItem):
+            if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
+                return true
+            } else {
+                return false
+            }
+        case .close:
+            if case .close = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -438,12 +438,15 @@ open class BlurredBackgroundView: UIView {
     }
 }
 
+public protocol NavigationBarHeaderView: UIView {
+}
+
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
     }
     
-    static func backArrowImage(color: UIColor) -> UIImage? {
+    public static func backArrowImage(color: UIColor) -> UIImage? {
         var red: CGFloat = 0.0
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
@@ -483,12 +486,13 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
-    private let stripeNode: ASDisplayNode
-    private let clippingNode: SparseNode
+    public let stripeNode: ASDisplayNode
+    public let clippingNode: SparseNode
     private let buttonsContainerNode: ASDisplayNode
     
     public private(set) var contentNode: NavigationBarContentNode?
     public private(set) var secondaryContentNode: ASDisplayNode?
+    public var secondaryContentNodeDisplayFraction: CGFloat = 1.0
     
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
@@ -646,6 +650,23 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public var customHeaderContentView: NavigationBarHeaderView? {
+        didSet {
+            if self.customHeaderContentView !== oldValue {
+                self.customHeaderContentView?.removeFromSuperview()
+                
+                if let customHeaderContentView = self.customHeaderContentView {
+                    self.buttonsContainerNode.view.addSubview(customHeaderContentView)
+                    self.backButtonNode.isHidden = true
+                    self.backButtonArrow.isHidden = true
+                } else {
+                    self.backButtonNode.isHidden = false
+                    self.backButtonArrow.isHidden = false
+                }
+            }
+        }
+    }
+    
     public var layoutSuspended: Bool = false
     
     private let titleNode: ImmediateTextNode
@@ -691,7 +712,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     var _previousItem: NavigationPreviousAction?
-    var previousItem: NavigationPreviousAction? {
+    public internal(set) var previousItem: NavigationPreviousAction? {
         get {
             return self._previousItem
         } set(value) {
@@ -1200,7 +1221,7 @@ open class NavigationBar: ASDisplayNode {
             self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         }
         
-        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -1218,11 +1239,11 @@ open class NavigationBar: ASDisplayNode {
             case .expansion:
                 expansionHeight = contentNode.height
                 
-                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? NavigationBar.defaultSecondaryContentHeight : 0.0
+                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - (appearsHidden ? 0.0 : additionalContentHeight) - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
-                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
+                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
                     }
                 }
             }
@@ -1354,6 +1375,12 @@ open class NavigationBar: ASDisplayNode {
             leftTitleInset -= 1.0
         }
         
+        if let customHeaderContentView = self.customHeaderContentView {
+            let headerSize = CGSize(width: size.width, height: nominalHeight)
+            //customHeaderContentView.update(size: headerSize, transition: transition)
+            transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
+        }
+        
         if self.titleNode.supernode != nil {
             let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight))
             
@@ -1471,6 +1498,22 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public func makeTransitionBackButtonView(accentColor: UIColor) -> UIView? {
+        if self.backButtonNode.supernode != nil {
+            let node = NavigationButtonNode()
+            node.manualAlpha = self.backButtonNode.manualAlpha
+            node.updateManualText(self.backButtonNode.manualText)
+            node.color = accentColor
+            if let validLayout = self.validLayout {
+                let _ = node.updateLayout(constrainedSize: CGSize(width: validLayout.size.width, height: validLayout.defaultHeight), isLandscape: validLayout.isLandscape)
+                node.frame = self.backButtonNode.frame
+            }
+            return node.view
+        } else {
+            return nil
+        }
+    }
+    
     public func makeTransitionRightButtonNode(accentColor: UIColor) -> NavigationButtonNode? {
         if self.rightButtonNode.supernode != nil {
             let node = NavigationButtonNode()
@@ -1507,6 +1550,17 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public func makeTransitionBackArrowView(accentColor: UIColor) -> UIView? {
+        if self.backButtonArrow.supernode != nil {
+            let view = UIImageView()
+            view.image = NavigationBar.backArrowImage(color: accentColor)
+            view.frame = self.backButtonArrow.frame
+            return view
+        } else {
+            return nil
+        }
+    }
+    
     public func makeTransitionBadgeNode() -> ASDisplayNode? {
         if self.badgeNode.supernode != nil && !self.badgeNode.isHidden {
             let node = NavigationBarBadgeNode(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
@@ -1520,6 +1574,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public var intrinsicCanTransitionInline: Bool = true
+    public var shouldTransitionInline: (() -> Bool)?
     
     public var passthroughTouches = true
     
@@ -1527,6 +1582,11 @@ open class NavigationBar: ASDisplayNode {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
             return false
         } else {
+            if let shouldTransitionInline = self.shouldTransitionInline {
+                if !shouldTransitionInline() {
+                    return false
+                }
+            }
             return self.intrinsicCanTransitionInline
         }
     }
@@ -1545,7 +1605,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let _ = self.secondaryContentNode {
-            result += NavigationBar.defaultSecondaryContentHeight
+            result += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
         }
         
         return result
@@ -1604,7 +1664,7 @@ open class NavigationBar: ASDisplayNode {
         if self.secondaryContentNode !== secondaryContentNode {
             if let previous = self.secondaryContentNode, previous.supernode === self.clippingNode {
                 if animated {
-                    previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previous] finished in
+                    previous.layer.animateAlpha(from: previous.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previous] finished in
                         if finished {
                             previous?.removeFromSupernode()
                             previous?.layer.removeAllAnimations()
@@ -1619,7 +1679,7 @@ open class NavigationBar: ASDisplayNode {
                 self.clippingNode.addSubnode(secondaryContentNode)
                 
                 if animated {
-                    secondaryContentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    secondaryContentNode.layer.animateAlpha(from: 0.0, to: secondaryContentNode.alpha, duration: 0.3)
                 }
             }
         }

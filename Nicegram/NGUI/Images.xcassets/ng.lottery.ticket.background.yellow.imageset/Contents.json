@@ -1,0 +1,15 @@
+{
+  "images" : [
+    {
+      "filename" : "lottery_ticket_yellow_background.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  },
+  "properties" : {
+    "preserves-vector-representation" : true
+  }
+}

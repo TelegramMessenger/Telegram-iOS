@@ -10,6 +10,7 @@ swift_library(
         "//Vendor/SnapKit:SnapKit",
         "//Nicegram/EsimModule/EsimUI:EsimUI",
         "//Nicegram/NGButton:NGButton",
+        "//Nicegram/NGCustomViews:NGCustomViews",
         "//Nicegram/NGExtensions:NGExtensions",
         "//Nicegram/NGLocalization:NGLocalization",
         "//Nicegram/NGTheme:NGTheme",

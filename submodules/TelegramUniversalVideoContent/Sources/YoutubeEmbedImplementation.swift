@@ -287,7 +287,6 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                     }
 
                     let _ = download
-                    let _ = failed
                     
                     if let position = position {
                         if self.ignoreEarlierTimestamps {
@@ -307,8 +306,14 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                     }
                 
                     if let updateStatus = self.updateStatus, let playback = playback, let duration = duration {
-                        let playbackStatus: MediaPlayerPlaybackStatus
-                        switch playback {
+                        if let failed, failed {
+                            self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: 0.0, dimensions: self.status.dimensions, timestamp: 0.0, baseRate: 0.0, seekId: self.status.seekId, status: .playing, soundEnabled: false)
+                            updateStatus(self.status)
+                            
+                            self.onPlaybackStarted?()
+                        } else {
+                            let playbackStatus: MediaPlayerPlaybackStatus
+                            switch playback {
                             case 0:
                                 if newTimestamp > Double(duration) - 1.0 {
                                     self.isPlaying = false
@@ -325,17 +330,18 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                                 playbackStatus = .buffering(initial: !self.started, whilePlaying: self.isPlaying, progress: 0.0, display: false)
                             default:
                                 playbackStatus = .buffering(initial: true, whilePlaying: true, progress: 0.0, display: false)
-                        }
-                        
-                        if case .playing = playbackStatus, !self.started {
-                            self.started = true
-                            print("YT started in \(CFAbsoluteTimeGetCurrent() - self.benchmarkStartTime)")
+                            }
                             
-                            self.onPlaybackStarted?()
+                            if case .playing = playbackStatus, !self.started {
+                                self.started = true
+                                print("YT started in \(CFAbsoluteTimeGetCurrent() - self.benchmarkStartTime)")
+                                
+                                self.onPlaybackStarted?()
+                            }
+                            
+                            self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: self.status.baseRate, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
+                            updateStatus(self.status)
                         }
-                        
-                        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: self.status.baseRate, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
-                        updateStatus(self.status)
                     }
                 }
                 
@@ -495,7 +501,9 @@ private func youtubeEmbedStoryboardImage(account: Account, resource: YoutubeEmbe
     
     return signal |> map { fullSizeData in
         let drawingSize = CGSize(width: CGFloat(size.width), height: CGFloat(size.height))
-        let context = DrawingContext(size: drawingSize, clear: true)
+        guard let context = DrawingContext(size: drawingSize, clear: true) else {
+            return nil
+        }
         
         var fullSizeImage: CGImage?
         if let fullSizeData = fullSizeData {

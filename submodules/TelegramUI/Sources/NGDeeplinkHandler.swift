@@ -1,11 +1,14 @@
 import Foundation
 import AccountContext
 import Display
+import NGAppContext
 import NGExtensions
+import NGLoadingIndicator
 import NGModels
 import NGOnboarding
 import NGSubscription
 import TelegramPresentationData
+import UIKit
 
 class NGDeeplinkHandler {
     
@@ -64,6 +67,12 @@ class NGDeeplinkHandler {
             return handlePurchaseEsim(url: url)
         case "onboarding":
             return handleOnboarding(url: url)
+        case "assistant-auth":
+            if #available(iOS 13.0, *) {
+                return handleLoginWithTelegram(url: url)
+            } else {
+                return false
+            }
         default:
             return false
         }
@@ -119,6 +128,28 @@ private extension NGDeeplinkHandler {
         
         navigationController?.topViewController?.present(c, animated: true)
         
+        return true
+    }
+    
+    @available(iOS 13.0, *)
+    func handleLoginWithTelegram(url: URL) -> Bool {
+        let appContext = AppContext(accountContext: tgAccountContext)
+        let initiateLoginWithTelegramUseCase = appContext.resolveInitiateLoginWithTelegramUseCase()
+        
+        NGLoadingIndicator.shared.startAnimating()
+        // Retain initiateLoginWithTelegramUseCase
+        initiateLoginWithTelegramUseCase.initiateLoginWithTelegram { [initiateLoginWithTelegramUseCase] result in
+            DispatchQueue.main.async {
+                NGLoadingIndicator.shared.stopAnimating()
+                switch result {
+                case .success(let url):
+                    UIApplication.shared.open(url)
+                case .failure(_):
+                    break
+                }
+            }
+            debugPrint(initiateLoginWithTelegramUseCase)
+        }
         return true
     }
 }

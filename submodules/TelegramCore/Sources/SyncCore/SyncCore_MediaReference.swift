@@ -7,8 +7,16 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(peer, _, _, _, _):
+            case let .message(peer, _, _, _, _, _):
                 return peer
+        }
+    }
+    public var author: PeerReference? {
+        switch content {
+            case .none:
+                return nil
+            case let .message(_, author, _, _, _, _):
+                return author
         }
     }
 
@@ -16,7 +24,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
         case .none:
             return nil
-        case let .message(_, id, _, _, _):
+        case let .message(_, _, id, _, _, _):
             return id
         }
     }
@@ -25,7 +33,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, _, timestamp, _, _):
+            case let .message(_, _, _, timestamp, _, _):
                 return timestamp
         }
     }
@@ -34,7 +42,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, _, _, incoming, _):
+            case let .message(_, _, _, _, incoming, _):
                 return incoming
         }
     }
@@ -43,22 +51,34 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, _, _, _, secret):
+            case let .message(_, _, _, _, _, secret):
                 return secret
         }
     }
     
     public init(_ message: Message) {
         if message.id.namespace != Namespaces.Message.Local, let peer = message.peers[message.id.peerId], let inputPeer = PeerReference(peer) {
-            self.content = .message(peer: inputPeer, id: message.id, timestamp: message.timestamp, incoming: message.flags.contains(.Incoming), secret: message.containsSecretMedia)
+            let author: PeerReference?
+            if let peer = message.author {
+                author = PeerReference(peer)
+            } else {
+                author = nil
+            }
+            self.content = .message(peer: inputPeer, author: author, id: message.id, timestamp: message.timestamp, incoming: message.flags.contains(.Incoming), secret: message.containsSecretMedia)
         } else {
             self.content = .none
         }
     }
     
-    public init(peer: Peer, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool) {
+    public init(peer: Peer, author: Peer?, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool) {
         if let inputPeer = PeerReference(peer) {
-            self.content = .message(peer: inputPeer, id: id, timestamp: timestamp, incoming: incoming, secret: secret)
+            let a: PeerReference?
+            if let peer = author {
+                a = PeerReference(peer)
+            } else {
+                a = nil
+            }
+            self.content = .message(peer: inputPeer, author: a, id: id, timestamp: timestamp, incoming: incoming, secret: secret)
         } else {
             self.content = .none
         }
@@ -75,14 +95,14 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
 
 public enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
     case none
-    case message(peer: PeerReference, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool)
+    case message(peer: PeerReference, author: PeerReference?, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_r", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                self = .message(peer: decoder.decodeObjectForKey("p", decoder: { PeerReference(decoder: $0) }) as! PeerReference, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), timestamp: 0, incoming: false, secret: false)
+            self = .message(peer: decoder.decodeObjectForKey("p", decoder: { PeerReference(decoder: $0) }) as! PeerReference, author: decoder.decodeObjectForKey("author") as? PeerReference, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), timestamp: 0, incoming: false, secret: false)
             default:
                 assertionFailure()
                 self = .none
@@ -93,9 +113,14 @@ public enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "_r")
-            case let .message(peer, id, _, _, _):
+            case let .message(peer, author, id, _, _, _):
                 encoder.encodeInt32(1, forKey: "_r")
                 encoder.encodeObject(peer, forKey: "p")
+                if let author = author {
+                    encoder.encodeObject(author, forKey: "author")
+                } else {
+                    encoder.encodeNil(forKey: "author")
+                }
                 encoder.encodeInt64(id.peerId.toInt64(), forKey: "i.p")
                 encoder.encodeInt32(id.namespace, forKey: "i.n")
                 encoder.encodeInt32(id.id, forKey: "i.i")

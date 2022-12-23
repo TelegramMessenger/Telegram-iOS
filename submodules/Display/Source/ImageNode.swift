@@ -143,6 +143,8 @@ public class ImageNode: ASDisplayNode {
         }
     }
     
+    public var contentUpdated: ((UIImage?) -> Void)?
+    
     public init(enableHasImage: Bool = false, enableEmpty: Bool = false, enableAnimatedTransition: Bool = false) {
         if enableHasImage {
             self.hasImage = ValuePromise(false, ignoreRepeated: true)
@@ -187,8 +189,10 @@ public class ImageNode: ASDisplayNode {
                         } else {
                             strongSelf.contents = image
                         }
+                        strongSelf.contentUpdated?(next)
                     } else if strongSelf.enableEmpty {
                         strongSelf.contents = nil
+                        strongSelf.contentUpdated?(nil)
                     }
                     if !reportedHasImage {
                         if let hasImage = strongSelf.hasImage {
@@ -210,6 +214,7 @@ public class ImageNode: ASDisplayNode {
         
         self.contents = nil
         self.disposable.set(nil)
+        self.contentUpdated?(nil)
     }
     
     public var image: UIImage? {

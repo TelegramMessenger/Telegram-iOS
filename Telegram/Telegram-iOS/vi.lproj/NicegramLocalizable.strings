@@ -1,0 +1,146 @@
+/*EsimModule*/
+"Error.Default" = "Đã xảy ra sự cố. Vui lòng thử lại sau";
+
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Agree";
+"Nicegram.Assistant.MobileData" = "Dữ liệu di động";
+"Nicegram.Assistant.MobileData.Esim" = "(eSIM)";
+"Nicegram.Assistant.MobileData.Description" = "Kết nối dữ liệu di động ngay trong ứng dụng";
+"Nicegram.Assistant.NicegramCommunity" = "Cộng đồng Nicegram";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Kênh chính thức";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Kênh nhắn tin chính thức";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Tất cả các kênh";
+"Nicegram.Assistant.Support" = "Hỗ trợ";
+"Nicegram.Assistant.Rate us" = "Đánh giá chúng tôi";
+"Nicegram.Assistant.Logout" = "Đăng xuất";
+"Nicegram.Assistant.Swipe" = "Vuốt lên để đóng trợ lý";
+"Nicegram.Assistant.SignIn" = "Đăng nhập";
+"Nicegram.Assistant.SpecialOffer" = "Ưu đãi đặc biệt";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Agree";
+"Nicegram.Assistant.Hint.Subtitle" = "Các tính năng có sẵn";
+"Nicegram.Assistant.Hint.MobileData" = "Dữ liệu di động (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "Số điện thoại ảo";
+"Nicegram.Assistant.Hint.Wallet" = "Ví tiền điện tử";
+"Nicegram.Assistant.Hint.Support" = "Hỗ trợ";
+"Nicegram.Assistant.Hint.Footer" = "Nhấp vào biểu tượng Trợ lý để tìm hiểu thêm";
+"Nicegram.Assistant.Hint.Comming" = "Sắp ra mắt";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "Đăng nhập bằng Thư điện tử";
+"Nicegram.Login.Email.Title" = "Thư điện tử";
+"Nicegram.Login.Email.Placeholder" = "Nhập địa chỉ thư điện tử của bạn";
+"Nicegram.Login.Password.Placeholder" = "Điền mật khẩu của bạn";
+"Nicegram.Login.OrContinue" = "hoặc tiếp tục với";
+"Nicegram.Login.Button" = "Đăng nhập";
+"Nicegram.Login.ForgotPass" = "Quên mật khẩu?";
+"Nicegram.Login.isRegister" = "Chưa đăng ký?";
+"Nicegram.Login.SignUp" = "Đăng ký";
+"Nicegram.Login.Action.Error" = "Mật khẩu không hợp lệ hoặc người dùng không dùng mật khẩu";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "Quên mật khẩu?";
+"Nicegram.ForgotPass.Subtitle" = "Nhập địa chỉ thư điện tử mà bạn đã đăng ký";
+"Nicegram.ForgotPass.Email.Title" = "Thư điện tử";
+"Nicegram.ForgotPass.Email.Placeholder" = "Nhập địa chỉ thư điện tử của bạn";
+"Nicegram.ForgotPass.Button" = "Gửi mã về thư điện tử";
+
+/*Nicegram Registration*/
+"Nicegram.Registration.Title" = "Đăng kí tài khoản của bạn";
+"Nicegram.Registration.Email" = "Thư điện tử";
+"Nicegram.Registration.Email.Error" = "Không có hồ sơ người dùng tương ứng với mã định danh này. Người dùng có thể đã bị xóa";
+"Nicegram.Registration.Password" = "Mật khẩu";
+"Nicegram.Registration.FirstName" = "Tên";
+"Nicegram.Registration.LastName" = "Họ";
+"Nicegram.Registration.Button" = "Đăng kí";
+"Nicegram.Registration.Question" = "Đã đăng ký?";
+"Nicegram.Registration.LogIn" = "Đăng nhập";
+
+/*Nicegram alert and errors*/
+"Nicegram.Alert.InboxCheck" = "Chúng tôi đã gửi cho bạn một thư điện tử xác minh. \nKiểm tra hộp thư đến của bạn!";
+"Nicegram.Alert.Continue" = "Tiếp tục";
+"Nicegram.Alert.BaseError" = "Đã xảy ra sự cố. Vui lòng thử lại sau";
+"Nicegram.Alert.Success" = "Thành công!";
+"Nicegram.Alert.TryAgain" = "Thử lại";
+
+/*Nicegram how to install*/
+"Nicegram.Install.Title" = "Thiết lập điện thoại của bạn";
+"Nicegram.Install.VideoInstructions.Title" = "Phát video hướng dẫn";
+"Nicegram.Install.Manual.Title" = "Cài đặt thủ công";
+"Nicegram.Install.Manual.Subtitle" = "Cài đặt → Dữ liệu di động → Thêm gói cước dữ liệu";
+"Nicegram.Install.Manual.Scan" = "Quét";
+"Nicegram.Install.Manual.Address" = "Ok";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "Dữ liệu di động";
+
+/*Lottery*/
+"Lottery.Banner.Title" = "Xổ số Hạnh phúc Nicegram";
+"Lottery.Banner.Desc" = "Giải độc đắc Powerball";
+
+"Assistant.Referral.Desc" = "Mời bạn bè của bạn tham gia **Nicegram** để có cơ hội trúng giải độc đắc cao hơn!";
+"Assistant.Referral.Btn" = "Mời";
+
+"Lottery.Header.Title" = "Xổ số Hạnh phúc Nicegram";
+"Lottery.Header.Desc" = "Kiểm tra vận may của bạn và tranh giải độc đắc Powerball trị giá";
+"Lottery.NextDrawWaiting.Title" = "Kỳ quay số tiếp theo sẽ diễn ra sau:";
+"Lottery.NextDrawStarted.Title" = "Trò chơi bắt đầu!";
+"Lottery.NextDrawStarted.Desc" = "Kết quả của kỳ quay số này sẽ được công bố rất sớm. Bạn sẽ có thể tạo vé tham dự kỳ quay số Powerball tiếp theo sau vài giờ nữa.";
+"Lottery.NextDraw.Day" = "Ngày";
+"Lottery.NextDraw.Hour" = "Giờ";
+"Lottery.NextDraw.Min" = "Phút";
+"Lottery.NextDraw.Sec" = "Giây";
+"Lottery.GetTicket.Btn" = "Nhận Vé của Tôi";
+"Lottery.InfoTab" = "Thông tin";
+"Lottery.TicketsTab" = "Vé của Tôi";
+"Lottery.PastDraws" = "Dãy số Trúng thưởng Mới nhất";
+"Lottery.ActiveTickets.Title" = "Vé Có sẵn";
+"Lottery.ActiveTickets.Desc" = "Kỳ quay số sẽ được tổ chức sau %@";
+"Lottery.AvailableTickets.Title" = "Có sẵn để Tạo";
+"Lottery.AvailableTicketsNotEmpty.Desc" = "Tạo một vé để tham gia kỳ quay số Powerball sắp tới ngay bây giờ hoặc nắm bắt cơ hội này sau nếu bạn muốn tham gia vào kỳ quay tiếp theo. Vé số bạn tạo sẽ chỉ được sử dụng một lần - tại kỳ quay tiếp theo.";
+"Lottery.AvailableTickets.Btn" = "Tạo Vé";
+"Lottery.AvailableTicketsEmpty.Desc" = "Bạn không có sẵn bất kỳ vé xổ số nào để tạo. Mời bạn bè của bạn tham gia Nicegram hoặc đăng ký Nicegram Cao cấp để có cơ hội giành được giải độc đắc trong mơ của bạn!";
+"Lottery.PastTickets" = "Lịch sử Vé của Tôi";
+"Lottery.MoreInfo" = "Thêm Thông tin";
+"Lottery.Or" = "hoặc";
+
+"LotteryTicket.YourNumbers" = "Dãy số của Bạn";
+"LotteryTicket.LastWin" = "Số Trúng thưởng Mới nhất";
+"LotteryTicket.Link" = "[https://powerball.com](https://powerball.com)";
+
+"Lottery.DrawSection.Title" = "Các kỳ quay số được tổ chức như thế nào?";
+"Lottery.DrawSection.Desc" = "Các kỳ quay số diễn ra vào thứ Tư hàng tuần. Giải độc đắc tiếp tục cộng dồn cho đến khi tìm được người trúng thưởng may mắn. Nếu có người trúng thưởng, vào kỳ quay số tiếp theo, giải độc đắc sẽ có trị giá %@.\n\nChủ nhân của tấm vé may mắn có tất cả sáu số trùng với những số được công bố tại kỳ quay số sẽ giành được giải độc đắc. Lưu ý rằng thứ tự của năm số đầu tiên không quan trọng, nhưng số cuối cùng được công bố tại kỳ quay số cũng phải là số cuối cùng trên tấm vé của bạn.";
+
+"Lottery.HowToGetTicketSection.Title" = "Làm thế nào để tôi nhận được vé?";
+"Lottery.HowToGetTicketSection.Desc" = "1. Tất cả người đăng ký Nicegram Cao cấp đều được nhận một vé miễn phí mỗi tháng. Để tham gia cùng họ, hãy đăng ký Nicegram Cao cấp, vào mục “Vé của Tôi” và nhấn nút “Nhận Vé của Tôi”.\n\n2. Mời ba người bạn tham gia Nicegram. Bạn sẽ kiếm được một vé xổ số miễn phí khi có 3 lượt giới thiệu thành công. Bạn càng thuyết phục được nhiều bạn bè tham gia Nicegram, bạn càng nhận được nhiều vé xổ số miễn phí.";
+
+"Lottery.WinnerSection.Title" = "Làm thế nào tôi có thể biết được ai là người trúng thưởng?";
+"Lottery.WinnerSection.Desc" = "Kết quả của mỗi kỳ quay số Powerball sẽ được công bố trên website chính thức [https://powerball.com](https://powerball.com). Vé trúng thưởng cũng sẽ được tải lên trang này và được đăng trên kênh Nicegram chính thức. Bạn cũng có thể xem tất cả thông tin liên quan đến vé của mình trong mục “Vé của Tôi”.";
+
+"Lottery.ReferralSection.Title" = "Mời bạn bè của bạn tham gia Nicegram";
+"Lottery.ReferralSection.Desc" = "Mời bạn bè của bạn tham gia Nicegram bằng liên kết cá nhân. Bạn sẽ kiếm được một vé xổ số miễn phí khi có 3 lượt giới thiệu thành công. Một lượt giới thiệu được coi là thành công ngay khi người bạn mời cài đặt ứng dụng Nicegram và xác minh tài khoản của họ. Những người bạn mà bạn mời cũng sẽ nhận được thêm một vé xổ số sau khi họ kích hoạt vé xổ số đầu tiên của mình!";
+"Lottery.ReferralSection.Btn" = "Mời Bạn bè của Tôi tham gia Nicegram";
+
+"Lottery.PremiumSection.Title" = "Nhận vé miễn phí với tư cách là người đăng ký Nicegram Cao cấp";
+"Lottery.PremiumSection.Subscribe.Desc" = "Nhận một vé xổ số miễn phí mỗi tháng với tư cách là người đăng ký Nicegram Cao cấp!\n\nHiện tại, bạn chưa đăng ký Nicegram Cao cấp! Hãy xem xét nhấn nút “Đăng ký” để có quyền sử dụng không giới hạn tất cả các tính năng độc quyền mà Nicegram cung cấp! Việc đăng ký Nicegram Cao cấp cũng giúp bạn chắc chắn nhận được các tấm vé số thường xuyên - hoàn toàn miễn phí!";
+"Lottery.PremiumSection.Subscribe.Btn" = "Đăng ký Nicegram Cao cấp";
+"Lottery.PremiumSection.Get.Desc" = "Nhận một vé xổ số miễn phí mỗi tháng với tư cách là người đăng ký Nicegram Cao cấp!\n\nBạn đã đăng ký Nicegram Cao cấp. Hãy nhận vé của bạn bất cứ lúc nào!";
+"Lottery.PremiumSection.Get.Btn" = "Nhận Vé Miễn phí của Tôi";
+"Lottery.PremiumSection.Wait.Desc" = "Nhận một vé xổ số miễn phí mỗi tháng với tư cách là người đăng ký Nicegram Cao cấp!\n\nBạn đã đăng ký Nicegram Cao cấp. Trong tháng này, bạn đã nhận vé xổ số miễn phí của mình. Vé tiếp theo sẽ có vào %@.";
+"Lottery.PremiumSection.Wait.Btn" = "Nhận Vé Miễn phí của Tôi";
+
+"CreateTicket.Title" = "Tạo Vé Xổ số của Bạn";
+"CreateTicket.Desc" = "Nhập 5 số duy nhất từ 1 đến 69 và một số độc lập từ 1 đến 26 để tạo vé của riêng bạn hoặc tạo ngẫu nhiên tất cả các số.";
+"CreateTicket.DrawDate" = "Ngày quay số: **%@**";
+"CreateTicket.NumbersDesc" = "Ô 1–5: các số từ 1 đến 69\nÔ 6: một số từ 1 đến 26";
+"CreateTicket.RandomBtn" = "Kết hợp Ngẫu nhiên";
+"CreateTicket.CreateBtn" = "Tạo Vé của tôi";
+
+"Alert.TelegramLogin.Title" = "Cần phải Xác minh";
+"Alert.TelegramLogin.Desc" = "Xác minh tài khoản Telegram của bạn qua bot Nicegram để tiếp tục.";
+"Alert.TelegramLogin.PositiveBtn" = "Tiếp tục";
+"Alert.TelegramLogin.NegativeBtn" = "Đóng";

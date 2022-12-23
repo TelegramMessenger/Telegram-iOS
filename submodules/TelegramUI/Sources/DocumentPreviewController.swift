@@ -54,7 +54,9 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         }, rootController: self)
         controller.delegate = self
         controller.dataSource = self
-        controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        if #available(iOS 16.0, *) {
+            controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        }
         self.setViewControllers([controller], animated: false)
         
         if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
@@ -198,22 +200,32 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
     }
     
     private func tick() {
-        self.navigationItem.rightBarButtonItems = [UIBarButtonItem()]
-        self.navigationItem.setRightBarButton(UIBarButtonItem(), animated: false)
-        
-        self.navigationController?.toolbar.isHidden = true
-
         let (navigationBars, toolbars) = navigationAndToolbarsInSubviews(forView: self.view)
         self.navigationBars = navigationBars
         self.toolbars = toolbars
-
-        for navigationBar in self.navigationBars {
-            navigationBar.topItem?.rightBarButtonItem = UIBarButtonItem()
-            navigationBar.topItem?.rightBarButtonItems = [UIBarButtonItem()]
-        }
         
-        for toolbar in self.toolbars {
-            toolbar.isHidden = true
+        if #available(iOS 16.0, *) {
+            if let navigationController = self.children.first as? UINavigationController, let topController = navigationController.topViewController {
+                topController.navigationItem.titleMenuProvider = nil
+            }
+            
+            for toolbar in self.toolbars {
+                toolbar.isHidden = true
+            }
+        } else {
+            self.navigationItem.rightBarButtonItems = [UIBarButtonItem()]
+            self.navigationItem.setRightBarButton(UIBarButtonItem(), animated: false)
+            
+            self.navigationController?.toolbar.isHidden = true
+            
+            for navigationBar in self.navigationBars {
+                navigationBar.topItem?.rightBarButtonItem = UIBarButtonItem()
+                navigationBar.topItem?.rightBarButtonItems = [UIBarButtonItem()]
+            }
+            
+            for toolbar in self.toolbars {
+                toolbar.isHidden = true
+            }
         }
     }
 

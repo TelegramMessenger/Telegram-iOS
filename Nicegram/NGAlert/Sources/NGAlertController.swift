@@ -2,6 +2,7 @@ import UIKit
 import SnapKit
 import EsimUI
 import NGButton
+import NGCustomViews
 import NGTheme
 
 private struct Constants {
@@ -12,8 +13,23 @@ private struct Constants {
 open class NGAlertController: UIViewController {
     
     public struct ActionStyle {
-        let backgroundColor: UIColor
+        let background: Background
         let textColor: UIColor
+        
+        public init(background: Background, textColor: UIColor) {
+            self.background = background
+            self.textColor = textColor
+        }
+        
+        public init(backgroundColor: UIColor, textColor: UIColor) {
+            self.background = .color(backgroundColor)
+            self.textColor = textColor
+        }
+        
+        public enum Background {
+            case color(UIColor)
+            case gradient([UIColor])
+        }
     }
     
     //  MARK: - UI Elements
@@ -87,7 +103,12 @@ open class NGAlertController: UIViewController {
         
         // Style
         button.foregroundColor = style.textColor
-        button.backgroundColor = style.backgroundColor
+        switch style.background {
+        case .color(let color):
+            button.backgroundColor = color
+        case .gradient(let colors):
+            button.setGradientBackground(colors: colors)
+        }
         
         // Default
         button.configureTitleLabel { label in
@@ -116,5 +137,12 @@ public extension NGAlertController.ActionStyle {
     
     static func no(ngTheme: NGThemeColors) -> NGAlertController.ActionStyle {
         return .init(backgroundColor: .white, textColor: .black)
+    }
+    
+    static func gradientAction() -> NGAlertController.ActionStyle {
+        return .init(
+            background: .gradient(.defaultGradient),
+            textColor: .white
+        )
     }
 }

@@ -1,0 +1,151 @@
+/*EsimModule*/
+"Error.Default" = "Сталася помилка. Спробуйте пізніше";
+
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Помічник Nicegram";
+"Nicegram.Assistant.MobileData" = "Стільникові дані";
+"Nicegram.Assistant.MobileData.Esim" = "(eSIM)";
+"Nicegram.Assistant.MobileData.Description" = "Отримайте стільникові дані прямо у програмі";
+"Nicegram.Assistant.NicegramCommunity" = "Спільнота Nicegram";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Офіційний канал";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Офіційний чат";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Усі канали";
+"Nicegram.Assistant.Support" = "Підтримка";
+"Nicegram.Assistant.Rate us" = "Оцініть нас";
+"Nicegram.Assistant.Logout" = "Вийти";
+"Nicegram.Assistant.Swipe" = "Проведіть догори, щоб закрити помічника";
+"Nicegram.Assistant.SignIn" = "Увійти";
+"Nicegram.Assistant.SpecialOffer" = "Спеціальна пропозиція";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Помічник Nicegram";
+"Nicegram.Assistant.Hint.Subtitle" = "Наявні можливості";
+"Nicegram.Assistant.Hint.MobileData" = "Стільникові дані (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "Віртуальні номери телефонів";
+"Nicegram.Assistant.Hint.Wallet" = "Криптогаманець";
+"Nicegram.Assistant.Hint.Support" = "Підтримка";
+"Nicegram.Assistant.Hint.Footer" = "Натисніть на іконку Помічника, щоб дізнатися більше";
+"Nicegram.Assistant.Hint.Comming" = "Незабаром";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "Увійти за допомогою пошти";
+"Nicegram.Login.Email.Title" = "Е-пошта";
+"Nicegram.Login.Email.Placeholder" = "Введіть свою електронну пошту";
+"Nicegram.Login.Password.Placeholder" = "Введіть Ваш пароль";
+"Nicegram.Login.OrContinue" = "або продовжити з";
+"Nicegram.Login.Button" = "Увійти";
+"Nicegram.Login.ForgotPass" = "Забули пароль?";
+"Nicegram.Login.isRegister" = "Ще не зареєстровані?";
+"Nicegram.Login.SignUp" = "Реєстрація";
+"Nicegram.Login.Action.Error" = "Неправильний пароль або користувач не має пароля";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "Забули пароль?";
+"Nicegram.ForgotPass.Subtitle" = "Введіть адресу е-пошти, використану при реєстрації";
+"Nicegram.ForgotPass.Email.Title" = "Е-пошта";
+"Nicegram.ForgotPass.Email.Placeholder" = "Введіть свою електронну пошту";
+"Nicegram.ForgotPass.Button" = "Відправити код на пошту";
+
+/*Nicegram Registration*/
+"Nicegram.Registration.Title" = "Створити обліковий запис";
+"Nicegram.Registration.Email" = "Е-пошта";
+"Nicegram.Registration.Email.Error" = "Немає записів користувача, відповідний до цього ідентифікатора. Можливо користувач був видалений";
+"Nicegram.Registration.Password" = "Пароль";
+"Nicegram.Registration.FirstName" = "Ім’я";
+"Nicegram.Registration.LastName" = "Прізвище";
+"Nicegram.Registration.Button" = "Зареєструватись";
+"Nicegram.Registration.Question" = "Вже зареєстровані?";
+"Nicegram.Registration.LogIn" = "Увійти";
+
+/*Nicegram alert and errors*/
+"Nicegram.Alert.InboxCheck" = "Ми надіслали вам електронний лист із підтвердженням. \nПеревірте вхідні повідомлення!";
+"Nicegram.Alert.Continue" = "Продовжити";
+"Nicegram.Alert.BaseError" = "Сталася помилка. Спробуйте пізніше";
+"Nicegram.Alert.Success" = "Успішно!";
+"Nicegram.Alert.TryAgain" = "Повторіть спробу";
+
+/*Nicegram how to install*/
+"Nicegram.Install.Title" = "Налаштуйте Ваш телефон";
+"Nicegram.Install.VideoInstructions.Title" = "Програти відеоінструкцію";
+"Nicegram.Install.Manual.Title" = "Встановити вручну";
+"Nicegram.Install.Manual.Subtitle" = "Налаштування → Стільникові дані → Додати картку eSIM";
+"Nicegram.Install.Manual.Scan" = "Сканувати";
+"Nicegram.Install.Manual.Address" = "Адреса SM-DP+";
+"Nicegram.Install.Manual.Code" = "Код активації";
+"Nicegram.Install.APN.Title" = "Встановити APN";
+"Nicegram.Install.APN.Subtitle" = "Налаштування → Стільникові дані → План → SMTH";
+"Nicegram.Install.APN" = "Точка доступу (APN)";
+"Nicegram.Install.Roaming.Title" = "Увімкнути роумінг даних";
+"Nicegram.Install.Roaming.Subtitle" = "Налаштування → Стільникові дані";
+"Nicegram.Install.Roaming.Data" = "Роумінг даних";
+"Nicegram.Install.Done" = "Готово";
+
+/*Nicegram qrcode*/
+"Nicegram.QRCode.Title" = "Сканувати QR-код";
+"Nicegram.QRCode.Description" = "Скануйте QR-код за допомогою телефонної камери, щоб активувати eSIM на вашому пристрої. Не забудьте поділитись кодом з іншими!";
+"Nicegram.QRCode.Share" = "Поширити QR-код";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "Стільникові дані";
+"Nicegram.MobileData.NoData" = "Поки що немає стільникових даних";
+"Nicegram.MobileData.Action.Add" = "Додати стільникові дані";
+
+"Nicegram.MobileData.MyEsim.Title" = "Моя eSIM";
+"Nicegram.MobileData.MyEsim.Worldwide" = "У світі";
+"Nicegram.MobileData.MyEsim.Add" = "Додати більше стільникових даних";
+"Nicegram.MobileData.MyEsim.Duration" = "Тривалість";
+"Nicegram.MobileData.MyEsim.Duration.Status" = "Необмежено";
+"Nicegram.MobileData.MyEsim.Status" = "Вільно";
+"Nicegram.MobileData.MyEsim.Mb" = "Мб";
+
+"Nicegram.Internet.Trafic" = "Інтернет трафік";
+"Nicegram.Internet.Duration" = "Тривалість";
+"Nicegram.Internet.Number" = "Номер телефону";
+"Nicegram.Internet.Info.Title" = "Додаткова інформація";
+"Nicegram.Internet.Plan.Title" = "Перевага тарифу даних";
+"Nicegram.Internet.Plan.Description" = "Вам надано необмежений доступ до високошвидкісного та безпечного інтернет-з'єднання";
+"Nicegram.Internet.Coverage.Title" = "Покриття країн";
+"Nicegram.Internet.Coverage.Description" = "Цей тариф дійсний в %@ країнах. Будь ласка, зверніть увагу, що ціни на стільникові дані можуть відрізнятися в залежності від країни";
+"Nicegram.Internet.Start.Title" = "Перші кроки";
+"Nicegram.Internet.Start.Description" = "Для того, щоб почати роботу з eSIM+ поповнити свій баланс, а потім насолоджуйтеся безшовним інтернет-підключенням, де б ви не були";
+"Nicegram.Internet.Countries.Title" = "Країни, що підтримуються";
+"Nicegram.Internet.Countries.SeeAll" = "Переглянути всі";
+"Nicegram.Internet.Countries.Search" = "Пошук країни";
+"Nicegram.Internet.Countries.Price" = "%@/мб";
+
+/*Nicegram Add Mobile Data*/
+"Nicegram.AddMobileData.Subtitle" = "Додати стільникові дані зараз - використати їх пізніше";
+"Nicegram.AddMobileData.Button" = "Отримати тариф за %@";
+"Nicegram.AddMobileData.Countries" = "Країни, що підтримуються";
+
+/*Updates*/
+"Nicegram.MobileData.MyEsim.FAQ" = "ЧаПи";
+"Nicegram.Internet.Number.Included" = "Включено";
+"Nicegram.Alert.Copied" = "Скопійовано";
+"Nicegram.Alert.Ok" = "Гаразд";
+"Nicegram.Error.NotSupportedDataPlan" = "Цей тариф більше не підтримується";
+"Auth.ErrorUserNotFound" = "Немає записів користувача, відповідний до цього ідентифікатора. Можливо користувач був видалений.";
+"Auth.ErrorWrongPassword" = "Неправильний пароль або користувач не має пароля.";
+"Auth.ErrorAlreadyInUse" = "Ця адреса вже використовується в іншому аккаунті.";
+"Error.EsimProfileBlocked" = "Ваш eSIM профіль заблоковано";
+"Error.EsimProfileExpired" = "Термін дії вашого eSIM профілю минув";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "Доступна нова спеціальна пропозиція, перевірте її!";
+
+"Assistant.Referral.Desc" = "Запросіть своїх друзів до **Nicegram**, щоб збільшити шанс виграти джекпот!";
+"Lottery.ActiveTickets.Desc" = "Твій малюнок буде проведено в %@";
+"LotteryTicket.Link" = "[https://powerball.com](https://powerball.com)";
+"Lottery.DrawSection.Desc" = "Малюнки відбуваються кожні середу. Жекпот продовжує накопичуватися, поки він не знайде свого щасливого переможця. Якщо це станеться, до часу наступного малюнка буде відображатися на %@.\n\nВласник щасливого квитка, який має всі шість чисел, співпадаючи з тими, які були оголошені на малюнку розгортають джекпот. Зверніть увагу, що порядок перших п'яти чисел не має значення, Хоча останній номер, оголошений при малюванні, має бути останнім по вашому квитку.";
+"Lottery.HowToGetTicketSection.Desc" = "1. Усі підписники Nicegram Premium мають право на купівлю квитка на місяць. Щоб приєднатися до них, підпишіться на Nicegram Premium, перейдіть на розділ Мої заявки та натисніть кнопку Отримати заявку.\n\n2. Запросіть трьох друзів до Nicegram. Три успішні реферали заробили тобі один безкоштовний лотерейний квиток. Чим більше друзів ти переконаєш приєднатися до Nicegram, тим більш безкоштовні лотерейні квитки ти отримаєте.";
+"Lottery.WinnerSection.Desc" = "Результати кожної гри з Powerball будуть опубліковані на офіційному сайті [https://powerball.com](https://powerball.com). Виграшний квиток буде додатково завантажений на цю сторінку та опублікований в офіційному каналі Nicegram. Також ви можете переглянути всю інформацію стосовно ваших заявок у розділі Мої Заявки.";
+"Lottery.PremiumSection.Subscribe.Desc" = "Отримуйте один безкоштовний лотерейний квиток щомісяця як Преміум підписник Nicegram!\n\nНаразі ви не підписані на Nicegram Premium! Розглянемо удари цієї кнопки Підписатися, щоб отримати необмежений доступ до всіх ексклюзивних функцій, які пропонує Nicegram! Підписка на Premium також гарантує стандартні лотерейні квитки, повністю безкоштовна!";
+"Lottery.PremiumSection.Get.Desc" = "Отримуйте один безкоштовний лотерейний квиток щомісяця як Преміум підписник Nicegram!\n\nВи вже підписані на Nicegram Premium. Відчуйте квиток у будь-який час!";
+"Lottery.PremiumSection.Wait.Desc" = "Отримуйте один безкоштовний лотерейний квиток щомісяця як Преміум підписник Nicegram!\n\nВи вже підписані на Nicegram Premium. Цього місяця ви вже заявляли про свій безкоштовний лотерейний квиток. Наступний буде доступний на %@.";
+"CreateTicket.DrawDate" = "Дата малюнка: **%@**";
+"CreateTicket.NumbersDesc" = "Секції 1-5: цифри від 1 до 69\nСекція 6: номер від 1 до 26";
+"Alert.TelegramLogin.PositiveBtn" = "Продовжити";
+"Alert.TelegramLogin.NegativeBtn" = "Закрити";

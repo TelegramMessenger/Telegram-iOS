@@ -14,7 +14,7 @@ open class NGToast: UIView {
     
     //  MARK: - Logic
     
-    public var duration: TimeInterval = 2
+    public var duration: TimeInterval? = 2
     private var autoDismissTimer: Timer?
     
     private var shownVerticalPositionConstraint: Constraint?
@@ -22,8 +22,8 @@ open class NGToast: UIView {
     
     //  MARK: - Lifecycle
     
-    public override init(frame: CGRect) {
-        super.init(frame: frame)
+    public init(topInsetFromSafeArea: CGFloat = 15) {
+        super.init(frame: .zero)
         
         let swipeRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(onSwipeUpGesture))
         swipeRecognizer.direction = .up
@@ -32,7 +32,7 @@ open class NGToast: UIView {
         addSubview(contentView)
         
         contentView.snp.makeConstraints { make in
-            make.top.equalTo(safeArea.top).inset(15)
+            make.top.equalTo(safeArea.top).inset(topInsetFromSafeArea)
             make.centerX.equalToSuperview()
             make.leading.equalToSuperview().inset(16)
             make.bottom.equalToSuperview()
@@ -73,8 +73,8 @@ open class NGToast: UIView {
             self.updateConstraints(isHidden: false)
             view.layoutIfNeeded()
         } completion: { _ in
-            if #available(iOS 10.0, *) {
-                self.autoDismissTimer = Timer.scheduledTimer(withTimeInterval: self.duration, repeats: false) { [weak self] _ in
+            if let duration = self.duration {
+                self.autoDismissTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
                     self?.hide()
                 }
             }

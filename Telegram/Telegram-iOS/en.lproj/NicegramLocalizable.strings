@@ -135,3 +135,70 @@
 
 /*Push Notifications*/
 "NicegramPush.SpecialOffer.Body" = "New special offer is available for you, check it out!";
+
+/*Lottery*/
+"Lottery.Banner.Title" = "Nicegram Happy Lottery";
+"Lottery.Banner.Desc" = "Powerball jackpot";
+
+"Assistant.Referral.Desc" = "Invite your friends to **Nicegram** for a greater chance to win the jackpot!";
+"Assistant.Referral.Btn" = "Invite";
+
+"Lottery.Header.Title" = "Nicegram Happy Lottery";
+"Lottery.Header.Desc" = "Test out your luck and compete for the Powerball jackpot worth";
+"Lottery.NextDrawWaiting.Title" = "The next drawing will take place in:";
+"Lottery.NextDrawStarted.Title" = "Game on!";
+"Lottery.NextDrawStarted.Desc" = "The results of this drawing will be announced very soon. You’ll be able to generate tickets to the next Powerball game in a few hours’ time.";
+"Lottery.NextDraw.Day" = "Days";
+"Lottery.NextDraw.Hour" = "Hours";
+"Lottery.NextDraw.Min" = "Min";
+"Lottery.NextDraw.Sec" = "Sec";
+"Lottery.GetTicket.Btn" = "Get My Ticket";
+"Lottery.InfoTab" = "Info";
+"Lottery.TicketsTab" = "My Tickets";
+"Lottery.PastDraws" = "Latest Winning Numbers";
+"Lottery.ActiveTickets.Title" = "Available Tickets";
+"Lottery.ActiveTickets.Desc" = "The drawing will be held in %@";
+"Lottery.AvailableTickets.Title" = "Available for Generation";
+"Lottery.AvailableTicketsNotEmpty.Desc" = "Generate a ticket to the upcoming Powerball game right now or seize this opportunity later if you wish to take part in the next drawing. The lottery ticket you generate will be used only once - at the upcoming drawing.";
+"Lottery.AvailableTickets.Btn" = "Generate a Ticket";
+"Lottery.AvailableTicketsEmpty.Desc" = "You don’t have any lottery tickets available for generation. Invite your friends to join Nicegram or subscribe to Nicegram Premium for a chance to win your dream jackpot!";
+"Lottery.PastTickets" = "My Ticket History";
+"Lottery.MoreInfo" = "More info";
+"Lottery.Or" = "or";
+
+"LotteryTicket.YourNumbers" = "Your numbers";
+"LotteryTicket.LastWin" = "Latest Winning Number";
+"LotteryTicket.Link" = "[https://powerball.com](https://powerball.com)";
+
+"Lottery.DrawSection.Title" = "How are the drawings held?";
+"Lottery.DrawSection.Desc" = "The drawings take place every Wednesday.  The jackpot keeps accumulating until it finds its lucky winner. If it does, by the time of the next drawing the jackpot will stand at %@.\n\nThe owner of the fortunate ticket that has all the six numbers coinciding with those announced at the drawing sweeps the jackpot. Note that the order of the first five numbers holds no significance, whereas the last number announced at the drawing has to be the last on your ticket as well.";
+
+"Lottery.HowToGetTicketSection.Title" = "How can I get a ticket?";
+"Lottery.HowToGetTicketSection.Desc" = "1. All Nicegram Premium subscribers are entitled to one free ticket a month. To join them, subscribe to Nicegram Premium, go to My Tickets section and press the Get My Ticket button.\n\n2. Invite three friends to Nicegram. Three successful referrals earn you one free lottery ticket. The more friends you persuade to join Nicegram, the more free lottery tickets you’ll end up receiving.";
+
+"Lottery.WinnerSection.Title" = "How can I find out the winner?";
+"Lottery.WinnerSection.Desc" = "The results of each Powerball game will be published on the official website [https://powerball.com](https://powerball.com). The winning ticket will be additionally uploaded to this page and posted in the official Nicegram channel. You can also view all the information regarding your tickets in the My Tickets section.";
+
+"Lottery.ReferralSection.Title" = "Invite your friends to Nicegram";
+"Lottery.ReferralSection.Desc" = "Invite your friends to join Nicegram via a personal link. Three successful referrals earn you one free lottery ticket. A referral counts as successful as soon as the person you invited installs the Nicegram app and verifies their account. The friends you invited will also receive an additional bonus lottery ticket after they activate their first one!";
+"Lottery.ReferralSection.Btn" = "Invite My Friends to Nicegram";
+
+"Lottery.PremiumSection.Title" = "Get free tickets as a Nicegram Premium subscriber";
+"Lottery.PremiumSection.Subscribe.Desc" = "Receive one free lottery ticket every month as a Nicegram Premium subscriber!\n\nAs for now, you are not subscribed to Nicegram Premium! Consider hitting that Subscribe button to gain unlimited access to all the exclusive features that Nicegram has to offer! The subscription to Premium also guarantees regular lottery tickets - completely free of charge!";
+"Lottery.PremiumSection.Subscribe.Btn" = "Subscribe to Nicegram Premium";
+"Lottery.PremiumSection.Get.Desc" = "Receive one free lottery ticket every month as a Nicegram Premium subscriber!\n\nYou are already subscribed to Nicegram Premium. Feel free to claim your ticket anytime!";
+"Lottery.PremiumSection.Get.Btn" = "Claim My Free Ticket";
+"Lottery.PremiumSection.Wait.Desc" = "Receive one free lottery ticket every month as a Nicegram Premium subscriber!\n\nYou are already subscribed to Nicegram Premium. This month, you have already claimed your free lottery ticket. The next one will become available on %@.";
+"Lottery.PremiumSection.Wait.Btn" = "Claim My Free Ticket";
+
+"CreateTicket.Title" = "Create Your Lottery Ticket";
+"CreateTicket.Desc" = "Enter 5 unique numbers from 1 to 69 and one standalone number from 1 to 26 to create your own ticket or generate all the numbers randomly.";
+"CreateTicket.DrawDate" = "Drawing date: **%@**";
+"CreateTicket.NumbersDesc" = "Cells 1-5: numbers from 1 to 69\nCell 6: number from 1 to 26";
+"CreateTicket.RandomBtn" = "Random Combination";
+"CreateTicket.CreateBtn" = "Generate My Ticket";
+
+"Alert.TelegramLogin.Title" = "Verification Required";
+"Alert.TelegramLogin.Desc" = "Verify your Telegram account via the Nicegram bot to continue.";
+"Alert.TelegramLogin.PositiveBtn" = "Continue";
+"Alert.TelegramLogin.NegativeBtn" = "Close";

@@ -1408,6 +1408,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
+            }, navigateToThreadMessage: { _, _, _ in
             }, tapMessage: { message in
                 tapMessage?(message)
         }, clickThroughMessage: {
@@ -1447,6 +1448,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _, _ in
         }, displayPremiumStickerTooltip: { _, _ in
+        }, displayEmojiPackTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -1491,68 +1493,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), controllerInteraction: nil, context: context)
     }
     
-    #if ENABLE_WALLET
-    public func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void) {
-        guard let storedContext = context.tonContext else {
-            return
-        }
-        let _ = (combineLatest(queue: .mainQueue(),
-            WalletStorageInterfaceImpl(postbox: context.account.postbox).getWalletRecords(),
-            storedContext.keychain.encryptionPublicKey(),
-            context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        )
-        |> deliverOnMainQueue).start(next: { wallets, currentPublicKey, preferences in
-            let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-            let walletConfiguration = WalletConfiguration.with(appConfiguration: appConfiguration)
-            guard let config = walletConfiguration.config, let blockchainName = walletConfiguration.blockchainName else {
-                return
-            }
-            let tonContext = storedContext.context(config: config, blockchainName: blockchainName, enableProxy: !walletConfiguration.disableProxy)
-            
-            if wallets.isEmpty {
-                if case .send = walletContext {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = textAlertController(context: context, title: presentationData.strings.Conversation_WalletRequiredTitle, text: presentationData.strings.Conversation_WalletRequiredText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Conversation_WalletRequiredNotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Conversation_WalletRequiredSetup, action: { [weak self] in
-                        self?.openWallet(context: context, walletContext: .generic, present: present)
-                    })])
-                    present(controller)
-                } else {
-                    if let _ = currentPublicKey {
-                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .intro, walletCreatedPreloadState: nil))
-                    } else {
-                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
-                    }
-                }
-            } else {
-                let walletInfo = wallets[0].info
-                let exportCompleted = wallets[0].exportCompleted
-                if let currentPublicKey = currentPublicKey {
-                    if currentPublicKey == walletInfo.encryptedSecret.publicKey {
-                        let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
-                        |> deliverOnMainQueue).start(next: { address in
-                            switch walletContext {
-                            case .generic:
-                                if exportCompleted {
-                                    present(WalletInfoScreen(context: WalletContextImpl(context: context, tonContext: tonContext), walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
-                                } else {
-                                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
-                                }
-                            case let .send(address, amount, comment):
-                                present(walletSendScreen(context: WalletContextImpl(context: context, tonContext: tonContext), randomId: Int64.random(in: Int64.min ... Int64.max), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
-                            }
-                            
-                        })
-                    } else {
-                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
-                    }
-                } else {
-                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
-                }
-            }
-        })
-    }
-    #endif
-    
     public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
@@ -1590,7 +1530,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController {
-        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId))
+        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: false))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
@@ -1600,46 +1540,81 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
-            case .settings:
-                mappedSource = .settings
-            case .stickers:
-                mappedSource = .stickers
-            case .reactions:
-                mappedSource = .reactions
-            case .ads:
-                mappedSource = .ads
-            case .upload:
-                mappedSource = .upload
-            case .groupsAndChannels:
-                mappedSource = .groupsAndChannels
-            case .pinnedChats:
-                mappedSource = .pinnedChats
-            case .publicLinks:
-                mappedSource = .publicLinks
-            case .savedGifs:
-                mappedSource = .savedGifs
-            case .savedStickers:
-                mappedSource = .savedStickers
-            case .folders:
-                mappedSource = .folders
-            case .chatsPerFolder:
-                mappedSource = .chatsPerFolder
-            case .appIcons:
-                mappedSource = .appIcons
-            case .accounts:
-                mappedSource = .accounts
-            case .about:
-                mappedSource = .about
-            case let .deeplink(reference):
-                mappedSource = .deeplink(reference)
-            case let .profile(peerId):
-                mappedSource = .profile(peerId)
-            case let .emojiStatus(peerId, fileId, file, packTitle):
-                mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
-            case .voiceToText:
-                mappedSource = .voiceToText
+        case .settings:
+            mappedSource = .settings
+        case .stickers:
+            mappedSource = .stickers
+        case .reactions:
+            mappedSource = .reactions
+        case .ads:
+            mappedSource = .ads
+        case .upload:
+            mappedSource = .upload
+        case .groupsAndChannels:
+            mappedSource = .groupsAndChannels
+        case .pinnedChats:
+            mappedSource = .pinnedChats
+        case .publicLinks:
+            mappedSource = .publicLinks
+        case .savedGifs:
+            mappedSource = .savedGifs
+        case .savedStickers:
+            mappedSource = .savedStickers
+        case .folders:
+            mappedSource = .folders
+        case .chatsPerFolder:
+            mappedSource = .chatsPerFolder
+        case .appIcons:
+            mappedSource = .appIcons
+        case .accounts:
+            mappedSource = .accounts
+        case .about:
+            mappedSource = .about
+        case let .deeplink(reference):
+            mappedSource = .deeplink(reference)
+        case let .profile(peerId):
+            mappedSource = .profile(peerId)
+        case let .emojiStatus(peerId, fileId, file, packTitle):
+            mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
+        case .voiceToText:
+            mappedSource = .voiceToText
+        case .fasterDownload:
+            mappedSource = .fasterDownload
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
+    }
+    
+    public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {
+        let mappedSubject: PremiumDemoScreen.Subject
+        switch subject {
+        case .doubleLimits:
+            mappedSubject = .doubleLimits
+        case .moreUpload:
+            mappedSubject = .moreUpload
+        case .fasterDownload:
+            mappedSubject = .fasterDownload
+        case .voiceToText:
+            mappedSubject = .voiceToText
+        case .noAds:
+            mappedSubject = .noAds
+        case .uniqueReactions:
+            mappedSubject = .uniqueReactions
+        case .premiumStickers:
+            mappedSubject = .premiumStickers
+        case .advancedChatManagement:
+            mappedSubject = .advancedChatManagement
+        case .profileBadge:
+            mappedSubject = .profileBadge
+        case .animatedUserpics:
+            mappedSubject = .animatedUserpics
+        case .appIcons:
+            mappedSubject = .appIcons
+        case .animatedEmoji:
+            mappedSubject = .animatedEmoji
+        case .emojiStatus:
+            mappedSubject = .emojiStatus
+        }
+        return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
     
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {

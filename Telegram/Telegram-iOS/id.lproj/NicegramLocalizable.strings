@@ -1,0 +1,24 @@
+
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "Asisten Nicegram";
+"Nicegram.Assistant.MobileData" = "Data Seluler";
+"Nicegram.Assistant.NicegramCommunity" = "Komunitas Nicegram";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Channel resmi";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Chat resmi";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "Semua channel";
+"Nicegram.Assistant.Support" = "Dukungan";
+"Nicegram.Assistant.Rate us" = "Berikan penilaian";
+"Nicegram.Assistant.Logout" = "Keluar";
+"Nicegram.Assistant.SignIn" = "Masuk";
+"Nicegram.Assistant.SpecialOffer" = "Penawaran spesial";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "Asisten Nicegram";
+"Nicegram.Assistant.Hint.Subtitle" = "Fitur yang tersedia";
+"Nicegram.Assistant.Hint.Support" = "Dukungan";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "Data Seluler";

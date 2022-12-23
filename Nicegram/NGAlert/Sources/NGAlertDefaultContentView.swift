@@ -14,6 +14,7 @@ open class NGAlertDefaultContentView: UIView {
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = ngTheme.reverseTitleColor
         titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 0
         
         imageView.contentMode = .scaleAspectFit
         
@@ -27,7 +28,7 @@ open class NGAlertDefaultContentView: UIView {
         descriptionLabel.textAlignment = .center
         descriptionLabel.numberOfLines = 0
         
-        let stack = UIStackView(arrangedSubviews: [titleLabel, imageView, subtitleLabel, descriptionLabel])
+        let stack = UIStackView(arrangedSubviews: [imageView, titleLabel, subtitleLabel, descriptionLabel])
         stack.axis = .vertical
         stack.spacing = 24
         stack.alignment = .center

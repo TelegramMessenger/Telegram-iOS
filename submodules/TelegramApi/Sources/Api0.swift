@@ -180,7 +180,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
     dict[414687501] = { return Api.DcOption.parse_dcOption($0) }
-    dict[-1460809483] = { return Api.Dialog.parse_dialog($0) }
+    dict[1135897376] = { return Api.DefaultHistoryTTL.parse_defaultHistoryTTL($0) }
+    dict[-712374074] = { return Api.Dialog.parse_dialog($0) }
     dict[1908216652] = { return Api.Dialog.parse_dialogFolder($0) }
     dict[1949890536] = { return Api.DialogFilter.parse_dialogFilter($0) }
     dict[909284270] = { return Api.DialogFilter.parse_dialogFilterDefault($0) }
@@ -224,6 +225,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[594758406] = { return Api.EncryptedMessage.parse_encryptedMessageService($0) }
     dict[179611673] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
     dict[-317687113] = { return Api.ExportedChatInvite.parse_chatInvitePublicJoinRequests($0) }
+    dict[1103040667] = { return Api.ExportedContactToken.parse_exportedContactToken($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
     dict[-207944868] = { return Api.FileHash.parse_fileHash($0) }
     dict[-11252123] = { return Api.Folder.parse_folder($0) }
@@ -454,9 +456,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
     dict[-1434950843] = { return Api.MessageAction.parse_messageActionSetChatTheme($0) }
-    dict[-1441072131] = { return Api.MessageAction.parse_messageActionSetMessagesTTL($0) }
+    dict[1007897979] = { return Api.MessageAction.parse_messageActionSetMessagesTTL($0) }
     dict[228168278] = { return Api.MessageAction.parse_messageActionTopicCreate($0) }
-    dict[-1316338916] = { return Api.MessageAction.parse_messageActionTopicEdit($0) }
+    dict[-1064024032] = { return Api.MessageAction.parse_messageActionTopicEdit($0) }
     dict[-1262252875] = { return Api.MessageAction.parse_messageActionWebViewDataSent($0) }
     dict[1205698681] = { return Api.MessageAction.parse_messageActionWebViewDataSentMe($0) }
     dict[546203849] = { return Api.MessageEntity.parse_inputMessageEntityMentionName($0) }
@@ -778,7 +780,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-761649164] = { return Api.Update.parse_updateChannelMessageForwards($0) }
     dict[-232346616] = { return Api.Update.parse_updateChannelMessageViews($0) }
     dict[-1738720581] = { return Api.Update.parse_updateChannelParticipant($0) }
-    dict[-158027602] = { return Api.Update.parse_updateChannelPinnedTopic($0) }
+    dict[422509539] = { return Api.Update.parse_updateChannelPinnedTopic($0) }
+    dict[-31881726] = { return Api.Update.parse_updateChannelPinnedTopics($0) }
     dict[-366410403] = { return Api.Update.parse_updateChannelReadMessagesContents($0) }
     dict[277713951] = { return Api.Update.parse_updateChannelTooLong($0) }
     dict[-1937192669] = { return Api.Update.parse_updateChannelUserTyping($0) }
@@ -936,6 +939,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1148485274] = { return Api.auth.Authorization.parse_authorizationSignUpRequired($0) }
     dict[1948046307] = { return Api.auth.CodeType.parse_codeTypeCall($0) }
     dict[577556219] = { return Api.auth.CodeType.parse_codeTypeFlashCall($0) }
+    dict[116234636] = { return Api.auth.CodeType.parse_codeTypeFragmentSms($0) }
     dict[-702884114] = { return Api.auth.CodeType.parse_codeTypeMissedCall($0) }
     dict[1923290508] = { return Api.auth.CodeType.parse_codeTypeSms($0) }
     dict[-1271602504] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
@@ -949,6 +953,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1398007207] = { return Api.auth.SentCodeType.parse_sentCodeTypeCall($0) }
     dict[1511364673] = { return Api.auth.SentCodeType.parse_sentCodeTypeEmailCode($0) }
     dict[-1425815847] = { return Api.auth.SentCodeType.parse_sentCodeTypeFlashCall($0) }
+    dict[-648651719] = { return Api.auth.SentCodeType.parse_sentCodeTypeFragmentSms($0) }
     dict[-2113903484] = { return Api.auth.SentCodeType.parse_sentCodeTypeMissedCall($0) }
     dict[-1521934870] = { return Api.auth.SentCodeType.parse_sentCodeTypeSetUpEmailRequired($0) }
     dict[-1073693790] = { return Api.auth.SentCodeType.parse_sentCodeTypeSms($0) }
@@ -1028,7 +1033,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[649453030] = { return Api.messages.MessageEditData.parse_messageEditData($0) }
     dict[834488621] = { return Api.messages.MessageReactionsList.parse_messageReactionsList($0) }
     dict[-1228606141] = { return Api.messages.MessageViews.parse_messageViews($0) }
-    dict[1682413576] = { return Api.messages.Messages.parse_channelMessages($0) }
+    dict[-948520370] = { return Api.messages.Messages.parse_channelMessages($0) }
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[978610270] = { return Api.messages.Messages.parse_messagesSlice($0) }
@@ -1254,6 +1259,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DcOption:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.DefaultHistoryTTL:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Dialog:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DialogFilter:
@@ -1289,6 +1296,8 @@ public extension Api {
             case let _1 as Api.EncryptedMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedChatInvite:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ExportedContactToken:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
                 _1.serialize(buffer, boxed)

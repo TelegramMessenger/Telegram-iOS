@@ -1,0 +1,62 @@
+
+/*Nicegram plus*/
+/*Nicegram assistant*/
+
+"Nicegram.Assistant.Title" = "නයිස්ග්‍රෑම් සහායක";
+"Nicegram.Assistant.MobileData" = "ජංගම දත්ත";
+"Nicegram.Assistant.NicegramCommunity" = "නයිස්ග්‍රෑම් ප්‍රජාව";
+"Nicegram.Assistant.NicegramCommunity.Telegram" = "ටෙලිග්‍රෑම්";
+"Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "නිල නාලිකාව";
+"Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "නිල කතාබහ";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "සියළු නාලිකා";
+"Nicegram.Assistant.Support" = "සහාය";
+"Nicegram.Assistant.Rate us" = "අගයන්න";
+"Nicegram.Assistant.Logout" = "නික්මෙන්න";
+"Nicegram.Assistant.SignIn" = "පිවිසෙන්න";
+"Nicegram.Assistant.SpecialOffer" = "විශේෂ දීමනාව";
+
+/*Nicegram assistant hint*/
+"Nicegram.Assistant.Hint.Title" = "නයිස්ග්‍රෑම් සහායක";
+"Nicegram.Assistant.Hint.Subtitle" = "තිබෙන විශේෂාංග";
+"Nicegram.Assistant.Hint.MobileData" = "ජංගම දත්ත (eSIM)";
+"Nicegram.Assistant.Hint.VirtualNumber" = "අත්‍ය දුරකථන අංක";
+"Nicegram.Assistant.Hint.Support" = "සහාය";
+
+/*Nicegram login*/
+"Nicegram.Login.Title" = "වි-තැපෑල සමඟ පිවිසෙන්න";
+"Nicegram.Login.Email.Title" = "වි-තැපෑල";
+"Nicegram.Login.Email.Placeholder" = "ඔබගේ වි-තැපෑල් යොදන්න";
+"Nicegram.Login.Password.Placeholder" = "මුරපදය යොදන්න";
+"Nicegram.Login.Button" = "පිවිසෙන්න";
+"Nicegram.Login.ForgotPass" = "මුරපදය අමතකද?";
+"Nicegram.Login.SignUp" = "ලියාපදිංචිය";
+
+/*Nicegram forgot password*/
+"Nicegram.ForgotPass.Title" = "මුරපදය අමතකද?";
+"Nicegram.ForgotPass.Email.Title" = "වි-තැපෑල";
+"Nicegram.ForgotPass.Email.Placeholder" = "ඔබගේ වි-තැපෑල් යොදන්න";
+"Nicegram.Registration.Email" = "වි-තැපෑල";
+"Nicegram.Registration.Password" = "මුරපදය";
+"Nicegram.Registration.FirstName" = "මුල් නම";
+"Nicegram.Registration.LastName" = "අග නම";
+"Nicegram.Registration.Button" = "ලියාපදිංචිය";
+"Nicegram.Registration.LogIn" = "පිවිසෙන්න";
+"Nicegram.Alert.Continue" = "ඉදිරියට";
+"Nicegram.Alert.Success" = "සාර්ථකයි!";
+"Nicegram.Alert.TryAgain" = "යළි උත්සාහය";
+"Nicegram.Install.Manual.Title" = "අතින් ස්ථාපනය";
+"Nicegram.Install.Manual.Scan" = "සුපිරික්සන්න";
+"Nicegram.Install.Done" = "අහවරයි";
+"Nicegram.QRCode.Share" = "QR කේතය බෙදාගන්න";
+
+/*Nicegram Mobile Data*/
+"Nicegram.MobileData.Title" = "ජංගම දත්ත";
+"Nicegram.MobileData.MyEsim.Worldwide" = "ලොවපුරා";
+"Nicegram.MobileData.MyEsim.Duration.Status" = "අසීමිතයි";
+"Nicegram.MobileData.MyEsim.Status" = "තිබේ";
+"Nicegram.MobileData.MyEsim.Mb" = "මෙ.බ.";
+"Nicegram.Internet.Number" = "දුරකථන අංකය";
+"Nicegram.Internet.Start.Title" = "පටන් ගන්න";
+"Nicegram.Internet.Countries.Title" = "සහාය දක්වන රටවල්";
+"Nicegram.AddMobileData.Countries" = "සහාය දක්වන රටවල්";
+"Alert.TelegramLogin.PositiveBtn" = "ඉදිරියට";

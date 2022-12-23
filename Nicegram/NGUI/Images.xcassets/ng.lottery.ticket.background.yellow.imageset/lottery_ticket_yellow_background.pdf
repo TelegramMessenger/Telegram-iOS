@@ -1,0 +1,103 @@
+%PDF-1.7
+
+1 0 obj
+  << /Length 2 0 R
+     /Range [ 0.000000 1.000000 0.000000 1.000000 0.000000 1.000000 ]
+     /Domain [ 0.000000 1.000000 ]
+     /FunctionType 4
+  >>
+stream
+{  0.960784 exch 0.796078 exch 0.086275 exch dup 0.000000 gt { exch pop exch pop exch pop dup 0.000000 sub 0.126050 mul 0.960784 add exch dup 0.000000 sub 0.602241 mul 0.796078 add exch dup 0.000000 sub 1.582633 mul 0.086275 add exch } if dup 0.280000 gt { exch pop exch pop exch pop dup 0.280000 sub -0.588235 mul 0.996078 add exch dup 0.280000 sub -1.503268 mul 0.964706 add exch dup 0.280000 sub -2.352942 mul 0.529412 add exch } if dup 0.340000 gt { exch pop exch pop exch pop dup 0.340000 sub -0.490196 mul 0.960784 add exch dup 0.340000 sub -1.176471 mul 0.874510 add exch dup 0.340000 sub -1.911765 mul 0.388235 add exch } if dup 0.420000 gt { exch pop exch pop exch pop dup 0.420000 sub -0.392157 mul 0.921569 add exch dup 0.420000 sub -0.980392 mul 0.780392 add exch dup 0.420000 sub -1.633987 mul 0.235294 add exch } if dup 0.480000 gt { exch pop exch pop exch pop dup 0.480000 sub -0.196078 mul 0.898039 add exch dup 0.480000 sub -0.490196 mul 0.721569 add exch dup 0.480000 sub -0.784314 mul 0.137255 add exch } if dup 0.520000 gt { exch pop exch pop exch pop dup 0.520000 sub 0.392157 mul 0.890196 add exch dup 0.520000 sub 0.935143 mul 0.701961 add exch dup 0.520000 sub 1.508296 mul 0.105882 add exch } if dup 0.650000 gt { exch pop exch pop exch pop dup 0.650000 sub 0.420168 mul 0.941176 add exch dup 0.650000 sub 0.980392 mul 0.823529 add exch dup 0.650000 sub 1.568627 mul 0.301961 add exch } if dup 0.790000 gt { exch pop exch pop exch pop dup 0.790000 sub -0.245098 mul 1.000000 add exch dup 0.790000 sub -0.931373 mul 0.960784 add exch dup 0.790000 sub -2.401962 mul 0.521569 add exch } if dup 0.870000 gt { exch pop exch pop exch pop dup 0.870000 sub -0.174292 mul 0.980392 add exch dup 0.870000 sub -0.740741 mul 0.886275 add exch dup 0.870000 sub -1.960785 mul 0.329412 add exch } if dup 0.960000 gt { exch pop exch pop exch pop dup 0.960000 sub -0.098039 mul 0.964706 add exch dup 0.960000 sub -0.588235 mul 0.819608 add exch dup 0.960000 sub -1.666666 mul 0.152941 add exch } if dup 1.000000 gt { exch pop exch pop exch pop 0.960784 exch 0.796078 exch 0.086275 exch } if pop }
+endstream
+endobj
+
+2 0 obj
+  2103
+endobj
+
+3 0 obj
+  << /Pattern << /P1 << /Matrix [ 141.000015 0.000000 -0.000000 141.000015 0.000000 -112.000015 ]
+                        /Shading << /Coords [ 0.000000 0.000000 1.000000 0.000000 ]
+                                    /ColorSpace /DeviceRGB
+                                    /Function 1 0 R
+                                    /Domain [ 0.000000 1.000000 ]
+                                    /ShadingType 2
+                                    /Extend [ true true ]
+                                 >>
+                        /PatternType 2
+                        /Type /Pattern
+                     >> >> >>
+endobj
+
+4 0 obj
+  << /Length 5 0 R >>
+stream
+/DeviceRGB CS
+/DeviceRGB cs
+q
+1.000000 0.000000 -0.000000 1.000000 0.000000 0.000000 cm
+/Pattern cs
+/P1 scn
+0.000000 25.000000 m
+0.000000 27.209139 1.790861 29.000000 4.000000 29.000000 c
+139.000000 29.000000 l
+140.104568 29.000000 141.000000 28.104570 141.000000 27.000000 c
+141.000000 2.000000 l
+141.000000 0.895430 140.104568 0.000000 139.000000 0.000000 c
+3.999997 0.000000 l
+1.790858 0.000000 0.000000 1.790861 0.000000 4.000000 c
+0.000000 25.000000 l
+h
+f
+n
+Q
+
+endstream
+endobj
+
+5 0 obj
+  465
+endobj
+
+6 0 obj
+  << /Annots []
+     /Type /Page
+     /MediaBox [ 0.000000 0.000000 141.000000 29.000000 ]
+     /Resources 3 0 R
+     /Contents 4 0 R
+     /Parent 7 0 R
+  >>
+endobj
+
+7 0 obj
+  << /Kids [ 6 0 R ]
+     /Count 1
+     /Type /Pages
+  >>
+endobj
+
+8 0 obj
+  << /Pages 7 0 R
+     /Type /Catalog
+  >>
+endobj
+
+xref
+0 9
+0000000000 65535 f
+0000000010 00000 n
+0000002297 00000 n
+0000002320 00000 n
+0000002948 00000 n
+0000003469 00000 n
+0000003491 00000 n
+0000003665 00000 n
+0000003739 00000 n
+trailer
+<< /ID [ (some) (id) ]
+   /Root 8 0 R
+   /Size 9
+>>
+startxref
+3798
+%%EOF

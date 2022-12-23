@@ -97,15 +97,15 @@ private final class ChatTextInputMediaRecordingButtonPresenterControllerNode: Vi
 }
 
 private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGModernConversationInputMicButtonPresentation {
-    private let account: Account?
+    private let statusBarHost: StatusBarHost?
     private let presentController: (ViewController) -> Void
     let container: ChatTextInputMediaRecordingButtonPresenterContainer
     private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
     private var timer: SwiftSignalKit.Timer?
     fileprivate weak var button: ChatTextInputMediaRecordingButton?
     
-    init(account: Account, presentController: @escaping (ViewController) -> Void) {
-        self.account = account
+    init(statusBarHost: StatusBarHost?, presentController: @escaping (ViewController) -> Void) {
+        self.statusBarHost = statusBarHost
         self.presentController = presentController
         self.container = ChatTextInputMediaRecordingButtonPresenterContainer()
     }
@@ -128,11 +128,19 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     }
     
     func present() {
-        if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), !keyboardWindow.isHidden {
+        let windowIsVisible: (UIWindow) -> Bool = { window in
+            print(window.alpha)
+            print(window.isHidden)
+            print(window.frame)
+            print(window.subviews)
+            return !window.frame.height.isZero
+        }
+        
+        if let statusBarHost = self.statusBarHost, let keyboardWindow = statusBarHost.keyboardWindow, let keyboardView = statusBarHost.keyboardView, !keyboardView.frame.height.isZero, isViewVisibleInHierarchy(keyboardView) {
             keyboardWindow.addSubview(self.container)
             
             self.timer = SwiftSignalKit.Timer(timeout: 0.05, repeat: true, completion: { [weak self] in
-                if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), !keyboardWindow.isHidden {
+                if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), windowIsVisible(keyboardWindow) {
                 } else {
                     self?.present()
                 }
@@ -174,7 +182,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private let strings: PresentationStrings
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
-    var account: Account?
+    var statusBarHost: StatusBarHost?
     let presentController: (ViewController) -> Void
     var recordingDisabled: () -> Void = { }
     var beginRecording: () -> Void = { }
@@ -473,7 +481,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
-        let presenter = ChatTextInputMediaRecordingButtonPresenter(account: self.account!, presentController: self.presentController)
+        let presenter = ChatTextInputMediaRecordingButtonPresenter(statusBarHost: self.statusBarHost, presentController: self.presentController)
         presenter.button = self
         self.currentPresenter = presenter.view()
         return presenter

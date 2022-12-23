@@ -172,6 +172,11 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     if readCounters.isUnread {
                         isUnread = true
                     }
+                    
+                    var isForum = false
+                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        isForum = true
+                    }
 
                     if case let .chatList(currentFilter) = source {
                         if let currentFilter = currentFilter, case let .filter(id, title, emoticon, data) = currentFilter {
@@ -312,19 +317,16 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         }
                     }
 
-                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                    } else {
-                        if isUnread {
-                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
-                                f(.default)
-                            })))
-                        } else {
-                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
-                                f(.default)
-                            })))
-                        }
+                    if isUnread {
+                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
+                            f(.default)
+                        })))
+                    } else if !isForum {
+                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
+                            f(.default)
+                        })))
                     }
 
                     let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
@@ -493,19 +495,16 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
     }
 }
 
-func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool, chatListController: ChatListControllerImpl?, joined: Bool) -> Signal<[ContextMenuItem], NoError> {
+func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool?, isClosed: Bool?, chatListController: ChatListControllerImpl?, joined: Bool, canSelect: Bool) -> Signal<[ContextMenuItem], NoError> {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
 
-    return combineLatest(
-        context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-        ),
-        context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
-        )
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
     )
-    |> mapToSignal { peer, threadData -> Signal<[ContextMenuItem], NoError> in
+    |> mapToSignal { peer, peerNotificationSettings, threadData -> Signal<[ContextMenuItem], NoError> in
         guard case let .channel(channel) = peer else {
             return .single([])
         }
@@ -515,12 +514,27 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         
         var items: [ContextMenuItem] = []
         
-        if channel.hasPermission(.manageTopics) {
-            items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                f(.default)
-                
-                let _ = context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: !isPinned).start()
-            })))
+        if let isClosed = isClosed, isClosed && threadId != 1 {
+        } else {
+            if let isPinned = isPinned, channel.hasPermission(.manageTopics) {
+                items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    f(.default)
+                    
+                    let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId)
+                    |> deliverOnMainQueue).start(error: { error in
+                        switch error {
+                        case let .limitReached(count):
+                            if let chatListController = chatListController {
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                let text = presentationData.strings.ChatList_MaxThreadPinsFinalText(Int32(count))
+                                chatListController.present(textAlertController(context: context, title: presentationData.strings.Premium_LimitReached, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true), in: .window(.root))
+                            }
+                        default:
+                            break
+                        }
+                    })
+                })))
+            }
         }
         
         var isUnread = false
@@ -536,12 +550,19 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         }
         
         var isMuted = false
-        if case .muted = threadData.notificationSettings.muteState {
+        switch threadData.notificationSettings.muteState {
+        case .muted:
             isMuted = true
+        case .unmuted:
+            isMuted = false
+        case .default:
+            if case .muted = peerNotificationSettings.muteState {
+                isMuted = true
+            }
         }
         items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] c, f in
             if isMuted {
-                let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: threadId)
+                let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: 0)
                 |> deliverOnMainQueue).start(completed: {
                     f(.default)
                 })
@@ -726,42 +747,45 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             }
         })))
         
-        var canOpenClose = false
-        if channel.flags.contains(.isCreator) {
-            canOpenClose = true
-        } else if channel.hasPermission(.manageTopics) {
-            canOpenClose = true
-        } else if threadData.isOwnedByMe {
-            canOpenClose = true
-        }
-        if canOpenClose {
-            items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                f(.default)
-                
-                let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()
-            })))
-        }
-        if channel.hasPermission(.deleteAllMessages) {
-            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
-                f(.default)
-                
-                chatListController?.deletePeerThread(peerId: peerId, threadId: threadId)
-            })))
+        if threadId != 1 {
+            var canOpenClose = false
+            if channel.flags.contains(.isCreator) {
+                canOpenClose = true
+            } else if channel.hasPermission(.manageTopics) {
+                canOpenClose = true
+            } else if threadData.isOwnedByMe {
+                canOpenClose = true
+            }
+            if canOpenClose {
+                items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    f(.default)
+                    
+                    let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()
+                })))
+            }
+            if channel.hasPermission(.deleteAllMessages) {
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
+                    f(.default)
+                    
+                    chatListController?.deletePeerThread(peerId: peerId, threadId: threadId)
+                })))
+            }
         }
         
-//        items.append(.separator)
-//        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//            f(.default)
-//            
-//            
-//        })))
+        if canSelect {
+            items.append(.separator)
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                f(.default)
+                chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
+            })))
+        }
         
         return .single(items)
     }
 }
 
 private func openCustomMute(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, baseController: ViewController) {
-    let controller = ChatTimerScreen(context: context, updatedPresentationData: nil, peerId: peerId, style: .default, mode: .mute, currentTime: nil, dismissByTapOutside: true, completion: { [weak baseController] value in
+    let controller = ChatTimerScreen(context: context, updatedPresentationData: nil, style: .default, mode: .mute, currentTime: nil, dismissByTapOutside: true, completion: { [weak baseController] value in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if value <= 0 {
