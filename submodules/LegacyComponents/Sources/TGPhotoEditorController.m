@@ -1932,58 +1932,63 @@
             strongSelf.didFinishEditing(nil, nil, nil, false, ^{});
     };
     
+    if ([_currentTabController isKindOfClass:[TGPhotoDrawingController class]]) {
+        dismiss();
+        return;
+    }
+    
     TGPaintingData *paintingData = nil;
     if ([_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
         paintingData = [(TGPhotoDrawingController *)_currentTabController paintingData];
     
     PGPhotoEditorValues *editorValues = paintingData == nil ? [_photoEditor exportAdjustments] : [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
     
-//    if ((_initialAdjustments == nil && (![editorValues isDefaultValuesForAvatar:[self presentedForAvatarCreation]] || editorValues.cropOrientation != UIImageOrientationUp)) || (_initialAdjustments != nil && ![editorValues isEqual:_initialAdjustments]))
-//    {
-//        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
-//        controller.dismissesByOutsideTap = true;
-//        controller.narrowInLandscape = true;
-//        __weak TGMenuSheetController *weakController = controller;
-//
-//        NSArray *items = @
-//        [
-//         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.DiscardChanges") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-//            {
-//                __strong TGMenuSheetController *strongController = weakController;
-//                if (strongController == nil)
-//                    return;
-//
-//                [strongController dismissAnimated:true manual:false completion:^
-//                {
-//                    dismiss();
-//                }];
-//            }],
-//            [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
-//            {
-//                __strong TGMenuSheetController *strongController = weakController;
-//                if (strongController != nil)
-//                    [strongController dismissAnimated:true];
-//            }]
-//        ];
-//
-//        [controller setItemViews:items];
-//        controller.sourceRect = ^
-//        {
-//            __strong TGPhotoEditorController *strongSelf = weakSelf;
-//            if (strongSelf == nil)
-//                return CGRectZero;
-//
-//            if (UIInterfaceOrientationIsPortrait(strongSelf.effectiveOrientation))
-//                return [strongSelf.view convertRect:strongSelf->_portraitToolbarView.cancelButtonFrame fromView:strongSelf->_portraitToolbarView];
-//            else
-//                return [strongSelf.view convertRect:strongSelf->_landscapeToolbarView.cancelButtonFrame fromView:strongSelf->_landscapeToolbarView];
-//        };
-//        [controller presentInViewController:self sourceView:self.view animated:true];
-//    }
-//    else
-//    {
+    if ((_initialAdjustments == nil && (![editorValues isDefaultValuesForAvatar:[self presentedForAvatarCreation]] || editorValues.cropOrientation != UIImageOrientationUp)) || (_initialAdjustments != nil && ![editorValues isEqual:_initialAdjustments]))
+    {
+        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
+        controller.dismissesByOutsideTap = true;
+        controller.narrowInLandscape = true;
+        __weak TGMenuSheetController *weakController = controller;
+
+        NSArray *items = @
+        [
+         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.DiscardChanges") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+            {
+                __strong TGMenuSheetController *strongController = weakController;
+                if (strongController == nil)
+                    return;
+
+                [strongController dismissAnimated:true manual:false completion:^
+                {
+                    dismiss();
+                }];
+            }],
+            [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
+            {
+                __strong TGMenuSheetController *strongController = weakController;
+                if (strongController != nil)
+                    [strongController dismissAnimated:true];
+            }]
+        ];
+
+        [controller setItemViews:items];
+        controller.sourceRect = ^
+        {
+            __strong TGPhotoEditorController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return CGRectZero;
+
+            if (UIInterfaceOrientationIsPortrait(strongSelf.effectiveOrientation))
+                return [strongSelf.view convertRect:strongSelf->_portraitToolbarView.cancelButtonFrame fromView:strongSelf->_portraitToolbarView];
+            else
+                return [strongSelf.view convertRect:strongSelf->_landscapeToolbarView.cancelButtonFrame fromView:strongSelf->_landscapeToolbarView];
+        };
+        [controller presentInViewController:self sourceView:self.view animated:true];
+    }
+    else
+    {
         dismiss();
-//    }
+    }
 }
 
 - (void)doneButtonPressed

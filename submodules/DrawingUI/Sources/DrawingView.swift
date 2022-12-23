@@ -19,6 +19,7 @@ protocol DrawingElement: AnyObject {
     var uuid: UUID { get }
     var translation: CGPoint { get set }
     var isValid: Bool { get }
+    var bounds: CGRect { get }
     
     func setupRenderView(screenSize: CGSize) -> DrawingRenderView?
     func setupRenderLayer() -> DrawingRenderLayer?
@@ -27,8 +28,9 @@ protocol DrawingElement: AnyObject {
     func draw(in: CGContext, size: CGSize)
 }
 
-enum DrawingOperation {
-    case element(DrawingElement)
+private enum DrawingOperation {
+    case clearAll(CGRect)
+    case slice(DrawingSlice)
     case addEntity(UUID)
     case removeEntity(DrawingEntity)
 }
@@ -69,7 +71,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     var shouldBegin: (CGPoint) -> Bool = { _ in return true }
     var getFullImage: () -> UIImage? = { return nil }
     
-    private var elements: [DrawingElement] = []
     private var undoStack: [DrawingOperation] = []
     private var redoStack: [DrawingOperation] = []
     fileprivate var uncommitedElement: DrawingElement?
@@ -126,11 +127,18 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     private let hapticFeedback = HapticFeedback()
     
+    public var screenSize: CGSize
+    
     init(size: CGSize) {
         self.imageSize = size
+        self.screenSize = size
         
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1.0
+        if #available(iOS 12.0, *) {
+            format.preferredRange = .standard
+        }
+        format.opaque = false
         self.renderer = UIGraphicsImageRenderer(size: size, format: format)
                 
         self.currentDrawingViewContainer = UIImageView()
@@ -170,7 +178,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.isExclusiveTouch = true
             
         self.addSubview(self.currentDrawingViewContainer)
-        //self.addSubview(self.metalView)
+        self.addSubview(self.metalView)
 
         self.layer.addSublayer(self.brushSizePreviewLayer)
         
@@ -180,7 +188,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 if !strongSelf.shouldBegin(point) {
                     return false
                 }
-                if strongSelf.elements.isEmpty && !strongSelf.hasOpaqueData && strongSelf.tool == .eraser {
+                if strongSelf.undoStack.isEmpty && !strongSelf.hasOpaqueData && strongSelf.tool == .eraser {
+                    return false
+                }
+                if strongSelf.tool == .blur, strongSelf.preparedBlurredImage == nil {
                     return false
                 }
                 if let uncommitedElement = strongSelf.uncommitedElement as? PenTool, uncommitedElement.isFinishingArrow {
@@ -202,7 +213,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 strongSelf.drawingGestureStartTimestamp = CACurrentMediaTime()
                 
                 if strongSelf.uncommitedElement != nil {
-                    strongSelf.finishDrawing()
+                    strongSelf.finishDrawing(rect: CGRect(origin: .zero, size: strongSelf.imageSize), synchronous: true)
                 }
                 
                 guard let newElement = strongSelf.prepareNewElement() else {
@@ -213,7 +224,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     strongSelf.metalView.isHidden = false
                 }
                 
-                if let renderView = newElement.setupRenderView(screenSize: CGSize(width: 414.0, height: 414.0)) {
+                if let renderView = newElement.setupRenderView(screenSize: strongSelf.screenSize) {
                     if let currentDrawingView = strongSelf.currentDrawingRenderView {
                         strongSelf.currentDrawingRenderView = nil
                         currentDrawingView.removeFromSuperview()
@@ -334,8 +345,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 strongSelf.strokeRecognitionTimer?.invalidate()
                 strongSelf.strokeRecognitionTimer = nil
                 strongSelf.uncommitedElement?.updatePath(path, state: state)
+                
+                let bounds = strongSelf.uncommitedElement?.bounds
                 Queue.mainQueue().after(0.05) {
-                    strongSelf.finishDrawing()
+                    if let bounds = bounds {
+                        strongSelf.finishDrawing(rect: bounds, synchronous: true)
+                    }
                 }
                 strongSelf.updateInternalState()
             case .cancelled:
@@ -368,16 +383,25 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     public func setup(withDrawing drawingData: Data?) {
         if let drawingData = drawingData, let image = UIImage(data: drawingData) {
             self.hasOpaqueData = true
-            self.drawingImage = image
+            
+            if let context = DrawingContext(size: image.size, scale: 1.0, opaque: false) {
+                context.withFlippedContext { context in
+                    if let cgImage = image.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
+                    }
+                }
+                self.drawingImage = context.generateImage() ?? image
+            } else {
+                self.drawingImage = image
+            }
             self.layer.contents = image.cgImage
-          
             self.updateInternalState()
         }
     }
     
     var hasOpaqueData = false
     var drawingData: Data? {
-        guard !self.elements.isEmpty || self.hasOpaqueData else {
+        guard !self.undoStack.isEmpty || self.hasOpaqueData else {
             return nil
         }
         return self.drawingImage?.pngData()
@@ -411,6 +435,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     blurredImage = self.preparedBlurredImage
                 }
                 
+                self.hapticFeedback.prepareImpact(.medium)
+                
                 let fillCircleLayer = SimpleShapeLayer()
                 self.longPressTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self, weak fillCircleLayer] in
                     if let strongSelf = self {
@@ -419,7 +445,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                         let action = {
                             let newElement = FillTool(drawingSize: strongSelf.imageSize, color: toolColor, blur: blurredImage != nil, blurredImage: blurredImage)
                             strongSelf.uncommitedElement = newElement
-                            strongSelf.finishDrawing(synchronous: true)
+                            strongSelf.finishDrawing(rect: CGRect(origin: .zero, size: strongSelf.imageSize), synchronous: true)
                         }
                         if [.eraser, .blur].contains(strongSelf.tool) {
                             UIView.transition(with: strongSelf, duration: 0.2, options: .transitionCrossDissolve) {
@@ -473,30 +499,21 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
         
     private let queue = Queue()
-    private var skipDrawing = Set<UUID>()
-    private func commit(reset: Bool = false, interactive: Bool = false, synchronous: Bool = true, completion: @escaping () -> Void = {}) {
+    private func commit(interactive: Bool = false, synchronous: Bool = true, completion: @escaping () -> Void = {}) {
         let currentImage = self.drawingImage
         let uncommitedElement = self.uncommitedElement
         let imageSize = self.imageSize
-        let skipDrawing = self.skipDrawing
         
         let action = {
             let updatedImage = self.renderer.image { context in
-                if !reset {
-                    context.cgContext.clear(CGRect(origin: .zero, size: imageSize))
-                    if let image = currentImage {
-                        image.draw(at: .zero)
-                    }
-                    if let uncommitedElement = uncommitedElement {
-                        uncommitedElement.draw(in: context.cgContext, size: imageSize)
-                    }
-                } else {
-                    context.cgContext.clear(CGRect(origin: .zero, size: imageSize))
-                    for element in self.elements {
-                        if !skipDrawing.contains(element.uuid) {
-                            element.draw(in: context.cgContext, size: imageSize)
-                        }
-                    }
+                context.cgContext.setBlendMode(.copy)
+                context.cgContext.clear(CGRect(origin: .zero, size: imageSize))
+                if let image = currentImage {
+                    image.draw(at: .zero)
+                }
+                if let uncommitedElement = uncommitedElement {
+                    context.cgContext.setBlendMode(.normal)
+                    uncommitedElement.draw(in: context.cgContext, size: imageSize)
                 }
             }
             Queue.mainQueue().async {
@@ -547,18 +564,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             }
         }
     }
-    
-    private func updateSelectionContent() {
-        let selectionImage = self.renderer.image { context in
-            for element in self.elements {
-                if self.skipDrawing.contains(element.uuid) {
-                    element.draw(in: context.cgContext, size: self.imageSize)
-                }
-            }
-        }
-        self.pannedSelectionView.layer.contents = selectionImage.cgImage
-    }
-    
+        
     fileprivate func cancelDrawing() {
         self.uncommitedElement = nil
         
@@ -591,20 +597,29 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             self.currentDrawingLayer = nil
         }
     }
+    
+    private func slice(for rect: CGRect) -> DrawingSlice? {
+        if let subImage = self.drawingImage?.cgImage?.cropping(to: rect) {
+            return DrawingSlice(image: subImage, rect: rect)
+        }
+        return nil
+    }
         
-    fileprivate func finishDrawing(synchronous: Bool = false) {
+    fileprivate func finishDrawing(rect: CGRect, synchronous: Bool = false) {
         let complete: (Bool) -> Void = { synchronous in
             if let uncommitedElement = self.uncommitedElement, !uncommitedElement.isValid {
                 self.uncommitedElement = nil
             }
+            if !self.undoStack.isEmpty || self.hasOpaqueData, let slice = self.slice(for: rect) {
+                self.undoStack.append(.slice(slice))
+            } else {
+                self.undoStack.append(.clearAll(rect))
+            }
+            
             self.commit(interactive: true, synchronous: synchronous)
             
             self.redoStack.removeAll()
-            if let uncommitedElement = self.uncommitedElement {
-                self.elements.append(uncommitedElement)
-                self.undoStack.append(.element(uncommitedElement))
-                self.uncommitedElement = nil
-            }
+            self.uncommitedElement = nil
             
             self.updateInternalState()
         }
@@ -622,7 +637,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.entitiesView?.removeAll()
         
         self.uncommitedElement = nil
-        self.elements.removeAll()
         self.undoStack.removeAll()
         self.redoStack.removeAll()
         self.hasOpaqueData = false
@@ -632,7 +646,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.addSubview(snapshotView)
         
         self.drawingImage = nil
-        self.commit(reset: true)
+        self.layer.contents = nil
         
         Queue.mainQueue().justDispatch {
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -645,6 +659,25 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.updateBlurredImage()
     }
     
+    private func applySlice(_ slice: DrawingSlice) {
+        let updatedImage = self.renderer.image { context in
+            context.cgContext.clear(CGRect(origin: .zero, size: imageSize))
+            context.cgContext.setBlendMode(.copy)
+            if let image = self.drawingImage {
+                image.draw(at: .zero)
+            }
+            if let image = slice.image {
+                context.cgContext.translateBy(x: imageSize.width / 2.0, y: imageSize.height / 2.0)
+                context.cgContext.scaleBy(x: 1.0, y: -1.0)
+                context.cgContext.translateBy(x: -imageSize.width / 2.0, y: -imageSize.height / 2.0)
+                context.cgContext.translateBy(x: slice.rect.minX, y: imageSize.height - slice.rect.maxY)
+                context.cgContext.draw(image, in: CGRect(origin: .zero, size: slice.rect.size))
+            }
+        }
+        self.drawingImage = updatedImage
+        self.layer.contents = updatedImage.cgImage
+    }
+    
     var canUndo: Bool {
         return !self.undoStack.isEmpty
     }
@@ -654,15 +687,22 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             return
         }
         switch lastOperation {
-        case let .element(element):
-            self.uncommitedElement = nil
-            self.redoStack.append(.element(element))
-            self.elements.removeAll(where: { $0.uuid == element.uuid })
-            
-            UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
-                self.commit(reset: true)
+        case let .clearAll(rect):
+            if let slice = self.slice(for: rect) {
+                self.redoStack.append(.slice(slice))
             }
-            
+            UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
+                self.drawingImage = nil
+                self.layer.contents = nil
+            }
+            self.updateBlurredImage()
+        case let .slice(slice):
+            if let slice = self.slice(for: slice.rect) {
+                self.redoStack.append(.slice(slice))
+            }
+            UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
+                self.applySlice(slice)
+            }
             self.updateBlurredImage()
         case let .addEntity(uuid):
             if let entityView = self.entitiesView?.getView(for: uuid) {
@@ -690,17 +730,17 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         }
         
         switch lastOperation {
-            case let .element(element):
-                self.uncommitedElement = nil
-                self.elements.append(element)
-                self.undoStack.append(.element(element))
-                self.uncommitedElement = element
-                       
-                UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
-                    self.commit(reset: false)
+            case .clearAll:
+                break
+            case let .slice(slice):
+                if !self.undoStack.isEmpty || self.hasOpaqueData, let slice = self.slice(for: slice.rect) {
+                    self.undoStack.append(.slice(slice))
+                } else {
+                    self.undoStack.append(.clearAll(slice.rect))
                 }
-                self.uncommitedElement = nil
-            
+                UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
+                    self.applySlice(slice)
+                }
                 self.updateBlurredImage()
             case let .addEntity(uuid):
                 if let entityView = self.entitiesView?.getView(for: uuid) {
@@ -807,7 +847,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.stateUpdated(NavigationState(
             canUndo: !self.undoStack.isEmpty,
             canRedo: !self.redoStack.isEmpty,
-            canClear: !self.elements.isEmpty || self.hasOpaqueData || !(self.entitiesView?.entities.isEmpty ?? true),
+            canClear: !self.undoStack.isEmpty || self.hasOpaqueData || !(self.entitiesView?.entities.isEmpty ?? true),
             canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
             isDrawing: self.isDrawing
         ))
@@ -885,16 +925,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         return element
     }
     
-    func removeElement(_ element: DrawingElement) {
-        self.elements.removeAll(where: { $0 === element })
-        self.commit(reset: true)
-    }
-    
-    func removeElements(_ elements: [UUID]) {
-        self.elements.removeAll(where: { elements.contains($0.uuid) })
-        self.commit(reset: true)
-    }
-    
     func setBrushSizePreview(_ size: CGFloat?) {
         let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
         if let size = size {
@@ -929,7 +959,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
     
     public var isEmpty: Bool {
-        return self.elements.isEmpty && !self.hasOpaqueData
+        return self.undoStack.isEmpty && !self.hasOpaqueData
     }
     
     public var scale: CGFloat {
@@ -941,18 +971,40 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
 }
 
-private class UndoSlice {
+private class DrawingSlice {
+    private static let queue = Queue()
+    
+    var _image: CGImage?
+    
     let uuid: UUID
-    
-//    let data: Data
-//    let bounds: CGRect
-    
+    var image: CGImage? {
+        if let image = self._image {
+            return image
+        } else if let data = try? Data(contentsOf: URL(fileURLWithPath: self.path)) {
+            return UIImage(data: data)?.cgImage
+        } else {
+            return nil
+        }
+    }
+    let rect: CGRect
     let path: String
     
-    init(context: DrawingContext, bounds: CGRect) {
+    init(image: CGImage, rect: CGRect) {
         self.uuid = UUID()
                 
+        self._image = image
+        self.rect = rect
         self.path = NSTemporaryDirectory() + "/drawing_\(uuid.hashValue).slice"
+        
+        DrawingSlice.queue.async {
+            let image = UIImage(cgImage: image)
+            if let data = image.pngData() as? NSData {
+                try? data.write(toFile: self.path)
+                Queue.mainQueue().async {
+                    self._image = nil
+                }
+            }
+        }
     }
     
     deinit {

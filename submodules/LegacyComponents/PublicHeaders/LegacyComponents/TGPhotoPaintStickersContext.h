@@ -39,6 +39,7 @@
 @protocol TGPhotoDrawingView <NSObject>
 
 @property (nonatomic, readonly) BOOL isTracking;
+@property (nonatomic, assign) CGSize screenSize;
 
 @property (nonatomic, copy) void(^ _Nonnull zoomOut)(void);
 

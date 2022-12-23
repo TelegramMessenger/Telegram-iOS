@@ -310,6 +310,12 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
                 entityView.onSnapToYAxis(snapped)
             }
         }
+        
+        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToAngle(snappedAngle)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -460,6 +466,8 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         default:
             break
         }
+        
+        entityView.onPositionUpdated(entity.position)
     }
     
     override func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
@@ -484,16 +492,29 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             return
         }
         
+        let velocity = gestureRecognizer.velocity
+        var updatedRotation = entity.rotation
+        var rotation: CGFloat = 0.0
+        
         switch gestureRecognizer.state {
-        case .began, .changed:
-            let rotation = gestureRecognizer.rotation
-            entity.rotation += rotation
-            entityView.update()
+        case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+        case .changed:
+            rotation = gestureRecognizer.rotation
+            updatedRotation += rotation
             
             gestureRecognizer.rotation = 0.0
+        case .ended, .cancelled:
+            self.snapTool.rotationReset()
         default:
             break
         }
+        
+        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+        entity.rotation = updatedRotation
+        entityView.update()
+        
+        entityView.onPositionUpdated(entity.position)
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

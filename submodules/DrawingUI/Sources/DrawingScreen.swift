@@ -393,7 +393,9 @@ private final class BlurredGradientComponent: Component {
         public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.component = component
             
-            self.updateColor(color: UIColor(rgb: 0x000000, alpha: 0.25), transition: transition.containedViewLayoutTransition)
+            self.isUserInteractionEnabled = false
+            
+            self.updateColor(color: UIColor(rgb: 0x000000, alpha: component.position == .top ? 0.15 : 0.25), transition: transition.containedViewLayoutTransition)
            
             if self.mask == nil {
                 self.mask = self.gradientMask
@@ -989,7 +991,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     position: .top,
                     tag: topGradientTag
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: 111.0),
+                availableSize: CGSize(width: context.availableSize.width, height: topInset + 10.0),
                 transition: .immediate
             )
             context.add(topGradient
@@ -2317,7 +2319,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                     entityView.update()
                     
                     if let (layout, orientation) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, forceUpdate: true, transition: .immediate)
+                        strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, forceUpdate: true, transition: .easeInOut(duration: 0.2))
                     }
                 })))
             }
@@ -2464,7 +2466,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
             let isFirstTime = self.validLayout == nil
             self.validLayout = (layout, orientation)
-            
+                        
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,

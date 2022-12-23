@@ -24,8 +24,7 @@
 #import "PGPhotoEditor.h"
 #import "TGPhotoEditorPreviewView.h"
 
-#import "TGPaintCanvas.h"
-#import "TGPainting.h"
+#import <LegacyComponents/TGPhotoPaintStickersContext.h>
 
 const CGFloat TGPhotoPaintTopPanelSize = 44.0f;
 const CGFloat TGPhotoPaintBottomPanelSize = 79.0f;
@@ -61,8 +60,6 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
     CGFloat _keyboardHeight;
     TGObserverProxy *_keyboardWillChangeFrameProxy;
     
-    TGPainting *_painting;
-
     bool _skipEntitiesSetup;
     bool _entitiesReady;
     
@@ -833,6 +830,7 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
     
     CGSize fittedSize = TGScaleToSize(photoEditor.rotatedCropSize, containerFrame.size);
     CGRect previewFrame = CGRectMake((containerFrame.size.width - fittedSize.width) / 2, (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
+    _drawingView.screenSize = fittedSize;
     
     CGFloat topInset = [self controllerStatusBarHeight] + 31.0;
     CGFloat visibleArea = self.view.frame.size.height - _keyboardHeight - topInset;

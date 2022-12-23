@@ -13,7 +13,7 @@ final class PenTool: DrawingElement {
         private var start = 0
         private var segmentsCount = 0
         
-        private var displayScale: CGFloat = 1.0
+        private var drawScale = CGSize(width: 1.0, height: 1.0)
         
         func setup(size: CGSize, screenSize: CGSize, isEraser: Bool) {
             self.isEraser = isEraser
@@ -22,15 +22,20 @@ final class PenTool: DrawingElement {
             self.isOpaque = false
             self.contentMode = .redraw
             
-            let viewSize = size.aspectFilled(screenSize)
+            //let scale = CGSize(width: screenSize.width / max(1.0, size.width), height: screenSize.height / max(1.0, size.height))
             
-            self.displayScale = size.width / viewSize.width
+            let scale = CGSize(width: 0.33, height: 0.33)
+            let viewSize = CGSize(width: size.width * scale.width, height: size.height * scale.height)
+            
+            self.drawScale = CGSize(width: size.width / viewSize.width, height: size.height / viewSize.height)
             
             self.bounds = CGRect(origin: .zero, size: viewSize)
-            self.transform = CGAffineTransform(scaleX: self.displayScale, y: self.displayScale)
+            self.transform = CGAffineTransform(scaleX: self.drawScale.width, y: self.drawScale.height)
             self.frame = CGRect(origin: .zero, size: size)
-                                    
-            let activeView = ActiveView(frame: CGRect(origin: .zero, size: viewSize))
+                        
+            self.drawScale.height = self.drawScale.width
+            
+            let activeView = ActiveView(frame: CGRect(origin: .zero, size: self.bounds.size))
             activeView.backgroundColor = .clear
             activeView.contentMode = .redraw
             activeView.isOpaque = false
@@ -40,18 +45,20 @@ final class PenTool: DrawingElement {
         }
         
         func animateArrowPaths(start: CGPoint, direction: CGFloat, length: CGFloat, lineWidth: CGFloat, completion: @escaping () -> Void) {
-            let arrowStart = CGPoint(x: start.x / self.displayScale, y: start.y / self.displayScale)
+            let scale = min(self.drawScale.width, self.drawScale.height)
+            
+            let arrowStart = CGPoint(x: start.x / scale, y: start.y / scale)
             let arrowLeftPath = UIBezierPath()
             arrowLeftPath.move(to: arrowStart)
-            arrowLeftPath.addLine(to: arrowStart.pointAt(distance: length / self.displayScale, angle: direction - 0.45))
+            arrowLeftPath.addLine(to: arrowStart.pointAt(distance: length / scale, angle: direction - 0.45))
             
             let arrowRightPath = UIBezierPath()
             arrowRightPath.move(to: arrowStart)
-            arrowRightPath.addLine(to: arrowStart.pointAt(distance: length / self.displayScale, angle: direction + 0.45))
+            arrowRightPath.addLine(to: arrowStart.pointAt(distance: length / scale, angle: direction + 0.45))
             
             let leftArrowShape = CAShapeLayer()
             leftArrowShape.path = arrowLeftPath.cgPath
-            leftArrowShape.lineWidth = lineWidth / self.displayScale
+            leftArrowShape.lineWidth = lineWidth / scale
             leftArrowShape.strokeColor = self.element?.color.toCGColor()
             leftArrowShape.lineCap = .round
             leftArrowShape.frame = self.bounds
@@ -59,7 +66,7 @@ final class PenTool: DrawingElement {
             
             let rightArrowShape = CAShapeLayer()
             rightArrowShape.path = arrowRightPath.cgPath
-            rightArrowShape.lineWidth = lineWidth / self.displayScale
+            rightArrowShape.lineWidth = lineWidth / scale
             rightArrowShape.strokeColor = self.element?.color.toCGColor()
             rightArrowShape.lineCap = .round
             rightArrowShape.frame = self.bounds
@@ -74,6 +81,7 @@ final class PenTool: DrawingElement {
             })
         }
     
+        var displaySize: CGSize?
         fileprivate func draw(element: PenTool, rect: CGRect) {
             self.element = element
             
@@ -90,7 +98,8 @@ final class PenTool: DrawingElement {
             if activeCount > limit {
                 rect = nil
                 let newStart = self.start + limit
-                let image = generateImage(self.bounds.size, contextGenerator: { size, context in
+                let displaySize = self.displaySize ?? CGSize(width: round(self.bounds.size.width), height: round(self.bounds.size.height))
+                let image = generateImage(displaySize, contextGenerator: { size, context in
                     context.clear(CGRect(origin: .zero, size: size))
                     
                     if let accumulationImage = self.accumulationImage, let cgImage = accumulationImage.cgImage {
@@ -101,7 +110,7 @@ final class PenTool: DrawingElement {
                     context.scaleBy(x: 1.0, y: -1.0)
                     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     
-                    context.scaleBy(x: 1.0 / self.displayScale, y: 1.0 / self.displayScale)
+                    context.scaleBy(x: 1.0 / self.drawScale.width, y: 1.0 / self.drawScale.height)
                     
                     context.setBlendMode(.copy)
                     element.drawSegments(in: context, from: self.start, to: newStart)
@@ -115,7 +124,7 @@ final class PenTool: DrawingElement {
             self.segmentsCount = element.segments.count
             
             if let rect = rect {
-                self.activeView?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0).applying(CGAffineTransform(scaleX: 1.0 / self.displayScale, y: 1.0 / self.displayScale)))
+                self.activeView?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0).applying(CGAffineTransform(scaleX: 1.0 / self.drawScale.width, y: 1.0 / self.drawScale.height)))
             } else {
                 self.activeView?.setNeedsDisplay()
             }
@@ -127,7 +136,9 @@ final class PenTool: DrawingElement {
                 guard let context = UIGraphicsGetCurrentContext(), let parent = self.parent, let element = parent.element else {
                     return
                 }
-                context.scaleBy(x: 1.0 / parent.displayScale, y: 1.0 / parent.displayScale)
+                                
+                parent.displaySize = rect.size
+                context.scaleBy(x: 1.0 / parent.drawScale.width, y: 1.0 / parent.drawScale.height)
                 element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
             }
         }
@@ -165,6 +176,10 @@ final class PenTool: DrawingElement {
         } else {
             return self.segments.count > 0
         }
+    }
+    
+    var bounds: CGRect {
+        return boundingRect(from: 0, to: self.segments.count).insetBy(dx: -20.0, dy: -20.0)
     }
     
     required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, hasArrow: Bool, isEraser: Bool, isBlur: Bool, blurredImage: UIImage?) {
@@ -220,11 +235,11 @@ final class PenTool: DrawingElement {
             return
         }
     
-        var filterDistance: CGFloat
+        let filterDistance: CGFloat
         if point.velocity > 1200.0 {
-            filterDistance = 70.0
+            filterDistance = 25.0
         } else {
-            filterDistance = 5.0
+            filterDistance = 15.0
         }
     
         if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.segments.count > 1 {
@@ -237,7 +252,7 @@ final class PenTool: DrawingElement {
             velocity = 1000.0
         }
         
-        var effectiveRenderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth + 1.0 - (velocity / 220.0), self.renderLineWidth))
+        var effectiveRenderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth - (velocity / 150.0), self.renderLineWidth))
         if let previousRenderLineWidth = self.previousRenderLineWidth {
             effectiveRenderLineWidth = effectiveRenderLineWidth * 0.2 + previousRenderLineWidth * 0.8
         }
@@ -307,6 +322,8 @@ final class PenTool: DrawingElement {
         
         if self.isEraser {
             context.setBlendMode(.clear)
+        } else if self.isBlur {
+            context.setBlendMode(.normal)
         } else {
             context.setAlpha(self.color.alpha)
             context.setBlendMode(.copy)
@@ -448,12 +465,11 @@ final class PenTool: DrawingElement {
         
         let step = 1.0 / numberOfSegments
         for t in stride(from: 0, to: 1, by: step) {
-            let pX = midPoint1.x * pow(1 - t, 2) + point1.position.x * 2.0 * (1 - t) * t + midPoint2.x * t * t
-            let pY = midPoint1.y * pow(1 - t, 2) + point1.position.y * 2.0 * (1 - t) * t + midPoint2.y * t * t
-            
+            let x = midPoint1.x * pow(1 - t, 2) + point1.position.x * 2.0 * (1 - t) * t + midPoint2.x * t * t
+            let y = midPoint1.y * pow(1 - t, 2) + point1.position.y * 2.0 * (1 - t) * t + midPoint2.y * t * t
             let w = midWidth1 * pow(1 - t, 2) + point1.width * 2.0 * (1 - t) * t + midWidth2 * t * t
          
-            smoothPoints.append(Point(position: CGPoint(x: pX, y: pY), width: w))
+            smoothPoints.append(Point(position: CGPoint(x: x, y: y), width: w))
         }
         
         smoothPoints.append(Point(position: midPoint2, width: midWidth2))
