@@ -373,6 +373,12 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                 entityView.onSnapToYAxis(snapped)
             }
         }
+        
+        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToAngle(snappedAngle)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -402,7 +408,6 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         }
         let location = gestureRecognizer.location(in: self)
         
-
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
@@ -411,6 +416,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                 for layer in sublayers {
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
+                        self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
                         return
                     }
                 }
@@ -432,13 +438,15 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                 let scaleDelta = (self.bounds.size.width + deltaX * 2.0) / self.bounds.size.width
                 updatedScale *= scaleDelta
                 
-                let deltaAngle: CGFloat
+                let newAngle: CGFloat
                 if self.currentHandle === self.leftHandle {
-                    deltaAngle = atan2(self.center.y - parentLocation.y, self.center.x - parentLocation.x)
+                    newAngle = atan2(self.center.y - parentLocation.y, self.center.x - parentLocation.x)
                 } else {
-                    deltaAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
+                    newAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
                 }
-                updatedRotation = deltaAngle
+                
+             //   let delta = newAngle - updatedRotation
+                updatedRotation = newAngle// self.snapTool.update(entityView: entityView, velocity: 0.0, delta: delta, updatedRotation: newAngle)
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
@@ -452,13 +460,16 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             entityView.update()
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
-        case .ended:
+        case .ended, .cancelled:
             self.snapTool.reset()
-        case .cancelled:
-            self.snapTool.reset()
+            if self.currentHandle != nil {
+                self.snapTool.rotationReset()
+            }
         default:
             break
         }
+        
+        entityView.onPositionUpdated(entity.position)
     }
     
     override func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
@@ -483,16 +494,29 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             return
         }
         
+        let velocity = gestureRecognizer.velocity
+        var updatedRotation = entity.rotation
+        var rotation: CGFloat = 0.0
+        
         switch gestureRecognizer.state {
-        case .began, .changed:
-            let rotation = gestureRecognizer.rotation
-            entity.rotation += rotation
-            entityView.update()
+        case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+        case .changed:
+            rotation = gestureRecognizer.rotation
+            updatedRotation += rotation
             
             gestureRecognizer.rotation = 0.0
+        case .ended, .cancelled:
+            self.snapTool.rotationReset()
         default:
             break
         }
+        
+        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+        entity.rotation = updatedRotation
+        entityView.update()
+        
+        entityView.onPositionUpdated(entity.position)
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -534,23 +558,31 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
     }
 }
 
+private let snapTimeout = 1.0
+
 class DrawingEntitySnapTool {
     private var xState: (skipped: CGFloat, waitForLeave: Bool)?
     private var yState: (skipped: CGFloat, waitForLeave: Bool)?
-    
-    private var rotationState: (skipped: CGFloat, waitForLeave: Bool)?
+    private var rotationState: (angle: CGFloat, skipped: CGFloat, waitForLeave: Bool)?
     
     var onSnapXUpdated: (Bool) -> Void = { _ in }
     var onSnapYUpdated: (Bool) -> Void = { _ in }
     var onSnapRotationUpdated: (CGFloat?) -> Void = { _ in }
     
+    var previousXSnapTimestamp: Double?
+    var previousYSnapTimestamp: Double?
+    var previousRotationSnapTimestamp: Double?
+    
     func reset() {
         self.xState = nil
         self.yState = nil
-        self.rotationState = nil
-        
+    
         self.onSnapXUpdated(false)
         self.onSnapYUpdated(false)
+    }
+    
+    func rotationReset() {
+        self.rotationState = nil
         self.onSnapRotationUpdated(nil)
     }
     
@@ -575,6 +607,8 @@ class DrawingEntitySnapTool {
     func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint) -> CGPoint {
         var updatedPosition = updatedPosition
         
+        let currentTimestamp = CACurrentMediaTime()
+        
         let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
         let snapXVelocity: CGFloat = snapXDelta * 12.0
         let snapXSkipTranslation: CGFloat = snapXDelta * 2.0
@@ -597,9 +631,14 @@ class DrawingEntitySnapTool {
                     }
                 } else {
                     if updatedPosition.x > snapLocation.x - snapXDelta && updatedPosition.x < snapLocation.x + snapXDelta {
-                        self.xState = (0.0, false)
-                        updatedPosition.x = snapLocation.x
-                        self.onSnapXUpdated(true)
+                        if let previousXSnapTimestamp, currentTimestamp - previousXSnapTimestamp < snapTimeout {
+                            
+                        } else {
+                            self.previousXSnapTimestamp = currentTimestamp
+                            self.xState = (0.0, false)
+                            updatedPosition.x = snapLocation.x
+                            self.onSnapXUpdated(true)
+                        }
                     }
                 }
             }
@@ -630,9 +669,14 @@ class DrawingEntitySnapTool {
                     }
                 } else {
                     if updatedPosition.y > snapLocation.y - snapYDelta && updatedPosition.y < snapLocation.y + snapYDelta {
-                        self.yState = (0.0, false)
-                        updatedPosition.y = snapLocation.y
-                        self.onSnapYUpdated(true)
+                        if let previousYSnapTimestamp, currentTimestamp - previousYSnapTimestamp < snapTimeout {
+                            
+                        } else {
+                            self.previousYSnapTimestamp = currentTimestamp
+                            self.yState = (0.0, false)
+                            updatedPosition.y = snapLocation.y
+                            self.onSnapYUpdated(true)
+                        }
                     }
                 }
             }
@@ -644,16 +688,72 @@ class DrawingEntitySnapTool {
         return updatedPosition
     }
     
-    private let snapRotations: [CGFloat] = [0.0, .pi / 4.0, .pi / 2.0, .pi * 1.5,]
+    private let snapRotations: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
     func maybeSkipFromStart(entityView: DrawingEntityView, rotation: CGFloat) {
         self.rotationState = nil
         
-        let snapDelta: CGFloat = 0.087
+        let snapDelta: CGFloat = 0.25
         for snapRotation in self.snapRotations {
+            let snapRotation = snapRotation * .pi
             if rotation > snapRotation - snapDelta && rotation < snapRotation + snapDelta {
-                self.rotationState = (0.0, true)
+                self.rotationState = (snapRotation, 0.0, true)
                 break
             }
         }
+    }
+    
+    func update(entityView: DrawingEntityView, velocity: CGFloat, delta: CGFloat, updatedRotation: CGFloat) -> CGFloat {
+        var updatedRotation = updatedRotation
+        if updatedRotation < 0.0 {
+            updatedRotation = 2.0 * .pi + updatedRotation
+        } else if updatedRotation > 2.0 * .pi {
+            while updatedRotation > 2.0 * .pi {
+                updatedRotation -= 2.0 * .pi
+            }
+        }
+        
+        let currentTimestamp = CACurrentMediaTime()
+        
+        let snapDelta: CGFloat = 0.1
+        let snapVelocity: CGFloat = snapDelta * 5.0
+        let snapSkipRotation: CGFloat = snapDelta * 2.0
+        
+        if abs(velocity) < snapVelocity || self.rotationState?.waitForLeave == true {
+            if let (snapRotation, skipped, waitForLeave) = self.rotationState {
+                if waitForLeave {
+                    if updatedRotation > snapRotation - snapDelta * 2.0 && updatedRotation < snapRotation + snapDelta {
+                        
+                    } else {
+                        self.rotationState = nil
+                    }
+                } else if abs(skipped) < snapSkipRotation {
+                    self.rotationState = (snapRotation, skipped + delta, false)
+                    updatedRotation = snapRotation
+                } else {
+                    self.rotationState = (snapRotation, snapSkipRotation, true)
+                    self.onSnapRotationUpdated(nil)
+                }
+            } else {
+                for snapRotation in self.snapRotations {
+                    let snapRotation = snapRotation * .pi
+                    if updatedRotation > snapRotation - snapDelta && updatedRotation < snapRotation + snapDelta {
+                        if let previousRotationSnapTimestamp, currentTimestamp - previousRotationSnapTimestamp < snapTimeout {
+                            
+                        } else {
+                            self.previousRotationSnapTimestamp = currentTimestamp
+                            self.rotationState = (snapRotation, 0.0, false)
+                            updatedRotation = snapRotation
+                            self.onSnapRotationUpdated(snapRotation)
+                        }
+                        break
+                    }
+                }
+            }
+        } else {
+            self.rotationState = nil
+            self.onSnapRotationUpdated(nil)
+        }
+        
+        return updatedRotation
     }
 }

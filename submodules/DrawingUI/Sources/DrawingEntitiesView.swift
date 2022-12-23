@@ -143,6 +143,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     private let xAxisView = UIView()
     private let yAxisView = UIView()
+    private let angleLayer = SimpleShapeLayer()
     private let hapticFeedback = HapticFeedback()
     
     public init(context: AccountContext, size: CGSize) {
@@ -163,8 +164,13 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.yAxisView.backgroundColor = UIColor(rgb: 0x5fc1f0)
         self.yAxisView.isUserInteractionEnabled = false
         
+        self.angleLayer.strokeColor = UIColor(rgb: 0xffd70a).cgColor
+        self.angleLayer.opacity = 0.0
+        self.angleLayer.lineDashPattern = [12, 12] as [NSNumber]
+        
         self.addSubview(self.xAxisView)
         self.addSubview(self.yAxisView)
+        self.layer.addSublayer(self.angleLayer)
     }
     
     required init?(coder: NSCoder) {
@@ -179,13 +185,20 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         super.layoutSubviews()
     
         let point = self.getEntityCenterPosition()
-        self.xAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 10.0, height: 3000.0))
+        self.xAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 6.0, height: 3000.0))
         self.xAxisView.center = point
         self.xAxisView.transform = CGAffineTransform(rotationAngle: self.getEntityInitialRotation())
         
-        self.yAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 10.0))
+        self.yAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 6.0))
         self.yAxisView.center = point
         self.yAxisView.transform = CGAffineTransform(rotationAngle: self.getEntityInitialRotation())
+        
+        let anglePath = CGMutablePath()
+        anglePath.move(to: CGPoint(x: 0.0, y: 3.0))
+        anglePath.addLine(to: CGPoint(x: 3000.0, y: 3.0))
+        self.angleLayer.path = anglePath
+        self.angleLayer.lineWidth = 6.0
+        self.angleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 6.0))
     }
     
     var entities: [DrawingEntity] {
@@ -358,6 +371,28 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             } else {
                 transition.updateAlpha(layer: strongSelf.yAxisView.layer, alpha: 0.0)
             }
+        }
+        view.onSnapToAngle = { [weak self, weak view] snappedToAngle in
+            guard let strongSelf = self, let strongView = view else {
+                return
+            }
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            if let snappedToAngle {
+                strongSelf.layer.insertSublayer(strongSelf.angleLayer, below: strongView.layer)
+                strongSelf.angleLayer.transform = CATransform3DMakeRotation(snappedToAngle, 0.0, 0.0, 1.0)
+                if strongSelf.angleLayer.opacity < 1.0 {
+                    strongSelf.hapticFeedback.impact(.light)
+                }
+                transition.updateAlpha(layer: strongSelf.angleLayer, alpha: 1.0)
+            } else {
+                transition.updateAlpha(layer: strongSelf.angleLayer, alpha: 0.0)
+            }
+        }
+        view.onPositionUpdated = { [weak self] position in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.angleLayer.position = position
         }
         
         view.update()
@@ -598,6 +633,8 @@ public class DrawingEntityView: UIView {
     
     var onSnapToXAxis: (Bool) -> Void = { _ in }
     var onSnapToYAxis: (Bool) -> Void = { _ in }
+    var onSnapToAngle: (CGFloat?) -> Void = { _ in }
+    var onPositionUpdated: (CGPoint) -> Void = { _ in }
     
     init(context: AccountContext, entity: DrawingEntity) {
         self.context = context

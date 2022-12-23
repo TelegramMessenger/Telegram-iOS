@@ -6,7 +6,6 @@
 #import "TGPhotoPaintStickerEntity.h"
 
 #import "TGMediaEditingContext.h"
-#import "TGPaintUndoManager.h"
 
 @interface TGPaintingData ()
 {

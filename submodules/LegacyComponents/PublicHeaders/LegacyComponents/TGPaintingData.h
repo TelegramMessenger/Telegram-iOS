@@ -1,7 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-@class TGPaintUndoManager;
 @class TGMediaEditingContext;
 @protocol TGMediaEditableItem;
 

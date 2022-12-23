@@ -214,42 +214,17 @@ class DrawingGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate
         
         var allTouches: [Touch] = []
 
-        for touch in touches {
-            var coalesced = event?.coalescedTouches(for: touch) ?? [touch]
-            if "".isEmpty || coalesced.isEmpty {
-                coalesced = [touch]
-            }
-
-            for coalescedTouch in coalesced {
-                allTouches.append(
-                    Touch(
-                        coalescedTouch: coalescedTouch,
-                        touch: touch,
-                        in: view,
-                        isUpdate: isUpdate,
-                        isPrediction: false,
-                        transform: self.transform
-                    )
-                )
-            }
-
-            if self.usePredictedTouches {
-                let predicted = event?.predictedTouches(for: touch) ?? []
-                for predictedTouch in predicted {
-                    allTouches.append(
-                        Touch(
-                            coalescedTouch: predictedTouch,
-                            touch: touch,
-                            in: view,
-                            isUpdate: isUpdate,
-                            isPrediction: true,
-                            transform: self.transform
-                        )
-                    )
-                }
-            }
+        if let touch = touches.first {
+            allTouches.append(Touch(
+                coalescedTouch: touch,
+                touch: touch,
+                in: view,
+                isUpdate: isUpdate,
+                isPrediction: false,
+                transform: self.transform
+            ))
         }
-    
+        
         self.onTouches(allTouches)
     }
 }
@@ -300,15 +275,7 @@ class DrawingGesturePipeline {
         }
     }
     
-    var mode: Mode = .location {
-        didSet {
-            if [.location, .polyline].contains(self.mode) {
-                self.gestureRecognizer?.usePredictedTouches = false
-            } else {
-                self.gestureRecognizer?.usePredictedTouches = true
-            }
-        }
-    }
+    var mode: Mode = .location
     
     init(view: DrawingView) {
         let gestureRecognizer = DrawingGestureRecognizer(target: self, action: #selector(self.handleGesture(_:)))

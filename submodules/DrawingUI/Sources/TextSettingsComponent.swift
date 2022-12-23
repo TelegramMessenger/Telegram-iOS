@@ -183,7 +183,8 @@ final class TextFontComponent: Component {
     
     final class View: UIView, ComponentTaggedView {
         private var button = HighlightableButton()
-    
+        private let icon = SimpleLayer()
+        
         private var component: TextFontComponent?
         
         public func matches(tag: Any) -> Bool {
@@ -200,6 +201,7 @@ final class TextFontComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.button)
+            self.button.layer.addSublayer(self.icon)
         }
         
         required init?(coder: NSCoder) {
@@ -215,16 +217,47 @@ final class TextFontComponent: Component {
         func update(component: TextFontComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             
+            if self.icon.contents == nil {
+                self.icon.contents = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/FontArrow"), color: UIColor(rgb: 0xffffff, alpha: 0.5))?.cgImage
+            }
+            
             let value = component.selectedValue
             
+            var disappearingSnapshotView: UIView?
+            let previousTitle = self.button.title(for: .normal)
+            if previousTitle != value.title {
+                if let snapshotView = self.button.titleLabel?.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.center = self.button.titleLabel?.center ?? snapshotView.center
+                    self.button.addSubview(snapshotView)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    self.button.titleLabel?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    disappearingSnapshotView = snapshotView
+                }
+            }
+            
+            self.button.clipsToBounds = true
             self.button.setTitle(value.title, for: .normal)
             self.button.titleLabel?.font = value.uiFont(size: 13.0)
-            self.button.sizeToFit()
-            self.button.frame = CGRect(origin: .zero, size: CGSize(width: self.button.frame.width + 16.0, height: 30.0))
+            self.button.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 26.0)
+            var buttonSize = self.button.sizeThatFits(availableSize)
+            buttonSize.width += 39.0 - 13.0
+            buttonSize.height = 30.0
+            transition.setFrame(view: self.button, frame: CGRect(origin: .zero, size: buttonSize))
             self.button.layer.cornerRadius = 11.0
             self.button.layer.borderWidth = 1.0 - UIScreenPixel
             self.button.layer.borderColor = UIColor.white.cgColor
             self.button.addTarget(self, action: #selector(self.pressed(_:)), for: .touchUpInside)
+            
+            let iconSize = CGSize(width: 16.0, height: 16.0)
+            let iconFrame = CGRect(origin: CGPoint(x: buttonSize.width - iconSize.width - 8.0, y: floorToScreenPixels((buttonSize.height - iconSize.height) / 2.0)), size: iconSize)
+            transition.setFrame(layer: self.icon, frame: iconFrame)
+            
+            if let disappearingSnapshotView, let titleLabel = self.button.titleLabel {
+                disappearingSnapshotView.layer.animatePosition(from: disappearingSnapshotView.center, to: titleLabel.center, duration: 0.2, removeOnCompletion: false)
+                self.button.titleLabel?.layer.animatePosition(from: disappearingSnapshotView.center, to: titleLabel.center, duration: 0.2)
+            }
             
             return CGSize(width: self.button.frame.width, height: availableSize.height)
         }

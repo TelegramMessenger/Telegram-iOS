@@ -19,6 +19,10 @@ final class MarkerTool: DrawingElement, Codable {
     var isValid: Bool {
         return !self.points.isEmpty
     }
+    
+    var bounds: CGRect {
+        return CGRect(origin: .zero, size: self.drawingSize)
+    }
         
     required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -170,6 +174,10 @@ final class NeonTool: DrawingElement, Codable {
     var isValid: Bool {
         return self.renderPath != nil
     }
+    
+    var bounds: CGRect {
+        return CGRect(origin: .zero, size: self.drawingSize)
+    }
         
     required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -290,6 +298,10 @@ final class FillTool: DrawingElement, Codable {
     
     var isValid: Bool {
         return true
+    }
+    
+    var bounds: CGRect {
+        return CGRect(origin: .zero, size: self.drawingSize)
     }
     
     required init(drawingSize: CGSize, color: DrawingColor, blur: Bool, blurredImage: UIImage?) {

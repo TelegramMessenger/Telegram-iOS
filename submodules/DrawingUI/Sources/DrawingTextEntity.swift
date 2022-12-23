@@ -258,7 +258,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.minimumZoomScale = 1.0
         self.textView.maximumZoomScale = 1.0
         self.textView.keyboardAppearance = .dark
-        self.textView.autocorrectionType = .no
+        self.textView.autocorrectionType = .default
         self.textView.spellCheckingType = .no
         
         super.init(context: context, entity: entity)
@@ -482,7 +482,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textEntity.text = updatedText
         
         self.sizeToFit()
-        self.update()
+        self.update(afterAppendingEmoji: true)
     }
     
     func insertText(_ text: NSAttributedString) {
@@ -493,11 +493,15 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         updatedText.removeAttribute(.font, range: range)
         updatedText.removeAttribute(.paragraphStyle, range: range)
         updatedText.removeAttribute(.foregroundColor, range: range)
+        
+        let previousSelectedRange = self.textView.selectedRange
         updatedText.replaceCharacters(in: self.textView.selectedRange, with: text)
         
         self.textEntity.text = updatedText
         
-        self.update()
+        self.update(animated: false, afterAppendingEmoji: true)
+        
+        self.textView.selectedRange = NSMakeRange(previousSelectedRange.location + previousSelectedRange.length + text.length, 0)
     }
     
     override func sizeThatFits(_ size: CGSize) -> CGSize {
@@ -531,7 +535,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         return fontSize
     }
     
-    private func updateText() {
+    private func updateText(keepSelectedRange: Bool = false) {
         guard let text = self.textEntity.text.mutableCopy() as? NSMutableAttributedString else {
             return
         }
@@ -581,10 +585,18 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         paragraphStyle.alignment = self.textEntity.alignment.alignment
         text.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
         
+        let previousRange = self.textView.selectedRange
         self.textView.attributedText = text
+        if keepSelectedRange {
+            self.textView.selectedRange = previousRange
+        }
     }
     
     override func update(animated: Bool = false) {
+        self.update(animated: animated, afterAppendingEmoji: false)
+    }
+    
+    func update(animated: Bool = false, afterAppendingEmoji: Bool = false) {
         if !self.isEditing {
             self.center = self.textEntity.position
             self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.textEntity.rotation), self.textEntity.scale, self.textEntity.scale)
@@ -622,11 +634,11 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             self.textView.layer.shadowRadius = 0.0
         }
         
-        self.updateText()
+        self.updateText(keepSelectedRange: afterAppendingEmoji)
         
         self.sizeToFit()
         
-        Queue.mainQueue().after(0.001) {
+        Queue.mainQueue().after(afterAppendingEmoji ? 0.01 : 0.001) {
             self.updateEntities()
         }
         
@@ -749,6 +761,12 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                 entityView.onSnapToYAxis(snapped)
             }
         }
+        
+        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
+            if let strongSelf = self, let entityView = strongSelf.entityView {
+                entityView.onSnapToAngle(snappedAngle)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -789,6 +807,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                 for layer in sublayers {
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
+                        self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
                         return
                     }
                 }
@@ -811,13 +830,15 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                 let scaleDelta = (self.bounds.size.width + deltaX * 2.0) / self.bounds.size.width
                 updatedScale = max(0.01, updatedScale * scaleDelta)
                 
-                let deltaAngle: CGFloat
+                let newAngle: CGFloat
                 if self.currentHandle === self.leftHandle {
-                    deltaAngle = atan2(self.center.y - parentLocation.y, self.center.x - parentLocation.x)
+                    newAngle = atan2(self.center.y - parentLocation.y, self.center.x - parentLocation.x)
                 } else {
-                    deltaAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
+                    newAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
                 }
-                updatedRotation = deltaAngle
+                
+                //let delta = newAngle - updatedRotation
+                updatedRotation = newAngle //" self.snapTool.update(entityView: entityView, velocity: 0.0, delta: delta, updatedRotation: newAngle)
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
@@ -831,13 +852,16 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             entityView.update()
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
-        case .ended:
+        case .ended, .cancelled:
             self.snapTool.reset()
-        case .cancelled:
-            self.snapTool.reset()
+            if self.currentHandle != nil {
+                self.snapTool.rotationReset()
+            }
         default:
             break
         }
+        
+        entityView.onPositionUpdated(entity.position)
     }
     
     override func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
@@ -862,16 +886,29 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             return
         }
         
+        let velocity = gestureRecognizer.velocity
+        var updatedRotation = entity.rotation
+        var rotation: CGFloat = 0.0
+        
         switch gestureRecognizer.state {
-        case .began, .changed:
-            let rotation = gestureRecognizer.rotation
-            entity.rotation += rotation
-            entityView.update()
+        case .began:
+            self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+        case .changed:
+            rotation = gestureRecognizer.rotation
+            updatedRotation += rotation
             
             gestureRecognizer.rotation = 0.0
+        case .ended, .cancelled:
+            self.snapTool.rotationReset()
         default:
             break
         }
+        
+        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+        entity.rotation = updatedRotation
+        entityView.update()
+        
+        entityView.onPositionUpdated(entity.position)
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
