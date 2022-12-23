@@ -40,7 +40,7 @@ public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, 
                                 
                                 if let message = locallyRenderedMessage(message: storeMessage, peers: peers), let media = message.media.first as? TelegramMediaFile {
                                     return Signal { subscriber in
-                                        let fetchDispsable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: MediaResourceReference.media(media: AnyMediaReference.message(message: MessageReference(message), media: media), resource: media.resource)).start()
+                                        let fetchDispsable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: MediaResourceReference.media(media: AnyMediaReference.message(message: MessageReference(message), media: media), resource: media.resource)).start()
                                         
                                         let dataDisposable = account.postbox.mediaBox.resourceData(media.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { data in
                                             if data.complete {
@@ -120,7 +120,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
                                     let removeDisposable = account.postbox.mediaBox.removeCachedResources([media.resource.id]).start(completed: {
                                         let reference = MediaResourceReference.media(media: .message(message: MessageReference(message), media: media), resource: media.resource)
                                         
-                                        fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                                        fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: reference).start()
                                         statusDisposable = account.postbox.mediaBox.resourceStatus(media.resource).start(next: { status in
                                             switch status {
                                             case let .Fetching(_, progress):
