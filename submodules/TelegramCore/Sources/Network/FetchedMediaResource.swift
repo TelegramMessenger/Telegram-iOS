@@ -47,6 +47,7 @@ public extension MediaResourceStorageLocation {
             case let .message(message, _):
                 if let id = message.id {
                     self.init(peerId: id.peerId, messageId: id)
+                    return
                 }
             default:
                 break
@@ -92,12 +93,14 @@ public func fetchedMediaResource(
         break
     }
     
+    let location = MediaResourceStorageLocation(userLocation: userLocation, reference: reference)
+    
     if let ranges = ranges {
         let signals = ranges.map { (range, priority) -> Signal<Void, FetchResourceError> in
             return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(
                 tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory),
                 info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground),
-                location: MediaResourceStorageLocation(userLocation: userLocation, reference: reference),
+                location: location,
                 contentType: userContentType,
                 isRandomAccessAllowed: isRandomAccessAllowed
             ))
@@ -110,7 +113,7 @@ public func fetchedMediaResource(
         return mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(
             tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory),
             info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground),
-            location: MediaResourceStorageLocation(userLocation: userLocation, reference: reference),
+            location: location,
             contentType: userContentType,
             isRandomAccessAllowed: isRandomAccessAllowed
         ), implNext: reportResultStatus)

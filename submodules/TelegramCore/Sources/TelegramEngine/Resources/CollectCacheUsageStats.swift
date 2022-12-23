@@ -63,11 +63,13 @@ public final class StorageUsageStats {
         case misc
     }
     
-    public struct CategoryData: Equatable {
+    public struct CategoryData {
         public var size: Int64
+        public var messages: [EngineMessage.Id: Int64]
         
-        public init(size: Int64) {
+        public init(size: Int64, messages: [EngineMessage.Id: Int64]) {
             self.size = size
+            self.messages = messages
         }
     }
     
@@ -119,7 +121,7 @@ private extension StorageUsageStats {
             default:
                 mappedCategory = .misc
             }
-            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value)
+            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
         }
         
         self.init(categories: mappedCategories)
@@ -211,7 +213,10 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
         return account.postbox.transaction { transaction -> AllStorageUsageStats in
             let total = StorageUsageStats(allStats.total)
             if additionalStats != 0 {
-                total.categories[.misc, default: StorageUsageStats.CategoryData(size: 0)].size += additionalStats
+                if total.categories[.misc] == nil {
+                    total.categories[.misc] = StorageUsageStats.CategoryData(size: 0, messages: [:])
+                }
+                total.categories[.misc]?.size += additionalStats
             }
             
             var peers: [EnginePeer.Id: AllStorageUsageStats.PeerStats] = [:]
@@ -222,8 +227,8 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
                 }
                 
                 var peerSize: Int64 = 0
-                for (_, size) in peerStats.contentTypes {
-                    peerSize += size
+                for (_, contentValue) in peerStats.contentTypes {
+                    peerSize += contentValue.size
                 }
                 if peerSize == 0 {
                     continue
@@ -243,6 +248,124 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
             )
         }
     }
+}
+
+func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey]) -> Signal<[EngineMessage.Id: Message], NoError> {
+    return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
+        var result: [EngineMessage.Id: Message] = [:]
+        for (category, value) in stats.categories {
+            if !categories.contains(category) {
+                continue
+            }
+            for id in value.messages.keys {
+                if result[id] == nil {
+                    if let message = transaction.getMessage(id) {
+                        result[id] = message
+                    }
+                }
+            }
+        }
+        
+        return result
+    }
+}
+
+func _internal_reindexCacheInBackground(account: Account) -> Signal<Never, NoError> {
+    let queue = Queue(name: "ReindexCacheInBackground")
+    return Signal { subscriber in
+        let isCancelled = Atomic<Bool>(value: false)
+        
+        func process(lowerBound: MessageIndex?) {
+            if isCancelled.with({ $0 }) {
+                return
+            }
+            
+            let _ = (account.postbox.transaction { transaction -> (messagesByMediaId: [MediaId: [MessageId]], mediaMap: [MediaId: Media], nextLowerBound: MessageIndex?) in
+                return transaction.enumerateMediaMessages(lowerBound: lowerBound, upperBound: nil, limit: 1000)
+            }
+            |> deliverOn(queue)).start(next: { result in
+                Logger.shared.log("ReindexCacheInBackground", "process batch of \(result.mediaMap.count) media")
+                
+                var storageItems: [(reference: StorageBox.Reference, id: Data, contentType: UInt8, size: Int64)] = []
+                
+                let mediaBox = account.postbox.mediaBox
+                
+                let processResource: ([MessageId], MediaResource, MediaResourceUserContentType) -> Void = { messageIds, resource, contentType in
+                    let size = mediaBox.fileSizeForId(resource.id)
+                    if size != 0 {
+                        if let itemId = resource.id.stringRepresentation.data(using: .utf8) {
+                            for messageId in messageIds {
+                                storageItems.append((reference: StorageBox.Reference(peerId: messageId.peerId.toInt64(), messageNamespace: UInt8(clamping: messageId.namespace), messageId: messageId.id), id: itemId, contentType: contentType.rawValue, size: size))
+                            }
+                        }
+                    }
+                }
+                
+                for (_, media) in result.mediaMap {
+                    guard let mediaId = media.id else {
+                        continue
+                    }
+                    guard let mediaMessages = result.messagesByMediaId[mediaId] else {
+                        continue
+                    }
+                    
+                    if let image = media as? TelegramMediaImage {
+                        for representation in image.representations {
+                            processResource(mediaMessages, representation.resource, .image)
+                        }
+                    } else if let file = media as? TelegramMediaFile {
+                        for representation in file.previewRepresentations {
+                            processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
+                        }
+                        processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
+                    } else if let webpage = media as? TelegramMediaWebpage {
+                        if case let .Loaded(content) = webpage.content {
+                            if let image = content.image {
+                                for representation in image.representations {
+                                    processResource(mediaMessages, representation.resource, .image)
+                                }
+                            }
+                            if let file = content.file {
+                                for representation in file.previewRepresentations {
+                                    processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
+                                }
+                                processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
+                            }
+                        }
+                    } else if let game = media as? TelegramMediaGame {
+                        if let image = game.image {
+                            for representation in image.representations {
+                                processResource(mediaMessages, representation.resource, .image)
+                            }
+                        }
+                        if let file = game.file {
+                            for representation in file.previewRepresentations {
+                                processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
+                            }
+                            processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
+                        }
+                    }
+                }
+                
+                if !storageItems.isEmpty {
+                    mediaBox.storageBox.batchAdd(items: storageItems)
+                }
+                
+                if let nextLowerBound = result.nextLowerBound {
+                    process(lowerBound: nextLowerBound)
+                } else {
+                    subscriber.putCompletion()
+                }
+            })
+        }
+        
+        process(lowerBound: nil)
+        
+        return ActionDisposable {
+            let _ = isCancelled.swap(true)
+        }
+    }
+    |> runOn(queue)
 }
 
 func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {

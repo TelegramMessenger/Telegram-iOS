@@ -912,6 +912,15 @@ public final class Transaction {
         return count
     }
     
+    public func enumerateMediaMessages(lowerBound: MessageIndex?, upperBound: MessageIndex?, limit: Int) -> (messagesByMediaId: [MediaId: [MessageId]], mediaMap: [MediaId: Media], nextLowerBound: MessageIndex?) {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.messageHistoryTable.enumerateMediaMessages(lowerBound: lowerBound, upperBound: upperBound, limit: limit)
+        } else {
+            return ([:], [:], nil)
+        }
+    }
+    
     public func enumerateMedia(lowerBound: MessageIndex?, upperBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
         assert(!self.disposed)
         if let postbox = self.postbox {
