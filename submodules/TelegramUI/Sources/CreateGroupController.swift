@@ -425,7 +425,26 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let createSignal: Signal<PeerId?, CreateGroupError>
             switch mode {
                 case .generic:
-                    createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
+                    if title.contains("*forum") {
+                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
+                        |> map(Optional.init)
+                        |> mapError { error -> CreateGroupError in
+                            switch error {
+                                case .generic:
+                                    return .generic
+                                case .restricted:
+                                    return .restricted
+                                case .tooMuchJoined:
+                                    return .tooMuchJoined
+                                case .tooMuchLocationBasedGroups:
+                                    return .tooMuchLocationBasedGroups
+                                case let .serverProvided(error):
+                                    return .serverProvided(error)
+                            }
+                        }
+                    } else {
+                        createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
+                    }
                 case .supergroup:
                     createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                     |> map(Optional.init)
@@ -575,7 +594,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
                     uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: resource))
                     uploadedVideoAvatar = nil
                     updateState { current in
@@ -590,7 +609,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
                     updateState { state in
                         var state = state
                         state.avatar = .image(representation, true)

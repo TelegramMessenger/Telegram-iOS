@@ -135,7 +135,7 @@ func personWithUser(stableId: String, user: TelegramUser) -> INPerson {
     let personHandle: INPersonHandle
     if let phone = user.phone {
         personHandle = INPersonHandle(value: formatPhoneNumber(phone), type: .phoneNumber)
-    } else if let username = user.username {
+    } else if let username = user.addressName {
         personHandle = INPersonHandle(value: "@\(username)", type: .unknown)
     } else {
         personHandle = INPersonHandle(value: user.nameOrPhone, type: .unknown)

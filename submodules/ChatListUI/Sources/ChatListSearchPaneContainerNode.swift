@@ -49,6 +49,7 @@ final class ChatListSearchPaneWrapper {
 
 public enum ChatListSearchPaneKey {
     case chats
+    case topics
     case media
     case downloads
     case links
@@ -62,6 +63,8 @@ extension ChatListSearchPaneKey {
         switch self {
         case .chats:
             return .chats
+        case .topics:
+            return .topics
         case .media:
             return .media
         case .downloads:
@@ -78,9 +81,15 @@ extension ChatListSearchPaneKey {
     }
 }
 
-func defaultAvailableSearchPanes(hasDownloads: Bool) -> [ChatListSearchPaneKey] {
-    var result: [ChatListSearchPaneKey] = [.chats, .media, .downloads, .links, .files, .music, .voice]
-    
+func defaultAvailableSearchPanes(isForum: Bool, hasDownloads: Bool) -> [ChatListSearchPaneKey] {
+    var result: [ChatListSearchPaneKey] = []
+    if isForum {
+        result.append(.topics)
+    } else {
+        result.append(.chats)
+    }
+    result.append(contentsOf: [.media, .downloads, .links, .files, .music, .voice])
+        
     if !hasDownloads {
         result.removeAll(where: { $0 == .downloads })
     }
@@ -110,13 +119,13 @@ private final class ChatListSearchPendingPane {
         interaction: ChatListSearchInteraction,
         navigationController: NavigationController?,
         peersFilter: ChatListNodePeersFilter,
-        groupId: EngineChatList.Group,
+        location: ChatListControllerLocation,
         searchQuery: Signal<String?, NoError>,
         searchOptions: Signal<ChatListSearchOptions?, NoError>,
         key: ChatListSearchPaneKey,
         hasBecomeReady: @escaping (ChatListSearchPaneKey) -> Void
     ) {
-        let paneNode = ChatListSearchListPaneNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: key == .chats ? peersFilter : [], groupId: groupId, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
+        let paneNode = ChatListSearchListPaneNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: (key == .chats || key == .topics) ? peersFilter : [], location: location, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
         
         self.pane = ChatListSearchPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
@@ -138,7 +147,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     private let animationRenderer: MultiAnimationRenderer
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peersFilter: ChatListNodePeersFilter
-    private let groupId: EngineChatList.Group
+    private let location: ChatListControllerLocation
     private let searchQuery: Signal<String?, NoError>
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
     private let navigationController: NavigationController?
@@ -172,17 +181,17 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     
     private var currentAvailablePanes: [ChatListSearchPaneKey]?
     
-    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peersFilter: ChatListNodePeersFilter, groupId: EngineChatList.Group, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
+    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peersFilter: ChatListNodePeersFilter, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.updatedPresentationData = updatedPresentationData
         self.peersFilter = peersFilter
-        self.groupId = groupId
+        self.location = location
         self.searchQuery = searchQuery
         self.searchOptions = searchOptions
         self.navigationController = navigationController
-        
+                
         super.init()
     }
     
@@ -330,7 +339,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             pane.pane.node.updateSelectedMessages(animated: animated)
         }
     }
-    
+        
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, availablePanes: [ChatListSearchPaneKey], transition: ContainedViewLayoutTransition) {
         let previousAvailablePanes = self.currentAvailablePanes ?? []
         self.currentAvailablePanes = availablePanes
@@ -367,8 +376,11 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes)
                 
-        self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        
+        if case .forum = self.location {
+            self.backgroundColor = .clear
+        } else {
+            self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        }
         let paneFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
         
         var visiblePaneIndices: [Int] = []
@@ -408,7 +420,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     interaction: self.interaction!,
                     navigationController: self.navigationController,
                     peersFilter: self.peersFilter,
-                    groupId: self.groupId,
+                    location: self.location,
                     searchQuery: self.searchQuery,
                     searchOptions: self.searchOptions,
                     key: key,

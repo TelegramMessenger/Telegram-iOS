@@ -187,22 +187,23 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
 }
 
 struct FetchedChatList {
-    let chatPeerIds: [PeerId]
-    let peers: [Peer]
-    let peerPresences: [PeerId: Api.User]
-    let notificationSettings: [PeerId: PeerNotificationSettings]
-    let readStates: [PeerId: [MessageId.Namespace: PeerReadState]]
-    let mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
-    let reactionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
-    let channelStates: [PeerId: Int32]
-    let storeMessages: [StoreMessage]
-    let topMessageIds: [PeerId: MessageId]
+    var chatPeerIds: [PeerId]
+    var peers: [Peer]
+    var peerPresences: [PeerId: Api.User]
+    var notificationSettings: [PeerId: PeerNotificationSettings]
+    var readStates: [PeerId: [MessageId.Namespace: PeerReadState]]
+    var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
+    var reactionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
+    var channelStates: [PeerId: Int32]
+    var storeMessages: [StoreMessage]
+    var topMessageIds: [PeerId: MessageId]
     
-    let lowerNonPinnedIndex: MessageIndex?
+    var lowerNonPinnedIndex: MessageIndex?
     
-    let pinnedItemIds: [PeerId]?
-    let folderSummaries: [PeerGroupId: PeerGroupUnreadCountersSummary]
-    let peerGroupIds: [PeerId: PeerGroupId]
+    var pinnedItemIds: [PeerId]?
+    var folderSummaries: [PeerGroupId: PeerGroupUnreadCountersSummary]
+    var peerGroupIds: [PeerId: PeerGroupId]
+    var threadInfos: [MessageId: StoreMessageHistoryThreadData]
 }
 
 func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex, hash: Int64, limit: Int32) -> Signal<FetchedChatList?, NoError> {
@@ -386,9 +387,18 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     
                         pinnedItemIds: pinnedItemIds,
                         folderSummaries: folderSummaries,
-                        peerGroupIds: peerGroupIds
+                        peerGroupIds: peerGroupIds,
+                        threadInfos: [:]
                     )
                     return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: storeMessages, reactions: [], result: result)
+                    |> mapToSignal { result in
+                        if let result = result {
+                            return resolveForumThreads(postbox: postbox, network: network, fetchedChatList: result)
+                            |> map(Optional.init)
+                        } else {
+                            return .single(result)
+                        }
+                    }
                 }
             }
         }

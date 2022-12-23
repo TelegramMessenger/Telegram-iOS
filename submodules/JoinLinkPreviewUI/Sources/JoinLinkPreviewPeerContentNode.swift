@@ -270,7 +270,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.contentOffsetUpdated?(-size.height + nodeHeight, transition)
     }
     
-    func updateSelectedPeers() {
+    func updateSelectedPeers(animated: Bool) {
     }
 }
 
@@ -318,6 +318,6 @@ public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareCont
         self.contentOffsetUpdated?(-size.height + nodeHeight, transition)
     }
     
-    public func updateSelectedPeers() {
+    public func updateSelectedPeers(animated: Bool) {
     }
 }

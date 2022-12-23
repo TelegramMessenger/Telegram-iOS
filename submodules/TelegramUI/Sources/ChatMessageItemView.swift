@@ -9,6 +9,8 @@ import LocalizedPeerData
 import ContextUI
 import ChatListUI
 import TelegramPresentationData
+import SwiftSignalKit
+
 import PtgForeignAgentNoticeRemoval
 
 struct ChatMessageItemWidthFill {
@@ -126,7 +128,7 @@ func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants
     let textInset: CGFloat = min(maxInset, ceil(maxInset * radiusTransition + minInset * (1.0 - radiusTransition)))
     result.text.bubbleInsets.left = textInset
     result.text.bubbleInsets.right = textInset
-    result.instantVideo.dimensions = min(params.width, params.availableHeight) > 320.0 ? constants.1.instantVideo.dimensions : constants.0.instantVideo.dimensions
+    result.instantVideo.dimensions = params.width > 320.0 ? constants.1.instantVideo.dimensions : constants.0.instantVideo.dimensions
     return result
 }
 
@@ -858,7 +860,12 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
-                    item.controllerInteraction.openPeer(peerId, .info, nil, false, nil)
+                    let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        if let peer = peer {
+                            item.controllerInteraction.openPeer(peer, .info, nil, false)
+                        }
+                    })
                 case let .openWebView(url, simple):
                     item.controllerInteraction.openWebView(button.title, url, simple, false)
             }

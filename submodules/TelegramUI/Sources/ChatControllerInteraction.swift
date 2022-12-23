@@ -61,7 +61,7 @@ struct UnreadMessageRangeKey: Hashable {
 
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool, Peer?) -> Void
+    let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
     let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
@@ -141,10 +141,12 @@ public final class ChatControllerInteraction {
     let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     let openJoinLink: (String) -> Void
     let openWebView: (String, String, Bool, Bool) -> Void
+    let activateAdAction: (EngineMessage.Id) -> Void
     
-    let requestMessageUpdate: (MessageId) -> Void
+    let requestMessageUpdate: (MessageId, Bool) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
     let dismissTextInput: () -> Void
+    let scrollToMessageId: (MessageIndex) -> Void
     
     var canPlayMedia: Bool = false
     var hiddenMedia: [MessageId: [Media]] = [:]
@@ -167,7 +169,7 @@ public final class ChatControllerInteraction {
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
-        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool, Peer?) -> Void,
+        openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void,
@@ -247,9 +249,11 @@ public final class ChatControllerInteraction {
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
-        requestMessageUpdate: @escaping (MessageId) -> Void,
+        activateAdAction: @escaping (EngineMessage.Id) -> Void,
+        requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
+        scrollToMessageId: @escaping (MessageIndex) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -336,9 +340,11 @@ public final class ChatControllerInteraction {
         self.openLargeEmojiInfo = openLargeEmojiInfo
         self.openJoinLink = openJoinLink
         self.openWebView = openWebView
+        self.activateAdAction = activateAdAction
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput
+        self.scrollToMessageId = scrollToMessageId
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

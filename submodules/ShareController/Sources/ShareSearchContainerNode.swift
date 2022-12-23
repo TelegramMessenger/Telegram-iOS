@@ -94,7 +94,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     peers[associatedPeer.id] = associatedPeer
                 }
                 let peer = EngineRenderedPeer(RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers), associatedMedia: [:]))
-                return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+                return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -129,7 +129,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -173,7 +173,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var enqueuedTransitions: [(ShareSearchGridTransaction, Bool)] = []
     private var enqueuedRecentTransitions: [(ShareSearchGridTransaction, Bool)] = []
     
-    private let contentGridNode: GridNode
+    let contentGridNode: GridNode
     private let recentGridNode: GridNode
     
     private let contentSeparatorNode: ASDisplayNode
@@ -546,7 +546,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     func animateIn() {
     }
     
-    func updateSelectedPeers() {
+    func updateSelectedPeers(animated: Bool) {
         self.contentGridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ShareControllerPeerGridItemNode {
                 itemNode.updateSelection(animated: true)
@@ -630,6 +630,148 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 itemTransition = .animated(duration: 0.3, curve: .spring)
             }
             self.recentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        }
+    }
+    
+    func frameForPeerId(_ peerId: EnginePeer.Id) -> CGRect? {
+        var node: ASDisplayNode?
+        if !self.recentGridNode.isHidden {
+            self.recentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                    node = itemNode
+                }
+            }
+        } else {
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                    node = itemNode
+                }
+            }
+        }
+        if let node = node {
+            return node.frame.offsetBy(dx: 0.0, dy: -10.0)
+        } else {
+            return nil
+        }
+    }
+    
+    func animateIn(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
+        self.searchNode.alpha = 1.0
+        self.searchNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.searchNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+
+        self.cancelButtonNode.alpha = 1.0
+        self.cancelButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.cancelButtonNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
+        self.contentGridNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
+        if let targetFrame = self.frameForPeerId(peerId), let (size, bottomInset) = self.validLayout {
+            let clippedNode = ASDisplayNode()
+            clippedNode.clipsToBounds = true
+            clippedNode.cornerRadius = 16.0
+            clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.searchNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
+            self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
+            
+            clippedNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            let maskView = UIView()
+            maskView.frame = clippedNode.bounds
+            
+            let maskImageView = UIImageView()
+            maskImageView.image = generatePeersMaskImage()
+            maskImageView.frame = maskView.bounds.offsetBy(dx: 0.0, dy: 36.0)
+            maskView.addSubview(maskImageView)
+            clippedNode.view.mask = maskView
+            
+            
+            self.contentGridNode.alpha = 1.0
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+                    itemNode.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak clippedNode] _ in
+                        clippedNode?.view.removeFromSuperview()
+                    })
+                } else if let snapshotView = itemNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = itemNode.view.convert(itemNode.bounds, to: clippedNode.view)
+                    
+                    clippedNode.view.addSubview(snapshotView)
+                    
+                    itemNode.alpha = 0.0
+                    let angle = targetFrame.center.angle(to: itemNode.position)
+                    let distance = targetFrame.center.distance(to: itemNode.position)
+                    let newDistance = distance * 2.8
+                    let newPosition = snapshotView.center.offsetBy(distance: newDistance, inDirection: angle)
+                    snapshotView.layer.animatePosition(from: newPosition, to: snapshotView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    snapshotView.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak itemNode] _ in
+                        itemNode?.alpha = 1.0
+                    })
+                    snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+                }
+            }
+                        
+            return targetFrame
+        } else {
+            return nil
+        }
+    }
+    
+    func animateOut(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
+        self.searchNode.alpha = 0.0
+        self.searchNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+        self.searchNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                
+        self.cancelButtonNode.alpha = 0.0
+        self.cancelButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+        self.cancelButtonNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
+        self.contentGridNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
+        if let sourceFrame = self.frameForPeerId(peerId), let (size, bottomInset) = self.validLayout {
+            let clippedNode = ASDisplayNode()
+            clippedNode.clipsToBounds = true
+            clippedNode.cornerRadius = 16.0
+            clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.searchNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
+            self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
+            
+            clippedNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            let maskView = UIView()
+            maskView.frame = clippedNode.bounds
+            
+            let maskImageView = UIImageView()
+            maskImageView.image = generatePeersMaskImage()
+            maskImageView.frame = maskView.bounds.offsetBy(dx: 0.0, dy: 36.0)
+            maskView.addSubview(maskImageView)
+            clippedNode.view.mask = maskView
+            
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let snapshotView = itemNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = itemNode.view.convert(itemNode.bounds, to: clippedNode.view)
+                    clippedNode.view.addSubview(snapshotView)
+                    
+                    if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                        
+                    } else {
+                        let angle = sourceFrame.center.angle(to: itemNode.position)
+                        let distance = sourceFrame.center.distance(to: itemNode.position)
+                        let newDistance = distance * 2.8
+                        let newPosition = snapshotView.center.offsetBy(distance: newDistance, inDirection: angle)
+                        snapshotView.layer.animatePosition(from: snapshotView.center, to: newPosition, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                    snapshotView.layer.animateScale(from: 1.0, to: 1.35, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+            }
+            
+            clippedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak clippedNode] _ in
+                clippedNode?.view.removeFromSuperview()
+            })
+            
+            self.contentGridNode.alpha = 0.0
+            
+            return sourceFrame
+        } else {
+            return nil
         }
     }
 }

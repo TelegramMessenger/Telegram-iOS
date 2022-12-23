@@ -3,9 +3,12 @@ import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
 import AppBundle
+import AvatarNode
+import AccountContext
 
 private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)
@@ -42,14 +45,16 @@ public struct SearchBarToken {
     public let id: AnyHashable
     public let icon: UIImage?
     public let iconOffset: CGFloat?
+    public let peer: (EnginePeer, AccountContext, PresentationTheme)?
     public let title: String
     public let style: Style?
     public let permanent: Bool
     
-    public init(id: AnyHashable, icon: UIImage?, iconOffset: CGFloat? = 0.0, title: String, style: Style? = nil, permanent: Bool) {
+    public init(id: AnyHashable, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, title: String, style: Style? = nil, permanent: Bool) {
         self.id = id
         self.icon = icon
         self.iconOffset = iconOffset
+        self.peer = peer
         self.title = title
         self.style = style
         self.permanent = permanent
@@ -63,6 +68,7 @@ private final class TokenNode: ASDisplayNode {
     let iconNode: ASImageNode
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
+    let avatarNode: AvatarNode?
     
     var isSelected: Bool = false
     var isCollapsed: Bool = false
@@ -85,22 +91,34 @@ private final class TokenNode: ASDisplayNode {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         
+        if let _ = token.peer {
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 12.0))
+        } else {
+            self.avatarNode = nil
+        }
+        
         super.init()
         
         self.clipsToBounds = true
         self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.backgroundNode)
         
-        let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
-        let strokeColor = token.style?.strokeColor ?? backgroundColor
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
-        
-        let foregroundColor = token.style?.foregroundColor ?? .white
-        self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
-        self.containerNode.addSubnode(self.iconNode)
-        
-        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
-        self.containerNode.addSubnode(self.titleNode)
+        if let avatarNode = self.avatarNode, let (peer, context, theme) = token.peer {
+            avatarNode.setPeer(context: context, theme: theme, peer: peer, clipStyle: .roundedRect, displayDimensions: CGSize(width: 24.0, height: 24.0))
+            self.containerNode.addSubnode(avatarNode)
+        } else {
+            self.containerNode.addSubnode(self.backgroundNode)
+            
+            let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
+            let strokeColor = token.style?.strokeColor ?? backgroundColor
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+            
+            let foregroundColor = token.style?.foregroundColor ?? .white
+            self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
+            self.containerNode.addSubnode(self.iconNode)
+            
+            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
+            self.containerNode.addSubnode(self.titleNode)
+        }
     }
     
     override func didLoad() {
@@ -110,7 +128,6 @@ private final class TokenNode: ASDisplayNode {
     }
     
     @objc private func tapGesture() {
-        
         self.tapped?()
     }
     
@@ -118,6 +135,11 @@ private final class TokenNode: ASDisplayNode {
         let targetFrame = self.containerNode.frame
         self.containerNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         self.backgroundNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        if let avatarNode = self.avatarNode {
+            avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
         
         self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
@@ -175,11 +197,17 @@ private final class TokenNode: ASDisplayNode {
             width += iconSize.width + 7.0
         }
         
-        let size = CGSize(width: self.isCollapsed ? height : width, height: height)
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize))
-                    
+        let size: CGSize
+        if let avatarNode = self.avatarNode {
+            size = CGSize(width: height, height: height)
+            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: avatarNode, frame: CGRect(origin: CGPoint(), size: size))
+        } else {
+            size = CGSize(width: self.isCollapsed ? height : width, height: height)
+            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize))
+        }
         return size
     }
 }
@@ -1014,7 +1042,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     public func deactivate(clear: Bool = true) {
         self.textField.resignFirstResponder()
         if clear {
-            self.textField.text = nil
+            self.textField.text = nil            
             self.textField.tokens = []
             self.textField.prefixString = nil
             self.textField.placeholderLabel.alpha = 1.0
@@ -1188,13 +1216,21 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     private func updateIsEmpty(animated: Bool = false) {
-        let isEmpty = (self.textField.text?.isEmpty ?? true) && self.tokens.isEmpty
+        let textIsEmpty = (self.textField.text?.isEmpty ?? true)
+        let isEmpty = textIsEmpty && self.tokens.isEmpty
 
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
         let placeholderTransition = !isEmpty ? .immediate : transition
         placeholderTransition.updateAlpha(node: self.textField.placeholderLabel, alpha: isEmpty ? 1.0 : 0.0)
 
-        let clearIsHidden = isEmpty && self.prefixString == nil
+        var tokensEmpty = true
+        for token in self.tokens {
+            if !token.permanent {
+                tokensEmpty = false
+            }
+        }
+        
+        let clearIsHidden = (textIsEmpty && tokensEmpty) && self.prefixString == nil
         transition.updateAlpha(node: self.clearButton.imageNode, alpha: clearIsHidden ? 0.0 : 1.0)
         transition.updateTransformScale(node: self.clearButton, scale: clearIsHidden ? 0.2 : 1.0)
         self.clearButton.isUserInteractionEnabled = !clearIsHidden

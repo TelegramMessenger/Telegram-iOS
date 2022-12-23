@@ -96,7 +96,6 @@ jobs:
           python3 build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
-            --disableParallelSwiftmoduleGeneration \
             --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
             --codesigningInformationPath="$HOME/telegram-configuration/provisioning" \
             --buildNumber=$BUILD_NUMBER \

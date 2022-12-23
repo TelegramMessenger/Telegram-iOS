@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
+import ChatMessageBackground
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never
@@ -25,6 +26,29 @@ struct ChatMessageBubbleContentProperties {
     let hidesBackground: ChatMessageBubbleContentBackgroundHiding
     let forceFullCorners: Bool
     let forceAlignment: ChatMessageBubbleContentAlignment
+    let shareButtonOffset: CGPoint?
+    let hidesHeaders: Bool
+    let avatarOffset: CGFloat?
+    
+    init(
+        hidesSimpleAuthorHeader: Bool,
+        headerSpacing: CGFloat,
+        hidesBackground: ChatMessageBubbleContentBackgroundHiding,
+        forceFullCorners: Bool,
+        forceAlignment: ChatMessageBubbleContentAlignment,
+        shareButtonOffset: CGPoint? = nil,
+        hidesHeaders: Bool = false,
+        avatarOffset: CGFloat? = nil
+    ) {
+        self.hidesSimpleAuthorHeader = hidesSimpleAuthorHeader
+        self.headerSpacing = headerSpacing
+        self.hidesBackground = hidesBackground
+        self.forceFullCorners = forceFullCorners
+        self.forceAlignment = forceAlignment
+        self.shareButtonOffset = shareButtonOffset
+        self.hidesHeaders = hidesHeaders
+        self.avatarOffset = avatarOffset
+    }
 }
 
 enum ChatMessageBubbleNoneMergeStatus {
@@ -134,17 +158,24 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         return false
     }
     
+    weak var bubbleBackgroundNode: ChatMessageBackground?
+    weak var bubbleBackdropNode: ChatMessageBubbleBackdrop?
+    
     var visibility: ListViewItemNodeVisibility = .none
     
     var item: ChatMessageBubbleContentItem?
     
     var updateIsTextSelectionActive: ((Bool) -> Void)?
     
+    var disablesClipping: Bool {
+        return false
+    }
+    
     required override init() {
         super.init()
     }
     
-    func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         preconditionFailure()
     }
     

@@ -155,6 +155,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, updateShowWebView: { _ in
         }, insertText: { _ in
         }, backwardsDeleteText: {
+        }, restartTopic: {
         }, chatController: {
             return nil
         }, statuses: nil)

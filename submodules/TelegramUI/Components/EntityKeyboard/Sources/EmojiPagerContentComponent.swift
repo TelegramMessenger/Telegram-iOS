@@ -2143,8 +2143,9 @@ public final class EmojiPagerContentComponent: Component {
             case icon(Icon)
         }
         
-        public enum Icon: Equatable {
+        public enum Icon: Equatable, Hashable {
             case premiumStar
+            case topic(String, Int32)
         }
         
         case animation(EntityKeyboardAnimationData)
@@ -2942,6 +2943,12 @@ public final class EmojiPagerContentComponent: Component {
                                 let imageSize = image.size.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
+                        case let .topic(title, color):
+                            let colors = self.getTopicColors(color)
+                            if let image = generateTopicIcon(backgroundColors: colors.0.map { UIColor(rgb: $0) }, strokeColors: colors.1.map { UIColor(rgb: $0) }, title: title) {
+                                let imageSize = image.size//.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
+                                image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
+                            }
                         }
                         
                         UIGraphicsPopContext()
@@ -2984,6 +2991,40 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 self.updatePlayback()
                 return nullAction
+            }
+            
+            private func getTopicColors(_ color: Int32) -> ([UInt32], [UInt32]) {
+                let topicColors: [Int32: ([UInt32], [UInt32])] = [
+                    0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+                    0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
+                    0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
+                    0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
+                    0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
+                    0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
+                ]
+                
+                return topicColors[color] ?? ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
+            }
+            
+            func update(content: ItemContent) {
+                if self.content != content {
+                    if case let .icon(icon) = content, case let .topic(title, color) = icon {
+                        let image = generateImage(self.size, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            
+                            UIGraphicsPushContext(context)
+                            
+                            let colors = self.getTopicColors(color)
+                            if let image = generateTopicIcon(backgroundColors: colors.0.map { UIColor(rgb: $0) }, strokeColors: colors.1.map { UIColor(rgb: $0) }, title: title) {
+                                let imageSize = image.size
+                                image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
+                            }
+                        
+                            UIGraphicsPopContext()
+                        })
+                        self.contents = image?.cgImage
+                    }
+                }
             }
             
             func update(transition: Transition, size: CGSize, badge: Badge?, blurredBadgeColor: UIColor, blurredBadgeBackgroundColor: UIColor) {
@@ -5244,6 +5285,11 @@ public final class EmojiPagerContentComponent: Component {
                                 badge = .premium
                             }
                         }
+                        
+                        if case .icon = item.content {
+                            itemLayer.update(content: item.content)
+                        }
+                        
                         itemLayer.update(transition: transition, size: itemFrame.size, badge: badge, blurredBadgeColor: UIColor(white: 0.0, alpha: 0.1), blurredBadgeBackgroundColor: keyboardChildEnvironment.theme.list.plainBackgroundColor)
                         
                         if item.accentTint {
@@ -5263,7 +5309,13 @@ public final class EmojiPagerContentComponent: Component {
                             }
                         }
                         
+                        var isSelected = false
                         if let itemFile = item.itemFile, component.selectedItems.contains(itemFile.fileId) {
+                            isSelected = true
+                        } else if case let .icon(icon) = item.content.id, case .topic = icon, component.selectedItems.isEmpty {
+                        }
+                        
+                        if isSelected {
                             let itemSelectionLayer: ItemSelectionLayer
                             if let current = self.visibleItemSelectionLayers[itemId] {
                                 itemSelectionLayer = current
@@ -5406,7 +5458,8 @@ public final class EmojiPagerContentComponent: Component {
                 default:
                     break
                 }
-                if let fileId = fileId, component.selectedItems.contains(fileId) {
+                if case let .icon(icon) = id.itemId, case .topic = icon, component.selectedItems.isEmpty {
+                } else if let fileId = fileId, component.selectedItems.contains(fileId) {
                 } else {
                     itemSelectionLayer.removeFromSuperlayer()
                     removedItemSelectionLayerIds.append(id)
@@ -6149,13 +6202,16 @@ public final class EmojiPagerContentComponent: Component {
         isStandalone: Bool,
         isStatusSelection: Bool,
         isReactionSelection: Bool,
+        isTopicIconSelection: Bool = false,
         isQuickReactionSelection: Bool = false,
         topReactionItems: [EmojiComponentReactionItem],
         areUnicodeEmojiEnabled: Bool,
         areCustomEmojiEnabled: Bool,
         chatPeerId: EnginePeer.Id?,
         selectedItems: Set<MediaId> = Set(),
-        topStatusTitle: String? = nil
+        topStatusTitle: String? = nil,
+        topicTitle: String? = nil,
+        topicColor: Int32? = nil
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -6185,6 +6241,17 @@ public final class EmojiPagerContentComponent: Component {
         } else if isReactionSelection {
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudTopReactions)
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentReactions)
+        } else if isTopicIconSelection {
+            iconStatusEmoji = context.engine.stickers.loadedStickerPack(reference: .iconTopicEmoji, forceActualized: false)
+            |> map { result -> [TelegramMediaFile] in
+                switch result {
+                case let .result(_, items, _):
+                    return items.map(\.file)
+                default:
+                    return []
+                }
+            }
+            |> take(1)
         }
         
         let availableReactions: Signal<AvailableReactions?, NoError>
@@ -6236,7 +6303,63 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
-            if isStatusSelection {
+            if isTopicIconSelection {
+                let resultItem = EmojiPagerContentComponent.Item(
+                    animationData: nil,
+                    content: .icon(.topic(String((topicTitle ?? "").prefix(1)), topicColor ?? 0)),
+                    itemFile: nil,
+                    subgroupId: nil,
+                    icon: .none,
+                    accentTint: false
+                )
+                
+                let groupId = "recent"
+                if let groupIndex = itemGroupIndexById[groupId] {
+                    itemGroups[groupIndex].items.append(resultItem)
+                } else {
+                    itemGroupIndexById[groupId] = itemGroups.count
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
+                }
+                
+                var existingIds = Set<MediaId>()
+                
+                for file in iconStatusEmoji {
+                    if existingIds.contains(file.fileId) {
+                        continue
+                    }
+                    existingIds.insert(file.fileId)
+                    
+                    var accentTint = false
+                    for attribute in file.attributes {
+                        if case let .CustomEmoji(_, _, packReference) = attribute {
+                            switch packReference {
+                            case let .id(id, _):
+                                if id == 773947703670341676 || id == 2964141614563343 {
+                                    accentTint = true
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    
+                    let resultItem: EmojiPagerContentComponent.Item
+                    
+                    let animationData = EntityKeyboardAnimationData(file: file)
+                    resultItem = EmojiPagerContentComponent.Item(
+                        animationData: animationData,
+                        content: .animation(animationData),
+                        itemFile: file,
+                        subgroupId: nil,
+                        icon: .none,
+                        accentTint: accentTint
+                    )
+                    
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    }
+                }
+            } else if isStatusSelection {
                 let resultItem = EmojiPagerContentComponent.Item(
                     animationData: nil,
                     content: .icon(.premiumStar),
@@ -6847,4 +6970,59 @@ public final class EmojiPagerContentComponent: Component {
         }
         return emojiItems
     }
+}
+
+func generateTopicIcon(backgroundColors: [UIColor], strokeColors: [UIColor], title: String) -> UIImage? {
+    return generateImage(CGSize(width: 44.0, height: 44.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        context.saveGState()
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: 1.2, y: 1.2)
+        context.translateBy(x: -14.0 - UIScreenPixel, y: -14.0 - UIScreenPixel)
+        
+        let _ = try? drawSvgPath(context, path: "M24.1835,4.71703 C21.7304,2.42169 18.2984,0.995605 14.5,0.995605 C7.04416,0.995605 1.0,6.49029 1.0,13.2683 C1.0,17.1341 2.80572,20.3028 5.87839,22.5523 C6.27132,22.84 6.63324,24.4385 5.75738,25.7811 C5.39922,26.3301 5.00492,26.7573 4.70138,27.0861 C4.26262,27.5614 4.01347,27.8313 4.33716,27.967 C4.67478,28.1086 6.66968,28.1787 8.10952,27.3712 C9.23649,26.7392 9.91903,26.1087 10.3787,25.6842 C10.7588,25.3331 10.9864,25.1228 11.187,25.1688 C11.9059,25.3337 12.6478,25.4461 13.4075,25.5015 C13.4178,25.5022 13.4282,25.503 13.4386,25.5037 C13.7888,25.5284 14.1428,25.5411 14.5,25.5411 C21.9558,25.5411 28.0,20.0464 28.0,13.2683 C28.0,9.94336 26.5455,6.92722 24.1835,4.71703 ")
+        context.closePath()
+        context.clip()
+        
+        let colorsArray = backgroundColors.map { $0.cgColor } as NSArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        context.resetClip()
+        
+        let _ = try? drawSvgPath(context, path: "M24.1835,4.71703 C21.7304,2.42169 18.2984,0.995605 14.5,0.995605 C7.04416,0.995605 1.0,6.49029 1.0,13.2683 C1.0,17.1341 2.80572,20.3028 5.87839,22.5523 C6.27132,22.84 6.63324,24.4385 5.75738,25.7811 C5.39922,26.3301 5.00492,26.7573 4.70138,27.0861 C4.26262,27.5614 4.01347,27.8313 4.33716,27.967 C4.67478,28.1086 6.66968,28.1787 8.10952,27.3712 C9.23649,26.7392 9.91903,26.1087 10.3787,25.6842 C10.7588,25.3331 10.9864,25.1228 11.187,25.1688 C11.9059,25.3337 12.6478,25.4461 13.4075,25.5015 C13.4178,25.5022 13.4282,25.503 13.4386,25.5037 C13.7888,25.5284 14.1428,25.5411 14.5,25.5411 C21.9558,25.5411 28.0,20.0464 28.0,13.2683 C28.0,9.94336 26.5455,6.92722 24.1835,4.71703 ")
+        context.closePath()
+        if let path = context.path {
+            let strokePath = path.copy(strokingWithWidth: 1.0, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
+            context.beginPath()
+            context.addPath(strokePath)
+            context.clip()
+            
+            let colorsArray = strokeColors.map { $0.cgColor } as NSArray
+            var locations: [CGFloat] = [0.0, 1.0]
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        }
+        
+        context.restoreGState()
+        
+        let attributedString = NSAttributedString(string: title, attributes: [NSAttributedString.Key.font: Font.with(size: 19.0, design: .round, weight: .bold), NSAttributedString.Key.foregroundColor: UIColor.white])
+        
+        let line = CTLineCreateWithAttributedString(attributedString)
+        let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        
+        let lineOffset = CGPoint(x: title == "B" ? 1.0 : 0.0, y: 0.0)
+        let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0) + 1.0)
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+        
+        context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+        CTLineDraw(line, context)
+        context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    })
 }

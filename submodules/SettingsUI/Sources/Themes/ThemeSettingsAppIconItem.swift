@@ -135,7 +135,7 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.iconNode.image = icon
         self.textNode.attributedText = title
         self.overlayNode.image = generateBorderImage(theme: theme, bordered: bordered, selected: selected)
-        self.lockNode.image = locked ? generateTintedImage(image: UIImage(bundleImageName: "Notification/SecretLock"), color: color) : nil
+        self.lockNode.image = locked ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: color) : nil
         self.action = {
             action()
         }

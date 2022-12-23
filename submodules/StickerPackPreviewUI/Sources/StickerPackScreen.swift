@@ -1732,7 +1732,7 @@ public final class StickerPackScreenImpl: ViewController {
                 }
                 if let peer = peer, let parentNavigationController = strongSelf.parentNavigationController {
                     strongSelf.dismiss()
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), animated: true))
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), animated: true))
                 }
             }))
         })

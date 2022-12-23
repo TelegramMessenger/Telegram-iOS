@@ -60,6 +60,8 @@ public enum ChatMessageBackgroundType: Equatable {
 }
 
 public class ChatMessageBackground: ASDisplayNode {
+    public weak var backdropNode: ChatMessageBubbleBackdrop?
+        
     public private(set) var type: ChatMessageBackgroundType?
     private var currentHighlighted: Bool?
     private var hasWallpaper: Bool?
@@ -68,6 +70,8 @@ public class ChatMessageBackground: ASDisplayNode {
     private let imageNode: ASImageNode
     private let outlineImageNode: ASImageNode
     private weak var backgroundNode: WallpaperBackgroundNode?
+    
+    public var backgroundFrame: CGRect = .zero
     
     public var hasImage: Bool {
         self.imageNode.image != nil
@@ -83,7 +87,7 @@ public class ChatMessageBackground: ASDisplayNode {
         self.outlineImageNode.displayWithoutProcessing = true
         
         super.init()
-        
+                
         self.isUserInteractionEnabled = false
         self.addSubnode(self.outlineImageNode)
         self.addSubnode(self.imageNode)
@@ -105,6 +109,50 @@ public class ChatMessageBackground: ASDisplayNode {
         }
     }
     
+    public func currentCorners(bubbleCorners: PresentationChatBubbleCorners) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool)? {
+        guard let type = self.type else {
+            return nil
+        }
+        
+        let maxRadius = bubbleCorners.mainRadius
+        let minRadius = bubbleCorners.auxiliaryRadius
+        
+        switch type {
+        case .none:
+            return nil
+        case let .incoming(mergeType):
+            switch mergeType {
+            case .None:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .none)
+            case let .Top(side):
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .top(side: side))
+            case .Bottom:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .bottom)
+            case .Both:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .both)
+            case .Side:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .side)
+            case .Extracted:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .extracted)
+            }
+        case let .outgoing(mergeType):
+            switch mergeType {
+            case .None:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .none)
+            case let .Top(side):
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .top(side: side))
+            case .Bottom:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .bottom)
+            case .Both:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .both)
+            case .Side:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .side)
+            case .Extracted:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .extracted)
+            }
+        }
+    }
+    
     public func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
         if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
@@ -116,7 +164,7 @@ public class ChatMessageBackground: ASDisplayNode {
         self.backgroundNode = backgroundNode
         self.hasWallpaper = hasWallpaper
         
-        let image: UIImage?
+        var image: UIImage?
         
         switch type {
         case .none:
@@ -227,7 +275,7 @@ public class ChatMessageBackground: ASDisplayNode {
                 tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
                 tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
                 
-                tempLayer.frame = self.bounds
+                tempLayer.frame = self.imageNode.frame
                 self.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
                 transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                     tempLayer?.removeFromSuperlayer()
@@ -246,17 +294,32 @@ public class ChatMessageBackground: ASDisplayNode {
                     tempLayer.rasterizationScale = self.imageNode.layer.rasterizationScale
                     tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
                     tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
+                    tempLayer.compositingFilter = self.imageNode.layer.compositingFilter
                     
-                    tempLayer.frame = self.bounds
-                    self.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
+                    tempLayer.frame = self.imageNode.frame
+                    
+                    self.imageNode.supernode?.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
                     transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                         tempLayer?.removeFromSuperlayer()
                     })
                 }
             }
         }
-        
+                
         self.imageNode.image = image
+        if highlighted && maskMode, let backdropNode = self.backdropNode, backdropNode.hasImage {
+            self.imageNode.layer.compositingFilter = "overlayBlendMode"
+            self.imageNode.alpha = 1.0
+            
+            backdropNode.addSubnode(self.imageNode)
+        } else {
+            self.imageNode.layer.compositingFilter = nil
+            self.imageNode.alpha = 1.0
+            
+            if self.imageNode.supernode != self {
+                self.addSubnode(self.imageNode)
+            }
+        }
         self.outlineImageNode.image = outlineImage
     }
 
@@ -418,10 +481,16 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private var essentialGraphics: PrincipalThemeEssentialGraphics?
     private weak var backgroundNode: WallpaperBackgroundNode?
     
-    private var maskView: UIImageView?
+    public var maskView: UIImageView?
     private var fixedMaskMode: Bool?
 
     private var absolutePosition: (CGRect, CGSize)?
+    
+    public var overrideMask: Bool = false {
+        didSet {
+            self.maskView?.image = nil
+        }
+    }
     
     public var hasImage: Bool {
         return self.backgroundContent != nil
@@ -458,7 +527,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
             self.setType(type: currentType, theme: theme, essentialGraphics: essentialGraphics, maskMode: maskMode, backgroundNode: backgroundNode)
         }
     }
-    
+        
     public func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode inputMaskMode: Bool, backgroundNode: WallpaperBackgroundNode?) {
         let maskMode = self.fixedMaskMode ?? inputMaskMode
 
@@ -538,11 +607,11 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
             }
             
             if let maskView = self.maskView {
-                maskView.image = bubbleMaskForType(type, graphics: essentialGraphics)
+                maskView.image = self.overrideMask ? nil : bubbleMaskForType(type, graphics: essentialGraphics)
             }
         }
     }
-    
+        
     public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {

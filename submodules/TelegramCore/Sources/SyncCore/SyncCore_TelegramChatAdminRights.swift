@@ -21,17 +21,17 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
     public static let canAddAdmins = TelegramChatAdminRightsFlags(rawValue: 1 << 9)
     public static let canBeAnonymous = TelegramChatAdminRightsFlags(rawValue: 1 << 10)
     public static let canManageCalls = TelegramChatAdminRightsFlags(rawValue: 1 << 11)
+    public static let canManageTopics = TelegramChatAdminRightsFlags(rawValue: 1 << 13)
     
     public static var all: TelegramChatAdminRightsFlags {
-        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canBeAnonymous, .canManageCalls]
+        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canBeAnonymous, .canManageCalls, .canManageTopics]
     }
     
     public static var allChannel: TelegramChatAdminRightsFlags {
-        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canManageCalls]
+        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canManageCalls, .canManageTopics]
     }
-
     
-    public static var groupSpecific: TelegramChatAdminRightsFlags = [
+    public static let internal_groupSpecific: TelegramChatAdminRightsFlags = [
         .canChangeInfo,
         .canDeleteMessages,
         .canBanUsers,
@@ -42,7 +42,7 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
         .canAddAdmins
     ]
     
-    public static var broadcastSpecific: TelegramChatAdminRightsFlags = [
+    public static let internal_broadcastSpecific: TelegramChatAdminRightsFlags = [
         .canChangeInfo,
         .canPostMessages,
         .canEditMessages,
@@ -51,6 +51,20 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
         .canInviteUsers,
         .canAddAdmins
     ]
+    
+    public static func peerSpecific(peer: EnginePeer) -> TelegramChatAdminRightsFlags {
+        if case let .channel(channel) = peer {
+            if channel.flags.contains(.isForum) {
+                return internal_groupSpecific.union(.canManageTopics)
+            } else if case .broadcast = channel.info {
+                return internal_broadcastSpecific
+            } else {
+                return internal_groupSpecific
+            }
+        } else {
+            return internal_groupSpecific
+        }
+    }
     
     public var count: Int {
         var result = 0

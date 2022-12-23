@@ -96,7 +96,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters, chatListNodeFilter, chatListNodePeersFilter, _, inactiveSecretChatPeerIds) = mode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
-            let chatListNode = ChatListNode(context: context, groupId: .root, chatListFilter: chatListNodeFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: chatListNodePeersFilter ?? [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), chatListFilter: chatListNodeFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: chatListNodePeersFilter ?? [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             if let limit = limit {
                 chatListNode.selectionLimit = limit
                 chatListNode.reachedSelectionLimit = reachedSelectionLimit
@@ -143,7 +143,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 self?.openPeer?(peer)
             }
         case let .chats(chatsNode):
-            chatsNode.peerSelected = { [weak self] peer, _, _, _ in
+            chatsNode.peerSelected = { [weak self] peer, _, _, _, _ in
                 self?.openPeer?(.peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil))
             }
             chatsNode.additionalCategorySelected = { [weak self] id in

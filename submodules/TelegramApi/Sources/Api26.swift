@@ -576,14 +576,17 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum SponsoredMessages: TypeConstructorDescription {
-        case sponsoredMessages(messages: [Api.SponsoredMessage], chats: [Api.Chat], users: [Api.User])
+        case sponsoredMessages(flags: Int32, postsBetween: Int32?, messages: [Api.SponsoredMessage], chats: [Api.Chat], users: [Api.User])
+        case sponsoredMessagesEmpty
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessages(let messages, let chats, let users):
+                case .sponsoredMessages(let flags, let postsBetween, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(1705297877)
+                        buffer.appendInt32(-907141753)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(postsBetween!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -600,38 +603,55 @@ public extension Api.messages {
                         item.serialize(buffer, true)
                     }
                     break
+                case .sponsoredMessagesEmpty:
+                    if boxed {
+                        buffer.appendInt32(406407439)
+                    }
+                    
+                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessages(let messages, let chats, let users):
-                return ("sponsoredMessages", [("messages", String(describing: messages)), ("chats", String(describing: chats)), ("users", String(describing: users))])
+                case .sponsoredMessages(let flags, let postsBetween, let messages, let chats, let users):
+                return ("sponsoredMessages", [("flags", String(describing: flags)), ("postsBetween", String(describing: postsBetween)), ("messages", String(describing: messages)), ("chats", String(describing: chats)), ("users", String(describing: users))])
+                case .sponsoredMessagesEmpty:
+                return ("sponsoredMessagesEmpty", [])
     }
     }
     
         public static func parse_sponsoredMessages(_ reader: BufferReader) -> SponsoredMessages? {
-            var _1: [Api.SponsoredMessage]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: [Api.SponsoredMessage]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SponsoredMessage.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SponsoredMessage.self)
             }
-            var _2: [Api.Chat]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _3: [Api.User]?
+            var _5: [Api.User]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.SponsoredMessages.sponsoredMessages(messages: _1!, chats: _2!, users: _3!)
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.SponsoredMessages.sponsoredMessages(flags: _1!, postsBetween: _2, messages: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil
             }
+        }
+        public static func parse_sponsoredMessagesEmpty(_ reader: BufferReader) -> SponsoredMessages? {
+            return Api.messages.SponsoredMessages.sponsoredMessagesEmpty
         }
     
     }
@@ -1382,56 +1402,6 @@ public extension Api.payments {
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             if _c1 && _c2 {
                 return Api.payments.SavedInfo.savedInfo(flags: _1!, savedInfo: _2)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum ValidatedRequestedInfo: TypeConstructorDescription {
-        case validatedRequestedInfo(flags: Int32, id: String?, shippingOptions: [Api.ShippingOption]?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .validatedRequestedInfo(let flags, let id, let shippingOptions):
-                    if boxed {
-                        buffer.appendInt32(-784000893)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(id!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(shippingOptions!.count))
-                    for item in shippingOptions! {
-                        item.serialize(buffer, true)
-                    }}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .validatedRequestedInfo(let flags, let id, let shippingOptions):
-                return ("validatedRequestedInfo", [("flags", String(describing: flags)), ("id", String(describing: id)), ("shippingOptions", String(describing: shippingOptions))])
-    }
-    }
-    
-        public static func parse_validatedRequestedInfo(_ reader: BufferReader) -> ValidatedRequestedInfo? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
-            var _3: [Api.ShippingOption]?
-            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ShippingOption.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.ValidatedRequestedInfo.validatedRequestedInfo(flags: _1!, id: _2, shippingOptions: _3)
             }
             else {
                 return nil

@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import WallpaperBackgroundNode
 
 final class ChatHistoryNavigationButtons: ASDisplayNode {
     private var theme: PresentationTheme
@@ -67,19 +68,19 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
+    init(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat, backgroundNode: WallpaperBackgroundNode) {
         self.theme = theme
         self.dateTimeFormat = dateTimeFormat
         
-        self.mentionsButton = ChatHistoryNavigationButtonNode(theme: theme, type: .mentions)
+        self.mentionsButton = ChatHistoryNavigationButtonNode(theme: theme, backgroundNode: backgroundNode, type: .mentions)
         self.mentionsButton.alpha = 0.0
         self.mentionsButton.isHidden = true
         
-        self.reactionsButton = ChatHistoryNavigationButtonNode(theme: theme, type: .reactions)
+        self.reactionsButton = ChatHistoryNavigationButtonNode(theme: theme, backgroundNode: backgroundNode, type: .reactions)
         self.reactionsButton.alpha = 0.0
         self.reactionsButton.isHidden = true
         
-        self.downButton = ChatHistoryNavigationButtonNode(theme: theme, type: .down)
+        self.downButton = ChatHistoryNavigationButtonNode(theme: theme, backgroundNode: backgroundNode, type: .down)
         self.downButton.alpha = 0.0
         self.downButton.isHidden = true
         
@@ -104,15 +105,33 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         super.didLoad()
     }
     
-    func update(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
-        if self.theme !== theme || self.dateTimeFormat != dateTimeFormat {
-            self.theme = theme
-            self.dateTimeFormat = dateTimeFormat
-            
-            self.reactionsButton.updateTheme(theme: theme)
-            self.mentionsButton.updateTheme(theme: theme)
-            self.downButton.updateTheme(theme: theme)
-        }
+    func update(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat, backgroundNode: WallpaperBackgroundNode) {
+        self.theme = theme
+        self.dateTimeFormat = dateTimeFormat
+        
+        self.reactionsButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
+        self.mentionsButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
+        self.downButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.absoluteRect = (rect, containerSize)
+        
+        var reactionsFrame = self.reactionsButton.frame
+        reactionsFrame.origin.x += rect.minX
+        reactionsFrame.origin.y += rect.minY
+        self.reactionsButton.update(rect: reactionsFrame, within: containerSize, transition: transition)
+        
+        var mentionsFrame = self.mentionsButton.frame
+        mentionsFrame.origin.x += rect.minX
+        mentionsFrame.origin.y += rect.minY
+        self.mentionsButton.update(rect: mentionsFrame, within: containerSize, transition: transition)
+        
+        var downFrame = self.downButton.frame
+        downFrame.origin.x += rect.minX
+        downFrame.origin.y += rect.minY
+        self.downButton.update(rect: downFrame, within: containerSize, transition: transition)
     }
     
     func updateLayout(transition: ContainedViewLayoutTransition) -> CGSize {
@@ -172,6 +191,10 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize).center)
         
         transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset - reactionsOffset), size: buttonSize).center)
+        
+        if let (rect, containerSize) = self.absoluteRect {
+            self.update(rect: rect, within: containerSize, transition: transition)
+        }
         
         return completeSize
     }

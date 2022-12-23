@@ -224,9 +224,7 @@ private final class ItemNode: ASDisplayNode {
         
         self.selectionFraction = selectionFraction
         self.unreadCount = unreadCount
-        
-        transition.updateAlpha(node: self.containerNode, alpha: (isReordering && isNoFilter && !canReorderAllChats) ? 0.5 : 1.0)
-        
+                
         if isReordering && !isNoFilter {
             if self.deleteButtonNode == nil {
                 let deleteButtonNode = ItemNodeDeleteButtonNode(pressed: { [weak self] in
@@ -275,7 +273,7 @@ private final class ItemNode: ASDisplayNode {
         
         if self.isReordering != isReordering {
             self.isReordering = isReordering
-            if self.isReordering && (!isNoFilter || canReorderAllChats) {
+            if self.isReordering {
                 self.startShaking()
             } else {
                 self.layer.removeAnimation(forKey: "shaking_position")
@@ -476,11 +474,13 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     var tabRequestedDeletion: ((ChatListFilterTabEntryId) -> Void)?
     var addFilter: (() -> Void)?
     var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void)?
+    var presentPremiumTip: (() -> Void)?
     
     private var reorderingGesture: ReorderingGestureRecognizer?
     private var reorderingItem: ChatListFilterTabEntryId?
     private var reorderingItemPosition: (initial: CGFloat, offset: CGFloat)?
     private var reorderingAutoScrollAnimator: ConstantDisplayLinkAnimator?
+    private var initialReorderedItemIds: [ChatListFilterTabEntryId]?
     private var reorderedItemIds: [ChatListFilterTabEntryId]?
     private lazy var hapticFeedback = { HapticFeedback() }()
     
@@ -539,11 +539,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return false
             }
-            for (id, itemNode) in strongSelf.itemNodes {
+            for (_, itemNode) in strongSelf.itemNodes {
                 if itemNode.view.convert(itemNode.bounds, to: strongSelf.view).contains(point) {
-                    if case .all = id, !(strongSelf.currentParams?.canReorderAllChats ?? false) {
-                        return false
-                    }
                     return true
                 }
             }
@@ -552,6 +549,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             guard let strongSelf = self, let _ = strongSelf.currentParams else {
                 return
             }
+            strongSelf.initialReorderedItemIds = strongSelf.reorderedItemIds
             for (id, itemNode) in strongSelf.itemNodes {
                 let itemFrame = itemNode.view.convert(itemNode.bounds, to: strongSelf.view)
                 if itemFrame.contains(point) {
@@ -594,6 +592,11 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 strongSelf.scrollNode.addSubnode(itemNode)
             }
             
+            if strongSelf.currentParams?.canReorderAllChats == false, let firstItem = strongSelf.reorderedItemIds?.first, case .filter = firstItem {
+                strongSelf.reorderedItemIds = strongSelf.initialReorderedItemIds
+                strongSelf.presentPremiumTip?()
+            }
+            
             strongSelf.reorderingItem = nil
             strongSelf.reorderingItemPosition = nil
             strongSelf.reorderingAutoScrollAnimator?.invalidate()
@@ -606,7 +609,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 return
             }
             
-            let minIndex = (strongSelf.currentParams?.canReorderAllChats ?? false) ? 0 : 1
+            let minIndex = 0
             if let reorderingItemNode = strongSelf.itemNodes[reorderingItem], let (initial, _) = strongSelf.reorderingItemPosition, let reorderedItemIds = strongSelf.reorderedItemIds, let currentItemIndex = reorderedItemIds.firstIndex(of: reorderingItem) {
                 
                 for (id, itemNode) in strongSelf.itemNodes {
@@ -927,13 +930,6 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             } else {
                 transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
             }
-            let lineAlpha: CGFloat
-            if isReordering && canReorderAllChats {
-                lineAlpha = 0.0
-            } else {
-                lineAlpha = isReordering && selectedFilter == .all ? 0.5 : 1.0
-            }
-            transition.updateAlpha(node: self.selectedLineNode, alpha: lineAlpha)
             
             if let previousSelectedFrame = self.previousSelectedFrame {
                 let previousContentOffsetX = max(0.0, min(previousContentWidth - previousScrollBounds.width, floor(previousSelectedFrame.midX - previousScrollBounds.width / 2.0)))

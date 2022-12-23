@@ -344,6 +344,8 @@ private final class InnerActionsContainerNode: ASDisplayNode {
 
 final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let presentationData: PresentationData
+    let shadowNode: ASImageNode
+    private let backgroundNode: ASDisplayNode
     private var effectView: UIVisualEffectView?
     private let highlightBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -367,6 +369,15 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     init(presentationData: PresentationData, tip: ContextController.Tip) {
         self.tip = tip
         self.presentationData = presentationData
+        
+        self.shadowNode = ASImageNode()
+        self.shadowNode.displaysAsynchronously = false
+        self.shadowNode.displayWithoutProcessing = true
+        self.shadowNode.image = UIImage(bundleImageName: "Components/Context Menu/Shadow")?.stretchableImage(withLeftCapWidth: 60, topCapHeight: 60)
+        self.shadowNode.contentMode = .scaleToFill
+        self.shadowNode.isHidden = true
+        
+        self.backgroundNode = ASDisplayNode()
         
         self.highlightBackgroundNode = ASDisplayNode()
         self.highlightBackgroundNode.isAccessibilityElement = false
@@ -408,6 +419,12 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.targetSelectionIndex = nil
             icon = nil
             isUserInteractionEnabled = text != nil
+        case let .notificationTopicExceptions(text, action):
+            self.action = action
+            self.text = text
+            self.targetSelectionIndex = nil
+            icon = nil
+            isUserInteractionEnabled = action != nil
         }
         
         self.iconNode = ASImageNode()
@@ -422,10 +439,12 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         
         super.init()
         
-        self.clipsToBounds = true
-        self.cornerRadius = 14.0
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+        self.backgroundNode.clipsToBounds = true
+        self.backgroundNode.cornerRadius = 14.0
         
-        self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+        self.highlightBackgroundNode.clipsToBounds = true
+        self.highlightBackgroundNode.cornerRadius = 14.0
         
         let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: presentationData.theme.contextMenu.primaryColor.withAlphaComponent(0.15), knob: presentationData.theme.contextMenu.primaryColor, knobDiameter: 8.0), strings: presentationData.strings, textNode: self.textNode.textNode, updateIsActive: { _ in
         }, present: { _, _ in
@@ -433,6 +452,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         })
         self.textSelectionNode = textSelectionNode
         
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.highlightBackgroundNode)
         self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.iconNode)
@@ -499,14 +519,20 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
-        switch widthClass {
-        case .compact:
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, presentation: ContextControllerActionsStackNode.Presentation, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+        var needsBlur = false
+        if case .regular = widthClass {
+            needsBlur = true
+        } else if case .inline = presentation {
+            needsBlur = true
+        }
+        
+        if !needsBlur {
             if let effectView = self.effectView {
                 self.effectView = nil
                 effectView.removeFromSuperview()
             }
-        case .regular:
+        } else {
             if self.effectView == nil {
                 let effectView: UIVisualEffectView
                 if #available(iOS 13.0, *) {
@@ -520,6 +546,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
                 } else {
                     effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
                 }
+                effectView.clipsToBounds = true
+                effectView.layer.cornerRadius = self.backgroundNode.cornerRadius
                 self.effectView = effectView
                 self.view.insertSubview(effectView, at: 0)
             }
@@ -597,6 +625,13 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             textSelectionNode.highlightAreaNode.frame = textFrame
         }
         
+        switch presentation {
+        case .modal:
+            self.shadowNode.isHidden = true
+        case .inline:
+            self.shadowNode.isHidden = false
+        }
+        
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: size))
         }
@@ -607,6 +642,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     }
     
     func setActualSize(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
@@ -774,7 +810,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.textSelectionTipNodeDisposable?.dispose()
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, presentation: ContextControllerActionsStackNode.Presentation, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var widthClass = widthClass
         if !self.blurBackground {
             widthClass = .regular
@@ -829,7 +865,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         
         if let textSelectionTipNode = self.textSelectionTipNode {
             contentSize.height += 8.0
-            let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsSize.width, transition: transition)
+            let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, presentation: presentation, width: actionsSize.width, transition: transition)
             transition.updateFrame(node: textSelectionTipNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: textSelectionTipSize))
             textSelectionTipNode.setActualSize(size: textSelectionTipSize, transition: transition)
             contentSize.height += textSelectionTipSize.height

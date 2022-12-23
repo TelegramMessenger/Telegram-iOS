@@ -291,9 +291,9 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         entries.append(.rightsHeader(presentationData.theme, presentationData.strings.GroupPermission_SectionTitle))
         
         var index = 0
-        for (right, _) in allGroupPermissionList {
+        for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
             let defaultEnabled = !defaultBannedRights.flags.contains(right) && channel.hasPermission(.banMembers)
-            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
+            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right, isForum: channel.flags.contains(.isForum)), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
             index += 1
         }
         
@@ -337,9 +337,9 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         entries.append(.rightsHeader(presentationData.theme, presentationData.strings.GroupPermission_SectionTitle))
         
         var index = 0
-        for (right, _) in allGroupPermissionList {
+        for (right, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
             let defaultEnabled = !defaultBannedRightsFlags.contains(right)
-            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
+            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right, isForum: false), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
             index += 1
         }
         
@@ -406,7 +406,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                     effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
                 } else {
                     effectiveRightsFlags.insert(rights)
-                    for (right, _) in allGroupPermissionList {
+                    for (right, _) in allGroupPermissionList(peer: EnginePeer(peer)) {
                         if groupPermissionDependencies(right).contains(rights) {
                             effectiveRightsFlags.insert(right)
                         }

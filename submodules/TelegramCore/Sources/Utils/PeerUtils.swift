@@ -2,6 +2,8 @@ import Foundation
 import Postbox
 
 public extension Peer {
+    
+    
     var debugDisplayTitle: String {
         switch self {
         case let user as TelegramUser:
@@ -39,15 +41,41 @@ public extension Peer {
             return nil
         }
     }
-    
+        
     var addressName: String? {
         switch self {
         case let user as TelegramUser:
-            return user.username
+            return user.usernames.first(where: { $0.isActive }).map { $0.username } ?? user.username
         case _ as TelegramGroup:
             return nil
         case let channel as TelegramChannel:
-            return channel.username
+            return channel.usernames.first(where: { $0.isActive }).map { $0.username } ?? channel.username
+        default:
+            return nil
+        }
+    }
+    
+    var usernames: [TelegramPeerUsername] {
+        switch self {
+        case let user as TelegramUser:
+            return user.usernames
+        case _ as TelegramGroup:
+            return []
+        case let channel as TelegramChannel:
+            return channel.usernames
+        default:
+            return []
+        }
+    }
+    
+    var editableUsername: String? {
+        switch self {
+        case let user as TelegramUser:
+            return user.usernames.first(where: { $0.flags.contains(.isEditable) }).map { $0.username } ?? user.username
+        case _ as TelegramGroup:
+            return nil
+        case let channel as TelegramChannel:
+            return channel.usernames.first(where: { $0.flags.contains(.isEditable) }).map { $0.username } ?? channel.username
         default:
             return nil
         }
@@ -172,6 +200,12 @@ public extension Peer {
         default:
             return false
         }
+    }
+}
+
+public extension TelegramPeerUsername {
+    var isActive: Bool {
+        return self.flags.contains(.isActive) || self.flags.contains(.isEditable)
     }
 }
 

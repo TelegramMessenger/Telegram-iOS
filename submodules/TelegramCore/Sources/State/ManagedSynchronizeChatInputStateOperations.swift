@@ -93,16 +93,16 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeChatInputStateOperation {
-                            return synchronizeChatInputState(transaction: transaction, postbox: postbox, network: network, peerId: entry.peerId, operation: operation)
+                            return synchronizeChatInputState(transaction: transaction, postbox: postbox, network: network, peerId: entry.peerId, threadId: operation.threadId, operation: operation)
                         } else {
                             assertionFailure()
                         }
                     }
                     return .complete()
                 })
-                    |> then(postbox.transaction { transaction -> Void in
-                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
-                    })
+                |> then(postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                })
                 
                 disposable.set(signal.start())
             }
@@ -125,9 +125,16 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
     }
 }
 
-private func synchronizeChatInputState(transaction: Transaction, postbox: Postbox, network: Network, peerId: PeerId, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
+private func synchronizeChatInputState(transaction: Transaction, postbox: Postbox, network: Network, peerId: PeerId, threadId: Int64?, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
     var inputState: SynchronizeableChatInputState?
-    if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId), let data = peerChatInterfaceState.data {
+    let peerChatInterfaceState: StoredPeerChatInterfaceState?
+    if let threadId = threadId {
+        peerChatInterfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
+    } else {
+        peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId)
+    }
+    
+    if let peerChatInterfaceState = peerChatInterfaceState, let data = peerChatInterfaceState.data {
         inputState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
     }
 
@@ -141,14 +148,19 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 flags |= (1 << 3)
             }
         }
-        return network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: inputState?.replyToMessageId?.id, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
-            |> delay(2.0, queue: Queue.concurrentDefaultQueue())
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
-            }
+        var topMsgId: Int32?
+        if let threadId = threadId {
+            flags |= (1 << 2)
+            topMsgId = Int32(clamping: threadId)
+        }
+        return network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: inputState?.replyToMessageId?.id, topMsgId: topMsgId, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
+        |> delay(2.0, queue: Queue.concurrentDefaultQueue())
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
     } else {
         return .complete()
     }

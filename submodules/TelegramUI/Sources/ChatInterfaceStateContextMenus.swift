@@ -260,6 +260,25 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         break
     }
     
+    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let threadData = chatPresentationInterfaceState.threadData {
+            if threadData.isClosed {
+                var canManage = false
+                if channel.flags.contains(.isCreator) {
+                    canManage = true
+                } else if channel.hasPermission(.manageTopics) {
+                    canManage = true
+                } else if threadData.isOwnedByMe {
+                    canManage = true
+                }
+                
+                if !canManage {
+                    return false
+                }
+            }
+        }
+    }
+    
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {
     case .peer:
@@ -508,6 +527,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     
     let message = messages[0]
     
+    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if message.threadId == nil {
+            canReply = false
+        }
+    }
+    
     if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
@@ -688,7 +713,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 f(.dismissWithoutContent)
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peer in
+                                controller.peerSelected = { [weak controller] peer, _ in
                                     let peerId = peer.id
                                     
                                     if let strongController = controller {
@@ -1057,6 +1082,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                     copyTextWithEntities()
                                                 }
                                             })
+                                        break
+                                    } else {
+                                        copyTextWithEntities()
+                                        break
                                     }
                                 }
                             } else {
@@ -1231,7 +1260,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if data.canPin && !isMigrated, case .peer = chatPresentationInterfaceState.chatLocation {
+        var canPin = data.canPin
+        if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation {
+            if !message.isForumPost {
+                canPin = false
+            }
+        }
+        if isMigrated {
+            canPin = false
+        }
+        
+        if canPin {
             var pinnedSelectedMessageId: MessageId?
             for message in messages {
                 if message.tags.contains(.pinned) {
@@ -1378,7 +1417,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         Queue.mainQueue().after(0.2) {
                                             switch result {
                                                 case .generic:
-                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
                                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                                     let text: String
@@ -1387,7 +1426,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                     } else {
                                                         text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                                     }
-                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                                         if case .info = action {
                                                             let controller = PremiumIntroScreen(context: context, source: .savedGifs)
                                                             controllerInteraction.navigationController()?.pushViewController(controller)
@@ -1475,7 +1514,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     guard let navigationController = controllerInteraction.navigationController() else {
                         return
                     }
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: messages[0].id.peerId), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
+                    guard let peer = messages[0].peers[messages[0].id.peerId] else {
+                        return
+                    }
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
                 })
             })))
         }
@@ -1603,7 +1645,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
                         c.dismiss(completion: {
-                            controllerInteraction.openPeer(stats.peers[0].id, .default, nil, false, nil)
+                            controllerInteraction.openPeer(stats.peers[0], .default, nil, false)
                         })
                     } else if (stats != nil && !stats!.peers.isEmpty) || reactionCount != 0 {
                         var tip: ContextController.Tip?
@@ -1645,9 +1687,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             back: { [weak c] in
                                 c?.popItems()
                             },
-                            openPeer: { [weak c] id in
+                            openPeer: { [weak c] peer in
                                 c?.dismiss(completion: {
-                                    controllerInteraction.openPeer(id, .default, MessageReference(message), true, nil)
+                                    controllerInteraction.openPeer(peer, .default, MessageReference(message), true)
                                 })
                             }
                         )), tip: tip)))

@@ -452,16 +452,17 @@ public extension Api {
 }
 public extension Api {
     enum User: TypeConstructorDescription {
-        case user(flags: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?)
+        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?)
         case userEmpty(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus):
+                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames):
                     if boxed {
-                        buffer.appendInt32(1570352622)
+                        buffer.appendInt32(-1885878744)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(flags2, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(accessHash!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(firstName!, buffer: buffer, boxed: false)}
@@ -479,6 +480,11 @@ public extension Api {
                     if Int(flags) & Int(1 << 19) != 0 {serializeString(botInlinePlaceholder!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 22) != 0 {serializeString(langCode!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 30) != 0 {emojiStatus!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(usernames!.count))
+                    for item in usernames! {
+                        item.serialize(buffer, true)
+                    }}
                     break
                 case .userEmpty(let id):
                     if boxed {
@@ -491,8 +497,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .user(let flags, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus):
-                return ("user", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("username", String(describing: username)), ("phone", String(describing: phone)), ("photo", String(describing: photo)), ("status", String(describing: status)), ("botInfoVersion", String(describing: botInfoVersion)), ("restrictionReason", String(describing: restrictionReason)), ("botInlinePlaceholder", String(describing: botInlinePlaceholder)), ("langCode", String(describing: langCode)), ("emojiStatus", String(describing: emojiStatus))])
+                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames):
+                return ("user", [("flags", String(describing: flags)), ("flags2", String(describing: flags2)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("username", String(describing: username)), ("phone", String(describing: phone)), ("photo", String(describing: photo)), ("status", String(describing: status)), ("botInfoVersion", String(describing: botInfoVersion)), ("restrictionReason", String(describing: restrictionReason)), ("botInlinePlaceholder", String(describing: botInlinePlaceholder)), ("langCode", String(describing: langCode)), ("emojiStatus", String(describing: emojiStatus)), ("usernames", String(describing: usernames))])
                 case .userEmpty(let id):
                 return ("userEmpty", [("id", String(describing: id))])
     }
@@ -501,56 +507,64 @@ public extension Api {
         public static func parse_user(_ reader: BufferReader) -> User? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
             var _3: Int64?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt64() }
-            var _4: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            _3 = reader.readInt64()
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt64() }
             var _5: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_5 = parseString(reader) }
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
             var _6: String?
-            if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
+            if Int(_1!) & Int(1 << 2) != 0 {_6 = parseString(reader) }
             var _7: String?
-            if Int(_1!) & Int(1 << 4) != 0 {_7 = parseString(reader) }
-            var _8: Api.UserProfilePhoto?
+            if Int(_1!) & Int(1 << 3) != 0 {_7 = parseString(reader) }
+            var _8: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_8 = parseString(reader) }
+            var _9: Api.UserProfilePhoto?
             if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.UserProfilePhoto
+                _9 = Api.parse(reader, signature: signature) as? Api.UserProfilePhoto
             } }
-            var _9: Api.UserStatus?
+            var _10: Api.UserStatus?
             if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.UserStatus
+                _10 = Api.parse(reader, signature: signature) as? Api.UserStatus
             } }
-            var _10: Int32?
-            if Int(_1!) & Int(1 << 14) != 0 {_10 = reader.readInt32() }
-            var _11: [Api.RestrictionReason]?
+            var _11: Int32?
+            if Int(_1!) & Int(1 << 14) != 0 {_11 = reader.readInt32() }
+            var _12: [Api.RestrictionReason]?
             if Int(_1!) & Int(1 << 18) != 0 {if let _ = reader.readInt32() {
-                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RestrictionReason.self)
+                _12 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RestrictionReason.self)
             } }
-            var _12: String?
-            if Int(_1!) & Int(1 << 19) != 0 {_12 = parseString(reader) }
             var _13: String?
-            if Int(_1!) & Int(1 << 22) != 0 {_13 = parseString(reader) }
-            var _14: Api.EmojiStatus?
+            if Int(_1!) & Int(1 << 19) != 0 {_13 = parseString(reader) }
+            var _14: String?
+            if Int(_1!) & Int(1 << 22) != 0 {_14 = parseString(reader) }
+            var _15: Api.EmojiStatus?
             if Int(_1!) & Int(1 << 30) != 0 {if let signature = reader.readInt32() {
-                _14 = Api.parse(reader, signature: signature) as? Api.EmojiStatus
+                _15 = Api.parse(reader, signature: signature) as? Api.EmojiStatus
+            } }
+            var _16: [Api.Username]?
+            if Int(_2!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Username.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 14) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 18) == 0) || _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 19) == 0) || _12 != nil
-            let _c13 = (Int(_1!) & Int(1 << 22) == 0) || _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 30) == 0) || _14 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
-                return Api.User.user(flags: _1!, id: _2!, accessHash: _3, firstName: _4, lastName: _5, username: _6, phone: _7, photo: _8, status: _9, botInfoVersion: _10, restrictionReason: _11, botInlinePlaceholder: _12, langCode: _13, emojiStatus: _14)
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 6) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 14) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 18) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 19) == 0) || _13 != nil
+            let _c14 = (Int(_1!) & Int(1 << 22) == 0) || _14 != nil
+            let _c15 = (Int(_1!) & Int(1 << 30) == 0) || _15 != nil
+            let _c16 = (Int(_2!) & Int(1 << 0) == 0) || _16 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 {
+                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16)
             }
             else {
                 return nil
@@ -844,6 +858,46 @@ public extension Api {
         }
         public static func parse_userStatusRecently(_ reader: BufferReader) -> UserStatus? {
             return Api.UserStatus.userStatusRecently
+        }
+    
+    }
+}
+public extension Api {
+    enum Username: TypeConstructorDescription {
+        case username(flags: Int32, username: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .username(let flags, let username):
+                    if boxed {
+                        buffer.appendInt32(-1274595769)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(username, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .username(let flags, let username):
+                return ("username", [("flags", String(describing: flags)), ("username", String(describing: username))])
+    }
+    }
+    
+        public static func parse_username(_ reader: BufferReader) -> Username? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Username.username(flags: _1!, username: _2!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

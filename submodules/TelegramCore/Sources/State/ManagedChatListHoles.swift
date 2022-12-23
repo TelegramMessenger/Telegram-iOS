@@ -90,3 +90,77 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
         }
     }
 }
+
+private final class ManagedForumTopicListHolesState {
+    private var currentHoles: [ForumTopicListHolesEntry: Disposable] = [:]
+    
+    func clearDisposables() -> [Disposable] {
+        let disposables = Array(self.currentHoles.values)
+        self.currentHoles.removeAll()
+        return disposables
+    }
+    
+    func update(entries: [ForumTopicListHolesEntry]) -> (removed: [Disposable], added: [ForumTopicListHolesEntry: MetaDisposable]) {
+        var removed: [Disposable] = []
+        var added: [ForumTopicListHolesEntry: MetaDisposable] = [:]
+        
+        for entry in entries {
+            if self.currentHoles[entry] == nil {
+                let disposable = MetaDisposable()
+                added[entry] = disposable
+                self.currentHoles[entry] = disposable
+            }
+        }
+        
+        var removedKeys: [ForumTopicListHolesEntry] = []
+        for (entry, disposable) in self.currentHoles {
+            if !entries.contains(entry) {
+                removed.append(disposable)
+                removedKeys.append(entry)
+            }
+        }
+        for key in removedKeys {
+            self.currentHoles.removeValue(forKey: key)
+        }
+        
+        return (removed, added)
+    }
+}
+
+func managedForumTopicListHoles(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let state = Atomic(value: ManagedForumTopicListHolesState())
+        
+        let disposable = postbox.forumTopicListHolesView().start(next: { view in
+            let entries = Array(view.entries)
+            
+            let (removed, added) = state.with { state in
+                return state.update(entries: entries)
+            }
+            
+            for disposable in removed {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in added {
+                disposable.set((_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: entry.peerId, offsetIndex: entry.index, limit: 100)
+                |> mapToSignal { result -> Signal<Never, LoadMessageHistoryThreadsError> in
+                    return postbox.transaction { transaction in
+                        return applyLoadMessageHistoryThreadsResults(accountPeerId: accountPeerId, transaction: transaction, results: [result])
+                    }
+                    |> castError(LoadMessageHistoryThreadsError.self)
+                    |> ignoreValues
+                }).start())
+            }
+        })
+        
+        return ActionDisposable {
+            disposable.dispose()
+            for disposable in state.with({ state -> [Disposable] in
+                state.clearDisposables()
+            }) {
+                disposable.dispose()
+            }
+        }
+    }
+}

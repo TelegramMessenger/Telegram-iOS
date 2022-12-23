@@ -54,19 +54,19 @@ public final class HashtagSearchController: TelegramBaseController {
         |> map { result, presentationData in
             let result = result.0
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
-            return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap(EnginePeerReadCounters.init), chatListPresentationData, result.totalCount, nil, false, .index($0.index), nil, .generic, false) })
+            return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap { EnginePeerReadCounters(state: $0, isMuted: false) }, nil, chatListPresentationData, result.totalCount, nil, false, .index($0.index), nil, .generic, false) })
         }
         let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
-        }, peerSelected: { _, _, _ in
-        }, disabledPeerSelected: { _ in
-        }, togglePeerSelected: { _ in
+        }, peerSelected: { _, _, _, _ in
+        }, disabledPeerSelected: { _, _ in
+        }, togglePeerSelected: { _, _ in
         }, togglePeersSelection: { _, _ in
         }, additionalCategorySelected: { _ in
-        }, messageSelected: { [weak self] peer, message, _ in
+        }, messageSelected: { [weak self] peer, _, message, _ in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in
+                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer) |> deliverOnMainQueue).start(next: { actualPeer in
                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: actualPeerId), subject: message.id.peerId == actualPeerId ? .message(id: .id(message.id), highlight: true, timecode: nil) : nil, keepStack: .always))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: message.id.peerId == actualPeer.id ? .message(id: .id(message.id), highlight: true, timecode: nil) : nil, keepStack: .always))
                     }
                 }))
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
@@ -76,10 +76,15 @@ public final class HashtagSearchController: TelegramBaseController {
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, setItemPinned: { _, _ in
         }, setPeerMuted: { _, _ in
+        }, setPeerThreadMuted: { _, _, _ in
         }, deletePeer: { _, _ in
+        }, deletePeerThread: { _, _ in
+        }, setPeerThreadStopped: { _, _, _ in
+        }, setPeerThreadPinned: { _, _, _ in
         }, updatePeerGrouping: { _, _ in
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {
+        }, toggleThreadsSelection: { _, _ in
         }, hidePsa: { _ in
         }, activateChatPreview: { _, _, gesture, _ in
             gesture?.cancel()
@@ -104,7 +109,7 @@ public final class HashtagSearchController: TelegramBaseController {
                 })
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], key: .chats, tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], location: .chatList(groupId: .root), key: .chats, tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
                 }, toggleExpandGlobalResults: {
                 }, searchPeer: { _ in
                 }, searchQuery: "", searchOptions: nil, messageContextAction: nil, openClearRecentlyDownloaded: {}, toggleAllPaused: {})

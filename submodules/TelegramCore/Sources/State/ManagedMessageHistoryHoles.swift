@@ -24,13 +24,11 @@ private final class ManagedMessageHistoryHolesState {
         
         for entry in entries {
             switch entry.hole {
-            case let .peer(hole):
-                if hole.threadId == nil {
-                    if self.holeDisposables[entry] == nil {
-                        let disposable = MetaDisposable()
-                        self.holeDisposables[entry] = disposable
-                        added[entry] = disposable
-                    }
+            case .peer:
+                if self.holeDisposables[entry] == nil {
+                    let disposable = MetaDisposable()
+                    self.holeDisposables[entry] = disposable
+                    added[entry] = disposable
                 }
             }
         }
@@ -55,7 +53,7 @@ func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox
             for (entry, disposable) in added {
                 switch entry.hole {
                 case let .peer(hole):
-                    disposable.set(fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerInput: .direct(peerId: hole.peerId, threadId: nil), namespace: hole.namespace, direction: entry.direction, space: entry.space, count: entry.count).start())
+                    disposable.set(fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: entry.direction, space: entry.space, count: entry.count).start())
                 }
             }
         })

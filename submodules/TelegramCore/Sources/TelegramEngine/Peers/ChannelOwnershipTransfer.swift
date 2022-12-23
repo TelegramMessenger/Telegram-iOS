@@ -83,12 +83,7 @@ func _internal_updateChannelOwnership(account: Account, accountStateManager: Acc
         return account.postbox.transaction { transaction -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
             if let channel = transaction.getPeer(channelId) as? TelegramChannel, let inputChannel = apiInputChannel(channel), let accountUser = transaction.getPeer(account.peerId), let user = transaction.getPeer(memberId), let inputUser = apiInputUser(user) {
                 
-                var flags: TelegramChatAdminRightsFlags
-                if case .broadcast = channel.info {
-                    flags = TelegramChatAdminRightsFlags.broadcastSpecific
-                } else {
-                    flags = TelegramChatAdminRightsFlags.groupSpecific
-                }
+                let flags: TelegramChatAdminRightsFlags = TelegramChatAdminRightsFlags.peerSpecific(peer: .channel(channel))
                     
                 let updatedParticipant = ChannelParticipant.creator(id: user.id, adminInfo: nil, rank: currentParticipant?.rank)
                 let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil, rank: currentCreator?.rank)

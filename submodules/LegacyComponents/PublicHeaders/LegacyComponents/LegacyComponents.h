@@ -83,9 +83,6 @@
 #import <LegacyComponents/TGChannelAdminRights.h>
 #import <LegacyComponents/TGChannelBannedRights.h>
 #import <LegacyComponents/TGCheckButtonView.h>
-#import <LegacyComponents/TGClipboardGalleryMixin.h>
-#import <LegacyComponents/TGClipboardGalleryPhotoItem.h>
-#import <LegacyComponents/TGClipboardMenu.h>
 #import <LegacyComponents/TGContactMediaAttachment.h>
 #import <LegacyComponents/TGConversation.h>
 #import <LegacyComponents/TGDataResource.h>

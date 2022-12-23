@@ -1093,65 +1093,115 @@ public extension Api {
     }
 }
 public extension Api {
-    enum Game: TypeConstructorDescription {
-        case game(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?)
+    enum ForumTopic: TypeConstructorDescription {
+        case forumTopic(flags: Int32, id: Int32, date: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings, draft: Api.DraftMessage?)
+        case forumTopicDeleted(id: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
+                case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings, let draft):
                     if boxed {
-                        buffer.appendInt32(-1107729093)
+                        buffer.appendInt32(1903173033)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeString(shortName, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(description, buffer: buffer, boxed: false)
-                    photo.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
+                    serializeInt32(iconColor, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    serializeInt32(readInboxMaxId, buffer: buffer, boxed: false)
+                    serializeInt32(readOutboxMaxId, buffer: buffer, boxed: false)
+                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadMentionsCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadReactionsCount, buffer: buffer, boxed: false)
+                    fromId.serialize(buffer, true)
+                    notifySettings.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 4) != 0 {draft!.serialize(buffer, true)}
+                    break
+                case .forumTopicDeleted(let id):
+                    if boxed {
+                        buffer.appendInt32(37687451)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
-                return ("game", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("shortName", String(describing: shortName)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("document", String(describing: document))])
+                case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings, let draft):
+                return ("forumTopic", [("flags", String(describing: flags)), ("id", String(describing: id)), ("date", String(describing: date)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("fromId", String(describing: fromId)), ("notifySettings", String(describing: notifySettings)), ("draft", String(describing: draft))])
+                case .forumTopicDeleted(let id):
+                return ("forumTopicDeleted", [("id", String(describing: id))])
     }
     }
     
-        public static func parse_game(_ reader: BufferReader) -> Game? {
+        public static func parse_forumTopic(_ reader: BufferReader) -> ForumTopic? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             var _4: String?
             _4 = parseString(reader)
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: Api.Photo?
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt64() }
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: Int32?
+            _9 = reader.readInt32()
+            var _10: Int32?
+            _10 = reader.readInt32()
+            var _11: Int32?
+            _11 = reader.readInt32()
+            var _12: Int32?
+            _12 = reader.readInt32()
+            var _13: Api.Peer?
             if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.Photo
+                _13 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _8: Api.Document?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.Document
+            var _14: Api.PeerNotifySettings?
+            if let signature = reader.readInt32() {
+                _14 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+            }
+            var _15: Api.DraftMessage?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _15 = Api.parse(reader, signature: signature) as? Api.DraftMessage
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = _6 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             let _c7 = _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.Game.game(flags: _1!, id: _2!, accessHash: _3!, shortName: _4!, title: _5!, description: _6!, photo: _7!, document: _8)
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            let _c12 = _12 != nil
+            let _c13 = _13 != nil
+            let _c14 = _14 != nil
+            let _c15 = (Int(_1!) & Int(1 << 4) == 0) || _15 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 {
+                return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, title: _4!, iconColor: _5!, iconEmojiId: _6, topMessage: _7!, readInboxMaxId: _8!, readOutboxMaxId: _9!, unreadCount: _10!, unreadMentionsCount: _11!, unreadReactionsCount: _12!, fromId: _13!, notifySettings: _14!, draft: _15)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_forumTopicDeleted(_ reader: BufferReader) -> ForumTopic? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ForumTopic.forumTopicDeleted(id: _1!)
             }
             else {
                 return nil

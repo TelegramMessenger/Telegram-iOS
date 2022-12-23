@@ -47,9 +47,9 @@ public enum ExternalJoiningChatState {
     }
     
     case invite(Invite)
-    case alreadyJoined(PeerId)
+    case alreadyJoined(EnginePeer)
     case invalidHash
-    case peek(PeerId, Int32)
+    case peek(EnginePeer, Int32)
 }
 
 func _internal_joinChatInteractively(with hash: String, account: Account) -> Signal<PeerId?, JoinLinkError> {
@@ -112,7 +112,7 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
                                 return updated
                             })
                             
-                            return .alreadyJoined(peer.id)
+                            return .alreadyJoined(EnginePeer(peer))
                         })
                         |> castError(JoinLinkInfoError.self)
                     }
@@ -124,7 +124,7 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
                                 return updated
                             })
                             
-                            return .peek(peer.id, expires)
+                            return .peek(EnginePeer(peer), expires)
                         })
                         |> castError(JoinLinkInfoError.self)
                     }

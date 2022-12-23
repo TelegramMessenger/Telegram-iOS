@@ -205,7 +205,7 @@ private func getSecretChatEntries(currentContext: AccountContext, secretChats: S
     return _getAccountsIncludingHiddenOnes(context: currentContext)
     |> mapToSignal { accountsAndPeers in
         let accounts = Dictionary(uniqueKeysWithValues: accountsAndPeers.1.map { ($0.0.account.id, ($0.0, $0.1)) })
-        return combineLatest(secretChats.filter({ accounts[$0.accountRecordId] != nil }).map { secretChatId -> Signal<(PtgSecretChatId, EngineRenderedPeer?, ChatListIndex?), NoError> in
+        return combineLatest(secretChats.filter({ accounts[$0.accountRecordId] != nil }).map { secretChatId -> Signal<(PtgSecretChatId, EngineRenderedPeer?, EngineChatList.Item.Index?), NoError> in
             let context = accounts[secretChatId.accountRecordId]!.0
             return combineLatest(
                 context.engine.data.get(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: secretChatId.peerId)),
@@ -215,6 +215,9 @@ private func getSecretChatEntries(currentContext: AccountContext, secretChats: S
         |> map { chatPeersAndIndices in
             return chatPeersAndIndices.compactMap { (secretChatId, peer, index) -> (PtgSecretChatId, EngineRenderedPeer, ChatListIndex?)? in
                 guard let peer = peer else {
+                    return nil
+                }
+                guard case let .chatList(index) = index else {
                     return nil
                 }
                 return (secretChatId, peer, index)

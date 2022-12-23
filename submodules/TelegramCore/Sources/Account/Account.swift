@@ -1185,6 +1185,7 @@ public class Account {
             self.managedOperationsDisposable.add(self.managedTopReactionsDisposable)
             
             self.managedOperationsDisposable.add(_internal_loadedStickerPack(postbox: self.postbox, network: self.network, reference: .iconStatusEmoji, forceActualized: true).start())
+            self.managedOperationsDisposable.add(_internal_loadedStickerPack(postbox: self.postbox, network: self.network, reference: .iconTopicEmoji, forceActualized: true).start())
         }
 
         if !supplementary {
@@ -1204,7 +1205,7 @@ public class Account {
                 |> map { view, _ -> Set<Int64> in
                     var allSecretChatIds = Set<Int64>()
                     for entry in view.entries {
-                        if case let .MessageEntry(_, _, _, _, _, peer, _, _, _, _) = entry {
+                        if case let .MessageEntry(_, _, _, _, _, peer, _, _, _, _, _) = entry {
                             allSecretChatIds.insert(peer.peerId.id._internalGetInt64Value())
                         }
                     }

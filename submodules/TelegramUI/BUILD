@@ -297,6 +297,13 @@ swift_library(
         "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",
         "//submodules/Components/PagerComponent:PagerComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/TelegramUI/Components/NotificationExceptionsScreen:NotificationExceptionsScreen",
+        "//submodules/TelegramUI/Components/ForumCreateTopicScreen:ForumCreateTopicScreen",
+        "//submodules/TelegramUI/Components/ChatTitleView",
+        "//submodules/InviteLinksUI:InviteLinksUI",
+        "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
+        "//submodules/MediaPasteboardUI:MediaPasteboardUI",
+
         "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgSettings:PtgSettings",
         "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",

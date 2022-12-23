@@ -305,12 +305,13 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
     public let resource: TelegramMediaResource
     public let progressiveSizes: [Int32]
     public let immediateThumbnailData: Data?
-    
-    public init(dimensions: PixelDimensions, resource: TelegramMediaResource, progressiveSizes: [Int32], immediateThumbnailData: Data?) {
+    public let hasVideo: Bool
+    public init(dimensions: PixelDimensions, resource: TelegramMediaResource, progressiveSizes: [Int32], immediateThumbnailData: Data?, hasVideo: Bool) {
         self.dimensions = dimensions
         self.resource = resource
         self.progressiveSizes = progressiveSizes
         self.immediateThumbnailData = immediateThumbnailData
+        self.hasVideo = hasVideo
     }
     
     public init(decoder: PostboxDecoder) {
@@ -318,6 +319,7 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
         self.resource = decoder.decodeObjectForKey("r") as? TelegramMediaResource ?? EmptyMediaResource()
         self.progressiveSizes = decoder.decodeInt32ArrayForKey("ps")
         self.immediateThumbnailData = decoder.decodeDataForKey("th")
+        self.hasVideo = decoder.decodeBoolForKey("hv", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -330,6 +332,7 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
         } else {
             encoder.encodeNil(forKey: "th")
         }
+        encoder.encodeBool(self.hasVideo, forKey: "hv")
     }
     
     public var description: String {
@@ -347,6 +350,9 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
             return false
         }
         if self.immediateThumbnailData != other.immediateThumbnailData {
+            return false
+        }
+        if self.hasVideo != other.hasVideo {
             return false
         }
         return true

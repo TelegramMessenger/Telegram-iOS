@@ -91,7 +91,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
         self.contentOffsetUpdated?(-size.height + 64.0, transition)
     }
     
-    public func updateSelectedPeers() {
+    public func updateSelectedPeers(animated: Bool) {
     }
 }
 
@@ -330,6 +330,6 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         self.contentOffsetUpdated?(-size.height + nodeHeight * 0.5, transition)
     }
     
-    public func updateSelectedPeers() {
+    public func updateSelectedPeers(animated: Bool) {
     }
 }

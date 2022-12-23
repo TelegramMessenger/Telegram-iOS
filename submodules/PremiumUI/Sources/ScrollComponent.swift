@@ -20,23 +20,26 @@ final class ScrollChildEnvironment: Equatable {
 }
 
 final class ScrollComponent<ChildEnvironment: Equatable>: Component {
-    public typealias EnvironmentType = ChildEnvironment
+    typealias EnvironmentType = ChildEnvironment
     
-    public let content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>
-    public let contentInsets: UIEdgeInsets
-    public let contentOffsetUpdated: (_ top: CGFloat, _ bottom: CGFloat) -> Void
-    public let contentOffsetWillCommit: (UnsafeMutablePointer<CGPoint>) -> Void
+    let content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>
+    let contentInsets: UIEdgeInsets
+    let contentOffsetUpdated: (_ top: CGFloat, _ bottom: CGFloat) -> Void
+    let contentOffsetWillCommit: (UnsafeMutablePointer<CGPoint>) -> Void
+    let resetScroll: ActionSlot<Void>
     
     public init(
         content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>,
         contentInsets: UIEdgeInsets,
         contentOffsetUpdated: @escaping (_ top: CGFloat, _ bottom: CGFloat) -> Void,
-        contentOffsetWillCommit:  @escaping (UnsafeMutablePointer<CGPoint>) -> Void
+        contentOffsetWillCommit:  @escaping (UnsafeMutablePointer<CGPoint>) -> Void,
+        resetScroll: ActionSlot<Void> = ActionSlot()
     ) {
         self.content = content
         self.contentInsets = contentInsets
         self.contentOffsetUpdated = contentOffsetUpdated
         self.contentOffsetWillCommit = contentOffsetWillCommit
+        self.resetScroll = resetScroll
     }
     
     public static func ==(lhs: ScrollComponent, rhs: ScrollComponent) -> Bool {
@@ -46,7 +49,6 @@ final class ScrollComponent<ChildEnvironment: Equatable>: Component {
         if lhs.contentInsets != rhs.contentInsets {
             return false
         }
-        
         return true
     }
     
@@ -106,6 +108,10 @@ final class ScrollComponent<ChildEnvironment: Equatable>: Component {
                 containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
             )
             transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
+            
+            component.resetScroll.connect { [weak self] _ in
+                self?.setContentOffset(.zero, animated: false)
+            }
             
             if self.contentSize != contentSize {
                 self.ignoreDidScroll = true

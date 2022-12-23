@@ -1,4 +1,72 @@
 public extension Api {
+    enum Game: TypeConstructorDescription {
+        case game(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
+                    if boxed {
+                        buffer.appendInt32(-1107729093)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeString(shortName, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    photo.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
+                return ("game", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("shortName", String(describing: shortName)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("document", String(describing: document))])
+    }
+    }
+    
+        public static func parse_game(_ reader: BufferReader) -> Game? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: Api.Photo?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Photo
+            }
+            var _8: Api.Document?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Game.game(flags: _1!, id: _2!, accessHash: _3!, shortName: _4!, title: _5!, description: _6!, photo: _7!, document: _8)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum GeoPoint: TypeConstructorDescription {
         case geoPoint(flags: Int32, long: Double, lat: Double, accessHash: Int64, accuracyRadius: Int32?)
         case geoPointEmpty
@@ -1256,88 +1324,6 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.InputBotInlineResult.inputBotInlineResultPhoto(id: _1!, type: _2!, photo: _3!, sendMessage: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum InputChannel: TypeConstructorDescription {
-        case inputChannel(channelId: Int64, accessHash: Int64)
-        case inputChannelEmpty
-        case inputChannelFromMessage(peer: Api.InputPeer, msgId: Int32, channelId: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputChannel(let channelId, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(-212145112)
-                    }
-                    serializeInt64(channelId, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputChannelEmpty:
-                    if boxed {
-                        buffer.appendInt32(-292807034)
-                    }
-                    
-                    break
-                case .inputChannelFromMessage(let peer, let msgId, let channelId):
-                    if boxed {
-                        buffer.appendInt32(1536380829)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt64(channelId, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputChannel(let channelId, let accessHash):
-                return ("inputChannel", [("channelId", String(describing: channelId)), ("accessHash", String(describing: accessHash))])
-                case .inputChannelEmpty:
-                return ("inputChannelEmpty", [])
-                case .inputChannelFromMessage(let peer, let msgId, let channelId):
-                return ("inputChannelFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("channelId", String(describing: channelId))])
-    }
-    }
-    
-        public static func parse_inputChannel(_ reader: BufferReader) -> InputChannel? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputChannel.inputChannel(channelId: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputChannelEmpty(_ reader: BufferReader) -> InputChannel? {
-            return Api.InputChannel.inputChannelEmpty
-        }
-        public static func parse_inputChannelFromMessage(_ reader: BufferReader) -> InputChannel? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputChannel.inputChannelFromMessage(peer: _1!, msgId: _2!, channelId: _3!)
             }
             else {
                 return nil

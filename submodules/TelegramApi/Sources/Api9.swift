@@ -1,4 +1,172 @@
 public extension Api {
+    indirect enum InputPeer: TypeConstructorDescription {
+        case inputPeerChannel(channelId: Int64, accessHash: Int64)
+        case inputPeerChannelFromMessage(peer: Api.InputPeer, msgId: Int32, channelId: Int64)
+        case inputPeerChat(chatId: Int64)
+        case inputPeerEmpty
+        case inputPeerSelf
+        case inputPeerUser(userId: Int64, accessHash: Int64)
+        case inputPeerUserFromMessage(peer: Api.InputPeer, msgId: Int32, userId: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPeerChannel(let channelId, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(666680316)
+                    }
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputPeerChannelFromMessage(let peer, let msgId, let channelId):
+                    if boxed {
+                        buffer.appendInt32(-1121318848)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    break
+                case .inputPeerChat(let chatId):
+                    if boxed {
+                        buffer.appendInt32(900291769)
+                    }
+                    serializeInt64(chatId, buffer: buffer, boxed: false)
+                    break
+                case .inputPeerEmpty:
+                    if boxed {
+                        buffer.appendInt32(2134579434)
+                    }
+                    
+                    break
+                case .inputPeerSelf:
+                    if boxed {
+                        buffer.appendInt32(2107670217)
+                    }
+                    
+                    break
+                case .inputPeerUser(let userId, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-571955892)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputPeerUserFromMessage(let peer, let msgId, let userId):
+                    if boxed {
+                        buffer.appendInt32(-1468331492)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPeerChannel(let channelId, let accessHash):
+                return ("inputPeerChannel", [("channelId", String(describing: channelId)), ("accessHash", String(describing: accessHash))])
+                case .inputPeerChannelFromMessage(let peer, let msgId, let channelId):
+                return ("inputPeerChannelFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("channelId", String(describing: channelId))])
+                case .inputPeerChat(let chatId):
+                return ("inputPeerChat", [("chatId", String(describing: chatId))])
+                case .inputPeerEmpty:
+                return ("inputPeerEmpty", [])
+                case .inputPeerSelf:
+                return ("inputPeerSelf", [])
+                case .inputPeerUser(let userId, let accessHash):
+                return ("inputPeerUser", [("userId", String(describing: userId)), ("accessHash", String(describing: accessHash))])
+                case .inputPeerUserFromMessage(let peer, let msgId, let userId):
+                return ("inputPeerUserFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("userId", String(describing: userId))])
+    }
+    }
+    
+        public static func parse_inputPeerChannel(_ reader: BufferReader) -> InputPeer? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPeer.inputPeerChannel(channelId: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPeerChannelFromMessage(_ reader: BufferReader) -> InputPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputPeer.inputPeerChannelFromMessage(peer: _1!, msgId: _2!, channelId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPeerChat(_ reader: BufferReader) -> InputPeer? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputPeer.inputPeerChat(chatId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPeerEmpty(_ reader: BufferReader) -> InputPeer? {
+            return Api.InputPeer.inputPeerEmpty
+        }
+        public static func parse_inputPeerSelf(_ reader: BufferReader) -> InputPeer? {
+            return Api.InputPeer.inputPeerSelf
+        }
+        public static func parse_inputPeerUser(_ reader: BufferReader) -> InputPeer? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputPeer.inputPeerUser(userId: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputPeerUserFromMessage(_ reader: BufferReader) -> InputPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputPeer.inputPeerUserFromMessage(peer: _1!, msgId: _2!, userId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputPeerNotifySettings: TypeConstructorDescription {
         case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: Api.NotificationSound?)
     
@@ -664,158 +832,6 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.InputSingleMedia.inputSingleMedia(flags: _1!, media: _2!, randomId: _3!, message: _4!, entities: _5)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputStickerSet: TypeConstructorDescription {
-        case inputStickerSetAnimatedEmoji
-        case inputStickerSetAnimatedEmojiAnimations
-        case inputStickerSetDice(emoticon: String)
-        case inputStickerSetEmojiDefaultStatuses
-        case inputStickerSetEmojiGenericAnimations
-        case inputStickerSetEmpty
-        case inputStickerSetID(id: Int64, accessHash: Int64)
-        case inputStickerSetPremiumGifts
-        case inputStickerSetShortName(shortName: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputStickerSetAnimatedEmoji:
-                    if boxed {
-                        buffer.appendInt32(42402760)
-                    }
-                    
-                    break
-                case .inputStickerSetAnimatedEmojiAnimations:
-                    if boxed {
-                        buffer.appendInt32(215889721)
-                    }
-                    
-                    break
-                case .inputStickerSetDice(let emoticon):
-                    if boxed {
-                        buffer.appendInt32(-427863538)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    break
-                case .inputStickerSetEmojiDefaultStatuses:
-                    if boxed {
-                        buffer.appendInt32(701560302)
-                    }
-                    
-                    break
-                case .inputStickerSetEmojiGenericAnimations:
-                    if boxed {
-                        buffer.appendInt32(80008398)
-                    }
-                    
-                    break
-                case .inputStickerSetEmpty:
-                    if boxed {
-                        buffer.appendInt32(-4838507)
-                    }
-                    
-                    break
-                case .inputStickerSetID(let id, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(-1645763991)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputStickerSetPremiumGifts:
-                    if boxed {
-                        buffer.appendInt32(-930399486)
-                    }
-                    
-                    break
-                case .inputStickerSetShortName(let shortName):
-                    if boxed {
-                        buffer.appendInt32(-2044933984)
-                    }
-                    serializeString(shortName, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputStickerSetAnimatedEmoji:
-                return ("inputStickerSetAnimatedEmoji", [])
-                case .inputStickerSetAnimatedEmojiAnimations:
-                return ("inputStickerSetAnimatedEmojiAnimations", [])
-                case .inputStickerSetDice(let emoticon):
-                return ("inputStickerSetDice", [("emoticon", String(describing: emoticon))])
-                case .inputStickerSetEmojiDefaultStatuses:
-                return ("inputStickerSetEmojiDefaultStatuses", [])
-                case .inputStickerSetEmojiGenericAnimations:
-                return ("inputStickerSetEmojiGenericAnimations", [])
-                case .inputStickerSetEmpty:
-                return ("inputStickerSetEmpty", [])
-                case .inputStickerSetID(let id, let accessHash):
-                return ("inputStickerSetID", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
-                case .inputStickerSetPremiumGifts:
-                return ("inputStickerSetPremiumGifts", [])
-                case .inputStickerSetShortName(let shortName):
-                return ("inputStickerSetShortName", [("shortName", String(describing: shortName))])
-    }
-    }
-    
-        public static func parse_inputStickerSetAnimatedEmoji(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetAnimatedEmoji
-        }
-        public static func parse_inputStickerSetAnimatedEmojiAnimations(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetAnimatedEmojiAnimations
-        }
-        public static func parse_inputStickerSetDice(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetDice(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses
-        }
-        public static func parse_inputStickerSetEmojiGenericAnimations(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmojiGenericAnimations
-        }
-        public static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetEmpty
-        }
-        public static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputStickerSet.inputStickerSetID(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputStickerSetPremiumGifts(_ reader: BufferReader) -> InputStickerSet? {
-            return Api.InputStickerSet.inputStickerSetPremiumGifts
-        }
-        public static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetShortName(shortName: _1!)
             }
             else {
                 return nil

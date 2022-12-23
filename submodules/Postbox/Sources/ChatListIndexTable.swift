@@ -170,8 +170,9 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
     }
     
-    func commitWithTransaction(postbox: PostboxImpl, currentTransaction: Transaction, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [((Peer, Bool)?, (Peer, Bool))], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedTotalUnreadStates: inout [PeerGroupId: ChatListTotalUnreadState], updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
+    func commitWithTransaction(postbox: PostboxImpl, currentTransaction: Transaction, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [((Peer, Bool)?, (Peer, Bool))], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), alteredInitialPeerThreadsSummaries: [PeerId: StoredPeerThreadsSummary], updatedTotalUnreadStates: inout [PeerGroupId: ChatListTotalUnreadState], updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
         var updatedPeerTags: [PeerId: (previous: PeerSummaryCounterTags, updated: PeerSummaryCounterTags)] = [:]
+        var updatedIsThreadBased: [PeerId: Bool] = [:]
         for (previous, updated) in updatedPeers {
             let previousTags: PeerSummaryCounterTags
             if let (previous, previousIsContact) = previous {
@@ -183,9 +184,16 @@ final class ChatListIndexTable: Table {
             if previousTags != updatedTags {
                 updatedPeerTags[updated.0.id] = (previousTags, updatedTags)
             }
+            
+            if let previous = previous {
+                let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(updated.0)
+                if postbox.seedConfiguration.peerSummaryIsThreadBased(previous.0) != isThreadBased {
+                    updatedIsThreadBased[updated.0.id] = isThreadBased
+                }
+            }
         }
         
-        if !self.updatedPreviousPeerCachedIndices.isEmpty || !alteredInitialPeerCombinedReadStates.isEmpty || !updatedPeerTags.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty {
+        if !self.updatedPreviousPeerCachedIndices.isEmpty || !alteredInitialPeerCombinedReadStates.isEmpty || !updatedPeerTags.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.added.isEmpty || !transactionParticipationInTotalUnreadCountUpdates.removed.isEmpty || !alteredInitialPeerThreadsSummaries.isEmpty {
             var addedToGroupPeerIds: [PeerId: PeerGroupId] = [:]
             var removedFromGroupPeerIds: [PeerId: PeerGroupId] = [:]
             var addedToIndexPeerIds = Set<PeerId>()
@@ -272,12 +280,20 @@ final class ChatListIndexTable: Table {
             for (peerId, _) in alteredInitialPeerCombinedReadStates {
                 alteredPeerIds.insert(peerId)
             }
+            for (peerId, _) in alteredInitialPeerThreadsSummaries {
+                alteredPeerIds.insert(peerId)
+            }
+            
             alteredPeerIds.formUnion(addedToGroupPeerIds.keys)
             alteredPeerIds.formUnion(removedFromGroupPeerIds.keys)
             alteredPeerIds.formUnion(transactionParticipationInTotalUnreadCountUpdates.added)
             alteredPeerIds.formUnion(transactionParticipationInTotalUnreadCountUpdates.removed)
             
             for peerId in updatedPeerTags.keys {
+                alteredPeerIds.insert(peerId)
+            }
+            
+            for peerId in updatedIsThreadBased.keys {
                 alteredPeerIds.insert(peerId)
             }
             
@@ -347,8 +363,42 @@ final class ChatListIndexTable: Table {
                 }
                 let isContact = postbox.contactsTable.isContact(peerId: peerId)
                 let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
-                let initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
-                let currentReadState = postbox.readStateTable.getCombinedState(peerId)
+                
+                let initialReadState: CombinedPeerReadState?
+                if let updated = updatedIsThreadBased[peerId] {
+                    if updated {
+                        // was not thread-based, use peer read state
+                        initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
+                    } else {
+                        let previousCount: Int32
+                        if let previousSummary = alteredInitialPeerThreadsSummaries[peerId] {
+                            previousCount = previousSummary.effectiveUnreadCount
+                        } else {
+                            previousCount = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
+                        }
+                        initialReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: previousCount, markedUnread: false))])
+                    }
+                } else {
+                    if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                        let previousCount: Int32
+                        if let previousSummary = alteredInitialPeerThreadsSummaries[peerId] {
+                            previousCount = previousSummary.effectiveUnreadCount
+                        } else {
+                            previousCount = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
+                        }
+                        initialReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: previousCount, markedUnread: false))])
+                    } else {
+                        initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
+                    }
+                }
+                
+                let currentReadState: CombinedPeerReadState?
+                if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                    let count = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
+                    currentReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
+                } else {
+                    currentReadState = postbox.readStateTable.getCombinedState(peerId)
+                }
                 
                 var groupIds: [PeerGroupId] = []
                 if let (groupId, _) = self.get(peerId: peerId).includedIndex(peerId: peerId) {
@@ -574,9 +624,19 @@ final class ChatListIndexTable: Table {
             guard let peer = postbox.peerTable.get(peerId) else {
                 continue
             }
-            guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {
+            
+            let combinedState: CombinedPeerReadState?
+            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
+                combinedState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
+            } else {
+                combinedState = postbox.readStateTable.getCombinedState(peerId)
+            }
+            
+            guard let combinedState = combinedState else {
                 continue
             }
+            
             let isContact = postbox.contactsTable.isContact(peerId: peerId)
             let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
             let inclusion = self.get(peerId: peerId)
@@ -653,7 +713,19 @@ final class ChatListIndexTable: Table {
             if peerId.namespace == .max {
                 return
             }
-            guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {
+            guard let peer = postbox.peerTable.get(peerId) else {
+                return
+            }
+            
+            let combinedState: CombinedPeerReadState?
+            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
+                combinedState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
+            } else {
+                combinedState = postbox.readStateTable.getCombinedState(peerId)
+            }
+            
+            guard let combinedState = combinedState else {
                 return
             }
             

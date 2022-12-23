@@ -826,7 +826,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
-                                                for (rights, _) in allGroupPermissionList {
+                                                for (rights, _) in allGroupPermissionList(peer: .channel(channel)) {
                                                     if banInfo.rights.flags.contains(rights) {
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
@@ -930,7 +930,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     
                     return entries
                 }
-            } else if let _ = peerView.peers[peerId] as? TelegramGroup, let cachedData = peerView.cachedData as? CachedGroupData {
+            } else if let group = peerView.peers[peerId] as? TelegramGroup, let cachedData = peerView.cachedData as? CachedGroupData {
                 updateActivity(true)
                 let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
                 let foundMembers: Signal<[RenderedChannelParticipant], NoError>
@@ -969,7 +969,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                             peers[creator.id] = creator
                                         }
                                         peers[peer.id] = peer
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .groupSpecific), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: .legacyGroup(group))), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
                                     case .member:
                                         var peers: [PeerId: Peer] = [:]
                                         peers[peer.id] = peer
@@ -1086,7 +1086,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
-                                                for (rights, _) in allGroupPermissionList {
+                                                for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
                                                     if banInfo.rights.flags.contains(rights) {
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")

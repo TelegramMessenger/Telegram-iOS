@@ -61,6 +61,17 @@ private func createChannel(account: Account, title: String, description: String?
                 }
                 |> castError(CreateChannelError.self)
                 |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+                |> mapToSignal { peerId -> Signal<PeerId, CreateChannelError> in
+                    if title.contains("*forum") {
+                        return _internal_setChannelForumMode(account: account, peerId: peerId, isForum: true)
+                        |> castError(CreateChannelError.self)
+                        |> map { _ -> PeerId in
+                        }
+                        |> then(.single(peerId))
+                    } else {
+                        return .single(peerId)
+                    }
+                }
             } else {
                 return .fail(.generic)
             }
