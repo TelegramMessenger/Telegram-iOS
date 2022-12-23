@@ -56,6 +56,7 @@ typedef enum {
 
 - (void)lockPortrait;
 - (void)unlockPortrait;
+- (void)disableInteractiveKeyboardGesture;
 
 - (TGNavigationBarPallete *)navigationBarPallete;
 - (TGMenuSheetPallete *)menuSheetPallete;

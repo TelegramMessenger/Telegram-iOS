@@ -7,10 +7,20 @@ import LegacyComponents
 import AppBundle
 import ImageBlur
 
+protocol DrawingRenderLayer: CALayer {
+    
+}
+
+protocol DrawingRenderView: UIView {
+    
+}
+
 protocol DrawingElement: AnyObject {
     var uuid: UUID { get }
     var translation: CGPoint { get set }
-            
+    var isValid: Bool { get }
+    
+    func setupRenderView(screenSize: CGSize) -> DrawingRenderView?
     func setupRenderLayer() -> DrawingRenderLayer?
     func updatePath(_ path: DrawingGesturePipeline.DrawingResult, state: DrawingGesturePipeline.DrawingGestureState)
     
@@ -43,23 +53,21 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     enum Tool {
         case pen
+        case arrow
         case marker
         case neon
         case eraser
-        case lasso
         case blur
     }
         
     var tool: Tool = .pen
     var toolColor: DrawingColor = DrawingColor(color: .white)
     var toolBrushSize: CGFloat = 0.25
-    var toolHasArrow: Bool = false
     
     var stateUpdated: (NavigationState) -> Void = { _ in }
 
     var shouldBegin: (CGPoint) -> Bool = { _ in return true }
-    var requestMenu: ([UUID], CGRect) -> Void = { _, _ in }
-    var getFullImage: (Bool) -> UIImage? = { _ in return nil }
+    var getFullImage: () -> UIImage? = { return nil }
     
     private var elements: [DrawingElement] = []
     private var undoStack: [DrawingOperation] = []
@@ -69,18 +77,18 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private(set) var drawingImage: UIImage?
     private let renderer: UIGraphicsImageRenderer
         
-    private var currentDrawingView: UIView
+    private var currentDrawingViewContainer: UIImageView
+    private var currentDrawingRenderView: DrawingRenderView?
     private var currentDrawingLayer: DrawingRenderLayer?
     
     private var pannedSelectionView: UIView
     
-    var lassoView: DrawingLassoView
     private var metalView: DrawingMetalView
 
     private let brushSizePreviewLayer: SimpleShapeLayer
     
     let imageSize: CGSize
-    private var zoomScale: CGFloat = 1.0
+    private(set) var zoomScale: CGFloat = 1.0
     
     private var drawingGesturePipeline: DrawingGesturePipeline?
     private var longPressGestureRecognizer: UILongPressGestureRecognizer?
@@ -109,12 +117,14 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 self.loadedTemplates.append(template)
             }
         }
-        
+
         load("shape_rectangle")
         load("shape_circle")
         load("shape_star")
         load("shape_arrow")
     }
+    
+    private let hapticFeedback = HapticFeedback()
     
     init(size: CGSize) {
         self.imageSize = size
@@ -123,11 +133,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         format.scale = 1.0
         self.renderer = UIGraphicsImageRenderer(size: size, format: format)
                 
-        self.currentDrawingView = UIView()
-        self.currentDrawingView.frame = CGRect(origin: .zero, size: size)
-        self.currentDrawingView.contentScaleFactor = 1.0
-        self.currentDrawingView.backgroundColor = .clear
-        self.currentDrawingView.isUserInteractionEnabled = false
+        self.currentDrawingViewContainer = UIImageView()
+        self.currentDrawingViewContainer.frame = CGRect(origin: .zero, size: size)
+        self.currentDrawingViewContainer.contentScaleFactor = 1.0
+        self.currentDrawingViewContainer.backgroundColor = .clear
+        self.currentDrawingViewContainer.isUserInteractionEnabled = false
         
         self.pannedSelectionView = UIView()
         self.pannedSelectionView.frame = CGRect(origin: .zero, size: size)
@@ -135,9 +145,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.pannedSelectionView.backgroundColor = .clear
         self.pannedSelectionView.isUserInteractionEnabled = false
         
-        self.lassoView = DrawingLassoView(size: size)
-        self.lassoView.isHidden = true
-                
         self.metalView = DrawingMetalView(size: size)!
         self.metalView.isHidden = true
         
@@ -160,11 +167,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
         self.backgroundColor = .clear
         self.contentScaleFactor = 1.0
+        self.isExclusiveTouch = true
             
-        self.addSubview(self.currentDrawingView)
-        self.addSubview(self.metalView)
-        self.lassoView.addSubview(self.pannedSelectionView)
-        self.addSubview(self.lassoView)
+        self.addSubview(self.currentDrawingViewContainer)
+        //self.addSubview(self.metalView)
+
         self.layer.addSublayer(self.brushSizePreviewLayer)
         
         let drawingGesturePipeline = DrawingGesturePipeline(view: self)
@@ -173,7 +180,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 if !strongSelf.shouldBegin(point) {
                     return false
                 }
-                if !strongSelf.lassoView.isHidden && strongSelf.lassoView.point(inside: strongSelf.convert(point, to: strongSelf.lassoView), with: nil) {
+                if strongSelf.elements.isEmpty && !strongSelf.hasOpaqueData && strongSelf.tool == .eraser {
+                    return false
+                }
+                if let uncommitedElement = strongSelf.uncommitedElement as? PenTool, uncommitedElement.isFinishingArrow {
                     return false
                 }
                 return true
@@ -200,7 +210,29 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 }
                 
                 if newElement is MarkerTool {
-                    self?.metalView.isHidden = false
+                    strongSelf.metalView.isHidden = false
+                }
+                
+                if let renderView = newElement.setupRenderView(screenSize: CGSize(width: 414.0, height: 414.0)) {
+                    if let currentDrawingView = strongSelf.currentDrawingRenderView {
+                        strongSelf.currentDrawingRenderView = nil
+                        currentDrawingView.removeFromSuperview()
+                    }
+                    if strongSelf.tool == .eraser {
+                        strongSelf.currentDrawingViewContainer.removeFromSuperview()
+                        strongSelf.currentDrawingViewContainer.backgroundColor = .white
+                        
+                        renderView.layer.compositingFilter = "xor"
+                        
+                        strongSelf.currentDrawingViewContainer.addSubview(renderView)
+                        strongSelf.mask = strongSelf.currentDrawingViewContainer
+                    } else if strongSelf.tool == .blur {
+                        strongSelf.currentDrawingViewContainer.mask = renderView
+                        strongSelf.currentDrawingViewContainer.image = strongSelf.preparedBlurredImage
+                    } else {
+                        strongSelf.currentDrawingViewContainer.addSubview(renderView)
+                    }
+                    strongSelf.currentDrawingRenderView = renderView
                 }
                 
                 if let renderLayer = newElement.setupRenderLayer() {
@@ -208,7 +240,20 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                         strongSelf.currentDrawingLayer = nil
                         currentDrawingLayer.removeFromSuperlayer()
                     }
-                    strongSelf.currentDrawingView.layer.addSublayer(renderLayer)
+                    if strongSelf.tool == .eraser {
+                        strongSelf.currentDrawingViewContainer.removeFromSuperview()
+                        strongSelf.currentDrawingViewContainer.backgroundColor = .white
+                        
+                        renderLayer.compositingFilter = "xor"
+                        
+                        strongSelf.currentDrawingViewContainer.layer.addSublayer(renderLayer)
+                        strongSelf.mask = strongSelf.currentDrawingViewContainer
+                    } else if strongSelf.tool == .blur {
+                        strongSelf.currentDrawingViewContainer.layer.mask = renderLayer
+                        strongSelf.currentDrawingViewContainer.image = strongSelf.preparedBlurredImage
+                    } else {
+                        strongSelf.currentDrawingViewContainer.layer.addSublayer(renderLayer)
+                    }
                     strongSelf.currentDrawingLayer = renderLayer
                 }
                 newElement.updatePath(path, state: state)
@@ -309,45 +354,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         longPressGestureRecognizer.delegate = self
         self.addGestureRecognizer(longPressGestureRecognizer)
         self.longPressGestureRecognizer = longPressGestureRecognizer
-        
-        self.lassoView.requestMenu = { [weak self] elements, rect in
-            if let strongSelf = self {
-                strongSelf.requestMenu(elements, rect)
-            }
-        }
-        
-        self.lassoView.panBegan = { [weak self] elements in
-            if let strongSelf = self {
-                strongSelf.skipDrawing = Set(elements)
-                strongSelf.commit(reset: true)
-                strongSelf.updateSelectionContent()
-            }
-        }
-        
-        self.lassoView.panChanged = { [weak self] elements, offset in
-            if let strongSelf = self {
-                let offset = CGPoint(x: offset.x * -1.0, y: offset.y * -1.0)
-                strongSelf.lassoView.bounds = CGRect(origin: offset, size: strongSelf.lassoView.bounds.size)
-            }
-        }
-        
-        self.lassoView.panEnded = { [weak self] elements, offset in
-            if let strongSelf = self {
-                let elementsSet = Set(elements)
-                for element in strongSelf.elements {
-                    if elementsSet.contains(element.uuid) {
-                        element.translation = element.translation.offsetBy(offset)
-                    }
-                }
-                strongSelf.skipDrawing = Set()
-                strongSelf.commit(reset: true, completion: {
-                    strongSelf.pannedSelectionView.layer.contents = nil
-                    
-                    strongSelf.lassoView.bounds = CGRect(origin: .zero, size: strongSelf.lassoView.bounds.size)
-                    strongSelf.lassoView.translate(offset)
-                })
-            }
-        }
     }
     
     required init?(coder: NSCoder) {
@@ -359,27 +365,25 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.strokeRecognitionTimer?.invalidate()
     }
     
-    public func setup(withDrawing drawingData: Data!) {
-        
+    public func setup(withDrawing drawingData: Data?) {
+        if let drawingData = drawingData, let image = UIImage(data: drawingData) {
+            self.hasOpaqueData = true
+            self.drawingImage = image
+            self.layer.contents = image.cgImage
+          
+            self.updateInternalState()
+        }
     }
     
+    var hasOpaqueData = false
     var drawingData: Data? {
-        guard !self.elements.isEmpty else {
+        guard !self.elements.isEmpty || self.hasOpaqueData else {
             return nil
         }
-        
-        let codableElements = self.elements.compactMap({ CodableDrawingElement(element: $0) })
-        if let data = try? JSONEncoder().encode(codableElements) {
-            return data
-        } else {
-            return nil
-        }
+        return self.drawingImage?.pngData()
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer === self.longPressGestureRecognizer, !self.lassoView.isHidden {
-            return false
-        }
         return true
     }
     
@@ -390,10 +394,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private var longPressTimer: SwiftSignalKit.Timer?
     private var fillCircleLayer: CALayer?
     @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        guard ![.eraser, .blur].contains(self.tool) else {
-            return
-        }
-        
         let location = gestureRecognizer.location(in: self)
         switch gestureRecognizer.state {
         case .began:
@@ -401,33 +401,62 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             self.longPressTimer = nil
             
             if self.longPressTimer == nil {
-                self.longPressTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self] in
+                var toolColor = self.toolColor
+                var blurredImage: UIImage?
+                if self.tool == .marker {
+                    toolColor = toolColor.withUpdatedAlpha(toolColor.alpha * 0.7)
+                } else if self.tool == .eraser {
+                    toolColor = DrawingColor.clear
+                } else if self.tool == .blur {
+                    blurredImage = self.preparedBlurredImage
+                }
+                
+                let fillCircleLayer = SimpleShapeLayer()
+                self.longPressTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self, weak fillCircleLayer] in
                     if let strongSelf = self {
                         strongSelf.cancelDrawing()
                         
-                        let newElement = FillTool(drawingSize: strongSelf.imageSize, color: strongSelf.toolColor)
-                        strongSelf.uncommitedElement = newElement
-                        strongSelf.finishDrawing()
+                        let action = {
+                            let newElement = FillTool(drawingSize: strongSelf.imageSize, color: toolColor, blur: blurredImage != nil, blurredImage: blurredImage)
+                            strongSelf.uncommitedElement = newElement
+                            strongSelf.finishDrawing(synchronous: true)
+                        }
+                        if [.eraser, .blur].contains(strongSelf.tool) {
+                            UIView.transition(with: strongSelf, duration: 0.2, options: .transitionCrossDissolve) {
+                                action()
+                            }
+                        } else {
+                            action()
+                        }
+                                                
+                        strongSelf.fillCircleLayer = nil
+                        fillCircleLayer?.removeFromSuperlayer()
+                        
+                        strongSelf.hapticFeedback.impact(.medium)
                     }
                 }, queue: Queue.mainQueue())
                 self.longPressTimer?.start()
                 
-                let fillCircleLayer = SimpleShapeLayer()
-                fillCircleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 160.0, height: 160.0))
-                fillCircleLayer.position = location
-                fillCircleLayer.path = UIBezierPath(ovalIn: CGRect(origin: .zero, size: CGSize(width: 160.0, height: 160.0))).cgPath
-                fillCircleLayer.fillColor = self.toolColor.toCGColor()
-                self.layer.addSublayer(fillCircleLayer)
-                self.fillCircleLayer = fillCircleLayer
-                
-                fillCircleLayer.animateScale(from: 0.01, to: 12.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] _ in
-                    if let strongSelf = self {
-                        if let fillCircleLayer = strongSelf.fillCircleLayer {
-                            strongSelf.fillCircleLayer = nil
-                            fillCircleLayer.removeFromSuperlayer()
+                if [.eraser, .blur].contains(self.tool) {
+    
+                } else {
+                    fillCircleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 160.0, height: 160.0))
+                    fillCircleLayer.position = location
+                    fillCircleLayer.path = UIBezierPath(ovalIn: CGRect(origin: .zero, size: CGSize(width: 160.0, height: 160.0))).cgPath
+                    fillCircleLayer.fillColor = toolColor.toCGColor()
+                    
+                    self.layer.addSublayer(fillCircleLayer)
+                    self.fillCircleLayer = fillCircleLayer
+                    
+                    fillCircleLayer.animateScale(from: 0.01, to: 12.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] _ in
+                        if let strongSelf = self {
+                            if let fillCircleLayer = strongSelf.fillCircleLayer {
+                                strongSelf.fillCircleLayer = nil
+                                fillCircleLayer.removeFromSuperlayer()
+                            }
                         }
-                    }
-                })
+                    })
+                }
             }
         case .ended, .cancelled:
             self.longPressTimer?.invalidate()
@@ -474,14 +503,39 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 self.drawingImage = updatedImage
                 self.layer.contents = updatedImage.cgImage
                 
+                if let currentDrawingRenderView = self.currentDrawingRenderView {
+                    if case .eraser = self.tool {
+                        currentDrawingRenderView.removeFromSuperview()
+                        self.mask = nil
+                        self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                        self.currentDrawingViewContainer.backgroundColor = .clear
+                    } else if case .blur = self.tool {
+                        self.currentDrawingViewContainer.mask = nil
+                        self.currentDrawingViewContainer.image = nil
+                    } else {
+                        currentDrawingRenderView.removeFromSuperview()
+                    }
+                    self.currentDrawingRenderView = nil
+                }
                 if let currentDrawingLayer = self.currentDrawingLayer {
+                    if case .eraser = self.tool {
+                        currentDrawingLayer.removeFromSuperlayer()
+                        self.mask = nil
+                        self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                        self.currentDrawingViewContainer.backgroundColor = .clear
+                    } else if case .blur = self.tool {
+                        self.currentDrawingViewContainer.layer.mask = nil
+                        self.currentDrawingViewContainer.image = nil
+                    } else {
+                        currentDrawingLayer.removeFromSuperlayer()
+                    }
                     self.currentDrawingLayer = nil
-                    currentDrawingLayer.removeFromSuperlayer()
                 }
                 
-                self.metalView.clear()
-                self.metalView.isHidden = true
-                
+                if self.tool == .marker {
+                    self.metalView.clear()
+                    self.metalView.isHidden = true
+                }
                 completion()
             }
         }
@@ -508,14 +562,41 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     fileprivate func cancelDrawing() {
         self.uncommitedElement = nil
         
+        if let currentDrawingRenderView = self.currentDrawingRenderView {
+            if case .eraser = self.tool {
+                currentDrawingRenderView.removeFromSuperview()
+                self.mask = nil
+                self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                self.currentDrawingViewContainer.backgroundColor = .clear
+            } else if case .blur = self.tool {
+                self.currentDrawingViewContainer.mask = nil
+                self.currentDrawingViewContainer.image = nil
+            } else {
+                currentDrawingRenderView.removeFromSuperview()
+            }
+            self.currentDrawingRenderView = nil
+        }
         if let currentDrawingLayer = self.currentDrawingLayer {
+            if self.tool == .eraser {
+                currentDrawingLayer.removeFromSuperlayer()
+                self.mask = nil
+                self.insertSubview(self.currentDrawingViewContainer, at: 0)
+                self.currentDrawingViewContainer.backgroundColor = .clear
+            } else if self.tool == .blur {
+                self.currentDrawingViewContainer.mask = nil
+                self.currentDrawingViewContainer.image = nil
+            } else {
+                currentDrawingLayer.removeFromSuperlayer()
+            }
             self.currentDrawingLayer = nil
-            currentDrawingLayer.removeFromSuperlayer()
         }
     }
         
-    fileprivate func finishDrawing() {
+    fileprivate func finishDrawing(synchronous: Bool = false) {
         let complete: (Bool) -> Void = { synchronous in
+            if let uncommitedElement = self.uncommitedElement, !uncommitedElement.isValid {
+                self.uncommitedElement = nil
+            }
             self.commit(interactive: true, synchronous: synchronous)
             
             self.redoStack.removeAll()
@@ -532,7 +613,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 complete(true)
             })
         } else {
-            complete(false)
+            complete(synchronous)
         }
     }
     
@@ -544,6 +625,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.elements.removeAll()
         self.undoStack.removeAll()
         self.redoStack.removeAll()
+        self.hasOpaqueData = false
         
         let snapshotView = UIImageView(image: self.drawingImage)
         snapshotView.frame = self.bounds
@@ -560,7 +642,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
         self.updateInternalState()
         
-        self.lassoView.reset()
+        self.updateBlurredImage()
+    }
+    
+    var canUndo: Bool {
+        return !self.undoStack.isEmpty
     }
     
     private func undo() {
@@ -573,16 +659,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             self.redoStack.append(.element(element))
             self.elements.removeAll(where: { $0.uuid == element.uuid })
             
-            let snapshotView = UIImageView(image: self.drawingImage)
-            snapshotView.frame = self.bounds
-            self.addSubview(snapshotView)
-            self.commit(reset: true)
-            
-            Queue.mainQueue().justDispatch {
-                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                    snapshotView?.removeFromSuperview()
-                })
+            UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
+                self.commit(reset: true)
             }
+            
+            self.updateBlurredImage()
         case let .addEntity(uuid):
             if let entityView = self.entitiesView?.getView(for: uuid) {
                 self.entitiesView?.remove(uuid: uuid, animated: true, announce: false)
@@ -592,7 +673,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             if let view = self.entitiesView?.add(entity, announce: false) {
                 view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 if !(entity is DrawingVectorEntity) {
-                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                    view.layer.animateScale(from: 0.1, to: entity.scale, duration: 0.2)
                 }
             }
             self.redoStack.append(.addEntity(entity.uuid))
@@ -615,8 +696,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 self.undoStack.append(.element(element))
                 self.uncommitedElement = element
                        
-                self.commit(reset: false)
+                UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
+                    self.commit(reset: false)
+                }
                 self.uncommitedElement = nil
+            
+                self.updateBlurredImage()
             case let .addEntity(uuid):
                 if let entityView = self.entitiesView?.getView(for: uuid) {
                     self.entitiesView?.remove(uuid: uuid, animated: true, announce: false)
@@ -626,7 +711,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 if let view = self.entitiesView?.add(entity, announce: false) {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     if !(entity is DrawingVectorEntity) {
-                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                        view.layer.animateScale(from: 0.1, to: entity.scale, duration: 0.2)
                     }
                 }
                 self.undoStack.append(.addEntity(entity.uuid))
@@ -651,71 +736,58 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.updateInternalState()
     }
     
-    private var preparredEraserImage: UIImage?
+    private var preparedBlurredImage: UIImage?
     
     func updateToolState(_ state: DrawingToolState) {
+        let previousTool = self.tool
         switch state {
         case let .pen(brushState):
-            self.drawingGesturePipeline?.mode = .polyline
+            self.drawingGesturePipeline?.mode = .direct
             self.tool = .pen
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = false
         case let .arrow(brushState):
-            self.drawingGesturePipeline?.mode = .polyline
-            self.tool = .pen
+            self.drawingGesturePipeline?.mode = .direct
+            self.tool = .arrow
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = true
         case let .marker(brushState):
             self.drawingGesturePipeline?.mode = .location
             self.tool = .marker
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = false
         case let .neon(brushState):
             self.drawingGesturePipeline?.mode = .smoothCurve
             self.tool = .neon
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = false
-        case let .eraser(eraserState):
-            self.tool = .eraser
-            self.drawingGesturePipeline?.mode = .smoothCurve
-            self.toolBrushSize = eraserState.size
         case let .blur(blurState):
             self.tool = .blur
-            self.drawingGesturePipeline?.mode = .smoothCurve
+            self.drawingGesturePipeline?.mode = .direct
             self.toolBrushSize = blurState.size
+        case let .eraser(eraserState):
+            self.tool = .eraser
+            self.drawingGesturePipeline?.mode = .direct
+            self.toolBrushSize = eraserState.size
         }
         
-        if [.eraser, .blur].contains(self.tool) {
+        if self.tool != previousTool {
+            self.updateBlurredImage()
+        }
+    }
+    
+    func updateBlurredImage() {
+        if case .blur = self.tool {
             Queue.concurrentDefaultQueue().async {
-                if let image = self.getFullImage(self.tool == .blur) {
-                    if case .eraser = self.tool {
-                        Queue.mainQueue().async {
-                            self.preparredEraserImage = image
-                        }
-                    } else {
-//                        let format = UIGraphicsImageRendererFormat()
-//                        format.scale = 1.0
-//                        let size = image.size.fitted(CGSize(width: 256, height: 256))
-//                        let renderer = UIGraphicsImageRenderer(size: size, format: format)
-//                        let scaledImage = renderer.image { _ in
-//                            image.draw(in: CGRect(origin: .zero, size: size))
-//                        }
-                        
-                        let blurredImage = blurredImage(image, radius: 60.0)
-                        Queue.mainQueue().async {
-                            self.preparredEraserImage = blurredImage
-                        }
+                if let image = self.getFullImage() {
+                    Queue.mainQueue().async {
+                        self.preparedBlurredImage = image
                     }
                 }
             }
         } else {
-            self.preparredEraserImage = nil
+            self.preparedBlurredImage = nil
         }
-        
     }
     
     func performAction(_ action: Action) {
@@ -733,15 +805,16 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
 
     private func updateInternalState() {
         self.stateUpdated(NavigationState(
-            canUndo: !self.elements.isEmpty || !self.undoStack.isEmpty,
+            canUndo: !self.undoStack.isEmpty,
             canRedo: !self.redoStack.isEmpty,
-            canClear: !self.elements.isEmpty || !(self.entitiesView?.entities.isEmpty ?? true),
+            canClear: !self.elements.isEmpty || self.hasOpaqueData || !(self.entitiesView?.entities.isEmpty ?? true),
             canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
             isDrawing: self.isDrawing
         ))
     }
     
     public func updateZoomScale(_ scale: CGFloat) {
+        self.cancelDrawing()
         self.zoomScale = scale
         self.updateInternalState()
     }
@@ -755,7 +828,21 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 drawingSize: self.imageSize,
                 color: self.toolColor,
                 lineWidth: self.toolBrushSize * scale,
-                hasArrow: self.toolHasArrow
+                hasArrow: false,
+                isEraser: false,
+                isBlur: false,
+                blurredImage: nil
+            )
+            element = penTool
+        case .arrow:
+            let penTool = PenTool(
+                drawingSize: self.imageSize,
+                color: self.toolColor,
+                lineWidth: self.toolBrushSize * scale,
+                hasArrow: true,
+                isEraser: false,
+                isBlur: false,
+                blurredImage: nil
             )
             element = penTool
         case .marker:
@@ -773,25 +860,27 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 lineWidth: self.toolBrushSize * scale
             )
         case .blur:
-            let blurTool = BlurTool(
+            let penTool = PenTool(
                 drawingSize: self.imageSize,
-                lineWidth: self.toolBrushSize * scale
+                color: self.toolColor,
+                lineWidth: self.toolBrushSize * scale,
+                hasArrow: false,
+                isEraser: false,
+                isBlur: true,
+                blurredImage: self.preparedBlurredImage
             )
-            blurTool.getFullImage = { [weak self] in
-                return self?.preparredEraserImage
-            }
-            element = blurTool
+            element = penTool
         case .eraser:
-            let eraserTool = EraserTool(
+            let penTool = PenTool(
                 drawingSize: self.imageSize,
-                lineWidth: self.toolBrushSize * scale
+                color: self.toolColor,
+                lineWidth: self.toolBrushSize * scale,
+                hasArrow: false,
+                isEraser: true,
+                isBlur: false,
+                blurredImage: nil
             )
-            eraserTool.getFullImage = { [weak self] in
-                return self?.preparredEraserImage
-            }
-            element = eraserTool
-        default:
-            element = nil
+            element = penTool
         }
         return element
     }
@@ -804,15 +893,16 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     func removeElements(_ elements: [UUID]) {
         self.elements.removeAll(where: { elements.contains($0.uuid) })
         self.commit(reset: true)
-        
-        self.lassoView.reset()
     }
     
     func setBrushSizePreview(_ size: CGFloat?) {
         let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
         if let size = size {
-            let minBrushSize = 2.0
-            let maxBrushSize = 28.0
+            let minLineWidth = max(1.0, max(self.frame.width, self.frame.height) * 0.002)
+            let maxLineWidth = max(10.0, max(self.frame.width, self.frame.height) * 0.07)
+            
+            let minBrushSize = minLineWidth
+            let maxBrushSize = maxLineWidth
             let brushSize = minBrushSize + (maxBrushSize - minBrushSize) * size
             
             self.brushSizePreviewLayer.transform = CATransform3DMakeScale(brushSize / 100.0, brushSize / 100.0, 1.0)
@@ -827,14 +917,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
         let scale = self.scale
         let transform = CGAffineTransformMakeScale(scale, scale)
-        self.currentDrawingView.transform = transform
-        self.currentDrawingView.frame = self.bounds
+        self.currentDrawingViewContainer.transform = transform
+        self.currentDrawingViewContainer.frame = self.bounds
         
         self.drawingGesturePipeline?.transform = CGAffineTransformMakeScale(1.0 / scale, 1.0 / scale)
-    
-        self.lassoView.transform = transform
-        self.lassoView.frame = self.bounds
-        
+            
         self.metalView.transform = transform
         self.metalView.frame = self.bounds
                         
@@ -842,7 +929,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
     
     public var isEmpty: Bool {
-        return self.elements.isEmpty
+        return self.elements.isEmpty && !self.hasOpaqueData
     }
     
     public var scale: CGFloat {
@@ -854,170 +941,21 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
 }
 
-class DrawingLassoView: UIView {
-    private var lassoBlackLayer: SimpleShapeLayer
-    private var lassoWhiteLayer: SimpleShapeLayer
+private class UndoSlice {
+    let uuid: UUID
     
-    var requestMenu: ([UUID], CGRect) -> Void = { _, _ in }
+//    let data: Data
+//    let bounds: CGRect
     
-    var panBegan: ([UUID]) -> Void = { _ in }
-    var panChanged: ([UUID], CGPoint) -> Void = { _, _ in }
-    var panEnded:  ([UUID], CGPoint) -> Void = { _, _ in }
+    let path: String
     
-    private var currentScale: CGFloat = 1.0
-    private var currentPoints: [CGPoint] = []
-    private var selectedElements: [UUID] = []
-    private var currentExpand: CGFloat = 0.0
-    
-    init(size: CGSize) {
-        self.lassoBlackLayer = SimpleShapeLayer()
-        self.lassoBlackLayer.frame = CGRect(origin: .zero, size: size)
-        
-        self.lassoWhiteLayer = SimpleShapeLayer()
-        self.lassoWhiteLayer.frame = CGRect(origin: .zero, size: size)
-        
-        super.init(frame: CGRect(origin: .zero, size: size))
-        
-        self.layer.addSublayer(self.lassoBlackLayer)
-        self.layer.addSublayer(self.lassoWhiteLayer)
-        
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
-        tapGestureRecognizer.numberOfTouchesRequired = 1
-        self.addGestureRecognizer(tapGestureRecognizer)
-        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.maximumNumberOfTouches = 1
-        self.addGestureRecognizer(panGestureRecognizer)
+    init(context: DrawingContext, bounds: CGRect) {
+        self.uuid = UUID()
+                
+        self.path = NSTemporaryDirectory() + "/drawing_\(uuid.hashValue).slice"
     }
     
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func setup(scale: CGFloat) {
-        self.isHidden = false
-        
-        let dash: CGFloat = 5.0 / scale
-        
-        self.lassoBlackLayer.opacity = 0.5
-        self.lassoBlackLayer.fillColor = UIColor.clear.cgColor
-        self.lassoBlackLayer.strokeColor = UIColor.black.cgColor
-        self.lassoBlackLayer.lineWidth = 2.0 / scale
-        self.lassoBlackLayer.lineJoin = .round
-        self.lassoBlackLayer.lineCap = .round
-        self.lassoBlackLayer.lineDashPattern = [dash as NSNumber, dash * 2.5 as NSNumber]
-        
-        let blackAnimation = CABasicAnimation(keyPath: "lineDashPhase")
-        blackAnimation.fromValue = dash * 3.5
-        blackAnimation.toValue = 0
-        blackAnimation.duration = 0.45
-        blackAnimation.repeatCount = .infinity
-        self.lassoBlackLayer.add(blackAnimation, forKey: "lineDashPhase")
-        
-        self.lassoWhiteLayer.opacity = 0.5
-        self.lassoWhiteLayer.fillColor = UIColor.clear.cgColor
-        self.lassoWhiteLayer.strokeColor = UIColor.white.cgColor
-        self.lassoWhiteLayer.lineWidth = 2.0 / scale
-        self.lassoWhiteLayer.lineJoin = .round
-        self.lassoWhiteLayer.lineCap = .round
-        self.lassoWhiteLayer.lineDashPattern = [dash as NSNumber, dash * 2.5 as NSNumber]
-        
-        let whiteAnimation = CABasicAnimation(keyPath: "lineDashPhase")
-        whiteAnimation.fromValue = dash * 3.5 + dash * 1.75
-        whiteAnimation.toValue = dash * 1.75
-        whiteAnimation.duration = 0.45
-        whiteAnimation.repeatCount = .infinity
-        self.lassoWhiteLayer.add(whiteAnimation, forKey: "lineDashPhase")
-    }
-    
-    @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let path = self.lassoBlackLayer.path else {
-            return
-        }
-        self.requestMenu(self.selectedElements, path.boundingBox)
-    }
-    
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-        let translation = gestureRecognizer.translation(in: self)
-        
-        switch gestureRecognizer.state {
-        case .began:
-            self.panBegan(self.selectedElements)
-        case .changed:
-            self.panChanged(self.selectedElements, translation)
-        case .ended:
-            self.panEnded(self.selectedElements, translation)
-        default:
-            break
-        }
-    }
-    
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if let path = self.lassoBlackLayer.path {
-            return path.contains(point)
-        } else {
-            return false
-        }
-    }
-    
-    func updatePath(_ bezierPath: BezierPath) {
-        self.lassoBlackLayer.path = bezierPath.path.cgPath
-        self.lassoWhiteLayer.path = bezierPath.path.cgPath
-    }
-    
-    func translate(_ offset: CGPoint) {
-        let updatedPoints = self.currentPoints.map { $0.offsetBy(offset) }
-        
-        self.apply(scale: self.currentScale, points: updatedPoints, selectedElements: self.selectedElements, expand: self.currentExpand)
-    }
-    
-    func apply(scale: CGFloat, points: [CGPoint], selectedElements: [UUID], expand: CGFloat) {
-        self.currentScale = scale
-        self.currentPoints = points
-        self.selectedElements = selectedElements
-        self.currentExpand = expand
-        
-        let dash: CGFloat = 5.0 / scale
-        
-        let hullPath = concaveHullPath(points: points)
-        let expandedPath = expandPath(hullPath, width: expand)
-        self.lassoBlackLayer.path = expandedPath
-        self.lassoWhiteLayer.path = expandedPath
-        
-        self.lassoBlackLayer.removeAllAnimations()
-        self.lassoWhiteLayer.removeAllAnimations()
-        
-        let blackAnimation = CABasicAnimation(keyPath: "lineDashPhase")
-        blackAnimation.fromValue = 0
-        blackAnimation.toValue = dash * 3.5
-        blackAnimation.duration = 0.45
-        blackAnimation.repeatCount = .infinity
-        self.lassoBlackLayer.add(blackAnimation, forKey: "lineDashPhase")
-        
-        self.lassoWhiteLayer.fillColor = UIColor.clear.cgColor
-        self.lassoWhiteLayer.strokeColor = UIColor.white.cgColor
-        self.lassoWhiteLayer.lineWidth = 2.0 / scale
-        self.lassoWhiteLayer.lineJoin = .round
-        self.lassoWhiteLayer.lineCap = .round
-        self.lassoWhiteLayer.lineDashPattern = [dash as NSNumber, dash * 2.5 as NSNumber]
-        
-        let whiteAnimation = CABasicAnimation(keyPath: "lineDashPhase")
-        whiteAnimation.fromValue = dash * 1.75
-        whiteAnimation.toValue = dash * 3.5 + dash * 1.75
-        whiteAnimation.duration = 0.45
-        whiteAnimation.repeatCount = .infinity
-        self.lassoWhiteLayer.add(whiteAnimation, forKey: "lineDashPhase")
-    }
-    
-    func reset() {
-        self.bounds = CGRect(origin: .zero, size: self.bounds.size)
-        
-        self.selectedElements = []
-        
-        self.isHidden = true
-        self.lassoBlackLayer.path = nil
-        self.lassoWhiteLayer.path = nil
-        self.lassoBlackLayer.removeAllAnimations()
-        self.lassoWhiteLayer.removeAllAnimations()
+    deinit {
+        try? FileManager.default.removeItem(atPath: self.path)
     }
 }

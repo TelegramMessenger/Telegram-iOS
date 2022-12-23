@@ -491,9 +491,9 @@
                         previewImage = thumbnailImage;
                     }
                 }
-                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:[NSURL fileURLWithPath:filePath] adjustments:videoAdjustments image:previewImage];
+                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:[NSURL fileURLWithPath:filePath] adjustments:videoAdjustments image:previewImage commit:commit];
             } else {
-                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
+                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage commit:commit];
             }
         };
         controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
@@ -504,7 +504,7 @@
             if (strongSelf == nil)
                 return;
             
-            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:asset adjustments:adjustments image:resultImage];
+            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:asset adjustments:adjustments image:resultImage commit:commit];
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {

@@ -639,9 +639,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         }
                         let uploadInterface = LegacyLiveUploadInterface(context: context)
                         let signal: SSignal
-                        if let asset = asset as? AVAsset {
-                            signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
-                        } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                        if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                             let durationSignal: SSignal = SSignal(generator: { subscriber in
                                 let disposable = (entityRenderer.duration()).start(next: { duration in
                                     subscriber.putNext(duration)
@@ -660,6 +658,8 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                 }
                             })
                            
+                        } else if let asset = asset as? AVAsset {
+                            signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
                         } else {
                             signal = SSignal.complete()
                         }

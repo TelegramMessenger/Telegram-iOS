@@ -47,9 +47,7 @@ enum DrawingTextAlignment: Equatable {
 enum DrawingTextFont: Equatable, Hashable {
     case sanFrancisco
     case newYork
-    case monospaced
-    case round
-    case custom(String, String)
+    case other(String, String)
     
     init(font: DrawingTextEntity.Font) {
         switch font {
@@ -57,12 +55,8 @@ enum DrawingTextFont: Equatable, Hashable {
             self = .sanFrancisco
         case .newYork:
             self = .newYork
-        case .monospaced:
-            self = .monospaced
-        case .round:
-            self = .round
-        case let .custom(font, name):
-            self = .custom(font, name)
+        case let .other(font, name):
+            self = .other(font, name)
         }
     }
     
@@ -72,12 +66,8 @@ enum DrawingTextFont: Equatable, Hashable {
             return .sanFrancisco
         case .newYork:
             return .newYork
-        case .monospaced:
-            return .monospaced
-        case .round:
-            return .round
-        case let .custom(font, name):
-            return .custom(font, name)
+        case let .other(font, name):
+            return .other(font, name)
         }
     }
     
@@ -87,27 +77,19 @@ enum DrawingTextFont: Equatable, Hashable {
             return "San Francisco"
         case .newYork:
             return "New York"
-        case .monospaced:
-            return "Monospaced"
-        case .round:
-            return "Rounded"
-        case let .custom(_, name):
+        case let .other(_, name):
             return name
         }
     }
     
-    var uiFont: UIFont {
+    func uiFont(size: CGFloat) -> UIFont {
         switch self {
         case .sanFrancisco:
-            return Font.semibold(13.0)
+            return Font.semibold(size)
         case .newYork:
-            return Font.with(size: 13.0, design: .serif, weight: .semibold)
-        case .monospaced:
-            return Font.with(size: 13.0, design: .monospace, weight: .semibold)
-        case .round:
-            return Font.with(size: 13.0, design: .round, weight: .semibold)
-        case let .custom(font, _):
-            return UIFont(name: font, size: 13.0) ?? Font.semibold(13.0)
+            return Font.with(size: size, design: .serif, weight: .semibold)
+        case let .other(font, _):
+            return UIFont(name: font, size: size) ?? Font.semibold(size)
         }
     }
 }
@@ -185,40 +167,24 @@ final class TextAlignmentComponent: Component {
 }
 
 final class TextFontComponent: Component {
-    let styleButton: AnyComponent<Empty>
-    let alignmentButton: AnyComponent<Empty>
-    
-    let values: [DrawingTextFont]
     let selectedValue: DrawingTextFont
     let tag: AnyObject?
-    let updated: (DrawingTextFont) -> Void
+    let tapped: () -> Void
     
-    init(styleButton: AnyComponent<Empty>, alignmentButton: AnyComponent<Empty>, values: [DrawingTextFont], selectedValue: DrawingTextFont, tag: AnyObject?, updated: @escaping (DrawingTextFont) -> Void) {
-        self.styleButton = styleButton
-        self.alignmentButton = alignmentButton
-        self.values = values
+    init(selectedValue: DrawingTextFont, tag: AnyObject?, tapped: @escaping () -> Void) {
         self.selectedValue = selectedValue
         self.tag = tag
-        self.updated = updated
+        self.tapped = tapped
     }
     
     static func == (lhs: TextFontComponent, rhs: TextFontComponent) -> Bool {
-        return lhs.styleButton == rhs.styleButton && lhs.alignmentButton == rhs.alignmentButton && lhs.values == rhs.values && lhs.selectedValue == rhs.selectedValue
+        return lhs.selectedValue == rhs.selectedValue
     }
     
     final class View: UIView, ComponentTaggedView {
-        private let styleButtonHost: ComponentView<Empty>
-        private let alignmentButtonHost: ComponentView<Empty>
-        
-        private var buttons: [DrawingTextFont: HighlightableButton] = [:]
-        private let scrollView = UIScrollView()
-        private let scrollMask = UIView()
-        private let maskLeft = SimpleGradientLayer()
-        private let maskCenter = SimpleLayer()
-        private let maskRight = SimpleGradientLayer()
-        
+        private var button = HighlightableButton()
+    
         private var component: TextFontComponent?
-        private var updated: (DrawingTextFont) -> Void = { _ in }
         
         public func matches(tag: Any) -> Bool {
             if let component = self.component, let componentTag = component.tag {
@@ -231,39 +197,9 @@ final class TextFontComponent: Component {
         }
         
         override init(frame: CGRect) {
-            if #available(iOS 11.0, *) {
-                self.scrollView.contentInsetAdjustmentBehavior = .never
-            }
-            self.scrollView.showsHorizontalScrollIndicator = false
-            self.scrollView.showsVerticalScrollIndicator = false
-            self.scrollView.decelerationRate = .fast
-            
-            self.styleButtonHost = ComponentView()
-            self.alignmentButtonHost = ComponentView()
-            
             super.init(frame: frame)
             
-            self.mask = self.scrollMask
-            
-            self.maskLeft.type = .axial
-            self.maskLeft.startPoint = CGPoint(x: 0.0, y: 0.5)
-            self.maskLeft.endPoint = CGPoint(x: 1.0, y: 0.5)
-            self.maskLeft.colors = [UIColor.white.withAlphaComponent(0.0).cgColor, UIColor.white.cgColor]
-            self.maskLeft.locations = [0.0, 1.0]
-            
-            self.maskCenter.backgroundColor = UIColor.white.cgColor
-            
-            self.maskRight.type = .axial
-            self.maskRight.startPoint = CGPoint(x: 0.0, y: 0.5)
-            self.maskRight.endPoint = CGPoint(x: 1.0, y: 0.5)
-            self.maskRight.colors = [UIColor.white.cgColor, UIColor.white.withAlphaComponent(0.0).cgColor]
-            self.maskRight.locations = [0.0, 1.0]
-            
-            self.scrollMask.layer.addSublayer(self.maskLeft)
-            self.scrollMask.layer.addSublayer(self.maskCenter)
-            self.scrollMask.layer.addSublayer(self.maskRight)
-            
-            self.addSubview(self.scrollView)
+            self.addSubview(self.button)
         }
         
         required init?(coder: NSCoder) {
@@ -271,160 +207,26 @@ final class TextFontComponent: Component {
         }
         
         @objc private func pressed(_ sender: HighlightableButton) {
-            for (font, button) in self.buttons {
-                if button === sender {
-                    self.updated(font)
-                    break
-                }
-            }
-        }
-        
-        func animateIn() {
-            var delay: Double = 0.0
-            
-            if let view = self.styleButtonHost.view {
-                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
-                delay += 0.02
-            }
-            
-            if let view = self.alignmentButtonHost.view {
-                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
-                view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, delay: delay)
-                delay += 0.02
-            }
-            
             if let component = self.component {
-                for value in component.values {
-                    if let view = self.buttons[value] {
-                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
-                        view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, delay: delay)
-                        delay += 0.02
-                    }
-                }
+                component.tapped()
             }
         }
-        
-        func animateOut(completion: @escaping () -> Void) {
-            if let view = self.styleButtonHost.view {
-                view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-            }
-            
-            if let view = self.alignmentButtonHost.view {
-                view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-            }
-            
-            if let component = self.component {
-                for value in component.values {
-                    if let view = self.buttons[value] {
-                        view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                    }
-                }
-            }
-            
-            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                completion()
-            })
-        }
-        
-        private var previousValue: DrawingTextFont?
+                        
         func update(component: TextFontComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
-            self.updated = component.updated
             
-            var contentWidth: CGFloat = 10.0
+            let value = component.selectedValue
             
-            let styleSize = self.styleButtonHost.update(
-                transition: transition,
-                component: component.styleButton,
-                environment: {},
-                containerSize: CGSize(width: 30.0, height: 30.0)
-            )
-            if let view = self.styleButtonHost.view {
-                if view.superview == nil {
-                    self.scrollView.addSubview(view)
-                }
-                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: styleSize)
-            }
+            self.button.setTitle(value.title, for: .normal)
+            self.button.titleLabel?.font = value.uiFont(size: 13.0)
+            self.button.sizeToFit()
+            self.button.frame = CGRect(origin: .zero, size: CGSize(width: self.button.frame.width + 16.0, height: 30.0))
+            self.button.layer.cornerRadius = 11.0
+            self.button.layer.borderWidth = 1.0 - UIScreenPixel
+            self.button.layer.borderColor = UIColor.white.cgColor
+            self.button.addTarget(self, action: #selector(self.pressed(_:)), for: .touchUpInside)
             
-            contentWidth += 44.0
-            
-            let alignmentSize = self.alignmentButtonHost.update(
-                transition: transition,
-                component: component.alignmentButton,
-                environment: {},
-                containerSize: CGSize(width: 30.0, height: 30.0)
-            )
-            if let view = self.alignmentButtonHost.view {
-                if view.superview == nil {
-                    self.scrollView.addSubview(view)
-                }
-                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -6.0 - UIScreenPixel), size: alignmentSize)
-            }
-            
-            contentWidth += 36.0
-            
-            var validIds = Set<DrawingTextFont>()
-            for value in component.values {
-                validIds.insert(value)
-                
-                contentWidth += 12.0
-                let button: HighlightableButton
-                if let current = self.buttons[value] {
-                    button = current
-                } else {
-                    button = HighlightableButton()
-                    button.setTitle(value.title, for: .normal)
-                    button.titleLabel?.font = value.uiFont
-                    button.sizeToFit()
-                    button.frame = CGRect(origin: .zero, size: CGSize(width: button.frame.width + 16.0, height: 30.0))
-                    button.layer.cornerRadius = 11.0
-                    button.addTarget(self, action: #selector(self.pressed(_:)), for: .touchUpInside)
-                    
-                    self.buttons[value] = button
-                    
-                    self.scrollView.addSubview(button)
-                }
-
-                if value == component.selectedValue {
-                    button.layer.borderWidth = 1.0 - UIScreenPixel
-                    button.layer.borderColor = UIColor.white.cgColor
-                } else {
-                    button.layer.borderWidth = UIScreenPixel
-                    button.layer.borderColor = UIColor.white.withAlphaComponent(0.5).cgColor
-                }
-                
-                button.frame = CGRect(origin: CGPoint(x: contentWidth, y: 0.0), size: button.frame.size)
-                contentWidth += button.frame.width
-            }
-            contentWidth += 12.0
-            
-            for (font, button) in self.buttons {
-                if !validIds.contains(font) {
-                    button.removeFromSuperview()
-                    self.buttons[font] = nil
-                }
-            }
-            
-            if self.scrollView.contentSize.width != contentWidth {
-                self.scrollView.contentSize = CGSize(width: contentWidth, height: 30.0)
-            }
-            self.scrollView.frame = CGRect(origin: .zero, size: availableSize)
-            
-            self.scrollMask.frame = CGRect(origin: .zero, size: availableSize)
-            self.maskLeft.frame = CGRect(origin: .zero, size: CGSize(width: 12.0, height: 30.0))
-            self.maskCenter.frame = CGRect(origin: CGPoint(x: 12.0, y: 0.0), size: CGSize(width: availableSize.width - 24.0, height: 30.0))
-            self.maskRight.frame = CGRect(origin: CGPoint(x: availableSize.width - 12.0, y: 0.0), size: CGSize(width: 12.0, height: 30.0))
-            
-            if component.selectedValue != self.previousValue {
-                self.previousValue = component.selectedValue
-                
-                if let button = self.buttons[component.selectedValue] {
-                    self.scrollView.scrollRectToVisible(button.frame.insetBy(dx: -48.0, dy: 0.0), animated: true)
-                }
-            }
-            
-            return availableSize
+            return CGSize(width: self.button.frame.width, height: availableSize.height)
         }
     }
     
@@ -444,6 +246,7 @@ final class TextSettingsComponent: CombinedComponent {
     let font: DrawingTextFont
     let isEmojiKeyboard: Bool
     let tag: AnyObject?
+    let fontTag: AnyObject?
 
     let presentColorPicker: () -> Void
     let presentFastColorPicker: (GenericComponentViewTag) -> Void
@@ -451,7 +254,7 @@ final class TextSettingsComponent: CombinedComponent {
     let dismissFastColorPicker: () -> Void
     let toggleStyle: () -> Void
     let toggleAlignment: () -> Void
-    let updateFont: (DrawingTextFont) -> Void
+    let presentFontPicker: () -> Void
     let toggleKeyboard: (() -> Void)?
     
     init(
@@ -461,13 +264,14 @@ final class TextSettingsComponent: CombinedComponent {
         font: DrawingTextFont,
         isEmojiKeyboard: Bool,
         tag: AnyObject?,
+        fontTag: AnyObject?,
         presentColorPicker: @escaping () -> Void = {},
         presentFastColorPicker: @escaping (GenericComponentViewTag) -> Void = { _ in },
         updateFastColorPickerPan: @escaping (CGPoint) -> Void = { _ in },
         dismissFastColorPicker: @escaping () -> Void = {},
         toggleStyle: @escaping () -> Void,
         toggleAlignment: @escaping () -> Void,
-        updateFont: @escaping (DrawingTextFont) -> Void,
+        presentFontPicker: @escaping () -> Void,
         toggleKeyboard: (() -> Void)?
     ) {
         self.color = color
@@ -476,13 +280,14 @@ final class TextSettingsComponent: CombinedComponent {
         self.font = font
         self.isEmojiKeyboard = isEmojiKeyboard
         self.tag = tag
+        self.fontTag = fontTag
         self.presentColorPicker = presentColorPicker
         self.presentFastColorPicker = presentFastColorPicker
         self.updateFastColorPickerPan = updateFastColorPickerPan
         self.dismissFastColorPicker = dismissFastColorPicker
         self.toggleStyle = toggleStyle
         self.toggleAlignment = toggleAlignment
-        self.updateFont = updateFont
+        self.presentFontPicker = presentFontPicker
         self.toggleKeyboard = toggleKeyboard
     }
     
@@ -540,6 +345,46 @@ final class TextSettingsComponent: CombinedComponent {
         }
     }
     
+    class View: UIView, ComponentTaggedView {
+        var componentTag: AnyObject?
+        
+        public func matches(tag: Any) -> Bool {
+            if let componentTag = self.componentTag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        func animateIn() {
+            var delay: Double = 0.0
+            for view in self.subviews {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
+                view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, delay: delay)
+                delay += 0.02
+            }
+        }
+        
+        func animateOut(completion: @escaping () -> Void) {
+            var isFirst = true
+            for view in self.subviews {
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: isFirst ? { _ in
+                    completion()
+                } : nil)
+                view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                isFirst = false
+            }
+        }
+    }
+    
+    func makeView() -> View {
+        let view = View()
+        view.componentTag = self.tag
+        return view
+    }
+    
     func makeState() -> State {
         State()
     }
@@ -548,6 +393,8 @@ final class TextSettingsComponent: CombinedComponent {
         let colorButton = Child(ColorSwatchComponent.self)
         let colorButtonTag = GenericComponentViewTag()
         
+        let alignmentButton = Child(Button.self)
+        let styleButton = Child(Button.self)
         let keyboardButton = Child(Button.self)
         let font = Child(TextFontComponent.self)
         
@@ -557,7 +404,6 @@ final class TextSettingsComponent: CombinedComponent {
             
             let toggleStyle = component.toggleStyle
             let toggleAlignment = component.toggleAlignment
-            let updateFont = component.updateFont
             
             var offset: CGFloat = 6.0
             if let color = component.color {
@@ -588,9 +434,9 @@ final class TextSettingsComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(colorButton
-                    .position(CGPoint(x: colorButton.size.width / 2.0, y: context.availableSize.height / 2.0))
+                    .position(CGPoint(x: colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height / 2.0))
                 )
-                offset += 32.0
+                offset += 42.0
             }
                         
             let styleImage: UIImage
@@ -610,55 +456,53 @@ final class TextSettingsComponent: CombinedComponent {
                 fontAvailableWidth -= 72.0
             }
             
-            var fonts: [DrawingTextFont] = [
-                .sanFrancisco,
-                .newYork,
-                .monospaced,
-                .round
-            ]
-            if case .custom = component.font {
-                fonts.insert(component.font, at: 0)
-            }
-                        
-            let font = font.update(
-                component: TextFontComponent(
-                    styleButton: AnyComponent(
-                        Button(
-                            content: AnyComponent(
-                                Image(
-                                    image: styleImage
-                                )
-                            ),
-                            action: {
-                                toggleStyle()
-                            }
-                        ).minSize(CGSize(width: 44.0, height: 44.0))
+            let styleButton = styleButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Image(
+                            image: styleImage
+                        )
                     ),
-                    alignmentButton: AnyComponent(
-                        Button(
-                            content: AnyComponent(
-                                TextAlignmentComponent(
-                                    alignment: component.alignment
-                                )
-                            ),
-                            action: {
-                                toggleAlignment()
-                            }
-                        ).minSize(CGSize(width: 44.0, height: 44.0))
-                    ),
-                    values: fonts,
-                    selectedValue: component.font,
-                    tag: component.tag,
-                    updated: { font in
-                        updateFont(font)
+                    action: {
+                        toggleStyle()
                     }
-                ),
-                availableSize: CGSize(width: fontAvailableWidth, height: 30.0),
+                ).minSize(CGSize(width: 44.0, height: 44.0)),
+                availableSize: CGSize(width: 30.0, height: 30.0),
                 transition: .easeInOut(duration: 0.2)
             )
-            context.add(font
-                .position(CGPoint(x: offset + font.size.width / 2.0, y: context.availableSize.height / 2.0))
+            context.add(styleButton
+                .position(CGPoint(x: offset + styleButton.size.width / 2.0, y: context.availableSize.height / 2.0))
+                .update(Transition.Update { _, view, transition in
+                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
+                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
+                            snapshot?.removeFromSuperview()
+                        })
+                        snapshot.frame = view.frame
+                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                        view.superview?.addSubview(snapshot)
+                    }
+                })
             )
+            offset += 44.0
+            
+            let alignmentButton = alignmentButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        TextAlignmentComponent(
+                            alignment: component.alignment
+                        )
+                    ),
+                    action: {
+                        toggleAlignment()
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)),
+                availableSize: context.availableSize,
+                transition: .easeInOut(duration: 0.2)
+            )
+            context.add(alignmentButton
+                .position(CGPoint(x: offset + alignmentButton.size.width / 2.0, y: context.availableSize.height / 2.0 + 1.0 - UIScreenPixel))
+            )
+            offset += 45.0
             
             if let toggleKeyboard = component.toggleKeyboard {
                 let keyboardButton = keyboardButton.update(
@@ -675,13 +519,28 @@ final class TextSettingsComponent: CombinedComponent {
                         }
                     ).minSize(CGSize(width: 44.0, height: 44.0)),
                     availableSize: CGSize(width: 32.0, height: 32.0),
-                    transition: .easeInOut(duration: 0.2)
+                    transition: .easeInOut(duration: 0.15)
                 )
                 context.add(keyboardButton
-                    .position(CGPoint(x: context.availableSize.width - keyboardButton.size.width / 2.0, y: context.availableSize.height / 2.0))
+                    .position(CGPoint(x: offset + keyboardButton.size.width / 2.0 + (component.isEmojiKeyboard ? 3.0 : 0.0), y: context.availableSize.height / 2.0))
                 )
             }
-                        
+                 
+            let font = font.update(
+                component: TextFontComponent(
+                    selectedValue: component.font,
+                    tag: component.fontTag,
+                    tapped: {
+                        component.presentFontPicker()
+                    }
+                ),
+                availableSize: CGSize(width: fontAvailableWidth, height: 30.0),
+                transition: .easeInOut(duration: 0.2)
+            )
+            context.add(font
+                .position(CGPoint(x: context.availableSize.width - font.size.width / 2.0 - 16.0, y: context.availableSize.height / 2.0))
+            )
+                         
             return context.availableSize
         }
     }
@@ -760,6 +619,9 @@ final class TextSizeSliderComponent: Component {
         init() {
             super.init(frame: CGRect())
 
+            self.layer.allowsGroupOpacity = true
+            self.isExclusiveTouch = true
+            
             let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
             pressGestureRecognizer.minimumPressDuration = 0.01
             pressGestureRecognizer.delegate = self

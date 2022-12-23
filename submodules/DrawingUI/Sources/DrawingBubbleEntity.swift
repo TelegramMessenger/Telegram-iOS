@@ -39,6 +39,8 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         return self.position
     }
     
+    public var scale: CGFloat = 1.0
+    
     public var renderImage: UIImage?
     
     init(drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
@@ -174,6 +176,11 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         return max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
     }
     
+    fileprivate var minimumSize: CGSize {
+        let minSize = min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height)
+        return CGSize(width: minSize * 0.1, height: minSize * 0.1)
+    }
+    
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         let lineWidth = self.maxLineWidth * 0.5
         let expandedBounds = self.bounds.insetBy(dx: -lineWidth, dy: -lineWidth)
@@ -285,7 +292,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         
         self.snapTool.onSnapYUpdated = { [weak self] snapped in
             if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
+                entityView.onSnapToYAxis(snapped)
             }
         }
     }
@@ -312,7 +319,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
     
     private var currentHandle: CALayer?
     @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingBubbleEntity else {
+        guard let entityView = self.entityView as? DrawingBubbleEntityView, let entity = entityView.entity as? DrawingBubbleEntity else {
             return
         }
         let location = gestureRecognizer.location(in: self)
@@ -338,37 +345,39 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             var updatedPosition = entity.position
             var updatedTailPosition = entity.tailPosition
             
+            let minimumSize = entityView.minimumSize
+            
             if self.currentHandle === self.leftHandle {
-                updatedSize.width -= delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
                 updatedPosition.x -= delta.x * -0.5
             } else if self.currentHandle === self.rightHandle {
-                updatedSize.width += delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width + delta.x)
                 updatedPosition.x += delta.x * 0.5
             } else if self.currentHandle === self.topHandle {
-                updatedSize.height -= delta.y
+                updatedSize.height = max(minimumSize.height, updatedSize.height - delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.bottomHandle {
-                updatedSize.height += delta.y
+                updatedSize.height = max(minimumSize.height, updatedSize.height + delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.topLeftHandle {
-                updatedSize.width -= delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
                 updatedPosition.x -= delta.x * -0.5
-                updatedSize.height -= delta.y
+                updatedSize.height =  max(minimumSize.height, updatedSize.height - delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.topRightHandle {
-                updatedSize.width += delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width + delta.x)
                 updatedPosition.x += delta.x * 0.5
-                updatedSize.height -= delta.y
+                updatedSize.height =  max(minimumSize.height, updatedSize.height - delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.bottomLeftHandle {
-                updatedSize.width -= delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
                 updatedPosition.x -= delta.x * -0.5
-                updatedSize.height += delta.y
+                updatedSize.height = max(minimumSize.height, updatedSize.height + delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.bottomRightHandle {
-                updatedSize.width += delta.x
+                updatedSize.width = max(minimumSize.width, updatedSize.width + delta.x)
                 updatedPosition.x += delta.x * 0.5
-                updatedSize.height += delta.y
+                updatedSize.height = max(minimumSize.height, updatedSize.height + delta.y)
                 updatedPosition.y += delta.y * 0.5
             } else if self.currentHandle === self.tailHandle {
                 updatedTailPosition = CGPoint(x: max(0.0, min(1.0, updatedTailPosition.x + delta.x / updatedSize.width)), y: max(0.0, min(updatedSize.height, updatedTailPosition.y + delta.y)))
@@ -382,7 +391,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             entity.size = updatedSize
             entity.position = updatedPosition
             entity.tailPosition = updatedTailPosition
-            entityView.update()
+            entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended:

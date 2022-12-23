@@ -127,6 +127,12 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.iconDisposable?.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.isExclusiveTouch = true
+    }
+    
     @objc private func pressed() {
         guard let controller = self.getController() else {
             return

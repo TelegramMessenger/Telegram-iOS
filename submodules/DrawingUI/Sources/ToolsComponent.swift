@@ -17,6 +17,7 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
     var isVisible = false
     private var currentSize: CGFloat?
     
+    private let shadow: SimpleLayer
     private let tip: UIImageView
     private let background: SimpleLayer
     private let band: SimpleGradientLayer
@@ -27,6 +28,8 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
     
     init(type: DrawingToolState.Key) {
         self.type = type
+        self.shadow = SimpleLayer()
+        
         self.tip = UIImageView()
         self.tip.isUserInteractionEnabled = false
         
@@ -41,6 +44,7 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
         
         let backgroundImage: UIImage?
         let tipImage: UIImage?
+        let shadowImage: UIImage?
         
         var tipAbove = true
         var hasBand = true
@@ -49,38 +53,48 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
         case .pen:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolPen")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolPenTip")?.withRenderingMode(.alwaysTemplate)
+            shadowImage = UIImage(bundleImageName: "Media Editor/ToolPenShadow")
         case .arrow:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolArrow")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolArrowTip")?.withRenderingMode(.alwaysTemplate)
+            shadowImage = UIImage(bundleImageName: "Media Editor/ToolArrowShadow")
         case .marker:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolMarker")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolMarkerTip")?.withRenderingMode(.alwaysTemplate)
             tipAbove = false
+            shadowImage = UIImage(bundleImageName: "Media Editor/ToolMarkerShadow")
         case .neon:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolNeon")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolNeonTip")?.withRenderingMode(.alwaysTemplate)
             tipAbove = false
+            shadowImage = UIImage(bundleImageName: "Media Editor/ToolNeonShadow")
         case .eraser:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolEraser")
             tipImage = nil
             hasBand = false
+            shadowImage = UIImage(bundleImageName: "Media Editor/ToolEraserShadow")
         case .blur:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolBlur")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolBlurTip")
             tipAbove = false
             hasBand = false
+            shadowImage = UIImage(bundleImageName: "Media Editor/ToolBlurShadow")
         }
         
         self.tip.image = tipImage
         self.background.contents = backgroundImage?.cgImage
+        self.shadow.contents = shadowImage?.cgImage
         
         super.init(frame: CGRect(origin: .zero, size: toolSize))
         
         self.tip.frame = CGRect(origin: .zero, size: toolSize)
+        self.shadow.frame = CGRect(origin: .zero, size: toolSize).insetBy(dx: -4.0, dy: 0.0)
         self.background.frame = CGRect(origin: .zero, size: toolSize)
         
         self.band.frame = CGRect(origin: CGPoint(x: 3.0, y: 64.0), size: CGSize(width: toolSize.width - 6.0, height: toolSize.width - 16.0))
         self.band.anchorPoint = CGPoint(x: 0.5, y: 0.0)
+        
+        self.layer.addSublayer(self.shadow)
         
         if tipAbove {
             self.layer.addSublayer(self.background)
@@ -107,7 +121,7 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer is UIPanGestureRecognizer {
-            if self.isSelected && !self.isToolFocused {
+            if self.isSelected {
                 return true
             } else {
                 return false
@@ -164,11 +178,11 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
     }
     
     func update(state: DrawingToolState) {
+        self.currentSize = state.size
+        
         if let _ = self.tip.image {
             let color = state.color?.toUIColor()
             self.tip.tintColor = color
-            
-            self.currentSize = state.size
             
             guard let color = color else {
                 return
@@ -234,7 +248,7 @@ final class ToolsComponent: Component {
     }
     
     public final class View: UIView, ComponentTaggedView {
-        private let toolViews: [ToolView]
+        private var toolViews: [ToolView] = []
         private let maskImageView: UIImageView
         
         private var isToolFocused: Bool?
@@ -251,20 +265,12 @@ final class ToolsComponent: Component {
         }
         
         override init(frame: CGRect) {
-            var toolViews: [ToolView] = []
-            for type in DrawingToolState.Key.allCases {
-                toolViews.append(ToolView(type: type))
-            }
-            self.toolViews = toolViews
-            
             self.maskImageView = UIImageView()
             self.maskImageView.image = generateGradientImage(size: CGSize(width: 1.0, height: 120.0), colors: [UIColor.white, UIColor.white, UIColor.white.withAlphaComponent(0.0)], locations: [0.0, 0.88, 1.0], direction: .vertical)
             
             super.init(frame: frame)
             
             self.mask = self.maskImageView
-            
-            toolViews.forEach { self.addSubview($0) }
         }
         
         required init?(coder: NSCoder) {
@@ -303,6 +309,18 @@ final class ToolsComponent: Component {
         
         func update(component: ToolsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
+            
+            if self.toolViews.isEmpty {
+                var toolViews: [ToolView] = []
+                for type in DrawingToolState.Key.allCases {
+                    if component.state.tools.contains(where: { $0.key == type }) {
+                        let toolView = ToolView(type: type)
+                        toolViews.append(toolView)
+                        self.addSubview(toolView)
+                    }
+                }
+                self.toolViews = toolViews
+            }
             
             let wasFocused = self.isToolFocused
             
@@ -452,64 +470,6 @@ final class ToolsComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
-
-final class BrushButtonContent: CombinedComponent {
-    let title: String
-    let image: UIImage
-  
-    init(
-        title: String,
-        image: UIImage
-    ) {
-        self.title = title
-        self.image = image
-    }
-    
-    static func ==(lhs: BrushButtonContent, rhs: BrushButtonContent) -> Bool {
-        if lhs.title != rhs.title {
-            return false
-        }
-        if lhs.image !== rhs.image {
-            return false
-        }
-        return true
-    }
-    
-    static var body: Body {
-        let title = Child(Text.self)
-        let image = Child(Image.self)
-        
-        return { context in
-            let component = context.component
-            
-            let title = title.update(
-                component: Text(
-                    text: component.title,
-                    font: Font.regular(17.0),
-                    color: .white
-                ),
-                availableSize: context.availableSize,
-                transition: .immediate
-            )
-            
-            let image = image.update(
-                component: Image(image: component.image),
-                availableSize: CGSize(width: 24.0, height: 24.0),
-                transition: .immediate
-            )
-            context.add(image
-                .position(CGPoint(x: context.availableSize.width - image.size.width / 2.0, y: context.availableSize.height / 2.0))
-            )
-            
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width - image.size.width - title.size.width / 2.0, y: context.availableSize.height / 2.0))
-            )
-          
-            return context.availableSize
-        }
     }
 }
 

@@ -247,6 +247,14 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                             return nil
                                                         }
                                                     }
+                                                } else if let customPeerPhotoMode, case .custom = customPeerPhotoMode {
+                                                    transaction.updatePeerCachedData(peerIds: Set([peer.id])) { peerId, cachedPeerData in
+                                                        if let cachedPeerData = cachedPeerData as? CachedUserData {
+                                                            return cachedPeerData.withUpdatedPersonalPhoto(.known(image))
+                                                        } else {
+                                                            return nil
+                                                        }
+                                                    }
                                                 }
                                             }
                                             return (.complete(representations), photoResult.resource, videoResult?.resource)
@@ -372,6 +380,14 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                 transaction.updatePeerCachedData(peerIds: Set([peer.id])) { peerId, cachedPeerData in
                                     if let cachedPeerData = cachedPeerData as? CachedUserData {
                                         return cachedPeerData.withUpdatedFallbackPhoto(.known(nil))
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            } else if let customPeerPhotoMode, case .custom = customPeerPhotoMode {
+                                transaction.updatePeerCachedData(peerIds: Set([peer.id])) { peerId, cachedPeerData in
+                                    if let cachedPeerData = cachedPeerData as? CachedUserData {
+                                        return cachedPeerData.withUpdatedPersonalPhoto(.known(nil))
                                     } else {
                                         return nil
                                     }

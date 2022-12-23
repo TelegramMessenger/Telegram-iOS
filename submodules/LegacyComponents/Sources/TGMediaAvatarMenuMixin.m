@@ -169,8 +169,7 @@
             });
         } else {
             if (strongSelf.didFinishWithVideo != nil)
-                strongSelf.didFinishWithVideo(image,
-                                              asset, adjustments);
+                strongSelf.didFinishWithVideo(image, asset, adjustments);
             
             commit();
             
@@ -473,16 +472,17 @@
             controller.stickersContext = _stickersContext;
             controller.forum = _forum;
             controller.isSuggesting = _isSuggesting;
-            controller.avatarCompletionBlock = ^(UIImage *resultImage)
-            {
+            controller.avatarCompletionBlock = ^(UIImage *resultImage, void(^commit)(void)) {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
-                                
+          
                 if (strongSelf.willFinishWithImage != nil) {
                     strongSelf.willFinishWithImage(resultImage, ^{
                         if (strongSelf.didFinishWithImage != nil)
                             strongSelf.didFinishWithImage(resultImage);
+                        
+                        commit();
                         
                         __strong TGMediaAssetsController *strongController = weakController;
                         if (strongController != nil && strongController.dismissalBlock != nil)
@@ -492,22 +492,40 @@
                     if (strongSelf.didFinishWithImage != nil)
                         strongSelf.didFinishWithImage(resultImage);
                     
+                    commit();
+                    
                     __strong TGMediaAssetsController *strongController = weakController;
                     if (strongController != nil && strongController.dismissalBlock != nil)
                         strongController.dismissalBlock();
                 }
             };
-            controller.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
+            controller.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments, void(^commit)(void)) {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
-                if (strongSelf.didFinishWithVideo != nil)
-                    strongSelf.didFinishWithVideo(image, asset, adjustments);
                 
-                __strong TGMediaAssetsController *strongController = weakController;
-                if (strongController != nil && strongController.dismissalBlock != nil)
-                    strongController.dismissalBlock();
+                if (strongSelf.willFinishWithVideo != nil) {
+                    strongSelf.willFinishWithVideo(image, ^{
+                        if (strongSelf.didFinishWithVideo != nil)
+                            strongSelf.didFinishWithVideo(image, asset, adjustments);
+                        
+                        commit();
+                        
+                        __strong TGMediaAssetsController *strongController = weakController;
+                        if (strongController != nil && strongController.dismissalBlock != nil)
+                            strongController.dismissalBlock();
+                    });
+                } else {
+                    if (strongSelf.didFinishWithVideo != nil)
+                        strongSelf.didFinishWithVideo(image, asset, adjustments);
+                    
+                    commit();
+                    
+                    __strong TGMediaAssetsController *strongController = weakController;
+                    if (strongController != nil && strongController.dismissalBlock != nil)
+                        strongController.dismissalBlock();
+                }
             };
             return presentBlock(controller);
         };

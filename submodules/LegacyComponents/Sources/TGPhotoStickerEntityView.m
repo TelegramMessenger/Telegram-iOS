@@ -32,8 +32,6 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 
 @interface TGPhotoStickerEntityView ()
 {
-    UIView<TGPhotoPaintStickerRenderView> *_stickerView;
-
     id _document;
     bool _animated;
     bool _mirrored;
@@ -53,17 +51,7 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
         _entityUUID = entity.uuid;
         _baseSize = entity.baseSize;
         _mirrored = entity.isMirrored;
-        
-        _stickerView = [context stickerViewForDocument:entity.document];
-        
-        __weak TGPhotoStickerEntityView *weakSelf = self;
-        _stickerView.started = ^(double duration) {
-            __strong TGPhotoStickerEntityView *strongSelf = weakSelf;
-            if (strongSelf != nil && strongSelf.started != nil)
-                strongSelf.started(duration);
-        };
-        [self addSubview:_stickerView];
-        
+                        
         _document = entity.document;
         _animated = entity.animated;
         
@@ -71,14 +59,9 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
         
         CGSize displaySize = [self fittedSizeForSize:imageSize maxSize:CGSizeMake(512.0f, 512.0f)];
     
-        _stickerView.frame = CGRectMake(CGFloor((self.frame.size.width - displaySize.width) / 2.0f), CGFloor((self.frame.size.height - displaySize.height) / 2.0f), displaySize.width, displaySize.height);
-        
         CGFloat scale = displaySize.width > displaySize.height ? self.frame.size.width / displaySize.width : self.frame.size.height / displaySize.height;
         _defaultTransform = CATransform3DMakeScale(scale, scale, 1.0f);
-        _stickerView.layer.transform = _defaultTransform;
         
-        if (_mirrored)
-            _stickerView.layer.transform = CATransform3DRotate(_defaultTransform, M_PI, 0, 1, 0);
     }
     return self;
 }
@@ -127,45 +110,17 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 
 - (bool)precisePointInside:(CGPoint)point
 {
-    CGPoint imagePoint = [_stickerView convertPoint:point fromView:self];
-    if (![_stickerView pointInside:[_stickerView convertPoint:point fromView:self] withEvent:nil])
-        return false;
-    
-    return [_stickerView isOpaqueAtPoint:imagePoint];
+    return false;
 }
 
 - (void)mirror
 {
-    _mirrored = !_mirrored;
     
-    if (iosMajorVersion() >= 7)
-    {
-        CATransform3D startTransform = _defaultTransform;
-        if (!_mirrored)
-        {
-            startTransform = _stickerView.layer.transform;
-        }
-        CATransform3D targetTransform = CATransform3DRotate(_defaultTransform, 0, 0, 1, 0);
-        if (_mirrored)
-        {
-            targetTransform = CATransform3DRotate(_defaultTransform, M_PI, 0, 1, 0);
-            targetTransform.m34 = -1.0f / _stickerView.frame.size.width;
-        }
-        
-        [UIView animateWithDuration:0.25 animations:^
-        {
-            _stickerView.layer.transform = targetTransform;
-        }];
-    }
-    else
-    {
-        _stickerView.layer.transform = CATransform3DRotate(_defaultTransform, _mirrored ? M_PI : 0, 0, 1, 0);
-    }
 }
 
 - (UIImage *)image
 {
-    return [_stickerView image];
+    return nil;
 }
 
 - (TGPhotoPaintEntitySelectionView *)createSelectionView
@@ -182,35 +137,35 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 }
 
 - (void)updateVisibility:(bool)visible {
-    [_stickerView setIsVisible:visible];
+    
 }
 
 - (void)seekTo:(double)timestamp {
-    [_stickerView seekTo:timestamp];
+    
 }
 
 - (void)play {
-    [_stickerView play];
+    
 }
 
 - (void)pause {
-    [_stickerView pause];
+    
 }
 
 - (void)resetToStart {
-    [_stickerView resetToStart];
+    
 }
 
 - (void)playFromFrame:(NSInteger)frameIndex {
-    [_stickerView playFromFrame:frameIndex];
+    
 }
 
 - (void)copyStickerView:(TGPhotoStickerEntityView *)view {
-    [_stickerView copyStickerView:view->_stickerView];
+    
 }
 
 - (int64_t)documentId {
-    return [_stickerView documentId];
+    return 0;
 }
 
 @end

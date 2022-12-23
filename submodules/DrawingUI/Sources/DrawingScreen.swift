@@ -18,6 +18,7 @@ import ContextUI
 import ChatEntityKeyboardInputNode
 import EntityKeyboard
 import TelegramUIPreferences
+import FastBlur
 
 enum DrawingToolState: Equatable, Codable {
     private enum CodingKeys: String, CodingKey {
@@ -31,8 +32,8 @@ enum DrawingToolState: Equatable, Codable {
         case arrow = 1
         case marker = 2
         case neon = 3
-        case eraser = 4
-        case blur = 5
+        case blur = 4
+        case eraser = 5
     }
     
     struct BrushState: Equatable, Codable {
@@ -100,8 +101,8 @@ enum DrawingToolState: Equatable, Codable {
     case arrow(BrushState)
     case marker(BrushState)
     case neon(BrushState)
-    case eraser(EraserState)
     case blur(EraserState)
+    case eraser(EraserState)
     
     func withUpdatedColor(_ color: DrawingColor) -> DrawingToolState {
         switch self {
@@ -113,7 +114,7 @@ enum DrawingToolState: Equatable, Codable {
             return .marker(state.withUpdatedColor(color))
         case let .neon(state):
             return .neon(state.withUpdatedColor(color))
-        case .eraser, .blur:
+        case .blur, .eraser:
             return self
         }
     }
@@ -128,10 +129,10 @@ enum DrawingToolState: Equatable, Codable {
             return .marker(state.withUpdatedSize(size))
         case let .neon(state):
             return .neon(state.withUpdatedSize(size))
-        case let .eraser(state):
-            return .eraser(state.withUpdatedSize(size))
         case let .blur(state):
             return .blur(state.withUpdatedSize(size))
+        case let .eraser(state):
+            return .eraser(state.withUpdatedSize(size))
         }
     }
     
@@ -148,7 +149,7 @@ enum DrawingToolState: Equatable, Codable {
         switch self {
         case let .pen(state), let .arrow(state), let .marker(state), let .neon(state):
             return state.size
-        case let .eraser(state), let .blur(state):
+        case let .blur(state), let .eraser(state):
             return state.size
         }
     }
@@ -163,10 +164,10 @@ enum DrawingToolState: Equatable, Codable {
             return .marker
         case .neon:
             return .neon
-        case .eraser:
-            return .eraser
         case .blur:
             return .blur
+        case .eraser:
+            return .eraser
         }
     }
     
@@ -183,10 +184,10 @@ enum DrawingToolState: Equatable, Codable {
                 self = .marker(try container.decode(BrushState.self, forKey: .brushState))
             case .neon:
                 self = .neon(try container.decode(BrushState.self, forKey: .brushState))
-            case .eraser:
-                self = .eraser(try container.decode(EraserState.self, forKey: .eraserState))
             case .blur:
                 self = .blur(try container.decode(EraserState.self, forKey: .eraserState))
+            case .eraser:
+                self = .eraser(try container.decode(EraserState.self, forKey: .eraserState))
             }
         } else {
             self = .pen(BrushState(color: DrawingColor(rgb: 0x000000), size: 0.5))
@@ -208,11 +209,11 @@ enum DrawingToolState: Equatable, Codable {
         case let .neon(state):
             try container.encode(DrawingToolState.Key.neon.rawValue, forKey: .type)
             try container.encode(state, forKey: .brushState)
-        case let .eraser(state):
-            try container.encode(DrawingToolState.Key.eraser.rawValue, forKey: .type)
-            try container.encode(state, forKey: .eraserState)
         case let .blur(state):
             try container.encode(DrawingToolState.Key.blur.rawValue, forKey: .type)
+            try container.encode(state, forKey: .eraserState)
+        case let .eraser(state):
+            try container.encode(DrawingToolState.Key.eraser.rawValue, forKey: .type)
             try container.encode(state, forKey: .eraserState)
         }
     }
@@ -285,9 +286,22 @@ struct DrawingState: Equatable {
                 .arrow(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff8a00), size: 0.23)),
                 .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffd60a), size: 0.75)),
                 .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34c759), size: 0.4)),
-                .eraser(DrawingToolState.EraserState(size: 0.5)),
-                .blur(DrawingToolState.EraserState(size: 0.5))
+                .blur(DrawingToolState.EraserState(size: 0.5)),
+                .eraser(DrawingToolState.EraserState(size: 0.5))
             ]
+        )
+    }
+    
+    func forVideo() -> DrawingState {
+        return DrawingState(
+            selectedTool: self.selectedTool,
+            tools: self.tools.filter { tool in
+                if case .blur = tool {
+                    return false
+                } else {
+                    return true
+                }
+            }
         )
     }
 }
@@ -324,21 +338,105 @@ final class DrawingSettings: Codable, Equatable {
 
 private final class ReferenceContentSource: ContextReferenceContentSource {
     private let sourceView: UIView
-
-    init(sourceView: UIView) {
+    private let customPosition: CGPoint
+    
+    init(sourceView: UIView, customPosition: CGPoint) {
         self.sourceView = sourceView
+        self.customPosition = customPosition
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, customPosition: customPosition)
     }
 }
+
+private final class BlurredGradientComponent: Component {
+    enum Position {
+        case top
+        case bottom
+    }
+    
+    let position: Position
+    let tag: AnyObject?
+
+    public init(
+        position: Position,
+        tag: AnyObject?
+    ) {
+        self.position = position
+        self.tag = tag
+    }
+    
+    public static func ==(lhs: BlurredGradientComponent, rhs: BlurredGradientComponent) -> Bool {
+        if lhs.position != rhs.position {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: BlurredBackgroundView, ComponentTaggedView {
+        private var component: BlurredGradientComponent?
+        
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        private var gradientMask = UIImageView()
+        private var gradientForeground = SimpleGradientLayer()
+        
+        public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            self.component = component
+            
+            self.updateColor(color: UIColor(rgb: 0x000000, alpha: 0.25), transition: transition.containedViewLayoutTransition)
+           
+            if self.mask == nil {
+                self.mask = self.gradientMask
+                self.gradientMask.image = generateGradientImage(
+                    size: CGSize(width: 1.0, height: availableSize.height),
+                    colors: [UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 0.0)],
+                    locations: component.position == .top ? [0.0, 0.5, 1.0] : [1.0, 0.5, 0.0],
+                    direction: .vertical
+                )
+                
+                self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.35).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
+                self.gradientForeground.startPoint = CGPoint(x: 0.5, y: component.position == .top ? 0.0 : 1.0)
+                self.gradientForeground.endPoint = CGPoint(x: 0.5, y: component.position == .top ? 1.0 : 0.0)
+                
+                self.layer.addSublayer(self.gradientForeground)
+            }
+            
+            transition.setFrame(view: self.gradientMask, frame: CGRect(origin: .zero, size: availableSize))
+            transition.setFrame(layer: self.gradientForeground, frame: CGRect(origin: .zero, size: availableSize))
+            
+            self.update(size: availableSize, transition: transition.containedViewLayoutTransition)
+            
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(color: nil, enableBlur: true)
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
 
 enum DrawingScreenTransition {
     case animateIn
     case animateOut
 }
 
+private let topGradientTag = GenericComponentViewTag()
+private let bottomGradientTag = GenericComponentViewTag()
 private let undoButtonTag = GenericComponentViewTag()
 private let redoButtonTag = GenericComponentViewTag()
 private let clearAllButtonTag = GenericComponentViewTag()
@@ -351,6 +449,7 @@ private let fillButtonTag = GenericComponentViewTag()
 private let zoomOutButtonTag = GenericComponentViewTag()
 private let textSettingsTag = GenericComponentViewTag()
 private let sizeSliderTag = GenericComponentViewTag()
+private let fontTag = GenericComponentViewTag()
 private let color1Tag = GenericComponentViewTag()
 private let color2Tag = GenericComponentViewTag()
 private let color3Tag = GenericComponentViewTag()
@@ -359,12 +458,14 @@ private let color5Tag = GenericComponentViewTag()
 private let color6Tag = GenericComponentViewTag()
 private let color7Tag = GenericComponentViewTag()
 private let color8Tag = GenericComponentViewTag()
+private let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
 private let doneButtonTag = GenericComponentViewTag()
 
 private final class DrawingScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let isVideo: Bool
     let isAvatar: Bool
     let present: (ViewController) -> Void
     let updateState: ActionSlot<DrawingView.NavigationState>
@@ -374,8 +475,9 @@ private final class DrawingScreenComponent: CombinedComponent {
     let updateSelectedEntity: ActionSlot<DrawingEntity?>
     let insertEntity: ActionSlot<DrawingEntity>
     let deselectEntity: ActionSlot<Void>
-    let updatePlayback: ActionSlot<Bool>
+    let updateEntitiesPlayback: ActionSlot<Bool>
     let previewBrushSize: ActionSlot<CGFloat?>
+    let dismissEyedropper: ActionSlot<Void>
     let apply: ActionSlot<Void>
     let dismiss: ActionSlot<Void>
     
@@ -383,9 +485,11 @@ private final class DrawingScreenComponent: CombinedComponent {
     let presentFastColorPicker: (UIView) -> Void
     let updateFastColorPickerPan: (CGPoint) -> Void
     let dismissFastColorPicker: () -> Void
+    let presentFontPicker: (UIView) -> Void
     
     init(
         context: AccountContext,
+        isVideo: Bool,
         isAvatar: Bool,
         present: @escaping (ViewController) -> Void,
         updateState: ActionSlot<DrawingView.NavigationState>,
@@ -395,16 +499,19 @@ private final class DrawingScreenComponent: CombinedComponent {
         updateSelectedEntity: ActionSlot<DrawingEntity?>,
         insertEntity: ActionSlot<DrawingEntity>,
         deselectEntity: ActionSlot<Void>,
-        updatePlayback: ActionSlot<Bool>,
+        updateEntitiesPlayback: ActionSlot<Bool>,
         previewBrushSize: ActionSlot<CGFloat?>,
+        dismissEyedropper: ActionSlot<Void>,
         apply: ActionSlot<Void>,
         dismiss: ActionSlot<Void>,
         presentColorPicker: @escaping (DrawingColor) -> Void,
         presentFastColorPicker: @escaping (UIView) -> Void,
         updateFastColorPickerPan: @escaping (CGPoint) -> Void,
-        dismissFastColorPicker: @escaping () -> Void
+        dismissFastColorPicker: @escaping () -> Void,
+        presentFontPicker: @escaping (UIView) -> Void
     ) {
         self.context = context
+        self.isVideo = isVideo
         self.isAvatar = isAvatar
         self.present = present
         self.updateState = updateState
@@ -414,14 +521,16 @@ private final class DrawingScreenComponent: CombinedComponent {
         self.updateSelectedEntity = updateSelectedEntity
         self.insertEntity = insertEntity
         self.deselectEntity = deselectEntity
-        self.updatePlayback = updatePlayback
+        self.updateEntitiesPlayback = updateEntitiesPlayback
         self.previewBrushSize = previewBrushSize
+        self.dismissEyedropper = dismissEyedropper
         self.apply = apply
         self.dismiss = dismiss
         self.presentColorPicker = presentColorPicker
         self.presentFastColorPicker = presentFastColorPicker
         self.updateFastColorPickerPan = updateFastColorPickerPan
         self.dismissFastColorPicker = dismissFastColorPicker
+        self.presentFontPicker = presentFontPicker
     }
     
     static func ==(lhs: DrawingScreenComponent, rhs: DrawingScreenComponent) -> Bool {
@@ -484,7 +593,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         private let updateToolState: ActionSlot<DrawingToolState>
         private let insertEntity: ActionSlot<DrawingEntity>
         private let deselectEntity: ActionSlot<Void>
-        private let updatePlayback: ActionSlot<Bool>
+        private let updateEntitiesPlayback: ActionSlot<Bool>
+        private let dismissEyedropper: ActionSlot<Void>
         private let present: (ViewController) -> Void
         
         var currentMode: Mode
@@ -497,12 +607,13 @@ private final class DrawingScreenComponent: CombinedComponent {
         
         private let stickerPickerInputData = Promise<StickerPickerInputData>()
     
-        init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updatePlayback: ActionSlot<Bool>, present: @escaping (ViewController) -> Void) {
+        init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updateEntitiesPlayback: ActionSlot<Bool>, dismissEyedropper: ActionSlot<Void>, present: @escaping (ViewController) -> Void) {
             self.context = context
             self.updateToolState = updateToolState
             self.insertEntity = insertEntity
             self.deselectEntity = deselectEntity
-            self.updatePlayback = updatePlayback
+            self.updateEntitiesPlayback = updateEntitiesPlayback
+            self.dismissEyedropper = dismissEyedropper
             self.present = present
             
             self.currentMode = .drawing
@@ -647,6 +758,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         
         var skipSelectedEntityUpdate = false
         func updateSelectedEntity(_ entity: DrawingEntity?) {
+            self.dismissEyedropper.invoke(Void())
+            
             self.selectedEntity = entity
             if let entity = entity {
                 if !entity.color.isClear {
@@ -734,7 +847,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             ]
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.present(contextController)
         }
         
@@ -758,10 +871,10 @@ private final class DrawingScreenComponent: CombinedComponent {
         func presentStickerPicker() {
             self.currentMode = .sticker
             
-            self.updatePlayback.invoke(false)
+            self.updateEntitiesPlayback.invoke(false)
             let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
             controller.completion = { [weak self] file in
-                self?.updatePlayback.invoke(true)
+                self?.updateEntitiesPlayback.invoke(true)
                 
                 if let file = file {
                     let stickerEntity = DrawingStickerEntity(file: file)
@@ -776,10 +889,13 @@ private final class DrawingScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, updateToolState: self.updateToolState, insertEntity: self.insertEntity, deselectEntity: self.deselectEntity, updatePlayback: self.updatePlayback, present: self.present)
+        return State(context: self.context, updateToolState: self.updateToolState, insertEntity: self.insertEntity, deselectEntity: self.deselectEntity, updateEntitiesPlayback: self.updateEntitiesPlayback, dismissEyedropper: self.dismissEyedropper, present: self.present)
     }
     
     static var body: Body {
+        let topGradient = Child(BlurredGradientComponent.self)
+        let bottomGradient = Child(BlurredGradientComponent.self)
+
         let undoButton = Child(Button.self)
         
         let redoButton = Child(Button.self)
@@ -836,6 +952,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let previewBrushSize = component.previewBrushSize
             let performAction = component.performAction
+            let dismissEyedropper = component.dismissEyedropper
+            
             component.updateState.connect { [weak state] updatedState in
                 state?.updateDrawingState(updatedState)
             }
@@ -861,9 +979,35 @@ private final class DrawingScreenComponent: CombinedComponent {
             let presentFastColorPicker = component.presentFastColorPicker
             let updateFastColorPickerPan = component.updateFastColorPickerPan
             let dismissFastColorPicker = component.dismissFastColorPicker
+            let presentFontPicker = component.presentFontPicker
                  
             let topInset = environment.safeInsets.top + 31.0
             let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
+            
+            let topGradient = topGradient.update(
+                component: BlurredGradientComponent(
+                    position: .top,
+                    tag: topGradientTag
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 111.0),
+                transition: .immediate
+            )
+            context.add(topGradient
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: topGradient.size.height / 2.0))
+            )
+            
+            let bottomGradient = bottomGradient.update(
+                component: BlurredGradientComponent(
+                    position: .bottom,
+                    tag: bottomGradientTag
+                    
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 155.0),
+                transition: .immediate
+            )
+            context.add(bottomGradient
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomGradient.size.height / 2.0))
+            )
             
             if let textEntity = state.selectedEntity as? DrawingTextEntity {
                 let textSettings = textSettings.update(
@@ -874,6 +1018,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         font: DrawingTextFont(font: textEntity.font),
                         isEmojiKeyboard: false,
                         tag: textSettingsTag,
+                        fontTag: fontTag,
                         toggleStyle: { [weak state, weak textEntity] in
                             guard let textEntity = textEntity else {
                                 return
@@ -914,15 +1059,10 @@ private final class DrawingScreenComponent: CombinedComponent {
                             }
                             state?.updated(transition: .easeInOut(duration: 0.2))
                         },
-                        updateFont: { [weak state, weak textEntity] font in
-                            guard let textEntity = textEntity else {
-                                return
+                        presentFontPicker: {
+                            if let controller = controller() as? DrawingScreen, let buttonView = controller.node.componentHost.findTaggedView(tag: fontTag) {
+                                presentFontPicker(buttonView)
                             }
-                            textEntity.font = font.font
-                            if let entityView = textEntity.currentEntityView {
-                                entityView.update()
-                            }
-                            state?.updated(transition: .easeInOut(duration: 0.2))
                         },
                         toggleKeyboard: nil
                     ),
@@ -932,12 +1072,12 @@ private final class DrawingScreenComponent: CombinedComponent {
                 context.add(textSettings
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0))
                     .appear(Transition.Appear({ _, view, transition in
-                        if let view = findTaggedComponentViewImpl(view: view, tag: textSettingsTag) as? TextFontComponent.View, !transition.animation.isImmediate {
+                        if let view = view as? TextSettingsComponent.View, !transition.animation.isImmediate {
                             view.animateIn()
                         }
                     }))
                     .disappear(Transition.Disappear({ view, transition, completion in
-                        if let view = findTaggedComponentViewImpl(view: view, tag: textSettingsTag) as? TextFontComponent.View, !transition.animation.isImmediate {
+                        if let view = view as? TextSettingsComponent.View, !transition.animation.isImmediate {
                             view.animateOut(completion: completion)
                         } else {
                             completion()
@@ -952,6 +1092,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             let delta: CGFloat = (rightButtonPosition - offsetX) / 7.0
             
             let applySwatchColor: (DrawingColor) -> Void = { [weak state] color in
+                dismissEyedropper.invoke(Void())
                 if let state = state {
                     if [.eraser, .blur].contains(state.drawingState.selectedTool) || state.selectedEntity is DrawingStickerEntity {
                         state.updateSelectedTool(.pen, update: false)
@@ -1186,15 +1327,17 @@ private final class DrawingScreenComponent: CombinedComponent {
             } else {
                 let tools = tools.update(
                     component: ToolsComponent(
-                        state: state.drawingState,
+                        state: component.isVideo ? state.drawingState.forVideo() : state.drawingState,
                         isFocused: false,
                         tag: toolsTag,
                         toolPressed: { [weak state] tool in
+                            dismissEyedropper.invoke(Void())
                             if let state = state {
                                 state.updateSelectedTool(tool)
                             }
                         },
                         toolResized: { [weak state] _, size in
+                            dismissEyedropper.invoke(Void())
                             state?.updateBrushSize(size)
                             if state?.selectedEntity == nil {
                                 previewBrushSize.invoke(size)
@@ -1353,6 +1496,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 )
                             ),
                             action: {
+                                dismissEyedropper.invoke(Void())
                                 performAction.invoke(.zoomOut)
                             }
                         ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(zoomOutButtonTag),
@@ -1379,6 +1523,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     tag: sizeSliderTag,
                     updated: { [weak state] size in
                         if let state = state {
+                            dismissEyedropper.invoke(Void())
                             state.updateBrushSize(size)
                             if state.selectedEntity == nil {
                                 previewBrushSize.invoke(size)
@@ -1392,7 +1537,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(textSize
-                .position(CGPoint(x: sizeSliderVisible ? textSize.size.width / 2.0 : textSize.size.width / 2.0 - 33.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
+                .position(CGPoint(x: textSize.size.width / 2.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
+                .opacity(sizeSliderVisible ? 1.0 : 0.0)
             )
             
             let undoButton = undoButton.update(
@@ -1402,6 +1548,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     ),
                     isEnabled: state.drawingViewState.canUndo,
                     action: {
+                        dismissEyedropper.invoke(Void())
                         performAction.invoke(.undo)
                     }
                 ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(undoButtonTag),
@@ -1421,6 +1568,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         Image(image: state.image(.redo))
                     ),
                     action: {
+                        dismissEyedropper.invoke(Void())
                         performAction.invoke(.redo)
                     }
                 ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(redoButtonTag),
@@ -1440,6 +1588,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     ),
                     isEnabled: state.drawingViewState.canClear,
                     action: {
+                        dismissEyedropper.invoke(Void())
                         performAction.invoke(.clear)
                     }
                 ).tagged(clearAllButtonTag),
@@ -1536,7 +1685,6 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .disappear(.default(scale: true))
             )
       
-            
             let modeRightInset: CGFloat = 57.0
             let addButton = addButton.update(
                 component: Button(
@@ -1563,12 +1711,15 @@ private final class DrawingScreenComponent: CombinedComponent {
                         }
                         switch state.currentMode {
                         case .drawing:
+                            dismissEyedropper.invoke(Void())
                             if let buttonView = controller.node.componentHost.findTaggedView(tag: addButtonTag) as? Button.View {
                                 state.presentShapePicker(buttonView)
                             }
                         case .sticker:
+                            dismissEyedropper.invoke(Void())
                             state.presentStickerPicker()
                         case .text:
+                            dismissEyedropper.invoke(Void())
                             state.addTextEntity()
                         }
                     }
@@ -1588,6 +1739,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         Image(image: state.image(.done))
                     ),
                     action: { [weak state] in
+                        dismissEyedropper.invoke(Void())
                         state?.saveToolState()
                         apply.invoke(Void())
                     }
@@ -1639,6 +1791,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     tag: modeTag,
                     selectedIndex: selectedIndex,
                     selectionChanged: { [weak state] index in
+                        dismissEyedropper.invoke(Void())
                         guard let state = state else {
                             return
                         }
@@ -1653,6 +1806,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     },
                     sizeUpdated: { [weak state] size in
                         if let state = state {
+                            dismissEyedropper.invoke(Void())
                             state.updateBrushSize(size)
                             if state.selectedEntity == nil {
                                 previewBrushSize.invoke(size)
@@ -1690,6 +1844,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     ),
                     action: { [weak state] in
                         if let state = state {
+                            dismissEyedropper.invoke(Void())
                             state.saveToolState()
                             dismiss.invoke(Void())
                         }
@@ -1718,8 +1873,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private let updateSelectedEntity: ActionSlot<DrawingEntity?>
         private let insertEntity: ActionSlot<DrawingEntity>
         private let deselectEntity: ActionSlot<Void>
-        private let updatePlayback: ActionSlot<Bool>
+        private let updateEntitiesPlayback: ActionSlot<Bool>
         private let previewBrushSize: ActionSlot<CGFloat?>
+        private let dismissEyedropper: ActionSlot<Void>
         private let apply: ActionSlot<Void>
         private let dismiss: ActionSlot<Void>
         
@@ -1727,11 +1883,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         
         private let textEditAccessoryView: UIInputView
         private let textEditAccessoryHost: ComponentView<Empty>
-                
+        
         private var presentationData: PresentationData
         private let hapticFeedback = HapticFeedback()
         private var validLayout: (ContainerViewLayout, UIInterfaceOrientation?)?
-                
+        
         private var _drawingView: DrawingView?
         var drawingView: DrawingView {
             if self._drawingView == nil, let controller = self.controller {
@@ -1752,36 +1908,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         strongSelf.updateState.invoke(state)
                     }
                 }
-                self._drawingView?.requestMenu = { [weak self] elements, rect in
-                    if let strongSelf = self, let drawingView = strongSelf._drawingView {
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        var actions: [ContextMenuAction] = []
-                        actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf._drawingView?.removeElements(elements)
-                            }
-                        }))
-                        actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf._drawingView?.removeElements(elements)
-                            }
-                        }))
-                        let strokeFrame = drawingView.lassoView.convert(rect, to: strongSelf.view).offsetBy(dx: 0.0, dy: -6.0)
-                        let controller = ContextMenuController(actions: actions)
-                        strongSelf.currentMenuController = controller
-                        strongSelf.controller?.present(
-                            controller,
-                            in: .window(.root),
-                            with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-                                if let strongSelf = self {
-                                    return (strongSelf, strokeFrame, strongSelf, strongSelf.bounds)
-                                } else {
-                                    return nil
-                                }
-                            })
-                        )
-                    }
-                }
                 self.performAction.connect { [weak self] action in
                     if let strongSelf = self {
                         if action == .clear {
@@ -1790,7 +1916,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                 ActionSheetItemGroup(items: [
                                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Paint_ClearConfirm, color: .destructive, action: { [weak actionSheet, weak self] in
                                         actionSheet?.dismissAnimated()
-
+                                        
                                         self?._drawingView?.performAction(action)
                                     })
                                 ]),
@@ -1816,6 +1942,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         strongSelf._drawingView?.setBrushSizePreview(size)
                     }
                 }
+                self.dismissEyedropper.connect { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.dismissCurrentEyedropper()
+                    }
+                }
             }
             return self._drawingView!
         }
@@ -1824,34 +1955,38 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private var _entitiesView: DrawingEntitiesView?
         var entitiesView: DrawingEntitiesView {
             if self._entitiesView == nil, let controller = self.controller {
-                self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.size)
+                if let externalEntitiesView = controller.externalEntitiesView {
+                    self._entitiesView = externalEntitiesView
+                } else {
+                    self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.size)
+                }
                 self._drawingView?.entitiesView = self._entitiesView
+                self._entitiesView?.drawingView = self._drawingView
                 self._entitiesView?.entityAdded = { [weak self] entity in
                     self?._drawingView?.onEntityAdded(entity)
                 }
                 self._entitiesView?.entityRemoved = { [weak self] entity in
                     self?._drawingView?.onEntityRemoved(entity)
                 }
-                let entitiesLayer = self.entitiesView.layer
-                self._drawingView?.getFullImage = { [weak self, weak entitiesLayer] withDrawing in
+                self._drawingView?.getFullImage = { [weak self] in
                     if let strongSelf = self, let controller = strongSelf.controller, let currentImage = controller.getCurrentImage() {
-                        if withDrawing {
-                            let image = generateImage(controller.size, contextGenerator: { size, context in
+                        let size = controller.size.fitted(CGSize(width: 256.0, height: 256.0))
+                        
+                        if let imageContext = DrawingContext(size: size, scale: 1.0, opaque: true, clear: false) {
+                            imageContext.withFlippedContext { c in
                                 let bounds = CGRect(origin: .zero, size: size)
                                 if let cgImage = currentImage.cgImage {
-                                    context.draw(cgImage, in: bounds)
+                                    c.draw(cgImage, in: bounds)
                                 }
                                 if let cgImage = strongSelf.drawingView.drawingImage?.cgImage {
-                                    context.draw(cgImage, in: bounds)
+                                    c.draw(cgImage, in: bounds)
                                 }
-                                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-                                context.scaleBy(x: 1.0, y: -1.0)
-                                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-                                entitiesLayer?.render(in: context)
-                            }, opaque: true, scale: 1.0)
-                            return image
+                                telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                                telegramFastBlurMore(Int32(imageContext.size.width * imageContext.scale), Int32(imageContext.size.height * imageContext.scale), Int32(imageContext.bytesPerRow), imageContext.bytes)
+                            }
+                            return imageContext.generateImage()
                         } else {
-                            return currentImage
+                            return nil
                         }
                     } else {
                         return nil
@@ -1908,7 +2043,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         in: .window(.root),
                         with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
                             if let strongSelf = self {
-                                return (strongSelf, entityFrame, strongSelf, strongSelf.bounds)
+                                return (strongSelf, entityFrame, strongSelf, strongSelf.bounds.insetBy(dx: 0.0, dy: 160.0))
                             } else {
                                 return nil
                             }
@@ -1926,7 +2061,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                 textEntityView.beginEditing(accessoryView: strongSelf.textEditAccessoryView)
                             } else {
                                 entityView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                entityView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                entityView.layer.animateScale(from: 0.1, to: entity.scale, duration: 0.2)
                                 
                                 if let selectionView = entityView.selectionView {
                                     selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
@@ -1940,7 +2075,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         entitiesView.selectEntity(nil)
                     }
                 }
-                self.updatePlayback.connect { [weak self] play in
+                self.updateEntitiesPlayback.connect { [weak self] play in
                     if let strongSelf = self, let entitiesView = strongSelf._entitiesView {
                         if play {
                             entitiesView.play()
@@ -1979,8 +2114,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             self.updateSelectedEntity = ActionSlot<DrawingEntity?>()
             self.insertEntity = ActionSlot<DrawingEntity>()
             self.deselectEntity = ActionSlot<Void>()
-            self.updatePlayback = ActionSlot<Bool>()
+            self.updateEntitiesPlayback = ActionSlot<Bool>()
             self.previewBrushSize = ActionSlot<CGFloat?>()
+            self.dismissEyedropper = ActionSlot<Void>()
             self.apply = ActionSlot<Void>()
             self.dismiss = ActionSlot<Void>()
             
@@ -2000,13 +2136,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
             self.dismiss.connect { [weak self] _ in
                 if let strongSelf = self {
-                    if !strongSelf.drawingView.isEmpty {
+                    if strongSelf.drawingView.canUndo || strongSelf.entitiesView.hasChanges {
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme))
                         actionSheet.setItemGroups([
                             ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.PhotoEditor_DiscardChanges, color: .accent, action: { [weak actionSheet, weak self] in
                                     actionSheet?.dismissAnimated()
-
+                                    
                                     self?.controller?.requestDismiss()
                                 })
                             ]),
@@ -2030,17 +2166,28 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
             self.view.disablesInteractiveTransitionGestureRecognizer = true
         }
-                
-        func presentEyedropper(dismissed: @escaping () -> Void) {
+        
+        private var currentEyedropperView: EyedropperView?
+        func presentEyedropper(retryLaterForVideo: Bool = true, dismissed: @escaping () -> Void) {
             guard let controller = self.controller else {
                 return
             }
             self.entitiesView.pause()
             
-            guard let currentImage = controller.getCurrentImage() else {
+            if controller.isVideo && retryLaterForVideo {
+                controller.updateVideoPlayback(false)
+                Queue.mainQueue().after(0.1) {
+                    self.presentEyedropper(retryLaterForVideo: false, dismissed: dismissed)
+                }
                 return
             }
-
+            
+            guard let currentImage = controller.getCurrentImage() else {
+                self.entitiesView.play()
+                controller.updateVideoPlayback(true)
+                return
+            }
+            
             let sourceImage = generateImage(controller.drawingView.imageSize, contextGenerator: { size, context in
                 let bounds = CGRect(origin: .zero, size: size)
                 if let cgImage = currentImage.cgImage {
@@ -2063,14 +2210,30 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 if let strongSelf = self, let controller = controller {
                     strongSelf.updateColor.invoke(color)
                     controller.entitiesView.play()
+                    controller.updateVideoPlayback(true)
                     dismissed()
                 }
             }
+            eyedropperView.dismissed = {
+                controller.entitiesView.play()
+                controller.updateVideoPlayback(true)
+            }
             eyedropperView.frame = controller.contentWrapperView.convert(controller.contentWrapperView.bounds, to: controller.view)
             controller.view.addSubview(eyedropperView)
+            self.currentEyedropperView = eyedropperView
+        }
+        
+        func dismissCurrentEyedropper() {
+            if let currentEyedropperView = self.currentEyedropperView {
+                self.currentEyedropperView = nil
+                currentEyedropperView.dismiss()
+            }
         }
         
         func presentColorPicker(initialColor: DrawingColor, dismissed: @escaping () -> Void = {}) {
+            self.dismissCurrentEyedropper()
+            self.dismissFontPicker()
+            
             guard let controller = self.controller else {
                 return
             }
@@ -2087,6 +2250,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         
         private var fastColorPickerView: ColorSpectrumPickerView?
         func presentFastColorPicker(sourceView: UIView) {
+            self.dismissCurrentEyedropper()
+            self.dismissFontPicker()
+            
             guard self.fastColorPickerView == nil, let superview = sourceView.superview else {
                 return
             }
@@ -2124,7 +2290,61 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             })
         }
         
+        private weak var currentFontPicker: ContextController?
+        func presentFontPicker(sourceView: UIView) {
+            guard !self.dismissFontPicker() else {
+                return
+            }
+            let fonts: [DrawingTextFont] = [
+                .sanFrancisco,
+                .newYork,
+                .other("MarkerFelt-Wide", "Marker Felt"),
+                .other("Chalkduster", "Chalkduster"),
+                .other("Menlo-Bold", "Menlo"),
+                .other("Copperplate-Bold", "Copperplate"),
+                .other("GillSans-SemiBold", "Gill Sans"),
+                .other("Papyrus", "Papyrus")
+            ]
+            
+            var items: [ContextMenuItem] = []
+            for font in fonts {
+                items.append(.action(ContextMenuActionItem(text: font.title, textFont: .custom(font.uiFont(size: 17.0)), icon: { _ in return nil }, animationName: nil, action: { [weak self] f in
+                    f.dismissWithResult(.default)
+                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                        return
+                    }
+                    textEntity.font = font.font
+                    entityView.update()
+                    
+                    if let (layout, orientation) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, forceUpdate: true, transition: .immediate)
+                    }
+                })))
+            }
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, customPosition: CGPoint(x: 7.0, y: 0.0))), items: .single(ContextController.Items(content: .list(items))))
+            self.controller?.present(contextController, in: .window(.root))
+            self.currentFontPicker = contextController
+        }
+        
+        @discardableResult
+        func dismissFontPicker() -> Bool {
+            if let currentFontPicker = self.currentFontPicker {
+                self.currentFontPicker = nil
+                currentFontPicker.dismiss()
+                return true
+            }
+            return false
+        }
+        
         func animateIn() {
+            if let view = self.componentHost.findTaggedView(tag: topGradientTag) {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
+            if let view = self.componentHost.findTaggedView(tag: bottomGradientTag) {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
             if let buttonView = self.componentHost.findTaggedView(tag: undoButtonTag) {
                 buttonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3)
@@ -2138,7 +2358,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3)
             }
             var delay: Double = 0.0
-            let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
             for tag in colorTags {
                 if let view = self.componentHost.findTaggedView(tag: tag) {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: delay)
@@ -2156,6 +2375,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 self.containerLayoutUpdated(layout: layout, orientation: orientation, animateOut: true, transition: .easeInOut(duration: 0.2))
             }
             
+            if let view = self.componentHost.findTaggedView(tag: topGradientTag) {
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            }
+            if let view = self.componentHost.findTaggedView(tag: bottomGradientTag) {
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            }
             if let buttonView = self.componentHost.findTaggedView(tag: undoButtonTag) {
                 buttonView.alpha = 0.0
                 buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
@@ -2197,8 +2422,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
                 view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), duration: 0.3, removeOnCompletion: false, additive: true)
             }
-
-            let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
+            
             for tag in colorTags {
                 if let view = self.componentHost.findTaggedView(tag: tag) {
                     view.alpha = 0.0
@@ -2211,7 +2435,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 view.animateOut(completion: {
                     completion()
                 })
-            } else if let view = self.componentHost.findTaggedView(tag: textSettingsTag) as? TextFontComponent.View {
+            } else if let view = self.componentHost.findTaggedView(tag: textSettingsTag) as? TextSettingsComponent.View {
                 view.animateOut(completion: {
                     completion()
                 })
@@ -2234,7 +2458,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             return result
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, orientation: UIInterfaceOrientation?, animateOut: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, orientation: UIInterfaceOrientation?, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
             guard let controller = self.controller else {
                 return
             }
@@ -2275,6 +2499,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 component: AnyComponent(
                     DrawingScreenComponent(
                         context: self.context,
+                        isVideo: controller.isVideo,
                         isAvatar: controller.isAvatar,
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
@@ -2286,8 +2511,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         updateSelectedEntity: self.updateSelectedEntity,
                         insertEntity: self.insertEntity,
                         deselectEntity: self.deselectEntity,
-                        updatePlayback: self.updatePlayback,
+                        updateEntitiesPlayback: self.updateEntitiesPlayback,
                         previewBrushSize: self.previewBrushSize,
+                        dismissEyedropper: self.dismissEyedropper,
                         apply: self.apply,
                         dismiss: self.dismiss,
                         presentColorPicker: { [weak self] initialColor in
@@ -2301,13 +2527,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         },
                         dismissFastColorPicker: { [weak self] in
                             self?.dismissFastColorPicker()
+                        },
+                        presentFontPicker: { [weak self] sourceView in
+                            self?.presentFontPicker(sourceView: sourceView)
                         }
                     )
                 ),
                 environment: {
                     environment
                 },
-                forceUpdate: animateOut,
+                forceUpdate: forceUpdate || animateOut,
                 containerSize: layout.size
             )
             if let componentView = self.componentHost.view {
@@ -2340,6 +2569,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                 font: DrawingTextFont(font: textEntity.font),
                                 isEmojiKeyboard: entityView.textView.inputView != nil,
                                 tag: nil,
+                                fontTag: fontTag,
                                 presentColorPicker: { [weak self] in
                                     guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
                                         return
@@ -2361,6 +2591,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                     self?.dismissFastColorPicker()
                                 },
                                 toggleStyle: { [weak self] in
+                                    self?.dismissFontPicker()
                                     guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
                                         return
                                     }
@@ -2383,6 +2614,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                     }
                                 },
                                 toggleAlignment: { [weak self] in
+                                    self?.dismissFontPicker()
                                     guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
                                         return
                                     }
@@ -2402,21 +2634,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                         strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, transition: .immediate)
                                     }
                                 },
-                                updateFont: { [weak self] font in
-                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                        return
-                                    }
-                                    textEntity.font = font.font
-                                    entityView.update()
-                                    
-                                    if let (layout, orientation) = strongSelf.validLayout {
-                                        strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, transition: .immediate)
+                                presentFontPicker: { [weak self] in
+                                    if let buttonView = self?.textEditAccessoryHost.findTaggedView(tag: fontTag) {
+                                        self?.presentFontPicker(sourceView: buttonView)
                                     }
                                 },
                                 toggleKeyboard: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
+                                    strongSelf.dismissFontPicker()
                                     strongSelf.toggleInputMode()
                                 }
                             )
@@ -2496,17 +2723,27 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     private let context: AccountContext
     private let size: CGSize
     private let originalSize: CGSize
+    private let isVideo: Bool
     private let isAvatar: Bool
+    private let externalEntitiesView: DrawingEntitiesView?
     
-    public var requestDismiss: (() -> Void)!
-    public var requestApply: (() -> Void)!
-    public var getCurrentImage: (() -> UIImage?)!
+    public var requestDismiss: () -> Void = {}
+    public var requestApply: () -> Void = {}
+    public var getCurrentImage: () -> UIImage? = { return nil }
+    public var updateVideoPlayback: (Bool) -> Void = { _ in }
     
-    public init(context: AccountContext, size: CGSize, originalSize: CGSize, isAvatar: Bool) {
+    public init(context: AccountContext, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?) {
         self.context = context
         self.size = size
         self.originalSize = originalSize
+        self.isVideo = isVideo
         self.isAvatar = isAvatar
+        
+        if let entitiesView = entitiesView as? DrawingEntitiesView {
+            self.externalEntitiesView = entitiesView
+        } else {
+            self.externalEntitiesView = nil
+        }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -2540,7 +2777,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         super.displayNodeDidLoad()
     }
     
-    public func generateResultData() -> TGPaintingData! {
+    public func generateResultData() -> TGPaintingData? {
         if self.drawingView.isEmpty && self.entitiesView.entities.isEmpty {
             return nil
         }
@@ -2585,7 +2822,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         }
         
         let drawingData = self.drawingView.drawingData
-        
         let entitiesData = self.entitiesView.entitiesData
         
         var stickers: [Any] = []
@@ -2621,7 +2857,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         return image
     }
     
-    public func animateOut(_ completion: (() -> Void)!) {
+    public func animateOut(_ completion: @escaping (() -> Void)) {
         self.selectionContainerView.alpha = 0.0
         
         self.node.animateOut(completion: completion)

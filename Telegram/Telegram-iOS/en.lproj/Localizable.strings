@@ -8518,6 +8518,7 @@ Sorry for the inconvenience.";
 
 "Privacy.ProfilePhoto.CustomOverrideInfo" = "You can add users or entire groups which will not see your profile photo.";
 "Privacy.ProfilePhoto.CustomOverrideAddInfo" = "Add users or entire groups which will still see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideBothInfo" = "You can add users or entire groups as exceptions that will override the settings above.";
 
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
 

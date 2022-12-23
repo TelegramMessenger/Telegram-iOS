@@ -76,6 +76,11 @@ public struct SegmentedControlItem: Equatable {
 }
 
 private class SegmentedControlItemNode: HighlightTrackingButtonNode {
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.isExclusiveTouch = true
+    }
 }
 
 public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {

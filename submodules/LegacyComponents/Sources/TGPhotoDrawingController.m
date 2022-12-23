@@ -30,7 +30,7 @@
 const CGFloat TGPhotoPaintTopPanelSize = 44.0f;
 const CGFloat TGPhotoPaintBottomPanelSize = 79.0f;
 const CGSize TGPhotoPaintingLightMaxSize = { 1280.0f, 1280.0f };
-const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
+const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
 
 @interface TGPhotoDrawingController () <UIScrollViewDelegate, UIGestureRecognizerDelegate>
 {
@@ -85,7 +85,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
         _stickersContext = stickersContext;
         
         CGSize size = TGScaleToSize(photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
-        _drawingAdapter = [_stickersContext drawingAdapter:size originalSize:photoEditor.originalSize isAvatar:isAvatar];
+        _drawingAdapter = [_stickersContext drawingAdapter:size originalSize:photoEditor.originalSize isVideo:photoEditor.forVideo isAvatar:isAvatar entitiesView:entitiesView];
         _interfaceController = (UIViewController<TGPhotoDrawingInterfaceController> *)_drawingAdapter.interfaceController;
         
         __weak TGPhotoDrawingController *weakSelf = self;
@@ -107,6 +107,13 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
                 return nil;
             
             return [strongSelf.photoEditor currentResultImage];
+        };
+        _interfaceController.updateVideoPlayback = ^(bool play) {
+            __strong TGPhotoDrawingController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            strongSelf.controlVideoPlayback(play);
         };
                         
         self.photoEditor = photoEditor;
@@ -474,6 +481,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 
 - (void)transitionIn {
     [_context lockPortrait];
+    [_context disableInteractiveKeyboardGesture];
 //    if (self.presentedForAvatarCreation) {
 //        _drawingView.hidden = true;
 //    }
@@ -900,6 +908,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 
 - (CGPoint)entityCenterPoint
 {
+    //return [_scrollView convertPoint:TGPaintCenterOfRect(_scrollView.bounds) toView:_entitiesView];
     return [_previewView convertPoint:TGPaintCenterOfRect(_previewView.bounds) toView:_entitiesView];
 }
 

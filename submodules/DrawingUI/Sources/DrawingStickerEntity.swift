@@ -254,6 +254,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
                         self.applyVisibility()
                     }
                 }
+                self.update(animated: false)
             }
         }
     }
@@ -537,15 +538,20 @@ class DrawingEntitySnapTool {
     private var xState: (skipped: CGFloat, waitForLeave: Bool)?
     private var yState: (skipped: CGFloat, waitForLeave: Bool)?
     
+    private var rotationState: (skipped: CGFloat, waitForLeave: Bool)?
+    
     var onSnapXUpdated: (Bool) -> Void = { _ in }
     var onSnapYUpdated: (Bool) -> Void = { _ in }
+    var onSnapRotationUpdated: (CGFloat?) -> Void = { _ in }
     
     func reset() {
         self.xState = nil
         self.yState = nil
+        self.rotationState = nil
         
         self.onSnapXUpdated(false)
         self.onSnapYUpdated(false)
+        self.onSnapRotationUpdated(nil)
     }
     
     func maybeSkipFromStart(entityView: DrawingEntityView, position: CGPoint) {
@@ -565,19 +571,19 @@ class DrawingEntitySnapTool {
             }
         }
     }
-    
+        
     func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint) -> CGPoint {
         var updatedPosition = updatedPosition
         
         let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapXVelocity: CGFloat = snapXDelta * 16.0
+        let snapXVelocity: CGFloat = snapXDelta * 12.0
         let snapXSkipTranslation: CGFloat = snapXDelta * 2.0
         
         if abs(velocity.x) < snapXVelocity || self.xState?.waitForLeave == true {
             if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
                 if let (skipped, waitForLeave) = self.xState {
                     if waitForLeave {
-                        if updatedPosition.x > snapLocation.x - snapXDelta * 1.5 && updatedPosition.x < snapLocation.x + snapXDelta * 1.5  {
+                        if updatedPosition.x > snapLocation.x - snapXDelta * 2.0 && updatedPosition.x < snapLocation.x + snapXDelta * 2.0  {
                             
                         } else {
                             self.xState = nil
@@ -598,22 +604,19 @@ class DrawingEntitySnapTool {
                 }
             }
         } else {
-            if self.xState != nil {
-                print()
-            }
             self.xState = nil
             self.onSnapXUpdated(false)
         }
         
         let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapYVelocity: CGFloat = snapYDelta * 16.0
+        let snapYVelocity: CGFloat = snapYDelta * 12.0
         let snapYSkipTranslation: CGFloat = snapYDelta * 2.0
         
         if abs(velocity.y) < snapYVelocity || self.yState?.waitForLeave == true {
             if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
                 if let (skipped, waitForLeave) = self.yState {
                     if waitForLeave {
-                        if updatedPosition.y > snapLocation.y - snapYDelta * 1.5 && updatedPosition.y < snapLocation.y + snapYDelta * 1.5 {
+                        if updatedPosition.y > snapLocation.y - snapYDelta * 2.0 && updatedPosition.y < snapLocation.y + snapYDelta * 2.0 {
                             
                         } else {
                             self.yState = nil
@@ -639,5 +642,18 @@ class DrawingEntitySnapTool {
         }
         
         return updatedPosition
+    }
+    
+    private let snapRotations: [CGFloat] = [0.0, .pi / 4.0, .pi / 2.0, .pi * 1.5,]
+    func maybeSkipFromStart(entityView: DrawingEntityView, rotation: CGFloat) {
+        self.rotationState = nil
+        
+        let snapDelta: CGFloat = 0.087
+        for snapRotation in self.snapRotations {
+            if rotation > snapRotation - snapDelta && rotation < snapRotation + snapDelta {
+                self.rotationState = (0.0, true)
+                break
+            }
+        }
     }
 }

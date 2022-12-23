@@ -440,6 +440,8 @@
             [videoItemView setScrubbingPanelApperanceLocked:false];
             [videoItemView presentScrubbingPanelAfterReload:hasChanges];
         }
+        
+        commit();
     };
     
     controller.didFinishRenderingFullSizeImage = ^(UIImage *image)

@@ -482,14 +482,14 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         }
     }
     
-    public func entities(for time: CMTime, fps: Int, size: CGSize, completion: (([CIImage]?) -> Void)!) {
+    public func entities(for time: CMTime, fps: Int, size: CGSize, completion: @escaping ([CIImage]) -> Void) {
         let entities = self.entities
         let maxSide = max(size.width, size.height)
-        let paintingScale = maxSide / 2560.0
+        let paintingScale = maxSide / 1920.0
         
         self.queue.async {
             if entities.isEmpty {
-                completion(nil)
+                completion([])
             } else {
                 let count = Atomic<Int>(value: 1)
                 let images = Atomic<[(CIImage, Int)]>(value: [])
@@ -543,8 +543,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 }
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
-    public var captionPanelView: (() -> TGCaptionPanelView?)!
-    public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> TGPhotoPaintStickersScreen?)!
+    public var captionPanelView: (() -> TGCaptionPanelView?)?
     
     private let context: AccountContext
     
@@ -552,63 +551,15 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         self.context = context
     }
     
-    public func documentId(forDocument document: Any!) -> Int64 {
-        if let data = document as? Data{
-            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
-            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
-                return file.fileId.id
-            } else {
-                return 0
-            }
-        } else {
-            return 0
-        }
-    }
-    
-    public func maskDescription(forDocument document: Any!) -> TGStickerMaskDescription? {
-        if let data = document as? Data{
-            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
-            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
-                for attribute in file.attributes {
-                    if case let .Sticker(_, _, maskData) = attribute {
-                        if let maskData = maskData {
-                            return TGStickerMaskDescription(n: maskData.n, point: CGPoint(x: maskData.x, y: maskData.y), zoom: CGFloat(maskData.zoom))
-                        } else {
-                            return nil
-                        }
-                    }
-                }
-                return nil
-            } else {
-                return nil
-            }
-        } else {
-            return nil
-        }
-    }
-
-    public func stickerView(forDocument document: Any!) -> (UIView & TGPhotoPaintStickerRenderView)! {
-        if let data = document as? Data{
-            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
-            if let file = decoder.decodeRootObject() as? TelegramMediaFile {
-                return LegacyPaintStickerView(context: self.context, file: file)
-            } else {
-                return nil
-            }
-        } else {
-            return nil
-        }
-    }
-    
     class LegacyDrawingAdapter: NSObject, TGPhotoDrawingAdapter {
-        let drawingView: TGPhotoDrawingView!
-        let drawingEntitiesView: TGPhotoDrawingEntitiesView!
+        let drawingView: TGPhotoDrawingView
+        let drawingEntitiesView: TGPhotoDrawingEntitiesView
         let selectionContainerView: UIView
-        let contentWrapperView: UIView!
-        let interfaceController: TGPhotoDrawingInterfaceController!
+        let contentWrapperView: UIView
+        let interfaceController: TGPhotoDrawingInterfaceController
         
-        init(context: AccountContext, size: CGSize, originalSize: CGSize, isAvatar: Bool) {
-            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isAvatar: isAvatar)
+        init(context: AccountContext, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?) {
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, entitiesView: entitiesView)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView
@@ -619,18 +570,18 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         }
     }
     
-    public func drawingAdapter(_ size: CGSize, originalSize: CGSize, isAvatar: Bool) -> TGPhotoDrawingAdapter! {
-        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize, isAvatar: isAvatar)
+    public func drawingAdapter(_ size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?) -> TGPhotoDrawingAdapter {
+        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, entitiesView: entitiesView)
     }
     
-    public func solidRoundedButton(_ title: String!, action: (() -> Void)!) -> (UIView & TGPhotoSolidRoundedButtonView)! {
+    public func solidRoundedButton(_ title: String, action: @escaping () -> Void) -> UIView & TGPhotoSolidRoundedButtonView {
         let theme = SolidRoundedButtonTheme(theme: self.context.sharedContext.currentPresentationData.with { $0 }.theme)
         let button = SolidRoundedButtonView(title: title, theme: theme, height: 50.0, cornerRadius: 10.0)
         button.pressed = action
         return button
     }
     
-    public func drawingEntitiesView(with size: CGSize) -> (UIView & TGPhotoDrawingEntitiesView)! {
+    public func drawingEntitiesView(with size: CGSize) -> UIView & TGPhotoDrawingEntitiesView {
         let view = DrawingEntitiesView(context: self.context, size: size)
         return view
     }

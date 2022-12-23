@@ -79,9 +79,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     enum Font: Codable {
         case sanFrancisco
         case newYork
-        case monospaced
-        case round
-        case custom(String, String)
+        case other(String, String)
     }
     
     enum Alignment: Codable {
@@ -345,12 +343,12 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                     return emojiViewProvider(emoji)
                 })
                 customEmojiContainerView.isUserInteractionEnabled = false
-                customEmojiContainerView.center = customEmojiContainerView.center.offsetBy(dx: 0.0, dy: 10.0)
+                customEmojiContainerView.center = customEmojiContainerView.center
                 self.addSubview(customEmojiContainerView)
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(fontSize: self.displayFontSize * 0.8, textColor: textColor, emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: self.displayFontSize * 0.78, textColor: textColor, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil
@@ -523,9 +521,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        var rect = self.bounds
-        rect = rect.offsetBy(dx: 0.0, dy: 10.0) // CGRectOffset(rect, 0.0f, 10.0f);
-        self.textView.frame = rect
+        self.textView.frame = self.bounds
     }
         
     private var displayFontSize: CGFloat {
@@ -545,7 +541,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(fontSize * 0.24)
     
         if let (font, name) = availableFonts[text.string.lowercased()] {
-            self.textEntity.font = .custom(font, name)
+            self.textEntity.font = .other(font, name)
         }
         
         var font: UIFont
@@ -554,11 +550,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             font = Font.with(size: fontSize, design: .regular, weight: .semibold)
         case .newYork:
             font = Font.with(size: fontSize, design: .serif, weight: .semibold)
-        case .monospaced:
-            font = Font.with(size: fontSize, design: .monospace, weight: .semibold)
-        case .round:
-            font = Font.with(size: fontSize, design: .round, weight: .semibold)
-        case let .custom(fontName, _):
+        case let .other(fontName, _):
             font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .regular, weight: .semibold)
         }
         
@@ -672,7 +664,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     func getRenderImage() -> UIImage? {
         let rect = self.bounds
         UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
-        self.textView.drawHierarchy(in: rect.offsetBy(dx: 0.0, dy: 10.0), afterScreenUpdates: true)
+        self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
@@ -684,14 +676,14 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         let scale = self.textEntity.scale
         let rotation = self.textEntity.rotation
         
-        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.8 / 17.0)
+        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.78 / 17.0)
         
         var entities: [DrawingStickerEntity] = []
         for (emojiRect, emojiAttribute) in self.emojiRects {
             guard let file = emojiAttribute.file else {
                 continue
             }
-            let emojiTextPosition = emojiRect.offsetBy(dx: 0.0, dy: 10.0).center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
+            let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
             let entity = DrawingStickerEntity(file: file)
             entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
@@ -754,7 +746,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         
         self.snapTool.onSnapYUpdated = { [weak self] snapped in
             if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
+                entityView.onSnapToYAxis(snapped)
             }
         }
     }
@@ -856,7 +848,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         switch gestureRecognizer.state {
         case .began, .changed:
             let scale = gestureRecognizer.scale
-            entity.fontSize = max(0.1, entity.scale * scale)
+            entity.scale = max(0.1, entity.scale * scale)
             entityView.update()
 
             gestureRecognizer.scale = 1.0
@@ -1033,8 +1025,8 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             context.saveGState()
             
             context.translateBy(x: origin.x, y: origin.y)
-            
-            context.setBlendMode(.normal)
+                        
+            context.setBlendMode(.copy)
             context.setFillColor(frameColor.cgColor)
             context.setStrokeColor(frameColor.cgColor)
             

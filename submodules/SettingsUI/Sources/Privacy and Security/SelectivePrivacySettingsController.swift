@@ -700,9 +700,12 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     }
     let exceptionsInfo: String
     if case .profilePhoto = kind {
-        if case .nobody = state.setting {
+        switch state.setting {
+        case .nobody:
             exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideAddInfo
-        } else {
+        case .contacts:
+            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideBothInfo
+        case .everybody:
             exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideInfo
         }
     } else {
