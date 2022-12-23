@@ -238,6 +238,17 @@ public final class MediaBox {
         return ResourceStorePaths(partial: "\(self.basePath)/\(fileNameForId(id))_partial", complete: "\(self.basePath)/\(fileNameForId(id))")
     }
     
+    public func fileSizeForId(_ id: MediaResourceId) -> Int64 {
+        let paths = self.storePathsForId(id)
+        if let size = fileSize(paths.complete, useTotalFileAllocatedSize: false) {
+            return size
+        } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
+            return size
+        } else {
+            return 0
+        }
+    }
+    
     private func fileNamesForId(_ id: MediaResourceId) -> ResourceStorePaths {
         return ResourceStorePaths(partial: "\(fileNameForId(id))_partial", complete: "\(fileNameForId(id))")
     }
