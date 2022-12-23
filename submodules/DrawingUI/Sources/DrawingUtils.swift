@@ -699,63 +699,6 @@ class BezierPath {
     }
 }
 
-func concaveHullPath(points: [CGPoint]) -> CGPath {
-    let hull = getHull(points, concavity: 1000.0)
-    let hullPath = CGMutablePath()
-    var moved = true
-    for point in hull {
-        if moved {
-            hullPath.move(to: point)
-            moved = false
-        } else {
-            hullPath.addLine(to: point)
-        }
-    }
-    hullPath.closeSubpath()
-    
-    return hullPath
-}
-
-func expandPath(_ path: CGPath, width: CGFloat) -> CGPath {
-    let expandedPath = path.copy(strokingWithWidth: width * 2.0, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
-    
-    class UserInfo {
-        let outputPath = CGMutablePath()
-        var passedFirst = false
-    }
-    var userInfo = UserInfo()
-    
-    withUnsafeMutablePointer(to: &userInfo) { userInfoPointer in
-        expandedPath.apply(info: userInfoPointer) { (userInfo, nextElementPointer) in
-            let element = nextElementPointer.pointee
-            let userInfoPointer = userInfo!.assumingMemoryBound(to: UserInfo.self)
-            let userInfo = userInfoPointer.pointee
-            
-            if !userInfo.passedFirst {
-                if case .closeSubpath = element.type {
-                    userInfo.passedFirst = true
-                }
-            } else {
-                switch element.type {
-                case .moveToPoint:
-                    userInfo.outputPath.move(to: element.points[0])
-                case .addLineToPoint:
-                    userInfo.outputPath.addLine(to: element.points[0])
-                case .addQuadCurveToPoint:
-                    userInfo.outputPath.addQuadCurve(to: element.points[1], control: element.points[0])
-                case .addCurveToPoint:
-                    userInfo.outputPath.addCurve(to: element.points[2], control1: element.points[0], control2: element.points[1])
-                case .closeSubpath:
-                    userInfo.outputPath.closeSubpath()
-                @unknown default:
-                    userInfo.outputPath.closeSubpath()
-                }
-            }
-        }
-    }
-    return userInfo.outputPath
-}
-
 class Matrix {
     private(set) var m: [Float]
     

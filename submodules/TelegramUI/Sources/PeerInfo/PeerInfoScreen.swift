@@ -3912,19 +3912,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                     legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: message.associatedThreadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                         transitionCompletion()
-                    }, presentStickers: { [weak self] completion in
-                        if let strongSelf = self {
-                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
-                                if let (fileReference, view, rect) = result {
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                                }
-                                return true
-                            })
-                            strongSelf.controller?.present(controller, in: .window(.root))
-                            return controller
-                        } else {
-                            return nil
-                        }
                     }, getCaptionPanelView: {
                         return nil
                     }, sendMessagesWithSignals: { [weak self] signals, _, _ in
@@ -6948,9 +6935,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             let uploadInterface = LegacyLiveUploadInterface(context: context)
             let signal: SSignal
-            if let asset = asset as? AVAsset {
-                signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
-            } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+            if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                 let durationSignal: SSignal = SSignal(generator: { subscriber in
                     let disposable = (entityRenderer.duration()).start(next: { duration in
                         subscriber.putNext(duration)
@@ -6969,6 +6954,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 })
                
+            } else if let asset = asset as? AVAsset {
+                signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
             } else {
                 signal = SSignal.complete()
             }
@@ -7153,19 +7140,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             
             let paintStickersContext = LegacyPaintStickersContext(context: strongSelf.context)
-            paintStickersContext.presentStickersController = { completion in
-                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
-                    if let (fileReference, view, rect) = result {
-                        let coder = PostboxEncoder()
-                        coder.encodeRootObject(fileReference.media)
-                        completion?(coder.makeData(), fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                    }
-                    return true
-                })
-                (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
-                return controller
-            }
-            
+        
             var isForum = false
             if let peer = strongSelf.data?.peer as? TelegramChannel, peer.flags.contains(.isForum) {
                 isForum = true

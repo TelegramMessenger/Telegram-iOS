@@ -7,7 +7,7 @@
 
 @protocol TGPhotoPaintEntityRenderer <NSObject>
 
-- (void)entitiesForTime:(CMTime)time fps:(NSInteger)fps size:(CGSize)size completion:(void(^)(NSArray<CIImage *> *))completion;
+- (void)entitiesForTime:(CMTime)time fps:(NSInteger)fps size:(CGSize)size completion:(void(^_Nonnull)(NSArray<CIImage *> * _Nonnull))completion;
 
 @end
 
@@ -17,45 +17,18 @@
 
 @end
 
-@protocol TGPhotoPaintStickerRenderView <NSObject>
-
-@property (nonatomic, copy) void(^started)(double);
-
-- (void)setIsVisible:(bool)isVisible;
-- (void)seekTo:(double)timestamp;
-- (void)play;
-- (void)pause;
-- (void)resetToStart;
-
-- (void)playFromFrame:(NSInteger)frameIndex;
-- (void)copyStickerView:(NSObject<TGPhotoPaintStickerRenderView> *)view;
-
-- (int64_t)documentId;
-- (UIImage *)image;
-
-@end
-
-@protocol TGPhotoPaintStickersScreen <NSObject>
-
-@property (nonatomic, copy) void(^screenDidAppear)(void);
-@property (nonatomic, copy) void(^screenWillDisappear)(void);
-
-- (void)restore;
-- (void)invalidate;
-
-@end
 
 @protocol TGCaptionPanelView <NSObject>
 
-@property (nonatomic, readonly) UIView *view;
+@property (nonatomic, readonly) UIView * _Nonnull view;
 
-- (NSAttributedString *)caption;
-- (void)setCaption:(NSAttributedString *)caption;
+- (NSAttributedString * _Nonnull)caption;
+- (void)setCaption:(NSAttributedString * _Nullable)caption;
 - (void)dismissInput;
 
-@property (nonatomic, copy) void(^sendPressed)(NSAttributedString *string);
-@property (nonatomic, copy) void(^focusUpdated)(BOOL focused);
-@property (nonatomic, copy) void(^heightUpdated)(BOOL animated);
+@property (nonatomic, copy) void(^ _Nullable sendPressed)(NSAttributedString * _Nullable string);
+@property (nonatomic, copy) void(^ _Nullable focusUpdated)(BOOL focused);
+@property (nonatomic, copy) void(^ _Nullable heightUpdated)(BOOL animated);
 
 - (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset;
 - (CGFloat)baseHeight;
@@ -67,20 +40,20 @@
 
 @property (nonatomic, readonly) BOOL isTracking;
 
-@property (nonatomic, copy) void(^zoomOut)(void);
+@property (nonatomic, copy) void(^ _Nonnull zoomOut)(void);
 
 - (void)updateZoomScale:(CGFloat)scale;
 
-- (void)setupWithDrawingData:(NSData *)drawingData;
+- (void)setupWithDrawingData:(NSData * _Nullable)drawingData;
 
 @end
 
 @protocol TGPhotoDrawingEntitiesView <NSObject>
 
-@property (nonatomic, copy) CGPoint (^getEntityCenterPosition)(void);
-@property (nonatomic, copy) CGFloat (^getEntityInitialRotation)(void);
+@property (nonatomic, copy) CGPoint (^ _Nonnull getEntityCenterPosition)(void);
+@property (nonatomic, copy) CGFloat (^ _Nonnull getEntityInitialRotation)(void);
 
-@property (nonatomic, copy) void(^hasSelectionChanged)(bool);
+@property (nonatomic, copy) void(^ _Nonnull hasSelectionChanged)(bool);
 @property (nonatomic, readonly) BOOL hasSelection;
 
 - (void)play;
@@ -91,22 +64,22 @@
 - (void)clearSelection;
 - (void)onZoom;
 
-- (void)handlePinch:(UIPinchGestureRecognizer *)gestureRecognizer;
-- (void)handleRotate:(UIRotationGestureRecognizer *)gestureRecognizer;
+- (void)handlePinch:(UIPinchGestureRecognizer * _Nonnull)gestureRecognizer;
+- (void)handleRotate:(UIRotationGestureRecognizer * _Nonnull)gestureRecognizer;
 
-- (void)setupWithEntitiesData:(NSData *)entitiesData;
+- (void)setupWithEntitiesData:(NSData * _Nullable)entitiesData;
 
 @end
 
 @protocol TGPhotoDrawingInterfaceController <NSObject>
 
-@property (nonatomic, copy) void(^requestDismiss)(void);
-@property (nonatomic, copy) void(^requestApply)(void);
-@property (nonatomic, copy) UIImage *(^getCurrentImage)(void);
-@property (nonatomic, copy) void(^updateVideoPlayback)(bool);
+@property (nonatomic, copy) void(^ _Nonnull requestDismiss)(void);
+@property (nonatomic, copy) void(^ _Nonnull requestApply)(void);
+@property (nonatomic, copy) UIImage * _Nullable(^ _Nonnull getCurrentImage)(void);
+@property (nonatomic, copy) void(^ _Nonnull updateVideoPlayback)(bool);
 
-- (TGPaintingData *)generateResultData;
-- (void)animateOut:(void(^)(void))completion;
+- (TGPaintingData * _Nullable)generateResultData;
+- (void)animateOut:(void(^_Nonnull)(void))completion;
 
 - (void)adapterContainerLayoutUpdatedSize:(CGSize)size
                           intrinsicInsets:(UIEdgeInsets)intrinsicInsets
@@ -121,30 +94,23 @@
 
 @protocol TGPhotoDrawingAdapter <NSObject>
 
-@property (nonatomic, readonly) id<TGPhotoDrawingView> drawingView;
-@property (nonatomic, readonly) id<TGPhotoDrawingEntitiesView> drawingEntitiesView;
-@property (nonatomic, readonly) UIView * selectionContainerView;
-@property (nonatomic, readonly) UIView * contentWrapperView;
-@property (nonatomic, readonly) id<TGPhotoDrawingInterfaceController> interfaceController;
+@property (nonatomic, readonly) id<TGPhotoDrawingView> _Nonnull drawingView;
+@property (nonatomic, readonly) id<TGPhotoDrawingEntitiesView> _Nonnull drawingEntitiesView;
+@property (nonatomic, readonly) UIView * _Nonnull selectionContainerView;
+@property (nonatomic, readonly) UIView * _Nonnull contentWrapperView;
+@property (nonatomic, readonly) id<TGPhotoDrawingInterfaceController> _Nonnull interfaceController;
 
 @end
 
 
 @protocol TGPhotoPaintStickersContext <NSObject>
 
-- (int64_t)documentIdForDocument:(id)document;
-- (TGStickerMaskDescription *)maskDescriptionForDocument:(id)document;
-
-- (UIView<TGPhotoPaintStickerRenderView> *)stickerViewForDocument:(id)document;
-
-@property (nonatomic, copy) id<TGPhotoPaintStickersScreen>(^presentStickersController)(void(^)(id, bool, UIView *, CGRect));
-
-@property (nonatomic, copy) id<TGCaptionPanelView>(^captionPanelView)(void);
+@property (nonatomic, copy) id<TGCaptionPanelView> _Nullable(^ _Nullable captionPanelView)(void);
 
 
-- (UIView<TGPhotoSolidRoundedButtonView> *)solidRoundedButton:(NSString *)title action:(void(^)(void))action;
-- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isVideo:(bool)isVideo isAvatar:(bool)isAvatar;
+- (UIView<TGPhotoSolidRoundedButtonView> *_Nonnull)solidRoundedButton:(NSString *_Nonnull)title action:(void(^_Nonnull)(void))action;
+- (id<TGPhotoDrawingAdapter> _Nonnull)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isVideo:(bool)isVideo isAvatar:(bool)isAvatar entitiesView:(UIView<TGPhotoDrawingEntitiesView> * _Nullable)entitiesView;
 
-- (UIView<TGPhotoDrawingEntitiesView> *)drawingEntitiesViewWithSize:(CGSize)size;
+- (UIView<TGPhotoDrawingEntitiesView> * _Nonnull)drawingEntitiesViewWithSize:(CGSize)size;
 
 @end

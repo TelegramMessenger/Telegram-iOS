@@ -197,7 +197,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     private var initialEntitiesData: Data?
-    public func setup(withEntitiesData entitiesData: Data!) {
+    public func setup(withEntitiesData entitiesData: Data?) {
         self.clear()
         
         self.initialEntitiesData = entitiesData
@@ -329,12 +329,13 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         let view = entity.makeView(context: self.context)
         view.containerView = self
         
-        view.onSnapToXAxis = { [weak self] snappedToX in
-            guard let strongSelf = self else {
+        view.onSnapToXAxis = { [weak self, weak view] snappedToX in
+            guard let strongSelf = self, let strongView = view else {
                 return
             }
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             if snappedToX {
+                strongSelf.insertSubview(strongSelf.xAxisView, belowSubview: strongView)
                 if strongSelf.xAxisView.alpha < 1.0 {
                     strongSelf.hapticFeedback.impact(.light)
                 }
@@ -343,12 +344,13 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 transition.updateAlpha(layer: strongSelf.xAxisView.layer, alpha: 0.0)
             }
         }
-        view.onSnapToYAxis = { [weak self] snappedToY in
-            guard let strongSelf = self else {
+        view.onSnapToYAxis = { [weak self, weak view] snappedToY in
+            guard let strongSelf = self, let strongView = view else {
                 return
             }
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             if snappedToY {
+                strongSelf.insertSubview(strongSelf.yAxisView, belowSubview: strongView)
                 if strongSelf.yAxisView.alpha < 1.0 {
                     strongSelf.hapticFeedback.impact(.light)
                 }
@@ -573,13 +575,13 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return self.selectedEntityView != nil
     }
     
-    public func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer!) {
+    public func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
         if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handlePinch(gestureRecognizer)
         }
     }
     
-    public func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer!) {
+    public func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
         if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handleRotate(gestureRecognizer)
         }

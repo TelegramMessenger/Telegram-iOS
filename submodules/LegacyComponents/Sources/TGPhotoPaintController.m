@@ -1162,35 +1162,6 @@
 //
 //#pragma mark Stickers
 //
-//- (void)presentStickersView
-//{
-//    if (_stickersScreen != nil) {
-//        [_stickersScreen restore];
-//        return;
-//    }
-//    
-//    __weak TGPhotoPaintController *weakSelf = self;
-//    _stickersScreen = _stickersContext.presentStickersController(^(id document, bool animated, UIView *view, CGRect rect) {
-//        __strong TGPhotoPaintController *strongSelf = weakSelf;
-//        if (strongSelf != nil) {
-//            [strongSelf createNewStickerWithDocument:document animated:animated transitionPoint:CGPointZero snapshotView:nil];
-//        }
-//    });
-//    _stickersScreen.screenDidAppear = ^{
-//        __strong TGPhotoPaintController *strongSelf = weakSelf;
-//        if (strongSelf != nil) {
-//            strongSelf.controlVideoPlayback(false);
-//            [strongSelf->_entitiesContainerView updateVisibility:false];
-//        }
-//    };
-//    _stickersScreen.screenWillDisappear = ^{
-//        __strong TGPhotoPaintController *strongSelf = weakSelf;
-//        if (strongSelf != nil) {
-//            strongSelf.controlVideoPlayback(true);
-//            [strongSelf->_entitiesContainerView updateVisibility:true];
-//        }
-//    };
-//}
 //
 //- (void)createNewStickerWithDocument:(id)document animated:(bool)animated transitionPoint:(CGPoint)transitionPoint snapshotView:(UIView *)snapshotView
 //{

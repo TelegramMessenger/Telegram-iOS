@@ -79,9 +79,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     enum Font: Codable {
         case sanFrancisco
         case newYork
-        case monospaced
-        case round
-        case custom(String, String)
+        case other(String, String)
     }
     
     enum Alignment: Codable {
@@ -543,7 +541,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(fontSize * 0.24)
     
         if let (font, name) = availableFonts[text.string.lowercased()] {
-            self.textEntity.font = .custom(font, name)
+            self.textEntity.font = .other(font, name)
         }
         
         var font: UIFont
@@ -552,11 +550,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             font = Font.with(size: fontSize, design: .regular, weight: .semibold)
         case .newYork:
             font = Font.with(size: fontSize, design: .serif, weight: .semibold)
-        case .monospaced:
-            font = Font.with(size: fontSize, design: .monospace, weight: .semibold)
-        case .round:
-            font = Font.with(size: fontSize, design: .round, weight: .semibold)
-        case let .custom(fontName, _):
+        case let .other(fontName, _):
             font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .regular, weight: .semibold)
         }
         
@@ -854,7 +848,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         switch gestureRecognizer.state {
         case .began, .changed:
             let scale = gestureRecognizer.scale
-            entity.fontSize = max(0.1, entity.scale * scale)
+            entity.scale = max(0.1, entity.scale * scale)
             entityView.update()
 
             gestureRecognizer.scale = 1.0

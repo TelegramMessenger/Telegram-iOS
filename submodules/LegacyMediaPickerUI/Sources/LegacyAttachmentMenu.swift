@@ -58,7 +58,7 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -75,13 +75,6 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
         let paintStickersContext = LegacyPaintStickersContext(context: context)
         paintStickersContext.captionPanelView = {
             return getCaptionPanelView()
-        }
-        paintStickersContext.presentStickersController = { completion in
-            return presentStickers({ file, animated, view, rect in
-                let coder = PostboxEncoder()
-                coder.encodeRootObject(file)
-                completion?(coder.makeData(), animated, view, rect)
-            })
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -132,7 +125,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
     })
 }
     
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitle: String?, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitle: String?, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -194,13 +187,6 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitl
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.captionPanelView = {
         return getCaptionPanelView()
-    }
-    paintStickersContext.presentStickersController = { completion in
-        return presentStickers({ file, animated, view, rect in
-            let coder = PostboxEncoder()
-            coder.encodeRootObject(file)
-            completion?(coder.makeData(), animated, view, rect)
-        })
     }
     
     if canSendImageOrVideo {

@@ -107,12 +107,6 @@ public final class WebSearchController: ViewController {
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
-    public var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)? {
-        didSet {
-            self.controllerNode.presentStickers = self.presentStickers
-        }
-    }
-    
     public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil } {
         didSet {
             self.controllerNode.getCaptionPanelView = self.getCaptionPanelView

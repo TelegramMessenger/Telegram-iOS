@@ -6154,16 +6154,6 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 }
                 
                 let paintStickersContext = LegacyPaintStickersContext(context: strongSelf.context)
-//                paintStickersContext.presentStickersController = { completion in
-//                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-//                        let coder = PostboxEncoder()
-//                        coder.encodeRootObject(fileReference.media)
-//                        completion?(coder.makeData(), fileReference.media.isAnimatedSticker, node.view, rect)
-//                        return true
-//                    })
-//                    strongSelf.controller?.present(controller, in: .window(.root))
-//                    return controller
-//                }
                 
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: peerId.namespace == Namespaces.Peer.CloudUser, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: false, title: nil, isSuggesting: false)!
                 mixin.forceDark = true
@@ -6308,9 +6298,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 }
                 let uploadInterface = LegacyLiveUploadInterface(context: context)
                 let signal: SSignal
-                if let asset = asset as? AVAsset {
-                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
-                } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                     let durationSignal: SSignal = SSignal(generator: { subscriber in
                         let disposable = (entityRenderer.duration()).start(next: { duration in
                             subscriber.putNext(duration)
@@ -6329,6 +6317,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         }
                     })
                    
+                } else if let asset = asset as? AVAsset {
+                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
                 } else {
                     signal = SSignal.complete()
                 }

@@ -151,7 +151,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public weak var webSearchController: WebSearchController?
     
     public var openCamera: ((TGAttachmentCameraView?) -> Void)?
-    public var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
     public var presentSchedulePicker: (Bool, @escaping (Int32) -> Void) -> Void = { _, _ in }
     public var presentTimerPicker: (@escaping (Int32) -> Void) -> Void = { _ in }
     public var presentWebSearch: (MediaGroupsScreen) -> Void = { _ in }
@@ -681,7 +680,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if let strongSelf = self {
                     strongSelf.controller?.interaction?.sendSelected(result, silently, scheduleTime, false, completion)
                 }
-            }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
+            }, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
@@ -717,7 +716,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if let strongSelf = self {
                     strongSelf.controller?.interaction?.sendSelected(result, silently, scheduleTime, false, completion)
                 }
-            }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
+            }, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
@@ -1498,7 +1497,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     if let strongSelf = self {
                         let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, subject: .assets(collection), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
                         
-                        mediaPicker.presentStickers = strongSelf.presentStickers
                         mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
                         mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
                         mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView

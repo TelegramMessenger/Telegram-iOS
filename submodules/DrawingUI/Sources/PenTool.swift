@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import Display
 
-final class PenTool: DrawingElement, Codable {
+final class PenTool: DrawingElement {
     class RenderView: UIView, DrawingRenderView {
         private weak var element: PenTool?
         private var isEraser = false
@@ -12,11 +12,10 @@ final class PenTool: DrawingElement, Codable {
         
         private var start = 0
         private var segmentsCount = 0
-        private var velocity: CGFloat?
         
         private var displayScale: CGFloat = 1.0
         
-        func setup(size: CGSize, screenSize: CGSize, isEraser: Bool, useDisplayLink: Bool) {
+        func setup(size: CGSize, screenSize: CGSize, isEraser: Bool) {
             self.isEraser = isEraser
             
             self.backgroundColor = .clear
@@ -75,7 +74,7 @@ final class PenTool: DrawingElement, Codable {
             })
         }
     
-        fileprivate func draw(element: PenTool, velocity: CGFloat, rect: CGRect) {
+        fileprivate func draw(element: PenTool, rect: CGRect) {
             self.element = element
             
             self.alpha = element.color.alpha
@@ -105,7 +104,7 @@ final class PenTool: DrawingElement, Codable {
                     context.scaleBy(x: 1.0 / self.displayScale, y: 1.0 / self.displayScale)
                     
                     context.setBlendMode(.copy)
-                    element.drawSegments(in: context, from: self.start, upTo: newStart)
+                    element.drawSegments(in: context, from: self.start, to: newStart)
                 }, opaque: false)
                 self.accumulationImage = image
                 self.layer.contents = image?.cgImage
@@ -115,11 +114,6 @@ final class PenTool: DrawingElement, Codable {
             
             self.segmentsCount = element.segments.count
             
-//            if let previous = self.velocity {
-//                self.velocity = velocity * 0.4 + previous * 0.6
-//            } else {
-//                self.velocity = velocity
-//            }
             if let rect = rect {
                 self.activeView?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0).applying(CGAffineTransform(scaleX: 1.0 / self.displayScale, y: 1.0 / self.displayScale)))
             } else {
@@ -134,7 +128,7 @@ final class PenTool: DrawingElement, Codable {
                     return
                 }
                 context.scaleBy(x: 1.0 / parent.displayScale, y: 1.0 / parent.displayScale)
-                element.drawSegments(in: context, from: parent.start, upTo: parent.segmentsCount)
+                element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
             }
         }
     }
@@ -195,67 +189,7 @@ final class PenTool: DrawingElement, Codable {
         
         self.renderColor = color.withUpdatedAlpha(1.0).toUIColor()
     }
-    
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case drawingSize
-        case color
-        case isEraser
-        case hasArrow
-        case isBlur
         
-        case renderLineWidth
-        case renderMinLineWidth
-        case renderArrowLength
-        case renderArrowLineWidth
-    
-        case arrowStart
-        case arrowDirection
-        
-        case renderSegments
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
-        self.color = try container.decode(DrawingColor.self, forKey: .color)
-        self.isEraser = try container.decode(Bool.self, forKey: .isEraser)
-        self.hasArrow = try container.decode(Bool.self, forKey: .hasArrow)
-        self.isBlur = try container.decode(Bool.self, forKey: .isBlur)
-        self.renderLineWidth = try container.decode(CGFloat.self, forKey: .renderLineWidth)
-        self.renderMinLineWidth = try container.decode(CGFloat.self, forKey: .renderMinLineWidth)
-        self.renderArrowLength = try container.decode(CGFloat.self, forKey: .renderArrowLength)
-        self.renderArrowLineWidth = try container.decode(CGFloat.self, forKey: .renderArrowLineWidth)
-        
-        self.arrowStart = try container.decodeIfPresent(CGPoint.self, forKey: .arrowStart)
-        self.arrowDirection = try container.decodeIfPresent(CGFloat.self, forKey: .arrowDirection)
-        
-        self.segments = try container.decode([Segment].self, forKey: .renderSegments)
-        
-        self.renderColor = self.color.withUpdatedAlpha(1.0).toUIColor()
-        self.maybeSetupArrow()
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.drawingSize, forKey: .drawingSize)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.isEraser, forKey: .isEraser)
-        try container.encode(self.hasArrow, forKey: .hasArrow)
-        try container.encode(self.isBlur, forKey: .isBlur)
-        try container.encode(self.renderLineWidth, forKey: .renderLineWidth)
-        try container.encode(self.renderMinLineWidth, forKey: .renderMinLineWidth)
-        try container.encode(self.renderArrowLength, forKey: .renderArrowLength)
-        try container.encode(self.renderArrowLineWidth, forKey: .renderArrowLineWidth)
-    
-        try container.encodeIfPresent(self.arrowStart, forKey: .arrowStart)
-        try container.encodeIfPresent(self.arrowDirection, forKey: .arrowDirection)
-        
-        try container.encode(self.segments, forKey: .renderSegments)
-    }
-    
     var isFinishingArrow = false
     func finishArrow(_ completion: @escaping () -> Void) {
         if let arrowStart, let arrowDirection {
@@ -271,7 +205,7 @@ final class PenTool: DrawingElement, Codable {
     
     func setupRenderView(screenSize: CGSize) -> DrawingRenderView? {
         let view = RenderView()
-        view.setup(size: self.drawingSize, screenSize: screenSize, isEraser: self.isEraser, useDisplayLink: self.color.toUIColor().rgb == 0xbf5af2)
+        view.setup(size: self.drawingSize, screenSize: screenSize, isEraser: self.isEraser)
         self.currentRenderView = view
         return view
     }
@@ -290,9 +224,9 @@ final class PenTool: DrawingElement, Codable {
         if point.velocity > 1200.0 {
             filterDistance = 70.0
         } else {
-            filterDistance = 15.0
+            filterDistance = 5.0
         }
-        
+    
         if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.segments.count > 1 {
             return
         }
@@ -312,7 +246,7 @@ final class PenTool: DrawingElement, Codable {
         let rect = append(point: Point(position: point.location, width: effectiveRenderLineWidth))
         
         if let currentRenderView = self.currentRenderView as? RenderView, let rect = rect {
-            currentRenderView.draw(element: self, velocity: point.velocity, rect: rect)
+            currentRenderView.draw(element: self, rect: rect)
         }
         
         if state == .ended {
@@ -385,7 +319,7 @@ final class PenTool: DrawingElement, Codable {
         if self.isBlur, let blurredImage = self.blurredImage {
             let maskContext = DrawingContext(size: size, scale: 0.5, clear: true)
             maskContext?.withFlippedContext { maskContext in
-                self.drawSegments(in: maskContext, from: 0, upTo: self.segments.count)
+                self.drawSegments(in: maskContext, from: 0, to: self.segments.count)
             }
             if let maskImage = maskContext?.generateImage()?.cgImage, let blurredImage = blurredImage.cgImage {
                 context.clip(to: CGRect(origin: .zero, size: size), mask: maskImage)
@@ -396,7 +330,7 @@ final class PenTool: DrawingElement, Codable {
             }
             
         } else {
-            self.drawSegments(in: context, from: 0, upTo: self.segments.count)
+            self.drawSegments(in: context, from: 0, to: self.segments.count)
         }
         
         if let arrowLeftPath, let arrowRightPath {
@@ -433,38 +367,6 @@ final class PenTool: DrawingElement, Codable {
             self.radius1 = radius1
             self.radius2 = radius2
             self.rect = rect
-        }
-        
-        private enum CodingKeys: String, CodingKey {
-            case a
-            case b
-            case c
-            case d
-            case radius1
-            case radius2
-            case rect
-        }
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.a = try container.decode(CGPoint.self, forKey: .a)
-            self.b = try container.decode(CGPoint.self, forKey: .b)
-            self.c = try container.decode(CGPoint.self, forKey: .c)
-            self.d = try container.decode(CGPoint.self, forKey: .d)
-            self.radius1 = try container.decode(CGFloat.self, forKey: .radius1)
-            self.radius2 = try container.decode(CGFloat.self, forKey: .radius2)
-            self.rect = try container.decode(CGRect.self, forKey: .rect)
-        }
-        
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.a, forKey: .a)
-            try container.encode(self.b, forKey: .b)
-            try container.encode(self.c, forKey: .c)
-            try container.encode(self.d, forKey: .d)
-            try container.encode(self.radius1, forKey: .radius1)
-            try container.encode(self.radius2, forKey: .radius2)
-            try container.encode(self.rect, forKey: .rect)
         }
     }
     
@@ -708,11 +610,10 @@ final class PenTool: DrawingElement, Codable {
         return path
     }
     
-    private func drawSegments(in context: CGContext, from: Int, upTo: Int) {
-//        context.setStrokeColor(self.renderColor.cgColor)
+    private func drawSegments(in context: CGContext, from: Int, to: Int) {
         context.setFillColor(self.renderColor.cgColor)
         
-        for i in from ..< upTo {
+        for i in from ..< to {
             let segment = self.segments[i]
             
             var segmentPath: CGPath
@@ -726,7 +627,6 @@ final class PenTool: DrawingElement, Codable {
             
             context.addPath(segmentPath)
             context.fillPath()
-//            context.strokePath()
         }
     }
 }

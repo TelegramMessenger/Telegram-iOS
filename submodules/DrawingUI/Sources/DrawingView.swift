@@ -365,14 +365,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.strokeRecognitionTimer?.invalidate()
     }
     
-    public func setup(withDrawing drawingData: Data!) {
+    public func setup(withDrawing drawingData: Data?) {
         if let drawingData = drawingData, let image = UIImage(data: drawingData) {
             self.hasOpaqueData = true
             self.drawingImage = image
             self.layer.contents = image.cgImage
-           //let codableElements = try? JSONDecoder().decode([CodableDrawingElement].self, from: drawingData) {
-            //self.elements = codableElements.map { $0.element }
-            //self.commit(reset: true)
+          
             self.updateInternalState()
         }
     }

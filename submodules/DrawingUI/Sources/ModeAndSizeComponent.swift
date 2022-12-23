@@ -104,7 +104,7 @@ class ModeAndSizeComponent: Component {
         
         init() {
             self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x888888, alpha: 0.3))
-            self.node = SegmentedControlNode(theme: SegmentedControlTheme(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0x6f7075, alpha: 0.6), shadowColor: .black, textColor: UIColor(rgb: 0xffffff), dividerColor: UIColor(rgb: 0x505155, alpha: 0.6)), items: [], selectedIndex: 0, cornerRadius: 16.0)
+            self.node = SegmentedControlNode(theme: SegmentedControlTheme(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shadowColor: .black, textColor: UIColor(rgb: 0xffffff), dividerColor: UIColor(rgb: 0x505155, alpha: 0.6)), items: [], selectedIndex: 0, cornerRadius: 16.0)
 
             self.knob = UIImageView(image: generateKnobImage())
             
