@@ -502,10 +502,30 @@ public final class StorageBox {
             
             self.valueBox.begin()
             
-            self.valueBox.scan(self.peerIdToIdTable, keys: { key in
-                result.append(PeerId(key.getInt64(0)))
-                return true
-            })
+            var fromKey = ValueBoxKey(length: 8)
+            fromKey.setInt64(0, value: 0)
+            
+            let toKey = ValueBoxKey(length: 8)
+            toKey.setInt64(0, value: Int64.max)
+            
+            while true {
+                var peerId: Int64?
+                self.valueBox.range(self.peerIdToIdTable, start: fromKey, end: toKey, keys: { key in
+                    peerId = key.getInt64(0)
+                    return false
+                }, limit: 1)
+                
+                if let peerId = peerId {
+                    if peerId != 0 {
+                        result.append(PeerId(peerId))
+                    }
+                    
+                    fromKey.setInt64(0, value: peerId)
+                    fromKey = fromKey.successor
+                } else {
+                    break
+                }
+            }
             
             self.valueBox.commit()
             
