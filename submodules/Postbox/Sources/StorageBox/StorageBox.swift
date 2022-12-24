@@ -230,6 +230,19 @@ public final class StorageBox {
             })
         }
         
+        func reset() {
+            self.valueBox.begin()
+                        
+            self.valueBox.removeAllFromTable(self.hashIdToInfoTable)
+            self.valueBox.removeAllFromTable(self.idToReferenceTable)
+            self.valueBox.removeAllFromTable(self.peerIdToIdTable)
+            self.valueBox.removeAllFromTable(self.peerContentTypeStatsTable)
+            self.valueBox.removeAllFromTable(self.contentTypeStatsTable)
+            self.valueBox.removeAllFromTable(self.metadataTable)
+            
+            self.valueBox.commit()
+        }
+        
         private func internalAddSize(contentType: UInt8, delta: Int64) {
             let key = ValueBoxKey(length: 1)
             key.setUInt8(0, value: contentType)
@@ -891,6 +904,12 @@ public final class StorageBox {
         self.impl.with { impl in
             let ids = impl.remove(peerIds: peerIds)
             completion(ids)
+        }
+    }
+    
+    public func reset() {
+        self.impl.with { impl in
+            impl.reset()
         }
     }
 }

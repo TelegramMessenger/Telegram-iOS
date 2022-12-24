@@ -33,6 +33,10 @@ swift_library(
         "//submodules/AvatarNode",
         "//submodules/PhotoResources",
         "//submodules/SemanticStatusNode",
+        "//submodules/RadialStatusNode",
+        "//submodules/UndoUI",
+        "//submodules/AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

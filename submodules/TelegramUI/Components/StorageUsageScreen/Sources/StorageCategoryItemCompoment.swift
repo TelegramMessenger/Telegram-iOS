@@ -167,7 +167,7 @@ final class StorageCategoryItemComponent: Component {
         }
         
         func update(component: StorageCategoryItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let themeUpdated = self.component?.theme !== component.theme
+            let themeUpdated = self.component?.theme !== component.theme || self.component?.category.color != component.category.color
             
             self.component = component
             
@@ -276,7 +276,21 @@ final class StorageCategoryItemComponent: Component {
                 transition.setFrame(view: labelView, frame: labelFrame)
             }
             
+            var copyCheckLayer: CheckLayer?
             if themeUpdated {
+                if !transition.animation.isImmediate {
+                    let copyLayer = CheckLayer(theme: self.checkLayer.theme)
+                    copyLayer.frame = self.checkLayer.frame
+                    copyLayer.setSelected(self.checkLayer.selected, animated: false)
+                    self.layer.addSublayer(copyLayer)
+                    copyCheckLayer = copyLayer
+                    transition.setAlpha(layer: copyLayer, alpha: 0.0, completion: { [weak copyLayer] _ in
+                        copyLayer?.removeFromSuperlayer()
+                    })
+                    self.checkLayer.opacity = 0.0
+                    transition.setAlpha(layer: self.checkLayer, alpha: 1.0)
+                }
+                
                 self.checkLayer.theme = CheckNodeTheme(
                     backgroundColor: component.category.color,
                     strokeColor: component.theme.list.itemCheckColors.foregroundColor,
@@ -289,7 +303,11 @@ final class StorageCategoryItemComponent: Component {
             
             let checkDiameter: CGFloat = 22.0
             let checkFrame = CGRect(origin: CGPoint(x: titleFrame.minX - 20.0 - checkDiameter, y: floor((height - checkDiameter) / 2.0)), size: CGSize(width: checkDiameter, height: checkDiameter))
-            self.checkLayer.frame = checkFrame
+            transition.setFrame(layer: self.checkLayer, frame: checkFrame)
+            
+            if let copyCheckLayer {
+                transition.setFrame(layer: copyCheckLayer, frame: checkFrame)
+            }
             
             transition.setFrame(view: self.checkButtonArea, frame: CGRect(origin: CGPoint(x: additionalLeftInset, y: 0.0), size: CGSize(width: leftInset - additionalLeftInset, height: height)))
             

@@ -16,6 +16,11 @@ import Markdown
 import ContextUI
 import AnimatedAvatarSetNode
 import AvatarNode
+import RadialStatusNode
+import UndoUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import TelegramStringFormatting
 
 private extension StorageUsageScreenComponent.Category {
     init(_ category: StorageUsageStats.CategoryKey) {
@@ -108,6 +113,13 @@ final class StorageUsageScreenComponent: Component {
         ) {
             self.selectedPeers = selectedPeers
             self.selectedMessages = selectedMessages
+        }
+        
+        convenience init() {
+            self.init(
+                selectedPeers: Set(),
+                selectedMessages: Set()
+            )
         }
         
         static func ==(lhs: SelectionState, rhs: SelectionState) -> Bool {
@@ -206,6 +218,8 @@ final class StorageUsageScreenComponent: Component {
         private let scrollView: ScrollViewImpl
         
         private var currentStats: AllStorageUsageStats?
+        private var existingCategories: Set<Category> = Set()
+        
         private var currentMessages: [MessageId: Message] = [:]
         private var cacheSettings: CacheStorageSettings?
         private var peerItems: StoragePeerListPanelComponent.Items?
@@ -214,6 +228,8 @@ final class StorageUsageScreenComponent: Component {
         private var musicItems: StorageFileListPanelComponent.Items?
         
         private var selectionState: SelectionState?
+        
+        private var isClearing: Bool = false
         
         private var selectedCategories: Set<Category> = Set()
         private var isOtherCategoryExpanded: Bool = false
@@ -232,6 +248,9 @@ final class StorageUsageScreenComponent: Component {
         
         private var chartAvatarNode: AvatarNode?
         
+        private var doneStatusCircle: SimpleShapeLayer?
+        private var doneStatusNode: RadialStatusNode?
+        
         private let pieChartView = ComponentView<Empty>()
         private let chartTotalLabel = ComponentView<Empty>()
         private let categoriesView = ComponentView<Empty>()
@@ -245,6 +264,8 @@ final class StorageUsageScreenComponent: Component {
         private let panelContainer = ComponentView<StorageUsagePanelContainerEnvironment>()
         
         private var selectionPanel: ComponentView<Empty>?
+        
+        private var clearingNode: StorageUsageClearProgressOverlayNode?
         
         private var component: StorageUsageScreenComponent?
         private weak var state: EmptyComponentState?
@@ -267,6 +288,7 @@ final class StorageUsageScreenComponent: Component {
             
             self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
             self.navigationSeparatorLayer = SimpleLayer()
+            self.navigationSeparatorLayer.opacity = 0.0
             
             self.scrollView = ScrollViewImpl()
             
@@ -434,7 +456,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                 })
                 
-                self.reloadStats(firstTime: true)
+                self.reloadStats(firstTime: true, completion: {})
             }
             
             var wasLockedAtPanels = false
@@ -446,13 +468,20 @@ final class StorageUsageScreenComponent: Component {
             
             let animationHint = transition.userData(AnimationHint.self)
             
-            if let animationHint, case .firstStatsUpdate = animationHint.value {
-                var alphaTransition = transition
+            if let animationHint {
                 if case .firstStatsUpdate = animationHint.value {
-                    alphaTransition = .easeInOut(duration: 0.25)
+                    let alphaTransition: Transition = .easeInOut(duration: 0.25)
+                    alphaTransition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
+                    alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
+                } else if case .clearedItems = animationHint.value {
+                    if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.frame = self.bounds
+                        self.addSubview(snapshotView)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
                 }
-                alphaTransition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
-                alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
             } else {
                 transition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
                 transition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
@@ -620,19 +649,17 @@ final class StorageUsageScreenComponent: Component {
                 .misc
             ]
             
-            if let animationHint, case .firstStatsUpdate = animationHint.value, let currentStats = self.currentStats {
-                let contextStats: StorageUsageStats
-                if let peer = component.peer {
-                    contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                } else {
-                    contextStats = currentStats.totalStats
-                }
-                
-                for (category, value) in contextStats.categories {
-                    if value.size != 0 {
-                        self.selectedCategories.insert(StorageUsageScreenComponent.Category(category))
+            if let _ = self.currentStats {
+                if let animationHint {
+                    switch animationHint.value {
+                    case .firstStatsUpdate, .clearedItems:
+                        self.selectedCategories = self.existingCategories
                     }
                 }
+                
+                self.selectedCategories.formIntersection(self.existingCategories)
+            } else {
+                self.selectedCategories.removeAll()
             }
             
             var chartItems: [PieChartComponent.ChartData.Item] = []
@@ -697,7 +724,7 @@ final class StorageUsageScreenComponent: Component {
                     
                     var chartCategoryColor = category.color
                     if !self.isOtherCategoryExpanded && otherCategories.contains(category) {
-                        chartCategoryColor = Category.other.color
+                        chartCategoryColor = Category.misc.color
                     }
                     
                     chartItems.append(PieChartComponent.ChartData.Item(id: category, displayValue: categoryFraction, value: categoryChartFraction, color: chartCategoryColor))
@@ -732,8 +759,36 @@ final class StorageUsageScreenComponent: Component {
                 let isSelected = otherListCategories.allSatisfy { item in
                     return self.selectedCategories.contains(item.key)
                 }
+                
+                let listColor: UIColor
+                if self.isOtherCategoryExpanded {
+                    listColor = Category.other.color
+                } else {
+                    listColor = Category.misc.color
+                }
+                
                 listCategories.append(StorageCategoriesComponent.CategoryData(
-                    key: Category.other, color: Category.other.color, title: Category.other.title(strings: environment.strings), size: totalOtherSize, sizeFraction: categoryFraction, isSelected: isSelected, subcategories: otherListCategories))
+                    key: Category.other, color: listColor, title: Category.other.title(strings: environment.strings), size: totalOtherSize, sizeFraction: categoryFraction, isSelected: isSelected, subcategories: otherListCategories))
+            }
+            
+            if !self.isOtherCategoryExpanded {
+                var otherSum: CGFloat = 0.0
+                for i in 0 ..< chartItems.count {
+                    if otherCategories.contains(chartItems[i].id) {
+                        var itemValue = chartItems[i].value
+                        if itemValue > 0.00001 {
+                            itemValue = max(itemValue, 0.01)
+                        }
+                        otherSum += itemValue
+                        if case .misc = chartItems[i].id {
+                        } else {
+                            chartItems[i].value = 0.0
+                        }
+                    }
+                }
+                if let index = chartItems.firstIndex(where: { $0.id == .misc }) {
+                    chartItems[index].value = otherSum
+                }
             }
             
             let chartData = PieChartComponent.ChartData(items: chartItems)
@@ -754,13 +809,76 @@ final class StorageUsageScreenComponent: Component {
                 }
                 
                 transition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
+                transition.setAlpha(view: pieChartComponentView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             }
-            contentHeight += pieChartSize.height
+            if let _ = self.currentStats, listCategories.isEmpty {
+                let checkColor = UIColor(rgb: 0x34C759)
+                
+                let doneStatusNode: RadialStatusNode
+                var animateIn = false
+                if let current = self.doneStatusNode {
+                    doneStatusNode = current
+                } else {
+                    doneStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.doneStatusNode = doneStatusNode
+                    self.addSubnode(doneStatusNode)
+                    animateIn = true
+                }
+                let doneSize = CGSize(width: 100.0, height: 100.0)
+                doneStatusNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - doneSize.width) / 2.0), y: contentHeight), size: doneSize)
+                
+                let doneStatusCircle: SimpleShapeLayer
+                if let current = self.doneStatusCircle {
+                    doneStatusCircle = current
+                } else {
+                    doneStatusCircle = SimpleShapeLayer()
+                    self.doneStatusCircle = doneStatusCircle
+                    self.layer.addSublayer(doneStatusCircle)
+                    doneStatusCircle.opacity = 0.0
+                }
+                
+                if animateIn {
+                    Queue.mainQueue().after(0.18, {
+                        doneStatusNode.transitionToState(.check(checkColor), animated: true)
+                        doneStatusCircle.opacity = 1.0
+                        doneStatusCircle.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                    })
+                }
+                
+                doneStatusCircle.lineWidth = 6.0
+                doneStatusCircle.strokeColor = checkColor.cgColor
+                doneStatusCircle.fillColor = nil
+                doneStatusCircle.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: doneStatusCircle.lineWidth * 0.5, y: doneStatusCircle.lineWidth * 0.5), size: CGSize(width: doneSize.width - doneStatusCircle.lineWidth * 0.5, height: doneSize.height - doneStatusCircle.lineWidth * 0.5))).cgPath
+                
+                doneStatusCircle.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - doneSize.width) / 2.0), y: contentHeight), size: doneSize).insetBy(dx: -doneStatusCircle.lineWidth * 0.5, dy: -doneStatusCircle.lineWidth * 0.5)
+                
+                contentHeight += doneSize.height
+            } else {
+                contentHeight += pieChartSize.height
+                
+                if let doneStatusNode = self.doneStatusNode {
+                    self.doneStatusNode = nil
+                    doneStatusNode.removeFromSupernode()
+                }
+                if let doneStatusCircle = self.doneStatusCircle {
+                    self.doneStatusCircle = nil
+                    doneStatusCircle.removeFromSuperlayer()
+                }
+            }
+            
             contentHeight += 26.0
             
+            let headerText: String
+            if listCategories.isEmpty {
+                headerText = "Storage Cleared"
+            } else if let peer = component.peer {
+                headerText = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+            } else {
+                headerText = "Storage Usage"
+            }
             let headerViewSize = self.headerView.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "Storage Usage", font: Font.semibold(22.0), color: environment.theme.list.itemPrimaryTextColor)),
+                component: AnyComponent(Text(text: headerText, font: Font.semibold(22.0), color: environment.theme.list.itemPrimaryTextColor)),
                 environment: {},
                 containerSize: CGSize(width: floor((availableSize.width - navigationRightButtonMaxWidth * 2.0) / 0.8), height: 100.0)
             )
@@ -780,14 +898,78 @@ final class StorageUsageScreenComponent: Component {
             let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
             
             //TODO:localize
+            var usageFraction: Double = 0.0
+            let totalUsageText: String
+            if listCategories.isEmpty {
+                totalUsageText = "All media can be re-downloaded from the Telegram cloud if you need it again."
+            } else if let currentStats = self.currentStats {
+                let contextStats: StorageUsageStats
+                if let peer = component.peer {
+                    contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
+                } else {
+                    contextStats = currentStats.totalStats
+                }
+                
+                var totalStatsSize: Int64 = 0
+                for (_, value) in contextStats.categories {
+                    totalStatsSize += value.size
+                }
+                
+                if let _ = component.peer {
+                    var allStatsSize: Int64 = 0
+                    for (_, value) in currentStats.totalStats.categories {
+                        allStatsSize += value.size
+                    }
+                    
+                    let fraction: Double
+                    if allStatsSize != 0 {
+                        fraction = Double(totalStatsSize) / Double(allStatsSize)
+                    } else {
+                        fraction = 0.0
+                    }
+                    usageFraction = fraction
+                    let fractionValue: Double = floor(fraction * 100.0 * 10.0) / 10.0
+                    let fractionString: String
+                    if fractionValue < 0.1 {
+                        fractionString = "<0.1"
+                    } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
+                        fractionString = "\(Int(fractionValue))"
+                    } else {
+                        fractionString = "\(fractionValue)"
+                    }
+                        
+                    totalUsageText = "This chat uses \(fractionString)% of your Telegram cache."
+                } else {
+                    let fraction: Double
+                    if currentStats.deviceFreeSpace != 0 && totalStatsSize != 0 {
+                        fraction = Double(totalStatsSize) / Double(currentStats.deviceFreeSpace + totalStatsSize)
+                    } else {
+                        fraction = 0.0
+                    }
+                    usageFraction = fraction
+                    let fractionValue: Double = floor(fraction * 100.0 * 10.0) / 10.0
+                    let fractionString: String
+                    if fractionValue < 0.1 {
+                        fractionString = "<0.1"
+                    } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
+                        fractionString = "\(Int(fractionValue))"
+                    } else {
+                        fractionString = "\(fractionValue)"
+                    }
+                        
+                    totalUsageText = "Telegram uses \(fractionString)% of your free disk space."
+                }
+            } else {
+                totalUsageText = " "
+            }
             let headerDescriptionSize = self.headerDescriptionView.update(
                 transition: transition,
-                component: AnyComponent(MultilineTextComponent(text: .markdown(text: "Telegram users 9.7% of your free disk space.", attributes: MarkdownAttributes(
+                component: AnyComponent(MultilineTextComponent(text: .markdown(text: totalUsageText, attributes: MarkdownAttributes(
                     body: body,
                     bold: bold,
                     link: body,
                     linkAttribute: { _ in nil }
-                )), maximumNumberOfLines: 0)),
+                )), horizontalAlignment: .center, maximumNumberOfLines: 0)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
             )
@@ -807,11 +989,14 @@ final class StorageUsageScreenComponent: Component {
             transition.setCornerRadius(layer: self.headerProgressBackgroundLayer, cornerRadius: headerProgressFrame.height * 0.5)
             self.headerProgressBackgroundLayer.backgroundColor = environment.theme.list.itemAccentColor.withMultipliedAlpha(0.2).cgColor
             
-            let headerProgress: CGFloat = 0.097
-            transition.setFrame(layer: self.headerProgressForegroundLayer, frame: CGRect(origin: headerProgressFrame.origin, size: CGSize(width: floorToScreenPixels(headerProgress * headerProgressFrame.width), height: headerProgressFrame.height)))
+            let headerProgress: CGFloat = usageFraction
+            transition.setFrame(layer: self.headerProgressForegroundLayer, frame: CGRect(origin: headerProgressFrame.origin, size: CGSize(width: max(headerProgressFrame.height, floorToScreenPixels(headerProgress * headerProgressFrame.width)), height: headerProgressFrame.height)))
             transition.setCornerRadius(layer: self.headerProgressForegroundLayer, cornerRadius: headerProgressFrame.height * 0.5)
             self.headerProgressForegroundLayer.backgroundColor = environment.theme.list.itemAccentColor.cgColor
             contentHeight += 4.0
+            
+            transition.setAlpha(layer: self.headerProgressBackgroundLayer, alpha: listCategories.isEmpty ? 0.0 : 1.0)
+            transition.setAlpha(layer: self.headerProgressForegroundLayer, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             
             contentHeight += 24.0
             
@@ -831,6 +1016,7 @@ final class StorageUsageScreenComponent: Component {
                     
                     chartAvatarNode.setPeer(context: component.context, theme: environment.theme, peer: peer, displayDimensions: avatarSize)
                 }
+                transition.setAlpha(view: chartAvatarNode.view, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             } else {
                 let chartTotalLabelSize = self.chartTotalLabel.update(
                     transition: transition,
@@ -841,6 +1027,7 @@ final class StorageUsageScreenComponent: Component {
                         self.scrollView.addSubview(chartTotalLabelView)
                     }
                     transition.setFrame(view: chartTotalLabelView, frame: CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize))
+                    transition.setAlpha(view: chartTotalLabelView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
                 }
             }
             
@@ -858,17 +1045,18 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             if key == Category.other {
-                                let otherCategories: [Category] = [.stickers, .avatars, .misc]
-                                if otherCategories.allSatisfy(self.selectedCategories.contains) {
-                                    for item in otherCategories {
-                                        self.selectedCategories.remove(item)
+                                var otherCategories: [Category] = [.stickers, .avatars, .misc]
+                                otherCategories = otherCategories.filter(self.existingCategories.contains)
+                                if !otherCategories.isEmpty {
+                                    if otherCategories.allSatisfy(self.selectedCategories.contains) {
+                                        for item in otherCategories {
+                                            self.selectedCategories.remove(item)
+                                        }
+                                    } else {
+                                        for item in otherCategories {
+                                            let _ = self.selectedCategories.insert(item)
+                                        }
                                     }
-                                    self.selectedCategories.remove(Category.other)
-                                } else {
-                                    for item in otherCategories {
-                                        let _ = self.selectedCategories.insert(item)
-                                    }
-                                    let _ = self.selectedCategories.insert(Category.other)
                                 }
                             } else {
                                 if self.selectedCategories.contains(key) {
@@ -1097,7 +1285,7 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             if self.selectionState == nil {
-                                self.selectionState = SelectionState(selectedPeers: Set(), selectedMessages: Set())
+                                self.selectionState = SelectionState()
                             }
                             self.selectionState = self.selectionState?.toggleMessage(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
@@ -1118,7 +1306,7 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             if self.selectionState == nil {
-                                self.selectionState = SelectionState(selectedPeers: Set(), selectedMessages: Set())
+                                self.selectionState = SelectionState()
                             }
                             self.selectionState = self.selectionState?.toggleMessage(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
@@ -1139,7 +1327,7 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             if self.selectionState == nil {
-                                self.selectionState = SelectionState(selectedPeers: Set(), selectedMessages: Set())
+                                self.selectionState = SelectionState()
                             }
                             self.selectionState = self.selectionState?.toggleMessage(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
@@ -1199,24 +1387,81 @@ final class StorageUsageScreenComponent: Component {
             
             self.updateScrolling(transition: transition)
             
+            if self.isClearing {
+                let clearingNode: StorageUsageClearProgressOverlayNode
+                var animateIn = false
+                if let current = self.clearingNode {
+                    clearingNode = current
+                } else {
+                    animateIn = true
+                    clearingNode = StorageUsageClearProgressOverlayNode(presentationData: component.context.sharedContext.currentPresentationData.with { $0 })
+                    self.clearingNode = clearingNode
+                    self.addSubnode(clearingNode)
+                }
+                
+                let clearingSize = CGSize(width: availableSize.width, height: availableSize.height)
+                clearingNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - clearingSize.width) / 2.0), y: floor((availableSize.height - clearingSize.height) / 2.0)), size: clearingSize)
+                clearingNode.updateLayout(size: clearingSize, transition: .immediate)
+                
+                if animateIn {
+                    clearingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.15)
+                }
+            } else {
+                if let clearingNode = self.clearingNode {
+                    self.clearingNode = nil
+                    
+                    let animationTransition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                    animationTransition.setAlpha(view: clearingNode.view, alpha: 0.0, completion: { [weak clearingNode] _ in
+                        clearingNode?.removeFromSupernode()
+                    })
+                }
+            }
+            
             return availableSize
         }
         
-        private func reloadStats(firstTime: Bool) {
-            if let controller = self.controller?() as? StorageUsageScreen {
-                controller.reloadParent?()
+        private func reportClearedStorage(size: Int64) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = self.controller?() else {
+                return
             }
             
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            controller.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+        }
+        
+        private func reloadStats(firstTime: Bool, completion: @escaping () -> Void) {
             guard let component = self.component else {
+                completion()
                 return
             }
             
             self.statsDisposable = (component.context.engine.resources.collectStorageUsageStats()
             |> deliverOnMainQueue).start(next: { [weak self] stats in
                 guard let self, let component = self.component else {
+                    completion()
                     return
                 }
-                self.currentStats = stats
+                
+                var existingCategories = Set<Category>()
+                let contextStats: StorageUsageStats
+                if let peer = component.peer {
+                    contextStats = stats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
+                } else {
+                    contextStats = stats.totalStats
+                }
+                for (category, value) in contextStats.categories {
+                    if value.size != 0 {
+                        existingCategories.insert(StorageUsageScreenComponent.Category(category))
+                    }
+                }
+                
+                if firstTime {
+                    self.currentStats = stats
+                    self.existingCategories = existingCategories
+                }
                 
                 var peerItems: [StoragePeerListPanelComponent.Item] = []
                 
@@ -1240,22 +1485,16 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 
-                self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
-                
-                self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: firstTime ? .firstStatsUpdate : .clearedItems)))
+                if firstTime {
+                    self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
+                    self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .firstStatsUpdate)))
+                }
                 
                 class RenderResult {
                     var messages: [MessageId: Message] = [:]
                     var imageItems: [StorageFileListPanelComponent.Item] = []
                     var fileItems: [StorageFileListPanelComponent.Item] = []
                     var musicItems: [StorageFileListPanelComponent.Item] = []
-                }
-                
-                let contextStats: StorageUsageStats
-                if let peer = component.peer {
-                    contextStats = stats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                } else {
-                    contextStats = stats.totalStats
                 }
                 
                 self.messagesDisposable = (component.context.engine.resources.renderStorageUsageStatsMessages(stats: contextStats, categories: [.files, .photos, .videos, .music], existingMessages: self.currentMessages)
@@ -1344,8 +1583,38 @@ final class StorageUsageScreenComponent: Component {
                     return result
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] result in
-                    guard let self else {
+                    guard let self, let component = self.component else {
+                        completion()
                         return
+                    }
+                    
+                    if !firstTime {
+                        if let peer = component.peer, let controller = self.controller?() as? StorageUsageScreen, let childCompleted = controller.childCompleted {
+                            let contextStats: StorageUsageStats = stats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
+                            var totalSize: Int64 = 0
+                            for (_, value) in contextStats.categories {
+                                totalSize += value.size
+                            }
+                            
+                            if totalSize == 0 {
+                                childCompleted({ [weak self] in
+                                    completion()
+                                    
+                                    if let self {
+                                        self.controller?()?.dismiss(animated: true)
+                                    }
+                                })
+                                return
+                            } else {
+                                childCompleted({})
+                            }
+                        }
+                    }
+                    
+                    if !firstTime {
+                        self.currentStats = stats
+                        self.existingCategories = existingCategories
+                        self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
                     }
                     
                     self.currentMessages = result.messages
@@ -1354,7 +1623,19 @@ final class StorageUsageScreenComponent: Component {
                     self.fileItems = StorageFileListPanelComponent.Items(items: result.fileItems)
                     self.musicItems = StorageFileListPanelComponent.Items(items: result.musicItems)
                     
-                    self.state?.updated(transition: Transition(animation: .none))
+                    if self.selectionState != nil {
+                        if result.imageItems.isEmpty && result.fileItems.isEmpty && result.musicItems.isEmpty && peerItems.isEmpty {
+                            self.selectionState = nil
+                        } else {
+                            self.selectionState = SelectionState()
+                        }
+                    }
+                    
+                    self.isClearing = false
+                    
+                    self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
+                    
+                    completion()
                 })
             })
         }
@@ -1368,11 +1649,13 @@ final class StorageUsageScreenComponent: Component {
             }
             
             let childController = StorageUsageScreen(context: component.context, makeStorageUsageExceptionsScreen: component.makeStorageUsageExceptionsScreen, peer: peer)
-            childController.reloadParent = { [weak self] in
+            childController.childCompleted = { [weak self] completed in
                 guard let self else {
                     return
                 }
-                self.reloadStats(firstTime: false)
+                self.reloadStats(firstTime: false, completion: {
+                    completed()
+                })
             }
             controller.push(childController)
         }
@@ -1429,6 +1712,10 @@ final class StorageUsageScreenComponent: Component {
                         mappedCategories.append(.misc)
                     }
                 }
+                
+                self.isClearing = true
+                self.state?.updated(transition: .immediate)
+                
                 let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     guard let self, let component = self.component, let currentStats = self.currentStats else {
@@ -1469,32 +1756,68 @@ final class StorageUsageScreenComponent: Component {
                         }
                     }
                     
-                    for category in categories {
-                        self.selectedCategories.remove(category)
-                    }
-                    self.selectionState = nil
-                    
-                    self.reloadStats(firstTime: false)
-                    
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)).withUserData(AnimationHint(value: .clearedItems)))
+                    self.reloadStats(firstTime: false, completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if totalSize != 0 {
+                            self.reportClearedStorage(size: totalSize)
+                        }
+                    })
                 })
             } else if !peers.isEmpty {
+                self.isClearing = true
+                self.state?.updated(transition: .immediate)
+                
+                var totalSize: Int64 = 0
+                if let peerItems = self.peerItems {
+                    for item in peerItems.items {
+                        if peers.contains(item.peer.id) {
+                            totalSize += item.size
+                        }
+                    }
+                }
+                
                 let _ = (component.context.engine.resources.clearStorage(peerIds: peers)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     guard let self else {
                         return
                     }
                     
-                    self.selectionState = nil
-                    self.reloadStats(firstTime: false)
+                    self.reloadStats(firstTime: false, completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if totalSize != 0 {
+                            self.reportClearedStorage(size: totalSize)
+                        }
+                    })
                 })
             } else if !messages.isEmpty {
                 var messageItems: [Message] = []
+                var totalSize: Int64 = 0
+                
+                let contextStats: StorageUsageStats
+                if let peer = component.peer {
+                    contextStats = self.currentStats?.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
+                } else {
+                    contextStats = self.currentStats?.totalStats ?? StorageUsageStats(categories: [:])
+                }
+                
                 for id in messages {
                     if let message = self.currentMessages[id] {
                         messageItems.append(message)
+                        
+                        for (_, value) in contextStats.categories {
+                            if let size = value.messages[id] {
+                                totalSize += size
+                            }
+                        }
                     }
                 }
+                
+                self.isClearing = true
+                self.state?.updated(transition: .immediate)
                 
                 let _ = (component.context.engine.resources.clearStorage(messages: messageItems)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -1502,8 +1825,15 @@ final class StorageUsageScreenComponent: Component {
                         return
                     }
                     
-                    self.selectionState = nil
-                    self.reloadStats(firstTime: false)
+                    self.reloadStats(firstTime: false, completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if totalSize != 0 {
+                            self.reportClearedStorage(size: totalSize)
+                        }
+                    })
                 })
             }
         }
@@ -1716,7 +2046,7 @@ final class StorageUsageScreenComponent: Component {
 public final class StorageUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
-    fileprivate var reloadParent: (() -> Void)?
+    fileprivate var childCompleted: ((@escaping () -> Void) -> Void)?
     
     public init(context: AccountContext, makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?, peer: EnginePeer? = nil) {
         self.context = context
@@ -1946,5 +2276,124 @@ private final class MultiplePeerAvatarsContextItemNode: ASDisplayNode, ContextMe
     
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
         return self
+    }
+}
+
+private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
+    private let presentationData: PresentationData
+    
+    private let blurredView: BlurredBackgroundView
+    private let animationNode: AnimatedStickerNode
+    private let progressTextNode: ImmediateTextNode
+    private let descriptionTextNode: ImmediateTextNode
+    private let progressBackgroundNode: ASDisplayNode
+    private let progressForegroundNode: ASDisplayNode
+    
+    private let progressDisposable = MetaDisposable()
+    
+    private var validLayout: CGSize?
+    
+    init(presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.blurredView = BlurredBackgroundView(color: presentationData.theme.list.plainBackgroundColor.withMultipliedAlpha(0.7), enableBlur: true)
+        
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearCache"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
+        
+        self.progressTextNode = ImmediateTextNode()
+        self.progressTextNode.textAlignment = .center
+        
+        self.descriptionTextNode = ImmediateTextNode()
+        self.descriptionTextNode.textAlignment = .center
+        self.descriptionTextNode.maximumNumberOfLines = 0
+        
+        self.progressBackgroundNode = ASDisplayNode()
+        self.progressBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.controlAccentColor.withMultipliedAlpha(0.2)
+        self.progressBackgroundNode.cornerRadius = 3.0
+        
+        self.progressForegroundNode = ASDisplayNode()
+        self.progressForegroundNode.backgroundColor = self.presentationData.theme.actionSheet.controlAccentColor
+        self.progressForegroundNode.cornerRadius = 3.0
+        
+        super.init()
+        
+        self.view.addSubview(self.blurredView)
+        self.addSubnode(self.animationNode)
+        self.addSubnode(self.progressTextNode)
+        self.addSubnode(self.descriptionTextNode)
+        //self.addSubnode(self.progressBackgroundNode)
+        //self.addSubnode(self.progressForegroundNode)
+    }
+    
+    deinit {
+        self.progressDisposable.dispose()
+    }
+    
+    func setProgressSignal(_ signal: Signal<Float, NoError>) {
+        self.progressDisposable.set((signal
+        |> deliverOnMainQueue).start(next: { [weak self] progress in
+            if let strongSelf = self {
+                strongSelf.setProgress(progress)
+            }
+        }))
+    }
+    
+    private var progress: Float = 0.0
+    private func setProgress(_ progress: Float) {
+        self.progress = progress
+        
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .linear))
+        }
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+        
+        transition.updateFrame(view: self.blurredView, frame: CGRect(origin: CGPoint(), size: size))
+        self.blurredView.update(size: size, transition: transition)
+        
+        let inset: CGFloat = 24.0
+        let progressHeight: CGFloat = 6.0
+        let spacing: CGFloat = 16.0
+        
+        let imageSide = min(160.0, size.height - 30.0)
+        let imageSize = CGSize(width: imageSide, height: imageSide)
+        
+        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floorToScreenPixels((size.height - imageSize.height) / 2.0) - 50.0), size: imageSize)
+        self.animationNode.frame = animationFrame
+        self.animationNode.updateLayout(size: imageSize)
+        
+        let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
+        self.progressBackgroundNode.frame = progressFrame
+        let progressForegroundFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
+        if !self.progressForegroundNode.frame.origin.x.isZero {
+            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame, beginWithCurrentState: true)
+        } else {
+            self.progressForegroundNode.frame = progressForegroundFrame
+        }
+        
+        self.descriptionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_KeepOpenedDescription, font: Font.regular(15.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+        let descriptionTextSize = self.descriptionTextNode.updateLayout(CGSize(width: size.width - inset * 3.0, height: size.height))
+        var descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: animationFrame.maxY + 52.0), size: descriptionTextSize)
+       
+        self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_NoProgress, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        let progressTextSize = self.progressTextNode.updateLayout(size)
+        var progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
+        
+        let availableHeight = progressTextFrame.minY
+        if availableHeight < 100.0 {
+            let offset = availableHeight / 2.0 - spacing
+            descriptionTextFrame = descriptionTextFrame.offsetBy(dx: 0.0, dy: -offset)
+            progressTextFrame = progressTextFrame.offsetBy(dx: 0.0, dy: -offset)
+            self.animationNode.alpha = 0.0
+        } else {
+            self.animationNode.alpha = 1.0
+        }
+        
+        self.progressTextNode.frame = progressTextFrame
+        self.descriptionTextNode.frame = descriptionTextFrame
     }
 }
