@@ -78,7 +78,6 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     
     enum Font: Codable {
         case sanFrancisco
-        case newYork
         case other(String, String)
     }
     
@@ -258,7 +257,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.minimumZoomScale = 1.0
         self.textView.maximumZoomScale = 1.0
         self.textView.keyboardAppearance = .dark
-        self.textView.autocorrectionType = .default
+        self.textView.autocorrectionType = .no
         self.textView.spellCheckingType = .no
         
         super.init(context: context, entity: entity)
@@ -551,11 +550,9 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         var font: UIFont
         switch self.textEntity.font {
         case .sanFrancisco:
-            font = Font.with(size: fontSize, design: .regular, weight: .semibold)
-        case .newYork:
-            font = Font.with(size: fontSize, design: .serif, weight: .semibold)
+            font = Font.with(size: fontSize, design: .round, weight: .semibold)
         case let .other(fontName, _):
-            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .regular, weight: .semibold)
+            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .round, weight: .semibold)
         }
         
         text.addAttribute(.font, value: font, range: range)
@@ -1286,6 +1283,7 @@ private var availableFonts: [String: (String, String)] = {
         
         var preferredFont: String?
         for name in names {
+            print(name)
             let originalName = name
             let name = name.lowercased()
             if (!name.contains("-") || name.contains("regular")) && preferredFont == nil {
@@ -1301,6 +1299,6 @@ private var availableFonts: [String: (String, String)] = {
             result[shortname] = (preferredFont, family)
         }
     }
-    print(result)
+    //print(result)
     return result
 }()

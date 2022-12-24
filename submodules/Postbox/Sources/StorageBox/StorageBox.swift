@@ -170,7 +170,7 @@ public final class StorageBox {
                 let _ = try? FileManager.default.removeItem(atPath: databasePath)
                 valueBox = SqliteValueBox(basePath: databasePath, queue: queue, isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, encryptionParameters: nil, upgradeProgress: { _ in })
             }
-            guard let valueBox else {
+            guard let valueBox = valueBox else {
                 preconditionFailure("Could not open database")
             }
             self.valueBox = valueBox
