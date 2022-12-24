@@ -262,6 +262,10 @@ final class StorageUsageScreenComponent: Component {
         private var keepDurationSectionContainerView: UIView
         private var keepDurationItems: [AnyHashable: ComponentView<Empty>] = [:]
         
+        private let keepSizeTitleView = ComponentView<Empty>()
+        private let keepSizeView = ComponentView<Empty>()
+        private let keepSizeDescriptionView = ComponentView<Empty>()
+        
         private let panelContainer = ComponentView<StorageUsagePanelContainerEnvironment>()
         
         private var selectionPanel: ComponentView<Empty>?
@@ -1260,6 +1264,91 @@ final class StorageUsageScreenComponent: Component {
                     transition.setFrame(view: keepDurationDescriptionComponentView, frame: keepDurationDescriptionFrame)
                 }
                 contentHeight += keepDurationDescriptionSize.height
+                contentHeight += 40.0
+                
+                //TODO:localize
+                let keepSizeTitleSize = self.keepSizeTitleView.update(
+                    transition: transition,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(
+                            text: "MAXIMUM CACHE SIZE", attributes: MarkdownAttributes(
+                                body: body,
+                                bold: bold,
+                                link: body,
+                                linkAttribute: { _ in nil }
+                            )
+                        ),
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                )
+                let keepSizeTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepSizeTitleSize)
+                if let keepSizeTitleComponentView = self.keepSizeTitleView.view {
+                    if keepSizeTitleComponentView.superview == nil {
+                        self.scrollView.addSubview(keepSizeTitleComponentView)
+                    }
+                    transition.setFrame(view: keepSizeTitleComponentView, frame: keepSizeTitleFrame)
+                }
+                contentHeight += keepSizeTitleSize.height
+                contentHeight += 8.0
+                
+                let keepSizeSize = self.keepSizeView.update(
+                    transition: transition,
+                    component: AnyComponent(StorageKeepSizeComponent(
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        value: cacheSettings?.defaultCacheStorageLimitGigabytes ?? 32,
+                        updateValue: { [weak self] value in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            let value = max(5, value)
+                            let _ = updateCacheStorageSettingsInteractively(accountManager: component.context.sharedContext.accountManager, { current in
+                                var current = current
+                                current.defaultCacheStorageLimitGigabytes = value
+                                return current
+                            }).start()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let keepSizeFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: keepSizeSize)
+                if let keepSizeComponentView = self.keepSizeView.view {
+                    if keepSizeComponentView.superview == nil {
+                        self.scrollView.addSubview(keepSizeComponentView)
+                    }
+                    transition.setFrame(view: keepSizeComponentView, frame: keepSizeFrame)
+                }
+                contentHeight += keepSizeSize.height
+                contentHeight += 8.0
+                
+                //TODO:localize
+                let keepSizeDescriptionSize = self.keepSizeDescriptionView.update(
+                    transition: transition,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(
+                            text: "If your cache size exceeds this limit, the oldest media will be deleted.", attributes: MarkdownAttributes(
+                                body: body,
+                                bold: bold,
+                                link: body,
+                                linkAttribute: { _ in nil }
+                            )
+                        ),
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                )
+                let keepSizeDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepSizeDescriptionSize)
+                if let keepSizeDescriptionComponentView = self.keepSizeDescriptionView.view {
+                    if keepSizeDescriptionComponentView.superview == nil {
+                        self.scrollView.addSubview(keepSizeDescriptionComponentView)
+                    }
+                    transition.setFrame(view: keepSizeDescriptionComponentView, frame: keepSizeDescriptionFrame)
+                }
+                contentHeight += keepSizeDescriptionSize.height
                 contentHeight += 40.0
             }
             

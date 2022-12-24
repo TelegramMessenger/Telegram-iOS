@@ -181,7 +181,7 @@ final class StorageCategoryItemComponent: Component {
             
             let rightInset: CGFloat = 16.0
             
-            var availableWidth: CGFloat = availableSize.width - leftInset
+            var availableWidth: CGFloat = availableSize.width - leftInset - rightInset
             
             if !component.category.subcategories.isEmpty {
                 let iconView: UIImageView
@@ -218,23 +218,23 @@ final class StorageCategoryItemComponent: Component {
             
             let labelSize = self.label.update(
                 transition: transition,
-                component: AnyComponent(Text(text: dataSizeString(Int(component.category.size), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: ".")), font: Font.regular(17.0), color: component.theme.list.itemSecondaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: dataSizeString(Int(component.category.size), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: ".")), font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
-            availableWidth = max(1.0, availableWidth - labelSize.width - 4.0)
+            availableWidth = max(1.0, availableWidth - labelSize.width - 1.0)
             
             let titleValueSize = self.titleValue.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "\(fractionString)%", font: Font.regular(17.0), color: component.theme.list.itemSecondaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(fractionString)%", font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
-            availableWidth = max(1.0, availableWidth - titleValueSize.width - 1.0)
+            availableWidth = max(1.0, availableWidth - titleValueSize.width - 4.0)
             
             let titleSize = self.title.update(
                 transition: transition,
-                component: AnyComponent(Text(text: component.category.title, font: Font.regular(17.0), color: component.theme.list.itemPrimaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.category.title, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
