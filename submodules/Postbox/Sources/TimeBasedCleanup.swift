@@ -173,7 +173,9 @@ private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UI
 
 private final class TimeBasedCleanupImpl {
     private let queue: Queue
+    private let storageBox: StorageBox
     private let generalPaths: [String]
+    private let totalSizeBasedPath: String
     private let shortLivedPaths: [String]
     
     private var scheduledTouches: [String] = []
@@ -197,9 +199,11 @@ private final class TimeBasedCleanupImpl {
         }
     }
     
-    init(queue: Queue, generalPaths: [String], shortLivedPaths: [String]) {
+    init(queue: Queue, storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
         self.queue = queue
+        self.storageBox = storageBox
         self.generalPaths = generalPaths
+        self.totalSizeBasedPath = totalSizeBasedPath
         self.shortLivedPaths = shortLivedPaths
     }
     
@@ -220,6 +224,7 @@ private final class TimeBasedCleanupImpl {
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
         let generalPaths = self.generalPaths
+        let totalSizeBasedPath = self.totalSizeBasedPath
         let shortLivedPaths = self.shortLivedPaths
         let scanOnce = Signal<Never, NoError> { subscriber in
             DispatchQueue.global(qos: .background).async {
@@ -251,6 +256,14 @@ private final class TimeBasedCleanupImpl {
                     let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, inodes: &inodes)
                     if !paths.contains(path) {
                         paths.append(path)
+                    }
+                    removedGeneralCount += scanResult.unlinkedCount
+                    totalLimitSize += scanResult.totalSize
+                }
+                do {
+                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, inodes: &inodes)
+                    if !paths.contains(totalSizeBasedPath) {
+                        paths.append(totalSizeBasedPath)
                     }
                     removedGeneralCount += scanResult.unlinkedCount
                     totalLimitSize += scanResult.totalSize
@@ -318,10 +331,10 @@ final class TimeBasedCleanup {
     private let queue = Queue()
     private let impl: QueueLocalObject<TimeBasedCleanupImpl>
     
-    init(generalPaths: [String], shortLivedPaths: [String]) {
+    init(storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: self.queue, generate: {
-            return TimeBasedCleanupImpl(queue: queue, generalPaths: generalPaths, shortLivedPaths: shortLivedPaths)
+            return TimeBasedCleanupImpl(queue: queue, storageBox: storageBox, generalPaths: generalPaths, totalSizeBasedPath: totalSizeBasedPath, shortLivedPaths: shortLivedPaths)
         })
     }
     

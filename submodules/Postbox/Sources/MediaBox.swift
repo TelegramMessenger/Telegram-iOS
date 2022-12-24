@@ -193,11 +193,10 @@ public final class MediaBox {
             postboxLog(string)
         }), basePath: basePath + "/storage")
         
-        self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
-            //self.basePath,
+        self.timeBasedCleanup = TimeBasedCleanup(storageBox: self.storageBox, generalPaths: [
             self.basePath + "/cache",
             self.basePath + "/animation-cache"
-        ], shortLivedPaths: [
+        ], totalSizeBasedPath: self.basePath, shortLivedPaths: [
             self.basePath + "/short-cache"
         ])
         

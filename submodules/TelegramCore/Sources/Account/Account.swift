@@ -1191,15 +1191,14 @@ public class Account {
 
         if !supplementary {
             let mediaBox = postbox.mediaBox
-            /*self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in
+            let _ = (accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
+            |> take(1)).start(next: { [weak mediaBox] sharedData in
                 guard let mediaBox = mediaBox else {
                     return
                 }
                 let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) ?? CacheStorageSettings.defaultSettings
                 mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
-            })*/
-            
-            mediaBox.setMaxStoreTimes(general: 1 * 24 * 60 * 60, shortLived: 60 * 60, gigabytesLimit: 100 * 1024 * 1024)
+            })
         }
         
         let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false, createIfNotExists: true).start(next: { key in
