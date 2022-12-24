@@ -24,6 +24,7 @@ final class StoragePeerTypeItemComponent: Component {
     let theme: PresentationTheme
     let iconName: String
     let title: String
+    let subtitle: String?
     let value: String
     let hasNext: Bool
     let action: (View) -> Void
@@ -32,6 +33,7 @@ final class StoragePeerTypeItemComponent: Component {
         theme: PresentationTheme,
         iconName: String,
         title: String,
+        subtitle: String?,
         value: String,
         hasNext: Bool,
         action: @escaping (View) -> Void
@@ -39,6 +41,7 @@ final class StoragePeerTypeItemComponent: Component {
         self.theme = theme
         self.iconName = iconName
         self.title = title
+        self.subtitle = subtitle
         self.value = value
         self.hasNext = hasNext
         self.action = action
@@ -54,6 +57,9 @@ final class StoragePeerTypeItemComponent: Component {
         if lhs.title != rhs.title {
             return false
         }
+        if lhs.subtitle != rhs.subtitle {
+            return false
+        }
         if lhs.value != rhs.value {
             return false
         }
@@ -66,6 +72,7 @@ final class StoragePeerTypeItemComponent: Component {
     class View: HighlightTrackingButton {
         private let iconView: UIImageView
         private let title = ComponentView<Empty>()
+        private var subtitle: ComponentView<Empty>?
         private let label = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         private let arrowIconView: UIImageView
@@ -171,9 +178,48 @@ final class StoragePeerTypeItemComponent: Component {
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
             
-            let height: CGFloat = 44.0
+            var subtitleSize: CGSize?
+            if let subtitleValue = component.subtitle {
+                let subtitle: ComponentView<Empty>
+                if let current = self.subtitle {
+                    subtitle = current
+                } else {
+                    subtitle = ComponentView()
+                    self.subtitle = subtitle
+                }
+                
+                let subtitleSizeValue = subtitle.update(
+                    transition: transition,
+                    component: AnyComponent(Text(text: subtitleValue, font: Font.regular(15.0), color: component.theme.list.itemSecondaryTextColor)),
+                    environment: {},
+                    containerSize: CGSize(width: availableWidth, height: 100.0)
+                )
+                subtitleSize = subtitleSizeValue
+            } else {
+                if let subtitle = self.subtitle {
+                    self.subtitle = nil
+                    subtitle.view?.removeFromSuperview()
+                }
+            }
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+            var height: CGFloat = 44.0
+            if subtitleSize != nil {
+                height = 60.0
+            }
+            
+            let titleFrame: CGRect
+            var subtitleFrame: CGRect?
+            
+            if let subtitleSize = subtitleSize {
+                let spacing: CGFloat = 1.0
+                let verticalSize: CGFloat = titleSize.height + subtitleSize.height + spacing
+                
+                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - verticalSize) / 2.0)), size: titleSize)
+                subtitleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + spacing), size: subtitleSize)
+            } else {
+                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+            }
+            
             let labelFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset - labelSize.width, y: floor((height - labelSize.height) / 2.0)), size: labelSize)
             
             if let titleView = self.title.view {
@@ -182,6 +228,13 @@ final class StoragePeerTypeItemComponent: Component {
                     self.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            if let subtitleView = self.subtitle?.view, let subtitleFrame {
+                if subtitleView.superview == nil {
+                    subtitleView.isUserInteractionEnabled = false
+                    self.addSubview(subtitleView)
+                }
+                transition.setFrame(view: subtitleView, frame: subtitleFrame)
             }
             if let labelView = self.label.view {
                 if labelView.superview == nil {

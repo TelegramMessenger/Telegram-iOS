@@ -84,6 +84,54 @@ private func processChartData(data: PieChartComponent.ChartData) -> PieChartComp
     return data
 }
 
+private let chartLabelFont = Font.with(size: 16.0, design: .round, weight: .semibold)
+
+private final class ChartLabel: UIView {
+    private let label: ImmediateTextView
+    private var currentText: String?
+    
+    override init(frame: CGRect) {
+        self.label = ImmediateTextView()
+        
+        super.init(frame: frame)
+        
+        self.addSubview(self.label)
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func update(text: String) -> CGSize {
+        if self.currentText == text {
+            return self.label.bounds.size
+        }
+        
+        var snapshotView: UIView?
+        if self.currentText != nil {
+            snapshotView = self.label.snapshotView(afterScreenUpdates: false)
+            snapshotView?.frame = self.label.frame
+        }
+        
+        self.currentText = text
+        self.label.attributedText = NSAttributedString(string: text, font: chartLabelFont, textColor: .white)
+        let size = self.label.updateLayout(CGSize(width: 100.0, height: 100.0))
+        self.label.frame = CGRect(origin: CGPoint(x: floor(-size.width * 0.5), y: floor(-size.height * 0.5)), size: size)
+        
+        if let snapshotView {
+            self.addSubview(snapshotView)
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+            snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+            self.label.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.label.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+        }
+        
+        return size
+    }
+}
+
 final class PieChartComponent: Component {
     struct ChartData: Equatable {
         struct Item: Equatable {
@@ -136,7 +184,7 @@ final class PieChartComponent: Component {
         private var currentAnimation: (start: ChartData, end: ChartData, current: ChartData, progress: CGFloat)?
         private var animator: DisplayLinkAnimator?
         
-        private var labels: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
+        private var labels: [StorageUsageScreenComponent.Category: ChartLabel] = [:]
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -195,7 +243,7 @@ final class PieChartComponent: Component {
             guard let context = UIGraphicsGetCurrentContext() else {
                 return
             }
-            guard let theme = self.theme, let data = self.currentAnimation?.current ?? self.data else {
+            guard let _ = self.theme, let data = self.currentAnimation?.current ?? self.data else {
                 return
             }
             if data.items.isEmpty {
@@ -267,14 +315,14 @@ final class PieChartComponent: Component {
                     fractionString = "\(fractionValue)"
                 }
                 
-                let label: ComponentView<Empty>
+                let label: ChartLabel
                 if let current = self.labels[item.id] {
                     label = current
                 } else {
-                    label = ComponentView<Empty>()
+                    label = ChartLabel()
                     self.labels[item.id] = label
                 }
-                let labelSize = label.update(transition: .immediate, component: AnyComponent(Text(text: "\(fractionString)%", font: Font.with(size: 16.0, design: .round, weight: .semibold), color: theme.list.itemCheckColors.foregroundColor)), environment: {}, containerSize: CGSize(width: 100.0, height: 100.0))
+                let labelSize = label.update(text: "\(fractionString)%")
                 
                 var labelFrame: CGRect?
                 
@@ -408,14 +456,14 @@ final class PieChartComponent: Component {
                     labelFrame = CGRect(origin: CGPoint(x: labelCenter.x - minSize.width * 0.5, y: labelCenter.y - minSize.height * 0.5), size: minSize)
                 }
                 
-                if let labelView = label.view, let labelFrame {
+                let labelView = label
+                if let labelFrame {
                     var animateIn: Bool = false
                     if labelView.superview == nil {
                         animateIn = true
                         self.addSubview(labelView)
                     }
                     
-                    labelView.bounds = CGRect(origin: CGPoint(), size: labelSize)
                     var labelScale = labelFrame.width / labelSize.width
                     
                     let normalAlpha: CGFloat = labelScale < 0.4 ? 0.0 : 1.0

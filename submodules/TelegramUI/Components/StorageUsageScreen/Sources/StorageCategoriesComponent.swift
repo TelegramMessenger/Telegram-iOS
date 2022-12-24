@@ -199,13 +199,13 @@ final class StorageCategoriesComponent: Component {
             let clearTitle: String
             let label: String?
             if totalSelectedSize == 0 {
-                clearTitle = "Clear"
+                clearTitle = component.strings.StorageManagement_ClearSelected
                 label = nil
             } else if hasDeselected {
-                clearTitle = "Clear Selected"
+                clearTitle = component.strings.StorageManagement_ClearSelected
                 label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
             } else {
-                clearTitle = "Clear All Cache"
+                clearTitle = component.strings.StorageManagement_ClearAll
                 label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
             }
             

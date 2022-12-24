@@ -195,21 +195,21 @@ final class StorageUsageScreenComponent: Component {
         func title(strings: PresentationStrings) -> String {
             switch self {
             case .photos:
-                return "Photos"
+                return strings.StorageManagement_SectionPhotos
             case .videos:
-                return "Videos"
+                return strings.StorageManagement_SectionVideos
             case .files:
-                return "Files"
+                return strings.StorageManagement_SectionFiles
             case .music:
-                return "Music"
+                return strings.StorageManagement_SectionMusic
             case .other:
-                return "Other"
+                return strings.StorageManagement_SectionOther
             case .stickers:
-                return "Stickers"
+                return strings.StorageManagement_SectionStickers
             case .avatars:
-                return "Avatars"
+                return strings.StorageManagement_SectionAvatars
             case .misc:
-                return "Miscellaneous"
+                return strings.StorageManagement_SectionMiscellaneous
             }
         }
     }
@@ -222,6 +222,8 @@ final class StorageUsageScreenComponent: Component {
         
         private var currentMessages: [MessageId: Message] = [:]
         private var cacheSettings: CacheStorageSettings?
+        private var cacheSettingsExceptionCount: [CacheStorageSettings.PeerStorageCategory: Int32]?
+        
         private var peerItems: StoragePeerListPanelComponent.Items?
         private var imageItems: StorageFileListPanelComponent.Items?
         private var fileItems: StorageFileListPanelComponent.Items?
@@ -449,22 +451,69 @@ final class StorageUsageScreenComponent: Component {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             
             if self.statsDisposable == nil {
-                self.cacheSettingsDisposable = (component.context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
-                |> map { sharedData -> CacheStorageSettings in
-                    let cacheSettings: CacheStorageSettings
-                    if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) {
+                let context = component.context
+                let viewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.accountSpecificCacheStorageSettings]))
+                let cacheSettingsExceptionCount: Signal<[CacheStorageSettings.PeerStorageCategory: Int32], NoError> = component.context.account.postbox.combinedView(keys: [viewKey])
+                |> map { views -> AccountSpecificCacheStorageSettings in
+                    let cacheSettings: AccountSpecificCacheStorageSettings
+                    if let view = views.views[viewKey] as? PreferencesView, let value = view.values[PreferencesKeys.accountSpecificCacheStorageSettings]?.get(AccountSpecificCacheStorageSettings.self) {
                         cacheSettings = value
                     } else {
-                        cacheSettings = CacheStorageSettings.defaultSettings
+                        cacheSettings = AccountSpecificCacheStorageSettings.defaultSettings
                     }
                     
                     return cacheSettings
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] cacheSettings in
+                |> distinctUntilChanged
+                |> mapToSignal { accountSpecificSettings -> Signal<[CacheStorageSettings.PeerStorageCategory: Int32], NoError> in
+                    return context.engine.data.get(
+                        EngineDataMap(accountSpecificSettings.peerStorageTimeoutExceptions.map(\.key).map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                    )
+                    |> map { peers -> [CacheStorageSettings.PeerStorageCategory: Int32] in
+                        var result: [CacheStorageSettings.PeerStorageCategory: Int32] = [:]
+                        
+                        for (_, peer) in peers {
+                            guard let peer else {
+                                continue
+                            }
+                            switch peer {
+                            case .user, .secretChat:
+                                result[.privateChats, default: 0] += 1
+                            case .legacyGroup:
+                                result[.groups, default: 0] += 1
+                            case let .channel(channel):
+                                if case .group = channel.info {
+                                    result[.groups, default: 0] += 1
+                                } else {
+                                    result[.channels, default: 0] += 1
+                                }
+                            }
+                        }
+                        
+                        return result
+                    }
+                }
+                
+                self.cacheSettingsDisposable = (combineLatest(queue: .mainQueue(),
+                    component.context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
+                    |> map { sharedData -> CacheStorageSettings in
+                        let cacheSettings: CacheStorageSettings
+                        if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) {
+                            cacheSettings = value
+                        } else {
+                            cacheSettings = CacheStorageSettings.defaultSettings
+                        }
+                        
+                        return cacheSettings
+                    },
+                    cacheSettingsExceptionCount
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] cacheSettings, cacheSettingsExceptionCount in
                     guard let self else {
                         return
                     }
                     self.cacheSettings = cacheSettings
+                    self.cacheSettingsExceptionCount = cacheSettingsExceptionCount
                     if self.currentStats != nil {
                         self.state?.updated(transition: .immediate)
                     }
@@ -620,7 +669,7 @@ final class StorageUsageScreenComponent: Component {
                     transition: selectionPanelTransition,
                     component: AnyComponent(StorageUsageScreenSelectionPanelComponent(
                         theme: environment.theme,
-                        title: "Clear Selected",
+                        title: environment.strings.StorageManagement_ClearSelected,
                         label: selectedSize == 0 ? nil : dataSizeString(Int(selectedSize), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),
                         isEnabled: selectedSize != 0,
                         insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: environment.safeInsets.bottom, right: sideInset),
@@ -887,19 +936,19 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             
-            contentHeight += 26.0
+            contentHeight += 23.0
             
             let headerText: String
             if listCategories.isEmpty {
-                headerText = "Storage Cleared"
+                headerText = environment.strings.StorageManagement_TitleCleared
             } else if let peer = component.peer {
                 headerText = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
             } else {
-                headerText = "Storage Usage"
+                headerText = environment.strings.StorageManagement_Title
             }
             let headerViewSize = self.headerView.update(
                 transition: transition,
-                component: AnyComponent(Text(text: headerText, font: Font.semibold(22.0), color: environment.theme.list.itemPrimaryTextColor)),
+                component: AnyComponent(Text(text: headerText, font: Font.semibold(20.0), color: environment.theme.list.itemPrimaryTextColor)),
                 environment: {},
                 containerSize: CGSize(width: floor((availableSize.width - navigationRightButtonMaxWidth * 2.0) / 0.8), height: 100.0)
             )
@@ -913,16 +962,15 @@ final class StorageUsageScreenComponent: Component {
             }
             contentHeight += headerViewSize.height
             
-            contentHeight += 4.0
+            contentHeight += 6.0
             
             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
             let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
             
-            //TODO:localize
             var usageFraction: Double = 0.0
             let totalUsageText: String
             if listCategories.isEmpty {
-                totalUsageText = "All media can be re-downloaded from the Telegram cloud if you need it again."
+                totalUsageText = environment.strings.StorageManagement_DescriptionCleared
             } else if let currentStats = self.currentStats {
                 let contextStats: StorageUsageStats
                 if let peer = component.peer {
@@ -959,7 +1007,7 @@ final class StorageUsageScreenComponent: Component {
                         fractionString = "\(fractionValue)"
                     }
                         
-                    totalUsageText = "This chat uses \(fractionString)% of your Telegram cache."
+                    totalUsageText = environment.strings.StorageManagement_DescriptionChatUsage(fractionString).string
                 } else {
                     let fraction: Double
                     if currentStats.deviceFreeSpace != 0 && totalStatsSize != 0 {
@@ -978,7 +1026,7 @@ final class StorageUsageScreenComponent: Component {
                         fractionString = "\(fractionValue)"
                     }
                         
-                    totalUsageText = "Telegram uses \(fractionString)% of your free disk space."
+                    totalUsageText = environment.strings.StorageManagement_DescriptionAppUsage(fractionString).string
                 }
             } else {
                 totalUsageText = " "
@@ -1117,10 +1165,9 @@ final class StorageUsageScreenComponent: Component {
                 contentHeight += 8.0
                 
                 
-                //TODO:localize
                 let categoriesDescriptionSize = self.categoriesDescriptionView.update(
                     transition: transition,
-                    component: AnyComponent(MultilineTextComponent(text: .markdown(text: "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.", attributes: MarkdownAttributes(
+                    component: AnyComponent(MultilineTextComponent(text: .markdown(text: environment.strings.StorageManagement_SectionsDescription, attributes: MarkdownAttributes(
                         body: body,
                         bold: bold,
                         link: body,
@@ -1144,12 +1191,11 @@ final class StorageUsageScreenComponent: Component {
             }
             
             if component.peer == nil {
-                //TODO:localize
                 let keepDurationTitleSize = self.keepDurationTitleView.update(
                     transition: transition,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "KEEP MEDIA", attributes: MarkdownAttributes(
+                            text: environment.strings.StorageManagement_AutoremoveHeader, attributes: MarkdownAttributes(
                                 body: body,
                                 bold: bold,
                                 link: body,
@@ -1184,21 +1230,20 @@ final class StorageUsageScreenComponent: Component {
                     
                     let mappedCategory: CacheStorageSettings.PeerStorageCategory
                     
-                    //TODO:localize
                     let iconName: String
                     let title: String
                     switch i {
                     case 0:
                         iconName = "Settings/Menu/EditProfile"
-                        title = "Private Chats"
+                        title = environment.strings.Notifications_PrivateChats
                         mappedCategory = .privateChats
                     case 1:
                         iconName = "Settings/Menu/GroupChats"
-                        title = "Group Chats"
+                        title = environment.strings.Notifications_GroupChats
                         mappedCategory = .groups
                     default:
                         iconName = "Settings/Menu/Channels"
-                        title = "Channels"
+                        title = environment.strings.Notifications_Channels
                         mappedCategory = .channels
                     }
                     
@@ -1210,12 +1255,18 @@ final class StorageUsageScreenComponent: Component {
                         optionText = timeIntervalString(strings: environment.strings, value: value)
                     }
                     
+                    var subtitle: String?
+                    if let cacheSettingsExceptionCount = self.cacheSettingsExceptionCount, let categoryCount = cacheSettingsExceptionCount[mappedCategory] {
+                        subtitle = environment.strings.CacheEvictionMenu_CategoryExceptions(Int32(categoryCount))
+                    }
+                    
                     let itemSize = item.update(
                         transition: transition,
                         component: AnyComponent(StoragePeerTypeItemComponent(
                             theme: environment.theme,
                             iconName: iconName,
                             title: title,
+                            subtitle: subtitle,
                             value: optionText,
                             hasNext: i != 3 - 1,
                             action: { [weak self] sourceView in
@@ -1242,12 +1293,11 @@ final class StorageUsageScreenComponent: Component {
                 contentHeight += keepContentHeight
                 contentHeight += 8.0
                 
-                //TODO:localize
                 let keepDurationDescriptionSize = self.keepDurationDescriptionView.update(
                     transition: transition,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.", attributes: MarkdownAttributes(
+                            text: environment.strings.StorageManagement_AutoremoveDescription, attributes: MarkdownAttributes(
                                 body: body,
                                 bold: bold,
                                 link: body,
@@ -1269,12 +1319,11 @@ final class StorageUsageScreenComponent: Component {
                 contentHeight += keepDurationDescriptionSize.height
                 contentHeight += 40.0
                 
-                //TODO:localize
                 let keepSizeTitleSize = self.keepSizeTitleView.update(
                     transition: transition,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "MAXIMUM CACHE SIZE", attributes: MarkdownAttributes(
+                            text: environment.strings.Cache_MaximumCacheSize.uppercased(), attributes: MarkdownAttributes(
                                 body: body,
                                 bold: bold,
                                 link: body,
@@ -1327,12 +1376,11 @@ final class StorageUsageScreenComponent: Component {
                 contentHeight += keepSizeSize.height
                 contentHeight += 8.0
                 
-                //TODO:localize
                 let keepSizeDescriptionSize = self.keepSizeDescriptionView.update(
                     transition: transition,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "If your cache size exceeds this limit, the oldest media will be deleted.", attributes: MarkdownAttributes(
+                            text: environment.strings.StorageManagement_AutoremoveSpaceDescription, attributes: MarkdownAttributes(
                                 body: body,
                                 bold: bold,
                                 link: body,
@@ -1356,10 +1404,10 @@ final class StorageUsageScreenComponent: Component {
             }
             
             var panelItems: [StorageUsagePanelContainerComponent.Item] = []
-            if let peerItems = self.peerItems, !peerItems.items.isEmpty {
+            if let peerItems = self.peerItems, !peerItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "peers",
-                    title: "Chats",
+                    title: environment.strings.StorageManagement_TabChats,
                     panel: AnyComponent(StoragePeerListPanelComponent(
                         context: component.context,
                         items: self.peerItems,
@@ -1378,10 +1426,10 @@ final class StorageUsageScreenComponent: Component {
                     ))
                 ))
             }
-            if let imageItems = self.imageItems, !imageItems.items.isEmpty {
+            if let imageItems = self.imageItems, !imageItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "images",
-                    title: "Media",
+                    title: environment.strings.StorageManagement_TabMedia,
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
                         items: self.imageItems,
@@ -1399,10 +1447,10 @@ final class StorageUsageScreenComponent: Component {
                     ))
                 ))
             }
-            if let fileItems = self.fileItems, !fileItems.items.isEmpty {
+            if let fileItems = self.fileItems, !fileItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "files",
-                    title: "Files",
+                    title: environment.strings.StorageManagement_TabFiles,
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
                         items: self.fileItems,
@@ -1420,10 +1468,10 @@ final class StorageUsageScreenComponent: Component {
                     ))
                 ))
             }
-            if let musicItems = self.musicItems, !musicItems.items.isEmpty {
+            if let musicItems = self.musicItems, !musicItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "music",
-                    title: "Music",
+                    title: environment.strings.StorageManagement_TabMusic,
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
                         items: self.musicItems,
@@ -1651,8 +1699,11 @@ final class StorageUsageScreenComponent: Component {
                             if let message = messages[id] {
                                 var matches = false
                                 for media in message.media {
-                                    if media is TelegramMediaFile {
-                                        matches = true
+                                    if let file = media as? TelegramMediaFile {
+                                        if file.isSticker || file.isCustomEmoji {
+                                        } else {
+                                            matches = true
+                                        }
                                     }
                                 }
                                 
@@ -1772,11 +1823,19 @@ final class StorageUsageScreenComponent: Component {
             }
             let context = component.context
             
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationData: presentationData)
-            //TODO:localizable
+            
+            let clearTitle: String
+            if categories == self.existingCategories {
+                clearTitle = presentationData.strings.StorageManagement_ClearAll
+            } else {
+                clearTitle = presentationData.strings.StorageManagement_ClearSelected
+            }
+            
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Clear Selected", color: .destructive, action: { [weak self, weak actionSheet] in
+                ActionSheetButtonItem(title: clearTitle, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
                     self?.commitClear(categories: categories, peers: peers, messages: messages)

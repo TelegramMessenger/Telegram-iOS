@@ -768,7 +768,7 @@ final class StorageFileListPanelComponent: Component {
                     let _ = isAudio
                     let _ = isVoice
                     
-                    var title: String = "File"
+                    var title: String = environment.strings.Message_File
                     
                     var subtitle = stringForFullDate(timestamp: item.message.timestamp, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     
@@ -800,7 +800,7 @@ final class StorageFileListPanelComponent: Component {
                                             //iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: false)))
                                         }
                                     } else {
-                                        title = "Audio"
+                                        title = environment.strings.Message_Audio
                                     }
                                 }
                             }
@@ -851,7 +851,7 @@ final class StorageFileListPanelComponent: Component {
                                 descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                                 iconImage = .roundVideo(file)*/
                             } else if !isAudio {
-                                var fileName: String = file.fileName ?? "File"
+                                var fileName: String = file.fileName ?? environment.strings.Message_File
                                 if file.isVideo {
                                     fileName = environment.strings.Message_Video
                                 }
@@ -868,8 +868,7 @@ final class StorageFileListPanelComponent: Component {
                                 }
                             }
                         } else if let image = media as? TelegramMediaImage {
-                            //TODO:localize
-                            title = "Photo"
+                            title = environment.strings.Message_Photo
                             
                             if let representation = largestImageRepresentation(image.representations) {
                                 imageIconValue = .media(image, representation)
