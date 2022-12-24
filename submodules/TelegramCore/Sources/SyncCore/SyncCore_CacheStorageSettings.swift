@@ -24,8 +24,8 @@ public struct CacheStorageSettings: Codable, Equatable {
             defaultCacheStorageLimitGigabytes: 8 * 1024 * 1024,
             categoryStorageTimeout: [
                 .privateChats: Int32.max,
-                .groups: Int32.max,
-                .channels: Int32(1 * 24 * 60 * 60)
+                .groups: Int32(31 * 24 * 60 * 60),
+                .channels: Int32(31 * 24 * 60 * 60)
             ]
         )
     }
