@@ -231,7 +231,22 @@ final class StorageUsageScreenComponent: Component {
         
         private var selectionState: SelectionState?
         
-        private var isClearing: Bool = false
+        private var isClearing: Bool = false {
+            didSet {
+                if self.isClearing != oldValue {
+                    if self.isClearing {
+                        if self.keepScreenActiveDisposable == nil {
+                            self.keepScreenActiveDisposable = self.component?.context.sharedContext.applicationBindings.pushIdleTimerExtension()
+                        }
+                    } else {
+                        if let keepScreenActiveDisposable = self.keepScreenActiveDisposable {
+                            self.keepScreenActiveDisposable = nil
+                            keepScreenActiveDisposable.dispose()
+                        }
+                    }
+                }
+            }
+        }
         
         private var selectedCategories: Set<Category> = Set()
         private var isOtherCategoryExpanded: Bool = false
@@ -288,6 +303,7 @@ final class StorageUsageScreenComponent: Component {
         private var statsDisposable: Disposable?
         private var messagesDisposable: Disposable?
         private var cacheSettingsDisposable: Disposable?
+        private var keepScreenActiveDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.headerOffsetContainer = UIView()
@@ -349,6 +365,7 @@ final class StorageUsageScreenComponent: Component {
         deinit {
             self.statsDisposable?.dispose()
             self.messagesDisposable?.dispose()
+            self.keepScreenActiveDisposable?.dispose()
         }
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -1784,7 +1801,7 @@ final class StorageUsageScreenComponent: Component {
                         if result.imageItems.isEmpty && result.fileItems.isEmpty && result.musicItems.isEmpty && peerItems.isEmpty {
                             self.selectionState = nil
                         } else {
-                            self.selectionState = SelectionState()
+                            self.selectionState = nil
                         }
                     }
                     

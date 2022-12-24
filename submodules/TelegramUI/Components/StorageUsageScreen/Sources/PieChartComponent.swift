@@ -391,6 +391,10 @@ final class PieChartComponent: Component {
                         let intersectionOuterBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), diameter * 0.5)
                         let intersectionInnerBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), innerDiameter * 0.5)
                         
+                        let horizontalInset: CGFloat = 2.0
+                        let intersectionOuterLeft = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y), diameter * 0.5) - horizontalInset
+                        let intersectionInnerLeft = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y), innerDiameter * 0.5) - horizontalInset
+                        
                         let intersectionLine1TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerStartAngle), y: sin(innerStartAngle)))
                         let intersectionLine1BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerStartAngle), y: sin(innerStartAngle)))
                         let intersectionLine2TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerEndAngle), y: sin(innerEndAngle)))
@@ -400,7 +404,9 @@ final class PieChartComponent: Component {
                             intersectionOuterTopRight,
                             intersectionInnerTopRight,
                             intersectionOuterBottomRight,
-                            intersectionInnerBottomRight
+                            intersectionInnerBottomRight,
+                            intersectionOuterLeft,
+                            intersectionInnerLeft
                         ]
                         
                         if angleValue < CGFloat.pi / 2.0 {
@@ -414,7 +420,7 @@ final class PieChartComponent: Component {
                         
                         var minDistance: CGFloat = 1000.0
                         for distance in distances {
-                            minDistance = min(minDistance, distance)
+                            minDistance = min(minDistance, max(distance, 1.0))
                         }
                         
                         let diagonalAngle = atan2(labelSize.height, labelSize.width)
