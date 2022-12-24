@@ -80,7 +80,7 @@ jobs:
 
           # prepare provisioning profiles
           PROVISIONING_PATH=$HOME/telegram-configuration/provisioning/profiles
-          find "$PROVISIONING_PATH" -type f -name "*.mobileprovision" -delete
+          mkdir -p $PROVISIONING_PATH
 
           echo "$PROVISIONING_PROFILE_APP_DATA" | base64 -di - > "$PROVISIONING_PATH/Telegram.mobileprovision"
           echo "$PROVISIONING_PROFILE_BROADCAST_UPLOAD_DATA" | base64 -di - > "$PROVISIONING_PATH/BroadcastUpload.mobileprovision"
