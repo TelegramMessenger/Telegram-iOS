@@ -338,15 +338,17 @@ final class DrawingSettings: Codable, Equatable {
 
 private final class ReferenceContentSource: ContextReferenceContentSource {
     private let sourceView: UIView
+    private let contentArea: CGRect
     private let customPosition: CGPoint
     
-    init(sourceView: UIView, customPosition: CGPoint) {
+    init(sourceView: UIView, contentArea: CGRect, customPosition: CGPoint) {
         self.sourceView = sourceView
+        self.contentArea = contentArea
         self.customPosition = customPosition
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, customPosition: customPosition)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: customPosition)
     }
 }
 
@@ -849,7 +851,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             ]
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.present(contextController)
         }
         
@@ -2294,18 +2296,18 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         
         private weak var currentFontPicker: ContextController?
         func presentFontPicker(sourceView: UIView) {
-            guard !self.dismissFontPicker() else {
+            guard !self.dismissFontPicker(), let validLayout = self.validLayout?.0 else {
                 return
             }
             let fonts: [DrawingTextFont] = [
                 .sanFrancisco,
-                .newYork,
-                .other("MarkerFelt-Wide", "Marker Felt"),
-                .other("Chalkduster", "Chalkduster"),
-                .other("Menlo-Bold", "Menlo"),
-                .other("Copperplate-Bold", "Copperplate"),
-                .other("GillSans-SemiBold", "Gill Sans"),
-                .other("Papyrus", "Papyrus")
+                .other("AmericanTypewriter", "American Typewriter"),
+                .other("AvenirNext-DemiBoldItalic", "Avenir Next"),
+                .other("CourierNewPS-BoldMT", "Courier New"),
+                .other("Noteworthy-Bold", "Noteworthy"),
+                .other("Georgia-Bold", "Georgia"),
+                .other("Papyrus", "Papyrus"),
+                .other("SnellRoundhand-Bold", "Snell Roundhand")
             ]
             
             var items: [ContextMenuItem] = []
@@ -2325,7 +2327,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, customPosition: CGPoint(x: 7.0, y: 0.0))), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: CGRect(origin: .zero, size: CGSize(width: validLayout.size.width, height: validLayout.size.height - (validLayout.inputHeight ?? 0.0))), customPosition: CGPoint(x: 0.0, y: 1.0))), items: .single(ContextController.Items(content: .list(items))))
             self.controller?.present(contextController, in: .window(.root))
             self.currentFontPicker = contextController
         }
