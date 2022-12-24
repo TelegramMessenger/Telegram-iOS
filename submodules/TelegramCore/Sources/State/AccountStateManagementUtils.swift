@@ -1305,14 +1305,6 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         return peer
                     }
                 })
-            case let .updateUserPhoto(userId, _, photo, _):
-                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
-                    if let user = peer as? TelegramUser {
-                        return user.withUpdatedPhoto(parsedTelegramProfilePhoto(photo))
-                    } else {
-                        return peer
-                    }
-                })
             case let .updateUserPhone(userId, phone):
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
                     if let user = peer as? TelegramUser {
