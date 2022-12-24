@@ -236,6 +236,7 @@ final class StorageUsageScreenComponent: Component {
         
         private let navigationBackgroundView: BlurredBackgroundView
         private let navigationSeparatorLayer: SimpleLayer
+        private let navigationSeparatorLayerContainer: SimpleLayer
         private let navigationEditButton = ComponentView<Empty>()
         private let navigationDoneButton = ComponentView<Empty>()
         
@@ -287,8 +288,12 @@ final class StorageUsageScreenComponent: Component {
             self.headerOffsetContainer.isUserInteractionEnabled = false
             
             self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
+            self.navigationBackgroundView.alpha = 0.0
+            
             self.navigationSeparatorLayer = SimpleLayer()
             self.navigationSeparatorLayer.opacity = 0.0
+            self.navigationSeparatorLayerContainer = SimpleLayer()
+            self.navigationSeparatorLayerContainer.opacity = 0.0
             
             self.scrollView = ScrollViewImpl()
             
@@ -324,7 +329,9 @@ final class StorageUsageScreenComponent: Component {
             self.scrollView.layer.addSublayer(self.headerProgressForegroundLayer)
             
             self.addSubview(self.navigationBackgroundView)
-            self.layer.addSublayer(self.navigationSeparatorLayer)
+            
+            self.navigationSeparatorLayerContainer.addSublayer(self.navigationSeparatorLayer)
+            self.layer.addSublayer(self.navigationSeparatorLayerContainer)
             
             self.addSubview(self.headerOffsetContainer)
         }
@@ -356,10 +363,9 @@ final class StorageUsageScreenComponent: Component {
         }
         
         func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-            guard let navigationMetrics = self.navigationMetrics else {
+            guard let _ = self.navigationMetrics else {
                 return
             }
-            let _ = navigationMetrics
             
             let paneAreaExpansionDistance: CGFloat = 32.0
             let paneAreaExpansionFinalPoint: CGFloat = scrollView.contentSize.height - scrollView.bounds.height
@@ -399,6 +405,7 @@ final class StorageUsageScreenComponent: Component {
                 let navigationBackgroundAlpha: CGFloat = abs(headerOffset - minOffset) < 4.0 ? 1.0 : 0.0
                 
                 animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
+                animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
                 
                 if let navigationEditButtonView = self.navigationEditButton.view {
                     animatedTransition.setAlpha(view: navigationEditButtonView, alpha: (self.selectionState == nil ? 1.0 : 0.0) * navigationBackgroundAlpha)
@@ -407,10 +414,13 @@ final class StorageUsageScreenComponent: Component {
                     animatedTransition.setAlpha(view: navigationDoneButtonView, alpha: (self.selectionState == nil ? 0.0 : 1.0) * navigationBackgroundAlpha)
                 }
                 
-                if abs(headerOffset - minOffset) < 4.0 && !isLockedAtPanels {
-                    animatedTransition.setAlpha(layer: self.navigationSeparatorLayer, alpha: 1.0)
-                } else {
-                    animatedTransition.setAlpha(layer: self.navigationSeparatorLayer, alpha: 0.0)
+                let expansionDistance: CGFloat = 32.0
+                var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
+                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+                
+                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
+                if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
+                    panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
                 }
                 
                 var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
@@ -497,7 +507,11 @@ final class StorageUsageScreenComponent: Component {
             self.navigationBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
             self.navigationBackgroundView.update(size: navigationFrame.size, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.navigationBackgroundView, frame: navigationFrame)
-            transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationFrame.maxY), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            
+            let navigationSeparatorFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationFrame.maxY), size: CGSize(width: availableSize.width, height: UIScreenPixel))
+            
+            transition.setFrame(layer: self.navigationSeparatorLayerContainer, frame: navigationSeparatorFrame)
+            transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(), size: navigationSeparatorFrame.size))
             
             let navigationEditButtonSize = self.navigationEditButton.update(
                 transition: transition,
