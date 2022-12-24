@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
+import DarwinDirStat
 
 public enum PeerCacheUsageCategory: Int32 {
     case image = 0

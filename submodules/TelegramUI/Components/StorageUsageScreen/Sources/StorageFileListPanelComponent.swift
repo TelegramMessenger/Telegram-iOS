@@ -328,7 +328,7 @@ private final class FileListItemComponent: Component {
                     checkLayer.setSelected(isSelected, animated: false)
                     checkLayer.setNeedsDisplay()
                 }
-                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: 20.0, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
             } else {
                 if let checkLayer = self.checkLayer {
                     self.checkLayer = nil

@@ -148,6 +148,7 @@ public final class SolidRoundedButtonComponent: Component {
                 button.gloss = component.gloss
                 
                 button.isEnabled = component.isEnabled
+                button.isUserInteractionEnabled = component.isEnabled
                 
                 button.updateTheme(component.theme)
                 let height = button.updateLayout(width: availableSize.width, transition: .immediate)

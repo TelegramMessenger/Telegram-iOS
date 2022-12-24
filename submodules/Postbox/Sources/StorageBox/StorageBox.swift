@@ -577,6 +577,44 @@ public final class StorageBox {
             return result
         }
         
+        func enumerateItems(startingWith startId: Data?, limit: Int) -> (ids: [Data], nextStartId: Data?) {
+            self.valueBox.begin()
+            
+            let startKey: ValueBoxKey
+            if let startId = startId, startId.count == 16 {
+                startKey = ValueBoxKey(length: 16)
+                startKey.setData(0, value: startId)
+            } else {
+                startKey = ValueBoxKey(length: 1)
+                startKey.setUInt8(0, value: 0)
+            }
+            
+            let endKey = ValueBoxKey(length: 16)
+            for i in 0 ..< 16 {
+                endKey.setUInt8(i, value: 0xff)
+            }
+            
+            var ids: [Data] = []
+            var nextKey: ValueBoxKey?
+            self.valueBox.range(self.hashIdToInfoTable, start: startKey, end: endKey, values: { key, value in
+                nextKey = key
+                
+                let info = ItemInfo(buffer: value)
+                ids.append(info.id)
+                
+                return true
+            }, limit: limit)
+            
+            self.valueBox.commit()
+            
+            var nextId = nextKey?.getData(0, length: 16)
+            if nextId == startId {
+                nextId = nil
+            }
+            
+            return (ids, nextId)
+        }
+        
         func all() -> [Entry] {
             var result: [Entry] = []
             
@@ -910,6 +948,15 @@ public final class StorageBox {
     public func reset() {
         self.impl.with { impl in
             impl.reset()
+        }
+    }
+    
+    public func enumerateItems(startingWith startId: Data?, limit: Int) -> Signal<(ids: [Data], nextStartId: Data?), NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            subscriber.putNext(impl.enumerateItems(startingWith: startId, limit: limit))
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
         }
     }
 }

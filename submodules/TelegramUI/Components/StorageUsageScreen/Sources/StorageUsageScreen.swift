@@ -541,7 +541,7 @@ final class StorageUsageScreenComponent: Component {
                 if navigationEditButtonView.superview == nil {
                     self.addSubview(navigationEditButtonView)
                 }
-                transition.setFrame(view: navigationEditButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 12.0 - navigationEditButtonSize.width, y: environment.statusBarHeight), size: navigationEditButtonSize))
+                transition.setFrame(view: navigationEditButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 12.0 - environment.safeInsets.right - navigationEditButtonSize.width, y: environment.statusBarHeight), size: navigationEditButtonSize))
             }
             
             let navigationDoneButtonSize = self.navigationDoneButton.update(
@@ -563,7 +563,7 @@ final class StorageUsageScreenComponent: Component {
                 if navigationDoneButtonView.superview == nil {
                     self.addSubview(navigationDoneButtonView)
                 }
-                transition.setFrame(view: navigationDoneButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 12.0 - navigationDoneButtonSize.width, y: environment.statusBarHeight), size: navigationDoneButtonSize))
+                transition.setFrame(view: navigationDoneButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 12.0 - environment.safeInsets.right - navigationDoneButtonSize.width, y: environment.statusBarHeight), size: navigationDoneButtonSize))
             }
             
             let navigationRightButtonMaxWidth: CGFloat = max(navigationEditButtonSize.width, navigationDoneButtonSize.width)
@@ -791,6 +791,7 @@ final class StorageUsageScreenComponent: Component {
             
             if !self.isOtherCategoryExpanded {
                 var otherSum: CGFloat = 0.0
+                var otherRealSum: CGFloat = 0.0
                 for i in 0 ..< chartItems.count {
                     if otherCategories.contains(chartItems[i].id) {
                         var itemValue = chartItems[i].value
@@ -798,6 +799,7 @@ final class StorageUsageScreenComponent: Component {
                             itemValue = max(itemValue, 0.01)
                         }
                         otherSum += itemValue
+                        otherRealSum += chartItems[i].displayValue
                         if case .misc = chartItems[i].id {
                         } else {
                             chartItems[i].value = 0.0
@@ -806,6 +808,7 @@ final class StorageUsageScreenComponent: Component {
                 }
                 if let index = chartItems.firstIndex(where: { $0.id == .misc }) {
                     chartItems[index].value = otherSum
+                    chartItems[index].displayValue = otherRealSum
                 }
             }
             
@@ -2106,7 +2109,7 @@ final class StorageUsageScreenComponent: Component {
                         }
                     })))
                 } else {
-                    subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, action: { c, _ in
+                    subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, totalCount: peerExceptions.count, action: { c, _ in
                         c.dismiss(completion: {
                             
                         })
@@ -2185,11 +2188,13 @@ private final class StorageUsageContextReferenceContentSource: ContextReferenceC
 final class MultiplePeerAvatarsContextItem: ContextMenuCustomItem {
     fileprivate let context: AccountContext
     fileprivate let peers: [EnginePeer]
+    fileprivate let totalCount: Int
     fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
 
-    init(context: AccountContext, peers: [EnginePeer], action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    init(context: AccountContext, peers: [EnginePeer], totalCount: Int, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.context = context
         self.peers = peers
+        self.totalCount = totalCount
         self.action = action
     }
 
@@ -2296,7 +2301,7 @@ private final class MultiplePeerAvatarsContextItemNode: ASDisplayNode, ContextMe
         let calculatedWidth = min(constrainedWidth, 250.0)
 
         let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
-        let text: String = self.presentationData.strings.CacheEvictionMenu_CategoryExceptions(Int32(self.item.peers.count))
+        let text: String = self.presentationData.strings.CacheEvictionMenu_CategoryExceptions(Int32(self.item.totalCount))
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
 
         let textSize = self.textNode.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))
