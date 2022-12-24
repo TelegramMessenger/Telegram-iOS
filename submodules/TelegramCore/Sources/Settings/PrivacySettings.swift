@@ -97,8 +97,9 @@ public struct AccountPrivacySettings: Equatable {
     
     public let automaticallyArchiveAndMuteNonContacts: Bool
     public let accountRemovalTimeout: Int32
+    public let messageAutoremoveTimeout: Int32?
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -110,6 +111,7 @@ public struct AccountPrivacySettings: Equatable {
         self.voiceMessages = voiceMessages
         self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
         self.accountRemovalTimeout = accountRemovalTimeout
+        self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
     
     public static func ==(lhs: AccountPrivacySettings, rhs: AccountPrivacySettings) -> Bool {
@@ -144,6 +146,9 @@ public struct AccountPrivacySettings: Equatable {
             return false
         }
         if lhs.accountRemovalTimeout != rhs.accountRemovalTimeout {
+            return false
+        }
+        if lhs.messageAutoremoveTimeout != rhs.messageAutoremoveTimeout {
             return false
         }
         
@@ -201,4 +206,24 @@ extension SelectivePrivacySettings {
         
         self = current.withEnabledPeers(enableFor).withDisabledPeers(disableFor)
     }
+}
+
+public struct GlobalMessageAutoremoveTimeoutSettings: Equatable, Codable {
+    public static var `default` = GlobalMessageAutoremoveTimeoutSettings(
+        messageAutoremoveTimeout: nil
+    )
+
+    public var messageAutoremoveTimeout: Int32?
+
+    public init(messageAutoremoveTimeout: Int32?) {
+        self.messageAutoremoveTimeout = messageAutoremoveTimeout
+    }
+}
+
+func updateGlobalMessageAutoremoveTimeoutSettings(transaction: Transaction, _ f: (GlobalMessageAutoremoveTimeoutSettings) -> GlobalMessageAutoremoveTimeoutSettings) {
+    transaction.updatePreferencesEntry(key: PreferencesKeys.globalMessageAutoremoveTimeoutSettings, { current in
+        let previous = current?.get(GlobalMessageAutoremoveTimeoutSettings.self) ?? GlobalMessageAutoremoveTimeoutSettings.default
+        let updated = f(previous)
+        return PreferencesEntry(updated)
+    })
 }

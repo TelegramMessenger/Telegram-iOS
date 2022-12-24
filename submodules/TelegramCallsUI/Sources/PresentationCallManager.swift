@@ -240,7 +240,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         
         answerCallImpl = { [weak self] uuid in
             if let strongSelf = self {
-                strongSelf.currentCall?.answer()
+                strongSelf.currentCall?.answer(fromCallKitAction: true)
             }
         }
         
@@ -439,7 +439,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     }
                     var phoneNumber: String?
                     if let peer = peer as? TelegramUser, let phone = peer.phone {
-                        phoneNumber = formatPhoneNumber(phone)
+                        phoneNumber = formatPhoneNumber(context: context, number: phone)
                     }
                     strongSelf.callKitIntegration?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, localContactId: localContactId, isVideo: isVideo, displayTitle: peer.debugDisplayTitle)
                 }))

@@ -47,7 +47,7 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
             }
             let apiMessages: [Api.Message]
             switch result {
-                case let .channelMessages(_, _, _, _, messages, _, _):
+                case let .channelMessages(_, _, _, _, messages, _, _, _):
                     apiMessages = messages
                 case let .messages(messages, _, _):
                     apiMessages = messages
@@ -87,7 +87,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                         let apiMarkedUnread: Bool
                         var apiChannelPts: Int32 = 0
                         switch dialog {
-                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, pts, _, _):
+                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, pts, _, _, _):
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId

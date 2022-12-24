@@ -2,8 +2,6 @@ import Foundation
 import Postbox
 
 public extension Peer {
-    
-    
     var debugDisplayTitle: String {
         switch self {
         case let user as TelegramUser:
@@ -30,7 +28,7 @@ public extension Peer {
         
         if let restrictionInfo = restrictionInfo {
             for rule in restrictionInfo.rules {
-                if rule.platform == "all" || rule.platform == platform {
+                if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                         return rule.text
                     }
@@ -198,6 +196,14 @@ public extension Peer {
         case let channel as TelegramChannel:
             return channel.flags.contains(.copyProtectionEnabled)
         default:
+            return false
+        }
+    }
+    
+    var isForum: Bool {
+        if let channel = self as? TelegramChannel {
+            return channel.flags.contains(.isForum)
+        } else {
             return false
         }
     }

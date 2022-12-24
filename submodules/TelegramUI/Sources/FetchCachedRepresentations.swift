@@ -533,7 +533,9 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
         textSize = CGSize(width: ceil(textSize.width) + 1.0, height: ceil(textSize.height) + 1.0)
         
         let emojiSize = CGSize(width: 52.0, height: 52.0)
-        let context = DrawingContext(size: emojiSize, clear: true)
+        guard let context = DrawingContext(size: emojiSize, clear: true) else {
+            return EmptyDisposable
+        }
         context.withFlippedContext { context in
             let size = textSize
             let bounds = CGRect(origin: CGPoint(), size: size)
@@ -637,7 +639,9 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
                 
                 let size = CGSize(width: 160.0, height: 160.0)
                 let spacing: CGFloat = 16.0
-                let context = DrawingContext(size: size, clear: true)
+                guard let context = DrawingContext(size: size, clear: true) else {
+                    return EmptyDisposable
+                }
                 context.withFlippedContext { context in
                     let origin: CGPoint
                     switch representation.tile {

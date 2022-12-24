@@ -144,7 +144,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
     
     func scrollToTop() -> Bool {
-        if !self.listNode.scrollToOffsetFromTop(0.0) {
+        if !self.listNode.scrollToOffsetFromTop(0.0, animated: true) {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             return true
         } else {
@@ -186,7 +186,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
-            self?.chatControllerInteraction.openPeer(EnginePeer(peer), .default, nil, false)
+            self?.chatControllerInteraction.openPeer(EnginePeer(peer), .default, nil, .default)
         }, openPeerContextAction: { [weak self] peer, node, gesture in
             self?.openPeerContextAction(peer, node, gesture)
         })

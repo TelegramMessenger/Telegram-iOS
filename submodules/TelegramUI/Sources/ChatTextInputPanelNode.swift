@@ -169,8 +169,10 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         let previousItem = self.item
         self.item = item
         
+        let (updatedImage, text, _, _, _) = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: self.theme, strings: self.strings)
+        
         if let image = self.iconImageNode.image {
-            self.iconImageNode.image = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: self.theme, strings: self.strings).0
+            self.iconImageNode.image = updatedImage
             
             let bottomInset: CGFloat = 0.0
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - bottomInset), size: image.size)
@@ -306,6 +308,12 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     view.frame = CGRect(origin: CGPoint(x: animationFrame.minX + floor((animationFrame.width - animationSize.width) / 2.0), y: animationFrame.minY + floor((animationFrame.height - animationSize.height) / 2.0)), size: animationSize)
                 }
             }
+        }
+        
+        if let text = text {
+            self.setAttributedTitle(NSAttributedString(string: text, font: accessoryButtonFont, textColor: self.theme.chat.inputPanel.inputControlColor), for: .normal)
+        } else {
+            self.setAttributedTitle(NSAttributedString(), for: .normal)
         }
     }
     
@@ -613,7 +621,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     override var context: AccountContext? {
         didSet {
-            self.actionButtons.micButton.account = self.context?.account
+            self.actionButtons.micButton.statusBarHost = self.context?.sharedContext.mainWindow?.statusBarHost
         }
     }
 

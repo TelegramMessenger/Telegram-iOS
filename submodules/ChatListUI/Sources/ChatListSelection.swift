@@ -58,18 +58,31 @@ func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, fil
 }
 
 
-func forumSelectionOptions(context: AccountContext, peerId: PeerId, threadIds: Set<Int64>, canDelete: Bool) -> Signal<ChatListSelectionOptions, NoError> {
-    if threadIds.isEmpty {
-        return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId))
-        |> map { counters -> ChatListSelectionOptions in
-            var hasUnread = false
-            if counters.isUnread {
-                hasUnread = true
-            }
-            return ChatListSelectionOptions(read: .all(enabled: hasUnread), delete: false)
+func forumSelectionOptions(context: AccountContext, peerId: PeerId, threadIds: Set<Int64>) -> Signal<ChatListSelectionOptions, NoError> {
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+        EngineDataList(threadIds.map { TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: $0) })
+    )
+    |> map { peer, threadDatas -> ChatListSelectionOptions in
+        guard !threadIds.isEmpty, case let .channel(channel) = peer else {
+            return ChatListSelectionOptions(read: .selective(enabled: false), delete: false)
         }
-        |> distinctUntilChanged
-    } else {
-        return .single(ChatListSelectionOptions(read: .selective(enabled: false), delete: canDelete))
+        
+        var canDelete = !threadIds.contains(1)
+        if !channel.hasPermission(.deleteAllMessages) {
+            canDelete = false
+        }
+        
+        var hasUnread = false
+        for thread in threadDatas {
+            guard let thread = thread else {
+                continue
+            }
+            if thread.incomingUnreadCount > 0 {
+                hasUnread = true
+                break
+            }
+        }
+        return ChatListSelectionOptions(read: .selective(enabled: hasUnread), delete: canDelete)
     }
 }

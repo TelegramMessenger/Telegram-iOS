@@ -79,6 +79,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
     fileprivate var resolvedSegments: [ResolvedSegment.Key: (ResolvedSegment, TextNode)] = [:]
     
     public var reverseAnimationDirection: Bool = false
+    public var alwaysOneDirection: Bool = false
     
     override public init() {
         super.init()
@@ -91,6 +92,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
             segmentLayouts[segmentKey] = TextNode.asyncLayout(segmentAndTextNode.1)
         }
         let reverseAnimationDirection = self.reverseAnimationDirection
+        let alwaysOneDirection = self.alwaysOneDirection
         
         return { [weak self] size, initialSegments in
             var segments: [ResolvedSegment] = []
@@ -173,7 +175,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                                 fromAlpha = CGFloat(presentation.opacity)
                             }
                             var offsetY: CGFloat
-                            if currentValue > updatedValue {
+                            if currentValue > updatedValue || alwaysOneDirection {
                                 offsetY = -floor(currentTextNode.bounds.height * 0.6)
                             } else {
                                 offsetY = floor(currentTextNode.bounds.height * 0.6)

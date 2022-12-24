@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MessageHistoryHolesViewEntry: Equatable, Hashable {
+public struct MessageHistoryHolesViewEntry: Equatable, Hashable, CustomStringConvertible {
     public let hole: MessageHistoryViewHole
     public let direction: MessageHistoryViewRelativeHoleDirection
     public let space: MessageHistoryHoleSpace
@@ -13,6 +13,10 @@ public struct MessageHistoryHolesViewEntry: Equatable, Hashable {
         self.space = space
         self.count = count
         self.userId = userId
+    }
+    
+    public var description: String {
+        return "hole: \(self.hole), direction: \(self.direction), space: \(self.space), count: \(self.count), userId: \(String(describing: self.userId))"
     }
 }
 

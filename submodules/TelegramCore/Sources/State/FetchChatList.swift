@@ -22,6 +22,7 @@ struct ParsedDialogs {
     let channelStates: [PeerId: Int32]
     let topMessageIds: [PeerId: MessageId]
     let storeMessages: [StoreMessage]
+    let ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout]
     
     let lowerNonPinnedIndex: MessageIndex?
     let referencedFolders: [PeerGroupId: PeerGroupUnreadCountersSummary]
@@ -53,6 +54,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var reactionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
     var channelStates: [PeerId: Int32] = [:]
     var topMessageIds: [PeerId: MessageId] = [:]
+    var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
     
     var storeMessages: [StoreMessage] = []
     var nonPinnedDialogsTopMessageIds = Set<MessageId>()
@@ -85,7 +87,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         var apiChannelPts: Int32?
         let apiNotificationSettings: Api.PeerNotifySettings
         switch dialog {
-            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, peerNotificationSettings, pts, _, _):
+            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, peerNotificationSettings, pts, _, _, ttlPeriod):
                 if let peer = peers[peer.peerId] {
                     var isExluded = false
                     if let group = peer as? TelegramGroup {
@@ -107,6 +109,9 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 apiUnreadReactionsCount = unreadReactionsCount
                 apiNotificationSettings = peerNotificationSettings
                 apiChannelPts = pts
+            
+                ttlPeriods[peer.peerId] = .known(ttlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
+            
                 let isPinned = (flags & (1 << 2)) != 0
                 if !isPinned {
                     nonPinnedDialogsTopMessageIds.insert(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: topMessage))
@@ -148,7 +153,11 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var lowerNonPinnedIndex: MessageIndex?
     
     for message in apiMessages {
-        if let storeMessage = StoreMessage(apiMessage: message) {
+        var peerIsForum = false
+        if let peerId = message.peerId, let peer = peers[peerId], peer.isForum {
+            peerIsForum = true
+        }
+        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
             var updatedStoreMessage = storeMessage
             if case let .Id(id) = storeMessage.id {
                 if let channelPts = channelStates[id.peerId] {
@@ -180,6 +189,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         channelStates: channelStates,
         topMessageIds: topMessageIds,
         storeMessages: storeMessages,
+        ttlPeriods: ttlPeriods,
     
         lowerNonPinnedIndex: lowerNonPinnedIndex,
         referencedFolders: referencedFolders
@@ -191,6 +201,7 @@ struct FetchedChatList {
     var peers: [Peer]
     var peerPresences: [PeerId: Api.User]
     var notificationSettings: [PeerId: PeerNotificationSettings]
+    var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout]
     var readStates: [PeerId: [MessageId.Namespace: PeerReadState]]
     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
     var reactionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
@@ -298,6 +309,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: Api.User] = [:]
                     var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+                    var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
                     var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
                     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
                     var reactionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
@@ -308,6 +320,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     peers.append(contentsOf: parsedRemoteChats.peers)
                     peerPresences.merge(parsedRemoteChats.peerPresences, uniquingKeysWith: { _, updated in updated })
                     notificationSettings.merge(parsedRemoteChats.notificationSettings, uniquingKeysWith: { _, updated in updated })
+                    ttlPeriods.merge(parsedRemoteChats.ttlPeriods, uniquingKeysWith: { _, updated in updated })
                     readStates.merge(parsedRemoteChats.readStates, uniquingKeysWith: { _, updated in updated })
                     mentionTagSummaries.merge(parsedRemoteChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
                     reactionTagSummaries.merge(parsedRemoteChats.reactionTagSummaries, uniquingKeysWith: { _, updated in updated })
@@ -319,6 +332,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         peers.append(contentsOf: parsedPinnedChats.peers)
                         peerPresences.merge(parsedPinnedChats.peerPresences, uniquingKeysWith: { _, updated in updated })
                         notificationSettings.merge(parsedPinnedChats.notificationSettings, uniquingKeysWith: { _, updated in updated })
+                        ttlPeriods.merge(parsedPinnedChats.ttlPeriods, uniquingKeysWith: { _, updated in updated })
                         readStates.merge(parsedPinnedChats.readStates, uniquingKeysWith: { _, updated in updated })
                         mentionTagSummaries.merge(parsedPinnedChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
                         reactionTagSummaries.merge(parsedPinnedChats.reactionTagSummaries, uniquingKeysWith: { _, updated in updated })
@@ -342,6 +356,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         peers.append(contentsOf: folderChats.peers)
                         peerPresences.merge(folderChats.peerPresences, uniquingKeysWith: { _, updated in updated })
                         notificationSettings.merge(folderChats.notificationSettings, uniquingKeysWith: { _, updated in updated })
+                        ttlPeriods.merge(folderChats.ttlPeriods, uniquingKeysWith: { _, updated in updated })
                         readStates.merge(folderChats.readStates, uniquingKeysWith: { _, updated in updated })
                         mentionTagSummaries.merge(folderChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
                         reactionTagSummaries.merge(folderChats.reactionTagSummaries, uniquingKeysWith: { _, updated in updated })
@@ -376,6 +391,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         peers: peers,
                         peerPresences: peerPresences,
                         notificationSettings: notificationSettings,
+                        ttlPeriods: ttlPeriods,
                         readStates: readStates,
                         mentionTagSummaries: mentionTagSummaries,
                         reactionTagSummaries: reactionTagSummaries,

@@ -34,7 +34,7 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
     }
     
     func setMessage(_ message: Message, presentationData: PresentationData, accountPeerId: PeerId) {
-        let authorNameText = stringForFullAuthorName(message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: accountPeerId)
+        let authorNameText = stringForFullAuthorName(message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: accountPeerId).joined(separator: " → ")
         let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: message.timestamp).string
         
         self.authorNameNode.attributedText = NSAttributedString(string: authorNameText, font: titleFont, textColor: .white)

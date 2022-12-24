@@ -1734,7 +1734,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         |> deliverOnMainQueue).start(next: { _, context, authContext in
-            if let context = context {
+            if let authContext = authContext, let confirmationCode = parseConfirmationCodeUrl(url) {
+                authContext.rootController.applyConfirmationCode(confirmationCode)
+            } else if let context = context {
                 context.openUrl(url)
             } else if let authContext = authContext {
                 if let proxyData = parseProxyUrl(url) {
@@ -1749,8 +1751,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                             UIApplication.shared.open(callbackUrl, options: [:], completionHandler: nil)
                         }
                     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
-                } else if let confirmationCode = parseConfirmationCodeUrl(url) {
-                    authContext.rootController.applyConfirmationCode(confirmationCode)
                 }
             }
         })

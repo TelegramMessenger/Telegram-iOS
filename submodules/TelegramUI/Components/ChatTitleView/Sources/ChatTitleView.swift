@@ -21,19 +21,62 @@ import ComponentFlow
 import EmojiStatusComponent
 import AnimationCache
 import MultiAnimationRenderer
+import ComponentDisplayAdapters
 
 private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
 private let subtitleFont = Font.regular(13.0)
 
-public enum ChatTitleContent {
+public enum ChatTitleContent: Equatable {
     public enum ReplyThreadType {
         case comments
         case replies
     }
     
-    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?)
+    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?)
     case replyThread(type: ReplyThreadType, count: Int)
     case custom(String, String?, Bool)
+    
+    public static func ==(lhs: ChatTitleContent, rhs: ChatTitleContent) -> Bool {
+        switch lhs {
+        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount):
+            if case let .peer(rhsPeerView, rhsCustomTitle, rhsOnlineMemberCount, rhsIsScheduledMessages, rhsIsMuted, rhsCustomMessageCount) = rhs {
+                if peerView !== rhsPeerView {
+                    return false
+                }
+                if customTitle != rhsCustomTitle {
+                    return false
+                }
+                if onlineMemberCount != rhsOnlineMemberCount {
+                    return false
+                }
+                if isScheduledMessages != rhsIsScheduledMessages {
+                    return false
+                }
+                if isMuted != rhsIsMuted {
+                    return false
+                }
+                if customMessageCount != rhsCustomMessageCount {
+                    return false
+                }
+                
+                return true
+            } else {
+                return false
+            }
+        case let .replyThread(type, count):
+            if case .replyThread(type, count) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .custom(title, status, active):
+            if case .custom(title, status, active) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 private enum ChatTitleIcon {
@@ -72,6 +115,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private let button: HighlightTrackingButtonNode
     
+    var manualLayout: Bool = false
     private var validLayout: (CGSize, CGRect)?
     
     private var titleLeftIcon: ChatTitleIcon = .none
@@ -89,7 +133,9 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     private func updateNetworkStatusNode(networkState: AccountNetworkState, layout: ContainerViewLayout?) {
-        self.setNeedsLayout()
+        if self.manualLayout {
+            self.setNeedsLayout()
+        }
     }
     
     public var networkState: AccountNetworkState = .online(proxy: nil) {
@@ -123,7 +169,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
                 var isEnabled = true
                 switch titleContent {
-                    case let .peer(peerView, customTitle, _, isScheduledMessages, isMuted):
+                    case let .peer(peerView, customTitle, _, isScheduledMessages, isMuted, _):
                         if peerView.peerId.isReplies {
                             let typeText: String = self.strings.DialogList_Replies
                             segments = [.text(0, NSAttributedString(string: typeText, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
@@ -143,7 +189,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else {
                                     if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
-                                        segments = [.text(0, NSAttributedString(string: formatPhoneNumber(phone), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                        segments = [.text(0, NSAttributedString(string: formatPhoneNumber(context: self.context, number: phone), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     } else {
                                         segments = [.text(0, NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }
@@ -306,7 +352,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.button.isUserInteractionEnabled = isEnabled
                 if !self.updateStatus() {
                     if updated {
-                        if let (size, clearBounds) = self.validLayout {
+                        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
                             self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.2, curve: .easeInOut))
                         }
                     }
@@ -319,11 +365,14 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _, _, isScheduledMessages, _):
+            case let .peer(peerView, _, _, isScheduledMessages, _, customMessageCount):
                 if let peer = peerViewMainPeer(peerView) {
                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
                     }
+                }
+                if customMessageCount != nil {
+                    inputActivitiesAllowed = false
                 }
             case .replyThread:
                 inputActivitiesAllowed = true
@@ -420,8 +469,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 if let titleContent = self.titleContent {
                     switch titleContent {
-                        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _):
-                            if let peer = peerViewMainPeer(peerView) {
+                        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _, customMessageCount):
+                            if let customMessageCount = customMessageCount, customMessageCount != 0 {
+                                let string = NSAttributedString(string: self.strings.Conversation_ForwardOptions_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                state = .info(string, .generic)
+                            } else if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
                                 if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                                     let string = NSAttributedString(string: "", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
@@ -553,7 +605,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         }
         
         if self.activityNode.transitionToState(state, animation: .slide) {
-            if let (size, clearBounds) = self.validLayout {
+            if !self.manualLayout, let (size, clearBounds) = self.validLayout {
                 self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.3, curve: .spring))
             }
             return true
@@ -636,23 +688,25 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        if let (size, clearBounds) = self.validLayout {
+        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
             self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
         }
     }
     
     public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, hasEmbeddedTitleContent: Bool) {
-        self.theme = theme
-        self.hasEmbeddedTitleContent = hasEmbeddedTitleContent
-        self.strings = strings
-        
-        let titleContent = self.titleContent
-        self.titleCredibilityIcon = .none
-        self.titleContent = titleContent
-        let _ = self.updateStatus()
-        
-        if let (size, clearBounds) = self.validLayout {
-            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        if self.theme !== theme || self.strings !== strings || self.hasEmbeddedTitleContent != hasEmbeddedTitleContent {
+            self.theme = theme
+            self.hasEmbeddedTitleContent = hasEmbeddedTitleContent
+            self.strings = strings
+            
+            let titleContent = self.titleContent
+            self.titleCredibilityIcon = .none
+            self.titleContent = titleContent
+            let _ = self.updateStatus()
+            
+            if !self.manualLayout, let (size, clearBounds) = self.validLayout {
+                self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+            }
         }
     }
     
@@ -718,7 +772,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             if self.titleRightIconNode.supernode == nil {
                 self.titleTextNode.addSubnode(self.titleRightIconNode)
             }
-            rightIconWidth = image.size.width + 3.0
+            rightIconWidth = max(24.0, image.size.width) + 3.0
         } else if self.titleRightIconNode.supernode != nil {
             self.titleRightIconNode.removeFromSupernode()
         }
@@ -728,12 +782,12 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition = .immediate
         }
         
-        let titleSideInset: CGFloat = 3.0
+        let titleSideInset: CGFloat = 6.0
         var titleFrame: CGRect
         if size.height > 40.0 {
             var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), animated: titleTransition.isAnimated)
             titleSize.width += credibilityIconWidth
-            let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
+            let activitySize = self.activityNode.updateLayout(CGSize(width: clearBounds.size.width - titleSideInset * 2.0, height: clearBounds.size.height), alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
             
             if activitySize.height.isZero {
@@ -853,5 +907,124 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             snapshotView?.removeFromSuperview()
         })
         snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+    }
+}
+
+public final class ChatTitleComponent: Component {
+    public let context: AccountContext
+    public let theme: PresentationTheme
+    public let strings: PresentationStrings
+    public let dateTimeFormat: PresentationDateTimeFormat
+    public let nameDisplayOrder: PresentationPersonNameOrder
+    public let content: ChatTitleContent
+    public let tapped: () -> Void
+    public let longTapped: () -> Void
+    
+    public init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        dateTimeFormat: PresentationDateTimeFormat,
+        nameDisplayOrder: PresentationPersonNameOrder,
+        content: ChatTitleContent,
+        tapped: @escaping () -> Void,
+        longTapped: @escaping () -> Void
+    ) {
+        self.context = context
+        self.theme = theme
+        self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
+        self.nameDisplayOrder = nameDisplayOrder
+        self.content = content
+        self.tapped = tapped
+        self.longTapped = longTapped
+    }
+    
+    public static func ==(lhs: ChatTitleComponent, rhs: ChatTitleComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.dateTimeFormat != rhs.dateTimeFormat {
+            return false
+        }
+        if lhs.nameDisplayOrder != rhs.nameDisplayOrder {
+            return false
+        }
+        if lhs.content != rhs.content {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView {
+        public private(set) var contentView: ChatTitleView?
+        
+        private var component: ChatTitleComponent?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: ChatTitleComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            
+            let contentView: ChatTitleView
+            if let current = self.contentView {
+                contentView = current
+            } else {
+                contentView = ChatTitleView(
+                    context: component.context,
+                    theme: component.theme,
+                    strings: component.strings,
+                    dateTimeFormat: component.dateTimeFormat,
+                    nameDisplayOrder: component.nameDisplayOrder,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer
+                )
+                contentView.pressed = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.component?.tapped()
+                }
+                contentView.longPressed = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.component?.longTapped()
+                }
+                contentView.manualLayout = true
+                self.contentView = contentView
+                self.addSubview(contentView)
+            }
+            
+            if contentView.titleContent != component.content {
+                contentView.titleContent = component.content
+            }
+            contentView.updateThemeAndStrings(theme: component.theme, strings: component.strings, hasEmbeddedTitleContent: false)
+            
+            contentView.updateLayout(size: availableSize, clearBounds: CGRect(origin: CGPoint(), size: availableSize), transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -343,9 +343,9 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 self.secretChatsSwitchNode.isOn = session.flags.contains(.acceptsSecretChats)
                 self.incomingCallsSwitchNode.isOn = session.flags.contains(.acceptsIncomingCalls)
             
-                if !session.flags.contains(.passwordPending) {
+                if !session.flags.contains(.passwordPending) && session.apiId != 22 {
                     hasIncomingCalls = true
-                    if ![2040, 2496].contains(session.apiId)  {
+                    if ![2040, 2496].contains(session.apiId) {
                         hasSecretChats = true
                     }
                 }

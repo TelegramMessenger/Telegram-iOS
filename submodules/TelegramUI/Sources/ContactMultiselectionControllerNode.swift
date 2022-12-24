@@ -71,7 +71,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     
-    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
+    private let isPeerEnabled: ((EnginePeer) -> Bool)?
+    
+    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
         self.navigationBar = navigationBar
         
         self.context = context
@@ -79,6 +81,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
+        
+        self.isPeerEnabled = isPeerEnabled
         
         var placeholder: String
         var includeChatList = false
@@ -94,9 +98,17 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters, chatListNodeFilter, chatListNodePeersFilter, _, inactiveSecretChatPeerIds) = mode {
-            placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
-            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), chatListFilter: chatListNodeFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: chatListNodePeersFilter ?? [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+        if case let .chatSelection(chatSelection) = mode {
+            let placeholderValue = chatSelection.searchPlaceholder
+            let selectedChats = chatSelection.selectedChats
+            let additionalCategories = chatSelection.additionalCategories
+            let chatListFilters = chatSelection.chatListFilters
+            
+            placeholder = placeholderValue
+            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), chatListFilter: chatSelection.chatListNodeFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: chatSelection.chatListNodePeersFilter ?? [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, inactiveSecretChatPeerIds: chatSelection.inactiveSecretChatPeerIds)
+            chatListNode.disabledPeerSelected = { peer, _ in
+                attemptDisabledItemSelection?(peer)
+            }
             if let limit = limit {
                 chatListNode.selectionLimit = limit
                 chatListNode.reachedSelectionLimit = reachedSelectionLimit
@@ -132,7 +144,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contentNode.node)
-        if case let .chatSelection(_, _, _, _, _, _, omitTokenList, _) = mode, omitTokenList {
+        if case let .chatSelection(chatSelection) = mode, chatSelection.omitTokenList {
         } else {
             self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
         }
@@ -205,7 +217,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchChannels = true
                             globalSearch = false
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, selectionState: selectionState, isSearch: true)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
@@ -282,7 +294,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             combinedInsets.right += layout.safeInsets.right
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: combinedInsets, headerInsets: headerInsets, duration: duration, curve: curve)
-            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
+            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
         }
         self.contentNode.node.frame = CGRect(origin: CGPoint(), size: layout.size)
         

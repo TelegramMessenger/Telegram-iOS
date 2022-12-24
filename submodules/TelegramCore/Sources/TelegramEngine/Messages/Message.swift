@@ -200,6 +200,12 @@ public final class EngineMessage: Equatable {
         if lhs.associatedThreadInfo != rhs.associatedThreadInfo {
             return false
         }
+        if lhs.attributes.count != rhs.attributes.count {
+            return false
+        }
+        if lhs.stableVersion != rhs.stableVersion {
+            return false
+        }
         return true
     }
 }

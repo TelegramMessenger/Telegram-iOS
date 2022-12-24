@@ -35,9 +35,10 @@
 // Thread local support required for UnwindImpl.
 #define ABSL_STACKTRACE_INL_HEADER \
   "absl/debugging/internal/stacktrace_generic-inl.inc"
-#endif
+#endif  // defined(ABSL_HAVE_THREAD_LOCAL)
 
-#elif defined(__EMSCRIPTEN__)
+// Emscripten stacktraces rely on JS. Do not use them in standalone mode.
+#elif defined(__EMSCRIPTEN__) && !defined(STANDALONE_WASM)
 #define ABSL_STACKTRACE_INL_HEADER \
   "absl/debugging/internal/stacktrace_emscripten-inl.inc"
 
@@ -55,7 +56,7 @@
 // Note: When using glibc this may require -funwind-tables to function properly.
 #define ABSL_STACKTRACE_INL_HEADER \
   "absl/debugging/internal/stacktrace_generic-inl.inc"
-#endif
+#endif  // __has_include(<execinfo.h>)
 #elif defined(__i386__) || defined(__x86_64__)
 #define ABSL_STACKTRACE_INL_HEADER \
   "absl/debugging/internal/stacktrace_x86-inl.inc"
@@ -73,9 +74,10 @@
 // Note: When using glibc this may require -funwind-tables to function properly.
 #define ABSL_STACKTRACE_INL_HEADER \
   "absl/debugging/internal/stacktrace_generic-inl.inc"
-#endif
-#endif
-#endif
+#endif  // __has_include(<execinfo.h>)
+#endif  // defined(__has_include)
+
+#endif  // defined(__linux__) && !defined(__ANDROID__)
 
 // Fallback to the empty implementation.
 #if !defined(ABSL_STACKTRACE_INL_HEADER)

@@ -107,6 +107,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
+        "//submodules/TelegramUI/Components/ChatTimerScreen",
         
         "//submodules/FakePasscodeUI:FakePasscodeUI",
     ],

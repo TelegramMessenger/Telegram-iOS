@@ -23,6 +23,7 @@ final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
     let enclosingPeer: Peer?
     let member: PeerInfoMember
     let badge: String?
+    let isAccount: Bool
     let action: ((PeerInfoScreenMemberItemAction) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -32,6 +33,7 @@ final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
         enclosingPeer: Peer?,
         member: PeerInfoMember,
         badge: String? = nil,
+        isAccount: Bool,
         action: ((PeerInfoScreenMemberItemAction) -> Void)?,
         contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil
     ) {
@@ -40,6 +42,7 @@ final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
         self.enclosingPeer = enclosingPeer
         self.member = member
         self.badge = badge
+        self.isAccount = isAccount
         self.action = action
         self.contextAction = contextAction
     }
@@ -188,7 +191,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             itemText = .presence
         }
         
-        let peerItem = ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: item.context, peer: EnginePeer(item.member.peer), height: itemHeight, presence: item.member.presence.flatMap(EnginePeer.Presence.init), text: itemText, label: itemLabel, editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: nil), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
+        let peerItem = ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: item.context, peer: EnginePeer(item.member.peer), height: itemHeight, presence: item.member.presence.flatMap(EnginePeer.Presence.init), text: itemText, label: itemLabel, editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: nil), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: false, animateFirstAvatarTransition: !item.isAccount, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
             
         }, removePeer: { _ in
             

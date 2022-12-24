@@ -121,6 +121,10 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     
     public var currentController: ViewController?
     
+    override public var transitionNavigationBar: NavigationBar? {
+        return self.currentController?.navigationBar
+    }
+    
     private let pendingControllerDisposable = MetaDisposable()
     
     private var theme: TabBarControllerTheme

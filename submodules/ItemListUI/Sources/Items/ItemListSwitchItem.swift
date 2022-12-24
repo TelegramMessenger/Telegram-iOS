@@ -13,6 +13,7 @@ public enum ItemListSwitchItemNodeType {
 
 public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
+    let icon: UIImage?
     let title: String
     let value: Bool
     let type: ItemListSwitchItemNodeType
@@ -27,8 +28,9 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let activatedWhileDisabled: () -> Void
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, disableLeadingInset: Bool = false, maximumNumberOfLines: Int = 1, noCorners: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, disableLeadingInset: Bool = false, maximumNumberOfLines: Int = 1, noCorners: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
         self.presentationData = presentationData
+        self.icon = icon
         self.title = title
         self.value = value
         self.type = type
@@ -120,6 +122,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
+    private let iconNode: ASImageNode
     private let titleNode: TextNode
     private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
     private let switchGestureNode: ASDisplayNode
@@ -146,6 +149,10 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -206,9 +213,13 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             var updatedTheme: PresentationTheme?
-            
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
+            }
+            
+            var updateIcon = false
+            if currentItem?.icon != item.icon {
+                updateIcon = true
             }
             
             switch item.style {
@@ -222,6 +233,11 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: 44.0)
                 insets = itemListNeighborsGroupedInsets(neighbors, params)
+            }
+            
+            var leftInset = 16.0 + params.leftInset
+            if let _ = item.icon {
+                leftInset += 43.0
             }
             
             if item.disableLeadingInset {
@@ -259,6 +275,20 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         accessibilityTraits.insert(.notEnabled)
                     }
                     strongSelf.activateArea.accessibilityTraits = accessibilityTraits
+                    
+                    if let icon = item.icon {
+                        if strongSelf.iconNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.iconNode)
+                        }
+                        if updateIcon {
+                            strongSelf.iconNode.image = icon
+                        }
+                        let iconY = floor((layout.contentSize.height - icon.size.height) / 2.0)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - icon.size.width) / 2.0), y: iconY), size: icon.size)
+                    } else if strongSelf.iconNode.supernode != nil {
+                        strongSelf.iconNode.image = nil
+                        strongSelf.iconNode.removeFromSupernode()
+                    }
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {
@@ -300,8 +330,6 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let _ = titleApply()
-                    
-                    let leftInset = 16.0 + params.leftInset
                     
                     switch item.style {
                         case .plain:
@@ -345,7 +373,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                             let bottomStripeInset: CGFloat
                             switch neighbors.bottom {
                                 case .sameSection(false):
-                                    bottomStripeInset = 16.0 + params.leftInset
+                                    bottomStripeInset = leftInset
                                     strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0

@@ -139,7 +139,9 @@ public func venueIcon(engine: TelegramEngine, type: String, background: Bool) ->
     let data: Signal<Data?, NoError> = isBuiltinIcon ? .single(nil) : venueIconData(engine: engine, resource: VenueIconResource(type: type))
     return data |> map { data in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                return nil
+            }
             
             var iconImage: UIImage?
             if let data = data, let image = UIImage(data: data) {

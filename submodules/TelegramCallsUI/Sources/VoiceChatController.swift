@@ -6169,7 +6169,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
 //                    return controller
 //                }
                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: peerId.namespace == Namespaces.Peer.CloudUser, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: peerId.namespace == Namespaces.Peer.CloudUser, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: false)!
                 mixin.forceDark = true
                 mixin.stickersContext = paintStickersContext
                 let _ = strongSelf.currentAvatarMixin.swap(mixin)

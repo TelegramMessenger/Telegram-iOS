@@ -8,6 +8,8 @@ import TelegramCore
 import SwiftSignalKit
 import AppBundle
 import AccountContext
+import TelegramAudio
+import TelegramVoip
 
 private let sharedProviderDelegate: AnyObject? = {
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -107,6 +109,10 @@ public final class CallKitIntegration {
             }
         }
     }
+    
+    public func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
+        (sharedProviderDelegate as? CallKitProviderDelegate)?.applyVoiceChatOutputMode(outputMode: outputMode)
+    }
 }
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
@@ -124,6 +130,9 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private var endCall: ((UUID) -> Signal<Bool, NoError>)?
     private var setCallMuted: ((UUID, Bool) -> Void)?
     private var audioSessionActivationChanged: ((Bool) -> Void)?
+    
+    private var isAudioSessionActive: Bool = false
+    private var pendingVoiceChatOutputMode: AudioSessionOutputMode?
     
     private let disposableSet = DisposableSet()
     
@@ -161,25 +170,32 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     private func requestTransaction(_ transaction: CXTransaction, completion: ((Bool) -> Void)? = nil) {
+        Logger.shared.log("CallKitIntegration", "requestTransaction \(transaction)")
         self.callController.request(transaction) { error in
             if let error = error {
-                print("Error requesting transaction: \(error)")
+                Logger.shared.log("CallKitIntegration", "error in requestTransaction \(transaction): \(error)")
             }
             completion?(error == nil)
         }
     }
     
     func endCall(uuid: UUID) {
+        Logger.shared.log("CallKitIntegration", "endCall \(uuid)")
+        
         let endCallAction = CXEndCallAction(call: uuid)
         let transaction = CXTransaction(action: endCallAction)
         self.requestTransaction(transaction)
     }
     
     func dropCall(uuid: UUID) {
+        Logger.shared.log("CallKitIntegration", "report call ended \(uuid)")
+        
         self.provider.reportCall(with: uuid, endedAt: nil, reason: CXCallEndedReason.remoteEnded)
     }
     
     func answerCall(uuid: UUID) {
+        Logger.shared.log("CallKitIntegration", "answer call \(uuid)")
+        
         let answerCallAction = CXAnswerCallAction(call: uuid)
         let transaction = CXTransaction(action: answerCallAction)
         self.requestTransaction(transaction)
@@ -202,6 +218,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
 
         startCallAction.isVideo = isVideo
         let transaction = CXTransaction(action: startCallAction)
+        
+        Logger.shared.log("CallKitIntegration", "initiate call \(uuid)")
         
         self.requestTransaction(transaction, completion: { _ in
             let update = CXCallUpdate()
@@ -238,23 +256,34 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         update.supportsDTMF = false
         update.hasVideo = isVideo
         
+        Logger.shared.log("CallKitIntegration", "report incoming call \(uuid)")
+        
+        OngoingCallContext.setupAudioSession()
+        
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in
             completion?(error as NSError?)
         })
     }
     
     func reportOutgoingCallConnecting(uuid: UUID, at date: Date) {
+        Logger.shared.log("CallKitIntegration", "report outgoing call connecting \(uuid)")
+        
         self.provider.reportOutgoingCall(with: uuid, startedConnectingAt: date)
     }
     
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
+        Logger.shared.log("CallKitIntegration", "report call connected \(uuid)")
+        
         self.provider.reportOutgoingCall(with: uuid, connectedAt: date)
     }
     
     func providerDidReset(_ provider: CXProvider) {
+        Logger.shared.log("CallKitIntegration", "providerDidReset")
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform start call action \(action)")
+        
         guard let startCall = self.startCall, let (uuid, context) = self.currentStartCallAccount, uuid == action.callUUID else {
             action.fail()
             return
@@ -281,6 +310,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform answer call action \(action)")
+        
         guard let answerCall = self.answerCall else {
             action.fail()
             return
@@ -290,6 +321,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform end call action \(action)")
+        
         guard let endCall = self.endCall else {
             action.fail()
             return
@@ -312,6 +345,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform mute call action \(action)")
+        
         guard let setCallMuted = self.setCallMuted else {
             action.fail()
             return
@@ -321,13 +356,29 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        Logger.shared.log("CallKitIntegration", "provider didActivate audio session")
+        self.isAudioSessionActive = true
         self.audioSessionActivationChanged?(true)
         self.audioSessionActivePromise?.set(true)
+        
+        if let outputMode = self.pendingVoiceChatOutputMode {
+            self.pendingVoiceChatOutputMode = nil
+            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
+        }
     }
     
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        Logger.shared.log("CallKitIntegration", "provider didDeactivate audio session")
+        self.isAudioSessionActive = false
         self.audioSessionActivationChanged?(false)
         self.audioSessionActivePromise?.set(false)
     }
+    
+    func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
+        if self.isAudioSessionActive {
+            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
+        } else {
+            self.pendingVoiceChatOutputMode = outputMode
+        }
+    }
 }
-

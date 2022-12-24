@@ -347,6 +347,7 @@ public func quickReactionSetupController(
                         isStandalone: false,
                         isStatusSelection: false,
                         isReactionSelection: true,
+                        isEmojiSelection: false,
                         isQuickReactionSelection: true,
                         topReactionItems: [],
                         areUnicodeEmojiEnabled: false,

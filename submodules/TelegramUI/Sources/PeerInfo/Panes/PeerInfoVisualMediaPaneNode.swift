@@ -1092,7 +1092,8 @@ private final class ItemView: UIView, SparseItemGridView {
             self.messageItemNode = messageItemNode
             self.buttonNode.addSubnode(messageItemNode)
         }
-
+        messageItemNode.visibility = .visible(1.0, .infinite)
+        
         messageItemNode.frame = CGRect(origin: CGPoint(), size: size)
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }

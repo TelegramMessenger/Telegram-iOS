@@ -161,7 +161,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         let bubbleBorderImage = messageBubbleImage(maxCornerRadius: bubbleCorners.mainRadius, minCornerRadius: bubbleCorners.auxiliaryRadius, incoming: true, fillColor: .clear, strokeColor: .red, neighbors: .none, theme: theme.chat, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true, onlyOutline: true)
         
         var messageContainers: [ChatLoadingPlaceholderMessageContainer] = []
-        for _ in 0 ..< 11 {
+        for _ in 0 ..< 14 {
             let container = ChatLoadingPlaceholderMessageContainer(bubbleImage: bubbleImage, bubbleBorderImage: bubbleBorderImage)
             container.setup(maskNode: self.maskNode, borderMaskNode: self.borderMaskNode)
             messageContainers.append(container)
@@ -436,6 +436,9 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
             CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
             CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
             CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight)
         ].map {
             if self.chatType == .channel {
                 return CGSize(width: floor($0.width * 1.3), height: floor($0.height * 1.8))
@@ -448,7 +451,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         var index = 0
         
         for messageContainer in self.messageContainers {
-            let messageSize = dimensions[index % 11]
+            let messageSize = dimensions[index % 14]
             messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1

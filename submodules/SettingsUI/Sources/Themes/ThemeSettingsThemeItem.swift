@@ -172,7 +172,9 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
     return .single(theme)
     |> map { theme -> (TransformImageArguments) -> DrawingContext? in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true) else {
+                return nil
+            }
             let drawingRect = arguments.drawingRect
             
             context.withContext { c in

@@ -307,7 +307,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.validLayout = (size, inset, interfaceState)
         
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
-        let leftInset: CGFloat = 55.0
+        let leftInset: CGFloat = 55.0 + inset
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0

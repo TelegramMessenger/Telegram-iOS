@@ -38,6 +38,7 @@ open class OverlayMediaItemNode: ASDisplayNode {
     }
     
     open var customTransition: Bool = false
+    open var isRemoved: Bool = false
     
     open func setShouldAcquireContext(_ value: Bool) {
     }

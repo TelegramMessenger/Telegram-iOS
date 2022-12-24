@@ -837,15 +837,51 @@ public extension Api {
     }
 }
 public extension Api {
+    enum DefaultHistoryTTL: TypeConstructorDescription {
+        case defaultHistoryTTL(period: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .defaultHistoryTTL(let period):
+                    if boxed {
+                        buffer.appendInt32(1135897376)
+                    }
+                    serializeInt32(period, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .defaultHistoryTTL(let period):
+                return ("defaultHistoryTTL", [("period", String(describing: period))])
+    }
+    }
+    
+        public static func parse_defaultHistoryTTL(_ reader: BufferReader) -> DefaultHistoryTTL? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.DefaultHistoryTTL.defaultHistoryTTL(period: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Dialog: TypeConstructorDescription {
-        case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?)
+        case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?, ttlPeriod: Int32?)
         case dialogFolder(flags: Int32, folder: Api.Folder, peer: Api.Peer, topMessage: Int32, unreadMutedPeersCount: Int32, unreadUnmutedPeersCount: Int32, unreadMutedMessagesCount: Int32, unreadUnmutedMessagesCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId):
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId, let ttlPeriod):
                     if boxed {
-                        buffer.appendInt32(-1460809483)
+                        buffer.appendInt32(-712374074)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -859,6 +895,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(pts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
                     break
                 case .dialogFolder(let flags, let folder, let peer, let topMessage, let unreadMutedPeersCount, let unreadUnmutedPeersCount, let unreadMutedMessagesCount, let unreadUnmutedMessagesCount):
                     if boxed {
@@ -878,8 +915,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId):
-                return ("dialog", [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("notifySettings", String(describing: notifySettings)), ("pts", String(describing: pts)), ("draft", String(describing: draft)), ("folderId", String(describing: folderId))])
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId, let ttlPeriod):
+                return ("dialog", [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("notifySettings", String(describing: notifySettings)), ("pts", String(describing: pts)), ("draft", String(describing: draft)), ("folderId", String(describing: folderId)), ("ttlPeriod", String(describing: ttlPeriod))])
                 case .dialogFolder(let flags, let folder, let peer, let topMessage, let unreadMutedPeersCount, let unreadUnmutedPeersCount, let unreadMutedMessagesCount, let unreadUnmutedMessagesCount):
                 return ("dialogFolder", [("flags", String(describing: flags)), ("folder", String(describing: folder)), ("peer", String(describing: peer)), ("topMessage", String(describing: topMessage)), ("unreadMutedPeersCount", String(describing: unreadMutedPeersCount)), ("unreadUnmutedPeersCount", String(describing: unreadUnmutedPeersCount)), ("unreadMutedMessagesCount", String(describing: unreadMutedMessagesCount)), ("unreadUnmutedMessagesCount", String(describing: unreadUnmutedMessagesCount))])
     }
@@ -916,6 +953,8 @@ public extension Api {
             } }
             var _12: Int32?
             if Int(_1!) & Int(1 << 4) != 0 {_12 = reader.readInt32() }
+            var _13: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {_13 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -928,8 +967,9 @@ public extension Api {
             let _c10 = (Int(_1!) & Int(1 << 0) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 1) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 4) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, notifySettings: _9!, pts: _10, draft: _11, folderId: _12)
+            let _c13 = (Int(_1!) & Int(1 << 5) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, notifySettings: _9!, pts: _10, draft: _11, folderId: _12, ttlPeriod: _13)
             }
             else {
                 return nil

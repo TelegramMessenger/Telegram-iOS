@@ -88,7 +88,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
 
     let rotated: Bool
-    final var index: Int?
+    public internal(set) final var index: Int?
     
     public var isHighlightedInOverlay: Bool = false
     

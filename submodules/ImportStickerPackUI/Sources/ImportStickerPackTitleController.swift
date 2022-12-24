@@ -840,7 +840,7 @@ func importStickerPackShortNameController(context: AccountContext, title: String
                             case .taken:
                                 contentNode?.infoText = .taken
                                 contentNode?.actionNodes.last?.actionEnabled = false
-                            case .invalid:
+                            case .invalid, .purchaseAvailable:
                                 contentNode?.infoText = .info
                                 contentNode?.actionNodes.last?.actionEnabled = false
                         }

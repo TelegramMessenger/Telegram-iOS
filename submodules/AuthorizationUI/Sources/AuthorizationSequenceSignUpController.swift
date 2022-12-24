@@ -130,6 +130,10 @@ final class AuthorizationSequenceSignUpController: ViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        if let navigationController = self.navigationController as? NavigationController, let layout = self.validLayout {
+            addTemporaryKeyboardSnapshotView(navigationController: navigationController, parentView: self.view, layout: layout)
+        }
+        
         self.controllerNode.activateInput()
     }
     

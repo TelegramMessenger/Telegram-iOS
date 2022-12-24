@@ -37,20 +37,6 @@ public struct PresentationResourcesSettings {
     public static let language = renderIcon(name: "Settings/Menu/Language")
     
     public static let deleteAccount = renderIcon(name: "Chat/Info/GroupRemovedIcon")
-
-    public static let wallet = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        context.setFillColor(UIColor.white.cgColor)
-        context.fill(bounds.insetBy(dx: 5.0, dy: 5.0))
-        
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/Menu/Wallet"), color: UIColor(rgb: 0x1b1b1c))?.cgImage {
-            context.draw(image, in: bounds)
-        }
-        
-        drawBorder(context: context, rect: bounds)
-    })
     
     public static let premium = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)

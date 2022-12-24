@@ -47,8 +47,7 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
     if case .cloud = strategy {
         return postboxSignal
         |> mapToSignal { (existMessages, missingMessageIds, supportPeers) in
-            
-            var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
+            var signals: [Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingMessageIds) {
                 if let peer = supportPeers[peerId] {
                     var signal: Signal<Api.messages.Messages, MTRpcError>?
@@ -63,16 +62,17 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
                         signals.append(signal |> map { result in
                             switch result {
                                 case let .messages(messages, chats, users):
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case let .messagesSlice(_, _, _, _, messages, chats, users):
-                                    return (messages, chats, users)
-                                case let .channelMessages(_, _, _, _, messages, chats, users):
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
+                                case let .channelMessages(_, _, _, _, messages, apiTopics, chats, users):
+                                    let _ = apiTopics
+                                    return (peer, messages, chats, users)
                                 case .messagesNotModified:
-                                    return ([], [], [])
+                                    return (peer, [], [], [])
                             }
                             } |> `catch` { _ in
-                                return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                                return Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>.single((peer, [], [], []))
                             })
                     }
                 }
@@ -80,13 +80,12 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
             
             return combineLatest(signals) |> mapToSignal { results -> Signal<[Message], NoError> in
                 return postbox.transaction { transaction -> [Message] in
-                    
-                    for (messages, chats, users) in results {
+                    for (peer, messages, chats, users) in results {
                         if !messages.isEmpty {
                             var storeMessages: [StoreMessage] = []
                             
                             for message in messages {
-                                if let message = StoreMessage(apiMessage: message) {
+                                if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                                     storeMessages.append(message)
                                 }
                             }

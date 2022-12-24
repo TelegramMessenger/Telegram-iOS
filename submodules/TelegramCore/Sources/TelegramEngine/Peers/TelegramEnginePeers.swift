@@ -137,8 +137,8 @@ public extension TelegramEngine {
             return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId)
         }
 
-        public func createGroup(title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
-            return _internal_createGroup(account: self.account, title: title, peerIds: peerIds)
+        public func createGroup(title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<PeerId?, CreateGroupError> {
+            return _internal_createGroup(account: self.account, title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
         }
 
         public func createSecretChat(peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
@@ -153,6 +153,56 @@ public extension TelegramEngine {
             } else {
                 return _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout)
             }
+        }
+        
+        public func setChatMessageAutoremoveTimeouts(peerIds: [EnginePeer.Id], timeout: Int32?) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    if peerId.namespace == Namespaces.Peer.SecretChat {
+                        _internal_setSecretChatMessageAutoremoveTimeoutInteractively(transaction: transaction, account: self.account, peerId: peerId, timeout: timeout)
+                    } else {
+                        var canManage = false
+                        guard let peer = transaction.getPeer(peerId) else {
+                            continue
+                        }
+                        if let user = peer as? TelegramUser {
+                            if user.botInfo == nil {
+                                canManage = true
+                            }
+                        } else if let _ = peer as? TelegramSecretChat {
+                            canManage = true
+                        } else if let group = peer as? TelegramGroup {
+                            canManage = !group.hasBannedPermission(.banChangeInfo)
+                        } else if let channel = peer as? TelegramChannel {
+                            canManage = channel.hasPermission(.changeInfo)
+                        }
+                        
+                        if !canManage {
+                            continue
+                        }
+                        
+                        let cachedData = transaction.getPeerCachedData(peerId: peerId)
+                        var currentValue: Int32?
+                        if let cachedData = cachedData as? CachedUserData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                currentValue = value?.effectiveValue
+                            }
+                        } else if let cachedData = cachedData as? CachedGroupData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                currentValue = value?.effectiveValue
+                            }
+                        } else if let cachedData = cachedData as? CachedChannelData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                currentValue = value?.effectiveValue
+                            }
+                        }
+                        if currentValue != timeout {
+                            let _ = _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout).start()
+                        }
+                    }
+                }
+            }
+            |> ignoreValues
         }
 
         public func updateChannelSlowModeInteractively(peerId: PeerId, timeout: Int32?) -> Signal<Void, UpdateChannelSlowModeError> {
@@ -287,7 +337,16 @@ public extension TelegramEngine {
         public func toggleChannelJoinRequest(peerId: PeerId, enabled: Bool) -> Signal<Never, UpdateChannelJoinRequestError> {
             return _internal_toggleChannelJoinRequest(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, peerId: peerId, enabled: enabled)
         }
+        
+        public func toggleAntiSpamProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
+            return _internal_toggleAntiSpamProtection(account: self.account, peerId: peerId, enabled: enabled)
+        }
+        
+        public func reportAntiSpamFalsePositive(peerId: PeerId, messageId: MessageId) -> Signal<Bool, NoError> {
+            return _internal_reportAntiSpamFalsePositive(account: self.account, peerId: peerId, messageId: messageId)
+        }
 
+        
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
             return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
@@ -856,6 +915,10 @@ public extension TelegramEngine {
             return _internal_setForumChannelTopicClosed(account: self.account, id: id, threadId: threadId, isClosed: isClosed)
         }
         
+        public func setForumChannelTopicHidden(id: EnginePeer.Id, threadId: Int64, isHidden: Bool) -> Signal<Never, EditForumChannelTopicError> {
+            return _internal_setForumChannelTopicHidden(account: self.account, id: id, threadId: threadId, isHidden: isHidden)
+        }
+        
         public func removeForumChannelThread(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 cloudChatAddClearHistoryOperation(transaction: transaction, peerId: id, threadId: threadId, explicitTopMessageId: nil, minTimestamp: nil, maxTimestamp: nil, type: CloudChatClearHistoryType(.forEveryone))
@@ -867,12 +930,65 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func setForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
-            return _internal_setForumChannelTopicPinned(account: self.account, id: id, threadId: threadId, isPinned: isPinned)
+        public func removeForumChannelThreads(id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for threadId in threadIds {
+                    cloudChatAddClearHistoryOperation(transaction: transaction, peerId: id, threadId: threadId, explicitTopMessageId: nil, minTimestamp: nil, maxTimestamp: nil, type: CloudChatClearHistoryType(.forEveryone))
+                    
+                    transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: nil)
+                    
+                    _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allScheduled))
+                }
+            }
+            |> ignoreValues
+        }
+        
+        public func toggleForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, SetForumChannelTopicPinnedError> {
+            return self.account.postbox.transaction { transaction -> ([Int64], Int) in
+                var limit = 5
+                let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
+                    limit = Int(value)
+                }
+                
+                return (transaction.getPeerPinnedThreads(peerId: id), limit)
+            }
+            |> castError(SetForumChannelTopicPinnedError.self)
+            |> mapToSignal { threadIds, limit -> Signal<Never, SetForumChannelTopicPinnedError> in
+                var threadIds = threadIds
+                if threadIds.contains(threadId) {
+                    threadIds.removeAll(where: { $0 == threadId })
+                } else {
+                    if threadIds.count + 1 > limit {
+                        return .fail(.limitReached(limit))
+                    }
+                    threadIds.insert(threadId, at: 0)
+                }
+                
+                return _internal_setForumChannelPinnedTopics(account: self.account, id: id, threadIds: threadIds)
+            }
+        }
+        
+        public func getForumChannelPinnedTopics(id: EnginePeer.Id) -> Signal<[Int64], NoError> {
+            return self.account.postbox.transaction { transcation -> [Int64] in
+                return transcation.getPeerPinnedThreads(peerId: id)
+            }
+        }
+        
+        public func setForumChannelPinnedTopics(id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, SetForumChannelTopicPinnedError> {
+            return _internal_setForumChannelPinnedTopics(account: self.account, id: id, threadIds: threadIds)
         }
         
         public func forumChannelTopicNotificationExceptions(id: EnginePeer.Id) -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> {
             return _internal_forumChannelTopicNotificationExceptions(account: self.account, id: id)
+        }
+        
+        public func importContactToken(token: String) -> Signal<EnginePeer?, NoError> {
+            return _internal_importContactToken(account: self.account, token: token)
+        }
+        
+        public func exportContactToken() -> Signal<ExportedContactToken?, NoError> {
+            return _internal_exportContactToken(account: self.account)
         }
     }
 }

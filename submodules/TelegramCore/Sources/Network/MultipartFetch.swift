@@ -849,7 +849,12 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
                             } else {
                                 return .revalidate
                             }
-                        case .messageAuthorAvatar:
+                        case let .messageAuthorAvatar(message, _):
+                            if let peer = message.author {
+                                if let location =                         resource.apiInputLocation(peerReference: peer) {
+                                    return .location(location)
+                                }
+                            }
                             return .revalidate
                         default:
                             return .none

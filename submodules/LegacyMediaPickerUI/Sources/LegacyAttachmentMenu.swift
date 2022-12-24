@@ -58,7 +58,7 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -85,7 +85,16 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let recipientName: String
+        if let threadTitle {
+            recipientName = threadTitle
+        } else {
+            if peer.id == context.account.peerId {
+                recipientName = presentationData.strings.DialogList_SavedMessages
+            } else {
+                recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            }
+        }
         
         let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
         legacyController.blocksBackgroundWhenInOverlay = true
@@ -123,11 +132,22 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
     })
 }
     
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitle: String?, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
     let presentationData = updatedPresentationData.initial
+    let recipientName: String
+    if let threadTitle {
+        recipientName = threadTitle
+    } else {
+        if peer.id == context.account.peerId {
+            recipientName = presentationData.strings.DialogList_SavedMessages
+        } else {
+            recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        }
+    }
+    
     let actionSheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
     let fontSize = floor(actionSheetTheme.baseFontSize * 20.0 / 17.0)
     
@@ -187,7 +207,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false, selectionLimit: selectionLimit)!
         carouselItemView = carouselItem
         carouselItem.stickersContext = paintStickersContext
-        carouselItem.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        carouselItem.recipientName = recipientName
         var openedCamera = false
         controller.willDismiss = { [weak carouselItem] _ in
             if let carouselItem = carouselItem, !openedCamera {

@@ -533,7 +533,13 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
             case let .index(index):
                 if index.id.peerId == space.peerId && index.id.namespace == space.namespace {
                     if indices.contains(Int(index.id.id)) {
+                        if tag == nil && space.namespace == 0 {
+                            assert(true)
+                        }
+                        
                         return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, threadId: threadId, indices: indices, startId: index.id.id, endId: nil))
+                    } else {
+                        //print("\(indices.rangeView.map({ $0 })) do not contain \(index.id.id)")
                     }
                 }
         }
@@ -545,6 +551,11 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                 case .upperBound, .index:
                     holeBounds = (Int32.max - 1, 1)
             }
+            
+            if tag == nil && space.namespace == 0 {
+                assert(true)
+            }
+            
             if case let .index(index) = anchor, index.id.peerId == space.peerId {
                 return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, threadId: threadId, indices: indices, startId: holeBounds.startId, endId: holeBounds.endId))
             } else {
@@ -585,6 +596,11 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                 } else {
                     holeStartIndex = indices[indices.endIndex]
                 }
+                
+                if tag == nil && space.namespace == 0 {
+                    assert(true)
+                }
+                
                 lowerOrAtAnchorHole = (items.lowerOrAtAnchor.count - i, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, threadId: threadId, indices: indices, startId: Int32(holeStartIndex), endId: 1))
                 
                 if i == -1 {
@@ -653,6 +669,11 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                 } else {
                     holeStartIndex = indices[indices.startIndex]
                 }
+                
+                if tag == nil && space.namespace == 0 {
+                    assert(true)
+                }
+                
                 higherThanAnchorHole = (i, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, threadId: threadId, indices: indices, startId: Int32(holeStartIndex), endId: Int32.max - 1))
                 
                 if i == items.higherThanAnchor.count {

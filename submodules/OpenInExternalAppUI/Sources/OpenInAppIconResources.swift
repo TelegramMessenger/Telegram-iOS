@@ -136,7 +136,9 @@ public func openInAppIcon(engine: TelegramEngine, appIcon: OpenInAppIcon) -> Sig
         case let .resource(resource):
             return openInAppIconData(engine: engine, appIcon: resource) |> map { data in
                 return { arguments in
-                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                    guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                        return nil
+                    }
 
                     var sourceImage: UIImage?
                     if let data = data, let image = UIImage(data: data) {
@@ -161,7 +163,9 @@ public func openInAppIcon(engine: TelegramEngine, appIcon: OpenInAppIcon) -> Sig
             }
         case let .image(image):
             return .single({ arguments in
-                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                    return nil
+                }
 
                 context.withFlippedContext { c in
                     c.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: arguments.drawingSize))

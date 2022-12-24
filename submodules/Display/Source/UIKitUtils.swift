@@ -467,33 +467,148 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
     if layer is AVSampleBufferDisplayLayer {
         return nil
     }
-    let view = CALayer()
-    view.isHidden = layer.isHidden
-    view.opacity = layer.opacity
-    view.contents = layer.contents
-    view.contentsRect = layer.contentsRect
-    view.contentsScale = layer.contentsScale
-    view.contentsCenter = layer.contentsCenter
-    view.contentsGravity = layer.contentsGravity
-    view.masksToBounds = layer.masksToBounds
-    view.cornerRadius = layer.cornerRadius
-    view.backgroundColor = layer.backgroundColor
-    view.layerTintColor = layer.layerTintColor
-    if let sublayers = layer.sublayers {
-        for sublayer in sublayers {
-            let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
-            if let subtree = subtree {
-                subtree.transform = sublayer.transform
-                subtree.position = sublayer.position
-                subtree.bounds = sublayer.bounds
-                subtree.anchorPoint = sublayer.anchorPoint
-                view.addSublayer(subtree)
-            } else {
-                return nil
+    
+    if let layer = layer as? CAShapeLayer {
+        let view = CAShapeLayer()
+        view.isHidden = layer.isHidden
+        view.opacity = layer.opacity
+        view.contents = layer.contents
+        view.contentsRect = layer.contentsRect
+        view.contentsScale = layer.contentsScale
+        view.contentsCenter = layer.contentsCenter
+        view.contentsGravity = layer.contentsGravity
+        view.masksToBounds = layer.masksToBounds
+        view.cornerRadius = layer.cornerRadius
+        view.backgroundColor = layer.backgroundColor
+        view.layerTintColor = layer.layerTintColor
+        
+        /*
+         open var path: CGPath?
+
+         
+         /* The color to fill the path, or nil for no fill. Defaults to opaque
+          * black. Animatable. */
+         
+         open var fillColor: CGColor?
+
+         
+         /* The fill rule used when filling the path. Options are `non-zero' and
+          * `even-odd'. Defaults to `non-zero'. */
+         
+         open var fillRule: CAShapeLayerFillRule
+
+         
+         /* The color to fill the path's stroked outline, or nil for no stroking.
+          * Defaults to nil. Animatable. */
+         
+         open var strokeColor: CGColor?
+
+         
+         /* These values define the subregion of the path used to draw the
+          * stroked outline. The values must be in the range [0,1] with zero
+          * representing the start of the path and one the end. Values in
+          * between zero and one are interpolated linearly along the path
+          * length. strokeStart defaults to zero and strokeEnd to one. Both are
+          * animatable. */
+         
+         open var strokeStart: CGFloat
+
+         open var strokeEnd: CGFloat
+
+         
+         /* The line width used when stroking the path. Defaults to one.
+          * Animatable. */
+         
+         open var lineWidth: CGFloat
+
+         
+         /* The miter limit used when stroking the path. Defaults to ten.
+          * Animatable. */
+         
+         open var miterLimit: CGFloat
+
+         
+         /* The cap style used when stroking the path. Options are `butt', `round'
+          * and `square'. Defaults to `butt'. */
+         
+         open var lineCap: CAShapeLayerLineCap
+
+         
+         /* The join style used when stroking the path. Options are `miter', `round'
+          * and `bevel'. Defaults to `miter'. */
+         
+         open var lineJoin: CAShapeLayerLineJoin
+
+         
+         /* The phase of the dashing pattern applied when creating the stroke.
+          * Defaults to zero. Animatable. */
+         
+         open var lineDashPhase: CGFloat
+
+         
+         /* The dash pattern (an array of NSNumbers) applied when creating the
+          * stroked version of the path. Defaults to nil. */
+         
+         open var lineDashPattern: [NSNumber]?
+         */
+        
+        view.path = layer.path
+        view.fillColor = layer.fillColor
+        view.fillRule = layer.fillRule
+        view.strokeColor = layer.strokeColor
+        view.strokeStart = layer.strokeStart
+        view.strokeEnd = layer.strokeEnd
+        view.lineWidth = layer.lineWidth
+        view.miterLimit = layer.miterLimit
+        view.lineCap = layer.lineCap
+        view.lineJoin = layer.lineJoin
+        view.lineDashPhase = layer.lineDashPhase
+        view.lineDashPattern = layer.lineDashPattern
+        
+        if let sublayers = layer.sublayers {
+            for sublayer in sublayers {
+                let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
+                if let subtree = subtree {
+                    subtree.transform = sublayer.transform
+                    subtree.position = sublayer.position
+                    subtree.bounds = sublayer.bounds
+                    subtree.anchorPoint = sublayer.anchorPoint
+                    view.addSublayer(subtree)
+                } else {
+                    return nil
+                }
             }
         }
+        return view
+    } else {
+        let view = CALayer()
+        view.isHidden = layer.isHidden
+        view.opacity = layer.opacity
+        view.contents = layer.contents
+        view.contentsRect = layer.contentsRect
+        view.contentsScale = layer.contentsScale
+        view.contentsCenter = layer.contentsCenter
+        view.contentsGravity = layer.contentsGravity
+        view.masksToBounds = layer.masksToBounds
+        view.cornerRadius = layer.cornerRadius
+        view.backgroundColor = layer.backgroundColor
+        view.layerTintColor = layer.layerTintColor
+        if let sublayers = layer.sublayers {
+            for sublayer in sublayers {
+                let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
+                if let subtree = subtree {
+                    subtree.transform = sublayer.transform
+                    subtree.position = sublayer.position
+                    subtree.bounds = sublayer.bounds
+                    subtree.anchorPoint = sublayer.anchorPoint
+                    view.addSublayer(subtree)
+                } else {
+                    return nil
+                }
+            }
+        }
+        return view
     }
-    return view
 }
 
 private func makeLayerSubtreeSnapshotAsView(layer: CALayer) -> UIView? {

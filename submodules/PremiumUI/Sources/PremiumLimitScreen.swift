@@ -942,7 +942,11 @@ private final class LimitSheetContent: CombinedComponent {
             
                 contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
             } else {
-                contentSize = CGSize(width: context.availableSize.width, height: 351.0 + environment.safeInsets.bottom)
+                var height: CGFloat = 351.0
+                if isPremiumDisabled {
+                    height -= 78.0
+                }
+                contentSize = CGSize(width: context.availableSize.width, height: height + environment.safeInsets.bottom)
             }
             
             return contentSize

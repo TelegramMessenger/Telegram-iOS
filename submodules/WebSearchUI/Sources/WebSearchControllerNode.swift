@@ -733,7 +733,7 @@ class WebSearchControllerNode: ASDisplayNode {
         if self.controllerInteraction.selectionState != nil {
             if let state = self.webSearchInterfaceState.state, state.scope == .images {
                 if let results = self.currentProcessedResults?.results {
-                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, chatLocation: self.chatLocation, presentationData: self.presentationData, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
+                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, threadTitle: nil, chatLocation: self.chatLocation, presentationData: self.presentationData, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
                         self?.hiddenMediaId.set(.single(id))
                     }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
                         return self?.gridNode.view

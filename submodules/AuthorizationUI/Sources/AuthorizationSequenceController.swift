@@ -120,7 +120,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     let masterDatacenterId = strongSelf.account.masterDatacenterId
                     let isTestingEnvironment = strongSelf.account.testingEnvironment
                     
-                    let countryCode = defaultCountryCode()
+                    let countryCode = AuthorizationSequenceController.defaultCountryCode()
                     
                     let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: isTestingEnvironment, masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
                 }
@@ -275,13 +275,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceCodeEntryController(presentationData: self.presentationData, openUrl: { [weak self] url in
-                self?.openUrl(url)
-            }, back: { [weak self] in
+            controller = AuthorizationSequenceCodeEntryController(presentationData: self.presentationData, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
-                let countryCode = defaultCountryCode()
+                let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
@@ -454,7 +452,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if nextType == nil {
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
-                        strongSelf.presentEmailComposeController(address: "reports@stel.com", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
+                        strongSelf.presentEmailComposeController(address: "sms@telegram.org", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
@@ -513,6 +511,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 authorizationController.performRequests()
             }
         }
+        controller.openFragment = { [weak self] url in
+            if let strongSelf = self {
+                strongSelf.sharedContext.applicationBindings.openUrl(url)
+            }
+        }
         controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
         return controller
     }
@@ -537,7 +540,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 guard let strongSelf = self else {
                     return
                 }
-                let countryCode = defaultCountryCode()
+                let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
@@ -702,7 +705,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 guard let strongSelf = self else {
                     return
                 }
-                let countryCode = defaultCountryCode()
+                let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
@@ -847,7 +850,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 guard let strongSelf = self else {
                     return
                 }
-                let countryCode = defaultCountryCode()
+                let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
@@ -907,7 +910,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 guard let strongSelf = self else {
                     return
                 }
-                let countryCode = defaultCountryCode()
+                let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             }, displayCancel: displayCancel)
@@ -1017,7 +1020,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         if self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
                         } else {
-                            controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
+                            controllers.append(self.phoneEntryController(countryCode: AuthorizationSequenceController.defaultCountryCode(), number: "", splashController: nil))
                         }
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     }
@@ -1045,7 +1048,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
                     }
-                    controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
+                    controllers.append(self.phoneEntryController(countryCode: AuthorizationSequenceController.defaultCountryCode(), number: "", splashController: nil))
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
                         self.appleSignInAllowed = appleSignInAllowed
                         controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
@@ -1151,30 +1154,30 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
     }
-}
-
-private func defaultCountryCode() -> Int32 {
-    var countryId: String? = nil
-    let networkInfo = CTTelephonyNetworkInfo()
-    if let carrier = networkInfo.subscriberCellularProvider {
-        countryId = carrier.isoCountryCode
-    }
     
-    if countryId == nil {
-        countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
-    }
-    
-    var countryCode: Int32 = 1
-    
-    if let countryId = countryId {
-        let normalizedId = countryId.uppercased()
-        for (code, idAndName) in countryCodeToIdAndName {
-            if idAndName.0 == normalizedId {
-                countryCode = Int32(code)
-                break
+    public static func defaultCountryCode() -> Int32 {
+        var countryId: String? = nil
+        let networkInfo = CTTelephonyNetworkInfo()
+        if let carrier = networkInfo.subscriberCellularProvider {
+            countryId = carrier.isoCountryCode
+        }
+        
+        if countryId == nil {
+            countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
+        }
+        
+        var countryCode: Int32 = 1
+        
+        if let countryId = countryId {
+            let normalizedId = countryId.uppercased()
+            for (code, idAndName) in countryCodeToIdAndName {
+                if idAndName.0 == normalizedId {
+                    countryCode = Int32(code)
+                    break
+                }
             }
         }
+        
+        return countryCode
     }
-    
-    return countryCode
 }

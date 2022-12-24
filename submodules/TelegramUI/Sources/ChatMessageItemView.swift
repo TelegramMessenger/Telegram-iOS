@@ -212,7 +212,7 @@ final class ChatMessageAccessibilityData {
                 let suppressForeignAgentNotice = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
                 let message_ = suppressForeignAgentNotice ? removeForeignAgentNotice(message: message) : message
                 
-                let (_, _, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message_)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
+                let (_, _, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, contentSettings: item.context.currentContentSettings.with { $0 }, messages: [EngineMessage(message_)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
                 
                 var text = messageText
                 
@@ -863,7 +863,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                     let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                     |> deliverOnMainQueue).start(next: { peer in
                         if let peer = peer {
-                            item.controllerInteraction.openPeer(peer, .info, nil, false)
+                            item.controllerInteraction.openPeer(peer, .info, nil, .default)
                         }
                     })
                 case let .openWebView(url, simple):

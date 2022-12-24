@@ -81,14 +81,16 @@ public final class HashtagSearchController: TelegramBaseController {
         }, deletePeerThread: { _, _ in
         }, setPeerThreadStopped: { _, _, _ in
         }, setPeerThreadPinned: { _, _, _ in
+        }, setPeerThreadHidden: { _, _, _ in
         }, updatePeerGrouping: { _, _ in
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {
         }, toggleThreadsSelection: { _, _ in
         }, hidePsa: { _ in
-        }, activateChatPreview: { _, _, gesture, _ in
+        }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
+        }, openForumThread: { _, _ in
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)

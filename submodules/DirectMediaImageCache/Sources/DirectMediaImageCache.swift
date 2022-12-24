@@ -12,7 +12,9 @@ import ManagedFile
 
 private func generateBlurredThumbnail(image: UIImage) -> UIImage? {
     let thumbnailContextSize = CGSize(width: 32.0, height: 32.0)
-    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+    guard let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) else {
+        return nil
+    }
 
     let filledSize = image.size.aspectFilled(thumbnailContextSize)
     let imageRect = CGRect(origin: CGPoint(x: (thumbnailContextSize.width - filledSize.width) / 2.0, y: (thumbnailContextSize.height - filledSize.height) / 2.0), size: filledSize)
@@ -129,7 +131,9 @@ private func loadImage(data: Data) -> UIImage? {
                 source.rowBytes = Int(width * 2)
                 source.data = UnsafeMutableRawPointer(mutating: sourceBytes.advanced(by: 4 + 2 + 2))
 
-                let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: true, clear: false)
+                guard let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: true, clear: false) else {
+                    return nil
+                }
 
                 var target = vImage_Buffer()
                 target.width = UInt(width)
@@ -218,7 +222,11 @@ public final class DirectMediaImageCache {
             let data = dataSignal.start(next: { data in
                 if let data = data, let image = UIImage(data: data) {
                     let scaledSize = CGSize(width: CGFloat(width), height: CGFloat(width))
-                    let scaledContext = DrawingContext(size: scaledSize, scale: 1.0, opaque: true)
+                    guard let scaledContext = DrawingContext(size: scaledSize, scale: 1.0, opaque: true) else {
+                        subscriber.putNext(nil)
+                        subscriber.putCompletion()
+                        return
+                    }
                     scaledContext.withFlippedContext { context in
                         let filledSize = image.size.aspectFilled(scaledSize)
                         let imageRect = CGRect(origin: CGPoint(x: (scaledSize.width - filledSize.width) / 2.0, y: (scaledSize.height - filledSize.height) / 2.0), size: filledSize)

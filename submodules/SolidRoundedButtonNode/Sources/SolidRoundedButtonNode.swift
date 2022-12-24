@@ -156,6 +156,13 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                             self.animationTimer = timer
                             timer.start()
                         }
+                    } else {
+                        self.animationNode?.play()
+                        let timer = SwiftSignalKit.Timer(timeout: 4.0, repeat: true, completion: { [weak self] in
+                            self?.animationNode?.play()
+                        }, queue: Queue.mainQueue())
+                        self.animationTimer = timer
+                        timer.start()
                     }
                 }
             } else if let animationNode = self.animationNode {
@@ -166,6 +173,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     }
     
     public var iconSpacing: CGFloat = 8.0 {
+        didSet {
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
+    public var animationSize: CGSize = CGSize(width: 30.0, height: 30.0) {
         didSet {
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
@@ -559,7 +574,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         let iconSize: CGSize
         if let _ = self.animationNode {
-            iconSize = CGSize(width: 30.0, height: 30.0)
+            iconSize = self.animationSize
         } else {
             iconSize = self.iconNode.image?.size ?? CGSize()
         }
@@ -794,6 +809,13 @@ public final class SolidRoundedButtonView: UIView {
                             self.animationTimer = timer
                             timer.start()
                         }
+                    } else {
+                        self.animationNode?.play()
+                        let timer = SwiftSignalKit.Timer(timeout: 4.0, repeat: true, completion: { [weak self] in
+                            self?.animationNode?.play()
+                        }, queue: Queue.mainQueue())
+                        self.animationTimer = timer
+                        timer.start()
                     }
                 }
             } else if let animationNode = self.animationNode {

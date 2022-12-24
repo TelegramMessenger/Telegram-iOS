@@ -49,6 +49,7 @@ public final class EmojiStatusComponent: Component {
         case text(color: UIColor, string: String)
         case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
         case topic(title: String, color: Int32, size: CGSize)
+        case image(image: UIImage?)
     }
     
     public let context: AccountContext
@@ -224,25 +225,14 @@ public final class EmojiStatusComponent: Component {
                         iconImage = nil
                     }
                 case let .topic(title, color, realSize):
-                    func generateTopicColors(_ color: Int32) -> ([UInt32], [UInt32]) {
-                        return ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
-                    }
-                    
-                    let topicColors: [Int32: ([UInt32], [UInt32])] = [
-                        0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
-                        0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
-                        0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
-                        0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
-                        0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
-                        0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
-                    ]
-                    let colors = topicColors[color] ?? generateTopicColors(color)
-                    
+                    let colors = topicIconColors(for: color)
                     if let image = generateTopicIcon(title: title, backgroundColors: colors.0.map(UIColor.init(rgb:)), strokeColors: colors.1.map(UIColor.init(rgb:)), size: realSize) {
                         iconImage = image
                     } else {
                         iconImage = nil
                     }
+                case let .image(image):
+                    iconImage = image
                 case let .verified(fillColor, foregroundColor, sizeType):
                     let imageNamePrefix: String
                     switch sizeType {
@@ -574,4 +564,17 @@ public final class EmojiStatusComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+public func topicIconColors(for color: Int32) -> ([UInt32], [UInt32]) {
+    let topicColors: [Int32: ([UInt32], [UInt32])] = [
+        0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+        0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
+        0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
+        0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
+        0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
+        0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
+    ]
+    
+    return topicColors[color] ?? ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
 }

@@ -38,7 +38,7 @@ public func qrCodeCutout(size: Int, dimensions: CGSize, scale: CGFloat?) -> (Int
     return (cutoutSize, cutoutRect, quadSize)
 }
 
-public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M") -> Signal<(Int, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M", onlyMarkers: Bool = false) -> Signal<(Int, (TransformImageArguments) -> DrawingContext?), NoError> {
     return Signal<(Data, Int, Int), NoError> { subscriber in
         if let data = string.data(using: .isoLatin1, allowLossyConversion: false), let filter = CIFilter(name: "CIQRCodeGenerator") {
             filter.setValue(data, forKey: "inputMessage")
@@ -70,7 +70,9 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
     }
     |> map { data, size, bytesPerRow in
         return (size, { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true) else {
+                return nil
+            }
 
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
@@ -105,7 +107,9 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
             }
             
             let squareSize = CGSize(width: side, height: side)
-            let tmpContext = DrawingContext(size: CGSize(width: squareSize.width * 4.0, height: squareSize.height), scale: arguments.scale ?? 0.0, clear: true)
+            guard let tmpContext = DrawingContext(size: CGSize(width: squareSize.width * 4.0, height: squareSize.height), scale: arguments.scale ?? 0.0, clear: true) else {
+                return nil
+            }
             tmpContext.withContext { c in
                 if let backgroundColor = backgroundColor {
                     c.setFillColor(backgroundColor.cgColor)
@@ -178,46 +182,48 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                     }
                 }
                 
-                for y in 0 ..< size {
-                    for x in 0 ..< size {
-                        if (y < markerSize + 1 && (x < markerSize + 1 || x > size - markerSize - 2)) || (y > size - markerSize - 2 && x < markerSize + 1) {
-                            continue
-                        }
-                        
-                        var corners: UIRectCorner = []
-                        if valueAt(x: x, y: y) {
-                            corners = .allCorners
-                            if valueAt(x: x, y: y - 1) {
-                                corners.remove(.topLeft)
-                                corners.remove(.topRight)
+                if !onlyMarkers {
+                    for y in 0 ..< size {
+                        for x in 0 ..< size {
+                            if (y < markerSize + 1 && (x < markerSize + 1 || x > size - markerSize - 2)) || (y > size - markerSize - 2 && x < markerSize + 1) {
+                                continue
                             }
-                            if valueAt(x: x, y: y + 1) {
-                                corners.remove(.bottomLeft)
-                                corners.remove(.bottomRight)
+                            
+                            var corners: UIRectCorner = []
+                            if valueAt(x: x, y: y) {
+                                corners = .allCorners
+                                if valueAt(x: x, y: y - 1) {
+                                    corners.remove(.topLeft)
+                                    corners.remove(.topRight)
+                                }
+                                if valueAt(x: x, y: y + 1) {
+                                    corners.remove(.bottomLeft)
+                                    corners.remove(.bottomRight)
+                                }
+                                if valueAt(x: x - 1, y: y) {
+                                    corners.remove(.topLeft)
+                                    corners.remove(.bottomLeft)
+                                }
+                                if valueAt(x: x + 1, y: y) {
+                                    corners.remove(.topRight)
+                                    corners.remove(.bottomRight)
+                                }
+                                drawAt(x: x, y: y, fill: true, corners: corners)
+                            } else {
+                                if valueAt(x: x - 1, y: y - 1) && valueAt(x: x - 1, y: y) && valueAt(x: x, y: y - 1) {
+                                    corners.insert(.topLeft)
+                                }
+                                if valueAt(x: x + 1, y: y - 1) && valueAt(x: x + 1, y: y) && valueAt(x: x, y: y - 1) {
+                                    corners.insert(.topRight)
+                                }
+                                if valueAt(x: x - 1, y: y + 1) && valueAt(x: x - 1, y: y) && valueAt(x: x, y: y + 1) {
+                                    corners.insert(.bottomLeft)
+                                }
+                                if valueAt(x: x + 1, y: y + 1) && valueAt(x: x + 1, y: y) && valueAt(x: x, y: y + 1) {
+                                    corners.insert(.bottomRight)
+                                }
+                                drawAt(x: x, y: y, fill: false, corners: corners)
                             }
-                            if valueAt(x: x - 1, y: y) {
-                                corners.remove(.topLeft)
-                                corners.remove(.bottomLeft)
-                            }
-                            if valueAt(x: x + 1, y: y) {
-                                corners.remove(.topRight)
-                                corners.remove(.bottomRight)
-                            }
-                            drawAt(x: x, y: y, fill: true, corners: corners)
-                        } else {
-                            if valueAt(x: x - 1, y: y - 1) && valueAt(x: x - 1, y: y) && valueAt(x: x, y: y - 1) {
-                                corners.insert(.topLeft)
-                            }
-                            if valueAt(x: x + 1, y: y - 1) && valueAt(x: x + 1, y: y) && valueAt(x: x, y: y - 1) {
-                                corners.insert(.topRight)
-                            }
-                            if valueAt(x: x - 1, y: y + 1) && valueAt(x: x - 1, y: y) && valueAt(x: x, y: y + 1) {
-                                corners.insert(.bottomLeft)
-                            }
-                            if valueAt(x: x + 1, y: y + 1) && valueAt(x: x + 1, y: y) && valueAt(x: x, y: y + 1) {
-                                corners.insert(.bottomRight)
-                            }
-                            drawAt(x: x, y: y, fill: false, corners: corners)
                         }
                     }
                 }

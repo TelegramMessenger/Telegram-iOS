@@ -198,8 +198,13 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
         return countryCodes
     }
     
+    public static func setupCountryCodes(countries: [Country], codesByPrefix: [String: (Country, Country.CountryCode)]) {
+        countryCodes = countries
+        countryCodesByPrefix = codesByPrefix
+    }
+    
     public static func lookupCountryNameById(_ id: String, strings: PresentationStrings) -> String? {
-        for country in self.countries() {
+        for country in countryCodes {
             if id == country.id {
                 let locale = localeWithStrings(strings)
                 if let countryName = locale.localizedString(forRegionCode: id) {
@@ -254,7 +259,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     }
     
     public static func lookupCountryIdByCode(_ code: Int) -> String? {
-        for country in self.countries() {
+        for country in countryCodes {
             for countryCode in country.countryCodes {
                 if countryCode.code == "\(code)" {
                     return country.id

@@ -4,7 +4,7 @@ import Postbox
 import Display
 import TelegramCore
 
-public enum ChatListControllerLocation {
+public enum ChatListControllerLocation: Equatable {
     case chatList(groupId: EngineChatList.Group)
     case forum(peerId: PeerId)
 }

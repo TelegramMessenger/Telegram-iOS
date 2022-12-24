@@ -204,7 +204,7 @@ public final class SearchDisplayController {
                 
         if !self.contentNode.hasDim {
             self.backgroundNode.alpha = 1.0
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
             
             self.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
         }
@@ -263,7 +263,7 @@ public final class SearchDisplayController {
     }
     
     public func deactivate(placeholder: SearchBarPlaceholderNode?, animated: Bool = true) {
-        self.searchBar.deactivate()
+        self.searchBar.deactivate(clear: false)
         
         let searchBar = self.searchBar
         if let placeholder = placeholder {

@@ -4,41 +4,61 @@ import json
 import shutil
 import shlex
 import tempfile
+import importlib.util
+from importlib.machinery import SourceFileLoader
 
 from BuildEnvironment import run_executable_with_output
 
+
+def import_module_from_file(module_name, file_path):
+    if not os.path.exists(file_path):
+        print('{} does not exist'.format(file_path))
+        sys.exit(1)
+
+    loader = SourceFileLoader(module_name, file_path)
+    spec = importlib.util.spec_from_file_location(module_name, loader=loader)
+    module = importlib.util.module_from_spec(spec)
+
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def session_scp_upload(session, source_path, destination_path):
     scp_command = 'scp -i {privateKeyPath} -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr {source_path} containerhost@"{ipAddress}":{destination_path}'.format(
-        privateKeyPath=session.privateKeyPath,
-        ipAddress=session.ipAddress,
+        privateKeyPath=session.private_key_path,
+        ipAddress=session.ip_address,
         source_path=shlex.quote(source_path),
         destination_path=shlex.quote(destination_path)
     )
     if os.system(scp_command) != 0:
         print('Command {} finished with a non-zero status'.format(scp_command))
+
 
 def session_scp_download(session, source_path, destination_path):
     scp_command = 'scp -i {privateKeyPath} -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr containerhost@"{ipAddress}":{source_path} {destination_path}'.format(
-        privateKeyPath=session.privateKeyPath,
-        ipAddress=session.ipAddress,
+        privateKeyPath=session.private_key_path,
+        ipAddress=session.ip_address,
         source_path=shlex.quote(source_path),
         destination_path=shlex.quote(destination_path)
     )
     if os.system(scp_command) != 0:
         print('Command {} finished with a non-zero status'.format(scp_command))
 
+
 def session_ssh(session, command):
     ssh_command = 'ssh -i {privateKeyPath} -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null containerhost@"{ipAddress}" -o ServerAliveInterval=60 -t "{command}"'.format(
-        privateKeyPath=session.privateKeyPath,
-        ipAddress=session.ipAddress,
+        privateKeyPath=session.private_key_path,
+        ipAddress=session.ip_address,
         command=command
     )
     return os.system(ssh_command)
 
-def remote_build(darwin_containers_host, bazel_cache_host, configuration, build_input_data_path):
-    macos_version = '12.5'
 
-    from darwin_containers import DarwinContainers
+def remote_build(darwin_containers_path, darwin_containers_host, bazel_cache_host, configuration, build_input_data_path):
+    macos_version = '13.0'
+
+    DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     base_dir = os.getcwd()
 
@@ -83,67 +103,88 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, build_
     print('Compressing source code...')
     os.system('find . -type f -a -not -regex "\\." -a -not -regex ".*\\./git" -a -not -regex ".*\\./git/.*" -a -not -regex "\\./bazel-bin" -a -not -regex "\\./bazel-bin/.*" -a -not -regex "\\./bazel-out" -a -not -regex "\\./bazel-out/.*" -a -not -regex "\\./bazel-testlogs" -a -not -regex "\\./bazel-testlogs/.*" -a -not -regex "\\./bazel-telegram-ios" -a -not -regex "\\./bazel-telegram-ios/.*" -a -not -regex "\\./buildbox" -a -not -regex "\\./buildbox/.*" -a -not -regex "\\./buck-out" -a -not -regex "\\./buck-out/.*" -a -not -regex "\\./\\.buckd" -a -not -regex "\\./\\.buckd/.*" -a -not -regex "\\./build" -a -not -regex "\\./build/.*" -print0 | tar cf "{buildbox_dir}/transient-data/source.tar" --null -T -'.format(buildbox_dir=buildbox_dir))
 
-    darwinContainers = DarwinContainers(serverAddress=darwin_containers_host, verbose=False)
-
     print('Opening container session...')
-    with darwinContainers.workingImageSession(name=image_name) as session:
-        print('Uploading data to container...')
-        session_scp_upload(session=session, source_path=build_input_data_path, destination_path='telegram-build-input')
-        session_scp_upload(session=session, source_path='{base_dir}/{buildbox_dir}/transient-data/source.tar'.format(base_dir=base_dir, buildbox_dir=buildbox_dir), destination_path='')
 
-        guest_build_sh = '''
-            set -x
-            set -e
+    def handle_ssh_credentials(credentials):
+        with DarwinContainers.ContainerSession(credentials=credentials) as session:
+            print('Uploading data to container...')
 
-            mkdir /Users/Shared/telegram-ios
-            cd /Users/Shared/telegram-ios
+            session_scp_upload(session=session, source_path=build_input_data_path, destination_path='telegram-build-input')
+            session_scp_upload(session=session, source_path='{base_dir}/{buildbox_dir}/transient-data/source.tar'.format(base_dir=base_dir, buildbox_dir=buildbox_dir), destination_path='')
 
-            tar -xf $HOME/source.tar
+            guest_build_sh = '''
+                set -x
+                set -e
 
-            python3 build-system/Make/ImportCertificates.py --path $HOME/telegram-build-input/certs
+                mkdir /Users/Shared/telegram-ios
+                cd /Users/Shared/telegram-ios
 
-        '''
+                tar -xf $HOME/source.tar
 
-        guest_build_sh += 'python3 build-system/Make/Make.py \\'
-        if bazel_cache_host is not None:
-            guest_build_sh += '--cacheHost="{}" \\'.format(bazel_cache_host)
-        guest_build_sh += 'build \\'
-        guest_build_sh += ''
-        guest_build_sh += '--buildNumber={} \\'.format(build_number)
-        guest_build_sh += '--configuration={} \\'.format(configuration)
-        guest_build_sh += '--configurationPath=$HOME/telegram-build-input/configuration.json \\'
-        guest_build_sh += '--codesigningInformationPath=$HOME/telegram-build-input \\'
-        guest_build_sh += '--outputBuildArtifactsPath=/Users/Shared/telegram-ios/build/artifacts \\'
+                python3 build-system/Make/ImportCertificates.py --path $HOME/telegram-build-input/certs
 
-        guest_build_file_path = tempfile.mktemp()
-        with open(guest_build_file_path, 'w+') as file:
-            file.write(guest_build_sh)
-        session_scp_upload(session=session, source_path=guest_build_file_path, destination_path='guest-build-telegram.sh')
-        os.unlink(guest_build_file_path)
+            '''
 
-        print('Executing remote build...')
+            guest_build_sh += 'python3 build-system/Make/Make.py \\'
+            if bazel_cache_host is not None:
+                guest_build_sh += '--cacheHost="{}" \\'.format(bazel_cache_host)
+            guest_build_sh += 'build \\'
+            guest_build_sh += ''
+            guest_build_sh += '--buildNumber={} \\'.format(build_number)
+            guest_build_sh += '--configuration={} \\'.format(configuration)
+            guest_build_sh += '--configurationPath=$HOME/telegram-build-input/configuration.json \\'
+            guest_build_sh += '--codesigningInformationPath=$HOME/telegram-build-input \\'
+            guest_build_sh += '--outputBuildArtifactsPath=/Users/Shared/telegram-ios/build/artifacts \\'
 
-        session_ssh(session=session, command='bash -l guest-build-telegram.sh')
+            guest_build_file_path = tempfile.mktemp()
+            with open(guest_build_file_path, 'w+') as file:
+                file.write(guest_build_sh)
+            session_scp_upload(session=session, source_path=guest_build_file_path, destination_path='guest-build-telegram.sh')
+            os.unlink(guest_build_file_path)
 
-        print('Retrieving build artifacts...')
+            print('Executing remote build...')
 
-        artifacts_path='{base_dir}/build/artifacts'.format(base_dir=base_dir)
-        if os.path.exists(artifacts_path):
-            shutil.rmtree(artifacts_path)
-        os.makedirs(artifacts_path, exist_ok=True)
+            session_ssh(session=session, command='bash -l guest-build-telegram.sh')
 
-        session_scp_download(session=session, source_path='/Users/Shared/telegram-ios/build/artifacts/*', destination_path='{artifacts_path}/'.format(artifacts_path=artifacts_path))
+            print('Retrieving build artifacts...')
 
-        if os.path.exists(artifacts_path + '/Telegram.ipa'):
-            print('Artifacts have been stored at {}'.format(artifacts_path))
-        else:
-            print('Telegram.ipa not found')
-            sys.exit(1)
+            artifacts_path='{base_dir}/build/artifacts'.format(base_dir=base_dir)
+            if os.path.exists(artifacts_path):
+                shutil.rmtree(artifacts_path)
+            os.makedirs(artifacts_path, exist_ok=True)
 
-def remote_deploy_testflight(darwin_containers_host, ipa_path, dsyms_path, username, password):
-    macos_version = '12.5'
+            session_scp_download(session=session, source_path='/Users/Shared/telegram-ios/build/artifacts/*', destination_path='{artifacts_path}/'.format(artifacts_path=artifacts_path))
 
-    from darwin_containers import DarwinContainers
+            if os.path.exists(artifacts_path + '/Telegram.ipa'):
+                print('Artifacts have been stored at {}'.format(artifacts_path))
+                sys.exit(0)
+            else:
+                print('Telegram.ipa not found')
+                sys.exit(1)
+
+        DarwinContainers.run_remote_ssh(credentials=credentials, command='')
+        sys.exit(0)
+
+    def handle_stopped():
+        pass
+
+    DarwinContainers.DarwinContainers(
+        server_address=darwin_containers_host,
+        verbose=False
+    ).run_image(
+        name=image_name,
+        is_base=False,
+        is_gui=True,
+        is_daemon=False,
+        on_ssh_credentials=handle_ssh_credentials,
+        on_stopped=handle_stopped
+    )
+
+
+def remote_deploy_testflight(darwin_containers_path, darwin_containers_host, ipa_path, dsyms_path, username, password):
+    macos_version = '13.0'
+
+    DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     configuration_path = 'versions.json'
     xcode_version = ''
@@ -159,34 +200,50 @@ def remote_deploy_testflight(darwin_containers_host, ipa_path, dsyms_path, usern
 
     print('Image name: {}'.format(image_name))
 
-    darwinContainers = DarwinContainers(serverAddress=darwin_containers_host, verbose=False)
 
-    print('Opening container session...')
-    with darwinContainers.workingImageSession(name=image_name) as session:
-        print('Uploading data to container...')
-        session_scp_upload(session=session, source_path=ipa_path, destination_path='')
-        session_scp_upload(session=session, source_path=dsyms_path, destination_path='')
+    def handle_ssh_credentials(credentials):
+        with DarwinContainers.ContainerSession(credentials=credentials) as session:
+            print('Uploading data to container...')
+            session_scp_upload(session=session, source_path=ipa_path, destination_path='')
+            session_scp_upload(session=session, source_path=dsyms_path, destination_path='')
 
-        guest_upload_sh = '''
-            set -e
+            guest_upload_sh = '''
+                set -e
 
-            export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
-            FASTLANE_PASSWORD="{password}" xcrun altool --upload-app --type ios --file "Telegram.ipa" --username "{username}" --password "@env:FASTLANE_PASSWORD"
-        '''.format(username=username, password=password)
+                export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
+                FASTLANE_PASSWORD="{password}" xcrun altool --upload-app --type ios --file "Telegram.ipa" --username "{username}" --password "@env:FASTLANE_PASSWORD"
+            '''.format(username=username, password=password)
 
-        guest_upload_file_path = tempfile.mktemp()
-        with open(guest_upload_file_path, 'w+') as file:
-            file.write(guest_upload_sh)
-        session_scp_upload(session=session, source_path=guest_upload_file_path, destination_path='guest-upload-telegram.sh')
-        os.unlink(guest_upload_file_path)
+            guest_upload_file_path = tempfile.mktemp()
+            with open(guest_upload_file_path, 'w+') as file:
+                file.write(guest_upload_sh)
+            session_scp_upload(session=session, source_path=guest_upload_file_path, destination_path='guest-upload-telegram.sh')
+            os.unlink(guest_upload_file_path)
 
-        print('Executing remote upload...')
-        session_ssh(session=session, command='bash -l guest-upload-telegram.sh')
+            print('Executing remote upload...')
+            session_ssh(session=session, command='bash -l guest-upload-telegram.sh')
+        sys.exit(0)
 
-def remote_ipa_diff(darwin_containers_host, ipa1_path, ipa2_path):
-    macos_version = '12.5'
+    def handle_stopped():
+        pass
 
-    from darwin_containers import DarwinContainers
+    DarwinContainers.DarwinContainers(
+        server_address=darwin_containers_host,
+        verbose=False
+    ).run_image(
+        name=image_name,
+        is_base=False,
+        is_gui=True,
+        is_daemon=False,
+        on_ssh_credentials=handle_ssh_credentials,
+        on_stopped=handle_stopped
+    )
+
+
+def remote_ipa_diff(darwin_containers_path, darwin_containers_host, ipa1_path, ipa2_path):
+    macos_version = '13.0'
+
+    DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     configuration_path = 'versions.json'
     xcode_version = ''
@@ -202,38 +259,53 @@ def remote_ipa_diff(darwin_containers_host, ipa1_path, ipa2_path):
 
     print('Image name: {}'.format(image_name))
 
-    darwinContainers = DarwinContainers(serverAddress=darwin_containers_host, verbose=False)
-
     print('Opening container session...')
-    with darwinContainers.workingImageSession(name=image_name) as session:
-        print('Uploading data to container...')
-        session_scp_upload(session=session, source_path='tools/ipadiff.py', destination_path='ipadiff.py')
-        session_scp_upload(session=session, source_path='tools/main.cpp', destination_path='main.cpp')
-        session_scp_upload(session=session, source_path=ipa1_path, destination_path='ipa1.ipa')
-        session_scp_upload(session=session, source_path=ipa2_path, destination_path='ipa2.ipa')
 
-        guest_upload_sh = '''
-            set -e
+    def handle_ssh_credentials(credentials):
+        with DarwinContainers.ContainerSession(credentials=credentials) as session:
+            print('Uploading data to container...')
+            session_scp_upload(session=session, source_path='tools/ipadiff.py', destination_path='ipadiff.py')
+            session_scp_upload(session=session, source_path='tools/main.cpp', destination_path='main.cpp')
+            session_scp_upload(session=session, source_path=ipa1_path, destination_path='ipa1.ipa')
+            session_scp_upload(session=session, source_path=ipa2_path, destination_path='ipa2.ipa')
 
-            python3 ipadiff.py ipa1.ipa ipa2.ipa
-            echo $? > result.txt
-        '''
+            guest_upload_sh = '''
+                set -e
 
-        guest_upload_file_path = tempfile.mktemp()
-        with open(guest_upload_file_path, 'w+') as file:
-            file.write(guest_upload_sh)
-        session_scp_upload(session=session, source_path=guest_upload_file_path, destination_path='guest-ipa-diff.sh')
-        os.unlink(guest_upload_file_path)
+                python3 ipadiff.py ipa1.ipa ipa2.ipa
+                echo $? > result.txt
+            '''
 
-        print('Executing remote ipa-diff...')
-        session_ssh(session=session, command='bash -l guest-ipa-diff.sh')
-        guest_result_path = tempfile.mktemp()
-        session_scp_download(session=session, source_path='result.txt', destination_path=guest_result_path)
-        guest_result = ''
-        with open(guest_result_path, 'r') as file:
-            guest_result = file.read().rstrip()
-        os.unlink(guest_result_path)
+            guest_upload_file_path = tempfile.mktemp()
+            with open(guest_upload_file_path, 'w+') as file:
+                file.write(guest_upload_sh)
+            session_scp_upload(session=session, source_path=guest_upload_file_path, destination_path='guest-ipa-diff.sh')
+            os.unlink(guest_upload_file_path)
 
-        if guest_result != '0':
-            sys.exit(1)
+            print('Executing remote ipa-diff...')
+            session_ssh(session=session, command='bash -l guest-ipa-diff.sh')
+            guest_result_path = tempfile.mktemp()
+            session_scp_download(session=session, source_path='result.txt', destination_path=guest_result_path)
+            guest_result = ''
+            with open(guest_result_path, 'r') as file:
+                guest_result = file.read().rstrip()
+            os.unlink(guest_result_path)
 
+            if guest_result != '0':
+                sys.exit(1)
+        sys.exit(0)
+
+    def handle_stopped():
+        pass
+
+    DarwinContainers.DarwinContainers(
+        server_address=darwin_containers_host,
+        verbose=False
+    ).run_image(
+        name=image_name,
+        is_base=False,
+        is_gui=True,
+        is_daemon=False,
+        on_ssh_credentials=handle_ssh_credentials,
+        on_stopped=handle_stopped
+    )

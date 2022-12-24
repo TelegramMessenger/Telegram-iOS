@@ -103,7 +103,7 @@ private enum ChatsToRemoveEntry: ItemListNodeEntry {
             case let .configuredChatsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .configuredChat(_, _, nameSortOrder, nameDisplayOrder, peer, selection, description, editable, revealed):
-                return ContactsPeerItem(presentationData: presentationData, style: .blocks, sectionId: self.section, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: arguments.context, peerMode: .generalSearch, peer: .peer(peer: EnginePeer(peer.chatMainPeer!), chatPeer: EnginePeer(peer.peer!)), status: .custom(string: description, multiline: false), enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: editable, editing: false, revealed: editable && revealed), index: nil, header: nil, action: { peeritem in
+                return ContactsPeerItem(presentationData: presentationData, style: .blocks, sectionId: self.section, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: arguments.context, peerMode: .generalSearch, peer: .peer(peer: EnginePeer(peer.chatMainPeer!), chatPeer: EnginePeer(peer.peer!)), status: .custom(string: description, multiline: false, isActive: false, icon: nil), enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: editable, editing: false, revealed: editable && revealed), index: nil, header: nil, action: { peeritem in
                     arguments.action(peer.peer!)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.updateRevealedPeerId(peerId)
@@ -489,7 +489,7 @@ func ptgAllChats(context: AccountContext) -> Signal<[PeerId: (index: ChatListInd
     |> map { chatListEntries in
         var peerEntries: [PeerId: (index: ChatListIndex, peer: RenderedPeer)] = [:]
         for entry in chatListEntries {
-            if case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _, _, _) = entry {
+            if case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _, _, _, _, _) = entry {
                 peerEntries[renderedPeer.peerId] = (index: index, peer: renderedPeer)
             }
         }

@@ -165,7 +165,11 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            if case .forwardedMessages = item.associatedData.subject {
+                incoming = false
+            }
+            
             let statusType: ChatMessageDateAndStatusType?
             switch preparePosition {
             case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
@@ -186,7 +190,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)
             
-            let (_, refineLayout) = interactiveFileLayout(ChatMessageInteractiveFileNode.Arguments(
+            let (initialWidth, refineLayout) = interactiveFileLayout(ChatMessageInteractiveFileNode.Arguments(
                 context: item.context,
                 presentationData: item.presentationData,
                 message: item.message,
@@ -198,7 +202,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                 forcedIsEdited: item.isItemEdited,
                 file: selectedFile!,
                 automaticDownload: automaticDownload,
-                incoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                incoming: incoming,
                 isRecentActions: item.associatedData.isRecentActions,
                 forcedResourceStatus: item.associatedData.forcedResourceStatus,
                 dateAndStatusType: statusType,
@@ -239,19 +243,19 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? nil : CGPoint(x: displaySize.width + 4.0, y: -25.0), hidesHeaders: !isExpanded, avatarOffset: !isExpanded && isPlaying ? -100.0 : 0.0)
             
-            let width = videoFrame.width + 2.0
+            let videoFrameWidth = videoFrame.width + 2.0
             
-            return (contentProperties, nil, width, { constrainedSize, position in
-                var refinedWidth = videoFrame.width + 2.0
+            return (contentProperties, nil, initialWidth, { constrainedSize, position in
+                var refinedWidth = videoFrameWidth
                 var finishLayout: ((CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void))?
                 
                 if isExpanded || !didSetupFileNode {
-                    (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
+                    (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right - 44.0, height: constrainedSize.height))
                     refinedWidth += layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right
                 }
                 
                 if !isExpanded {
-                    refinedWidth = videoFrame.width + 2.0
+                    refinedWidth = videoFrameWidth
                 }
                 
                 return (refinedWidth, { boundingWidth in

@@ -233,3 +233,4 @@
 27;ZA;XX XXX XXXX;South Africa
 260;ZM;XX XXX XXXX;Zambia
 263;ZW;XX XXX XXXX;Zimbabwe
+888;FT;XXXX XXXX;Fragment

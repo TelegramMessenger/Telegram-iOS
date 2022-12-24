@@ -177,9 +177,14 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                     }
                 }
                 
+                var isForum = false
+                if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+                    isForum = true
+                }
+                
                 let widgetPeer = WidgetDataPeer(id: peer.id.toInt64(), name: name, lastName: lastName, letters: peer.displayLetters, avatarPath: smallestImageRepresentation(peer.profileImageRepresentations).flatMap { representation in
                     return postbox.mediaBox.resourcePath(representation.resource)
-                }, badge: badge, message: mappedMessage)
+                }, badge: badge, message: mappedMessage, isForum: isForum)
                 
                 result.append(ParsedPeer(accountId: accountId, accountPeerId: state.peerId.toInt64(), peer: widgetPeer))
             }
@@ -273,8 +278,8 @@ struct AvatarItemView: View {
     var body: some View {
         return ZStack {
             if let peer = peer {
-                Image(uiImage: avatarImage(accountPeerId: peer.accountPeerId, peer: peer.peer, size: CGSize(width: itemSize, height: itemSize)))
-                .clipShape(Circle())
+                Image(uiImage: avatarImage(accountPeerId: peer.accountPeerId, peer: peer.peer, size: CGSize(width: itemSize, height: itemSize), style: peer.peer.isForum ? .roundedRect : .round))
+                    .mask(peer.peer.isForum ? AnyView(RoundedRectangle(cornerRadius: itemSize * 0.25)) : AnyView(Circle()))
             } else {
                 Circle()
                     .fill(placeholderColor)

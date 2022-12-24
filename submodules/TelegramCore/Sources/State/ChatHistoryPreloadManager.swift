@@ -247,11 +247,18 @@ private final class AdditionalPreloadPeerIdsContext {
     }
 }
 
-public struct ChatHistoryPreloadItem : Equatable {
+public struct ChatHistoryPreloadItem : Equatable, Hashable {
     public let index: ChatListIndex
     public let threadId: Int64?
     public let isMuted: Bool
     public let hasUnread: Bool
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(index.hashValue)
+        if let threadId = threadId {
+            hasher.combine(threadId)
+        }
+    }
     
     public init(index: ChatListIndex, threadId: Int64?, isMuted: Bool, hasUnread: Bool) {
         self.index = index
@@ -314,12 +321,6 @@ final class ChatHistoryPreloadManager {
                 return
             }
             
-            #if DEBUG
-            if "".isEmpty {
-                return
-            }
-            #endif
-            
             strongSelf.canPreloadHistoryValue = value
             if value {
                 for i in 0 ..< min(3, strongSelf.entries.count) {
@@ -376,7 +377,9 @@ final class ChatHistoryPreloadManager {
                 return
             }
             #if DEBUG
-            //return
+            if "".isEmpty {
+                return
+            }
             #endif
             
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []

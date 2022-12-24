@@ -249,10 +249,17 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     }
                 }
                 
+                var openChatLocation = chatLocation ?? .peer(id: message.id.peerId)
+                var openChatLocationContextHolder = chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)
+                if chatLocation?.peerId != message.id.peerId {
+                    openChatLocation = .peer(id: message.id.peerId)
+                    openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+                }
+                
                 return .gallery(startState
                 |> deliverOnMainQueue
                 |> map { startState in
-                    let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message) : .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(id: message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil))), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: startState.timecode, playbackRate: startState.rate, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                    let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message) : .peerMessagesAtId(messageId: message.id, chatLocation: openChatLocation, chatLocationContextHolder: openChatLocationContextHolder)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: startState.timecode, playbackRate: startState.rate, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                     gallery.temporaryDoNotWaitForReady = autoplayingVideo
