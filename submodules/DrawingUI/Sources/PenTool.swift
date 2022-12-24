@@ -198,7 +198,7 @@ final class PenTool: DrawingElement {
         let minRenderArrowLength = max(10.0, max(drawingSize.width, drawingSize.height) * 0.02)
         
         self.renderLineWidth = lineWidth
-        self.renderMinLineWidth = isEraser || isBlur ? lineWidth : minLineWidth + (lineWidth - minLineWidth) * 0.3
+        self.renderMinLineWidth = isEraser || isBlur ? lineWidth : minLineWidth + (lineWidth - minLineWidth) * 0.2
         self.renderArrowLength = max(minRenderArrowLength, lineWidth * 3.0)
         self.renderArrowLineWidth = max(minLineWidth * 1.8, lineWidth * 0.75)
         
@@ -234,14 +234,8 @@ final class PenTool: DrawingElement {
         guard case let .point(point) = path else {
             return
         }
-    
-        let filterDistance: CGFloat
-        if point.velocity > 1200.0 {
-            filterDistance = 25.0
-        } else {
-            filterDistance = 15.0
-        }
-    
+        
+        let filterDistance: CGFloat = 20.0
         if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.segments.count > 1 {
             return
         }
@@ -252,14 +246,13 @@ final class PenTool: DrawingElement {
             velocity = 1000.0
         }
         
-        var effectiveRenderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth - (velocity / 150.0), self.renderLineWidth))
+        var effectiveRenderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth - (velocity / 100.0), self.renderLineWidth))
         if let previousRenderLineWidth = self.previousRenderLineWidth {
             effectiveRenderLineWidth = effectiveRenderLineWidth * 0.2 + previousRenderLineWidth * 0.8
         }
         self.previousRenderLineWidth = effectiveRenderLineWidth
         
         let rect = append(point: Point(position: point.location, width: effectiveRenderLineWidth))
-        
         if let currentRenderView = self.currentRenderView as? RenderView, let rect = rect {
             currentRenderView.draw(element: self, rect: rect)
         }
@@ -461,7 +454,7 @@ final class PenTool: DrawingElement {
         
         let segmentDistance: CGFloat = 6.0
         let distance = midPoint1.distance(to: midPoint2)
-        let numberOfSegments = min(128, max(floor(distance / segmentDistance), 32))
+        let numberOfSegments = min(48, max(floor(distance / segmentDistance), 24))
         
         let step = 1.0 / numberOfSegments
         for t in stride(from: 0, to: 1, by: step) {

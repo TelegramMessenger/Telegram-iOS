@@ -258,7 +258,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.minimumZoomScale = 1.0
         self.textView.maximumZoomScale = 1.0
         self.textView.keyboardAppearance = .dark
-        self.textView.autocorrectionType = .default
+        self.textView.autocorrectionType = .no
         self.textView.spellCheckingType = .no
         
         super.init(context: context, entity: entity)

@@ -996,7 +996,7 @@ private class DrawingSlice {
         self.rect = rect
         self.path = NSTemporaryDirectory() + "/drawing_\(uuid.hashValue).slice"
         
-        DrawingSlice.queue.async {
+        DrawingSlice.queue.after(2.0) {
             let image = UIImage(cgImage: image)
             if let data = image.pngData() as? NSData {
                 try? data.write(toFile: self.path)
