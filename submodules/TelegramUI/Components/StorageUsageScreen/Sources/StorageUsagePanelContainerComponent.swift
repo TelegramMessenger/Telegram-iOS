@@ -381,6 +381,7 @@ final class StorageUsagePanelContainerComponent: Component {
     
     class View: UIView, UIGestureRecognizerDelegate {
         private let topPanelBackgroundView: UIView
+        private let topPanelMergedBackgroundView: UIView
         private let topPanelSeparatorLayer: SimpleLayer
         private let header = ComponentView<Empty>()
         
@@ -396,6 +397,10 @@ final class StorageUsagePanelContainerComponent: Component {
         
         override init(frame: CGRect) {
             self.topPanelBackgroundView = UIView()
+            
+            self.topPanelMergedBackgroundView = UIView()
+            self.topPanelMergedBackgroundView.alpha = 0.0
+            
             self.topPanelSeparatorLayer = SimpleLayer()
             
             self.panelsBackgroundLayer = SimpleLayer()
@@ -404,6 +409,7 @@ final class StorageUsagePanelContainerComponent: Component {
             
             self.layer.addSublayer(self.panelsBackgroundLayer)
             self.addSubview(self.topPanelBackgroundView)
+            self.addSubview(self.topPanelMergedBackgroundView)
             self.layer.addSublayer(self.topPanelSeparatorLayer)
             
             let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
@@ -531,6 +537,11 @@ final class StorageUsagePanelContainerComponent: Component {
             }
         }
         
+        func updateNavigationMergeFactor(value: CGFloat, transition: Transition) {
+            transition.setAlpha(view: self.topPanelMergedBackgroundView, alpha: value)
+            transition.setAlpha(view: self.topPanelBackgroundView, alpha: 1.0 - value)
+        }
+        
         func update(component: StorageUsagePanelContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StorageUsagePanelContainerEnvironment>, transition: Transition) -> CGSize {
             let environment = environment[StorageUsagePanelContainerEnvironment.self].value
             
@@ -542,20 +553,15 @@ final class StorageUsagePanelContainerComponent: Component {
             if themeUpdated {
                 self.panelsBackgroundLayer.backgroundColor = component.theme.list.itemBlocksBackgroundColor.cgColor
                 self.topPanelSeparatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
+                self.topPanelBackgroundView.backgroundColor = component.theme.list.itemBlocksBackgroundColor
+                self.topPanelMergedBackgroundView.backgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
             }
             
             let topPanelCoverHeight: CGFloat = 10.0
             
             let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: -topPanelCoverHeight), size: CGSize(width: availableSize.width, height: 44.0))
             transition.setFrame(view: self.topPanelBackgroundView, frame: topPanelFrame)
-            
-            let lockScrollingTransition: Transition
-            if themeUpdated {
-                lockScrollingTransition = transition
-            } else {
-                lockScrollingTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-            }
-            lockScrollingTransition.setBackgroundColor(view: self.topPanelBackgroundView, color: environment.isScrollable ? component.theme.rootController.navigationBar.blurredBackgroundColor : component.theme.list.itemBlocksBackgroundColor)
+            transition.setFrame(view: self.topPanelMergedBackgroundView, frame: topPanelFrame)
             
             transition.setFrame(layer: self.panelsBackgroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelFrame.maxY)))
             

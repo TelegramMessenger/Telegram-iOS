@@ -46,15 +46,12 @@ enum DrawingTextAlignment: Equatable {
 
 enum DrawingTextFont: Equatable, Hashable {
     case sanFrancisco
-    case newYork
     case other(String, String)
     
     init(font: DrawingTextEntity.Font) {
         switch font {
         case .sanFrancisco:
             self = .sanFrancisco
-        case .newYork:
-            self = .newYork
         case let .other(font, name):
             self = .other(font, name)
         }
@@ -64,8 +61,6 @@ enum DrawingTextFont: Equatable, Hashable {
         switch self {
         case .sanFrancisco:
             return .sanFrancisco
-        case .newYork:
-            return .newYork
         case let .other(font, name):
             return .other(font, name)
         }
@@ -75,8 +70,6 @@ enum DrawingTextFont: Equatable, Hashable {
         switch self {
         case .sanFrancisco:
             return "San Francisco"
-        case .newYork:
-            return "New York"
         case let .other(_, name):
             return name
         }
@@ -85,9 +78,7 @@ enum DrawingTextFont: Equatable, Hashable {
     func uiFont(size: CGFloat) -> UIFont {
         switch self {
         case .sanFrancisco:
-            return Font.semibold(size)
-        case .newYork:
-            return Font.with(size: size, design: .serif, weight: .semibold)
+            return Font.with(size: size, design: .round, weight: .semibold)
         case let .other(font, _):
             return UIFont(name: font, size: size) ?? Font.semibold(size)
         }

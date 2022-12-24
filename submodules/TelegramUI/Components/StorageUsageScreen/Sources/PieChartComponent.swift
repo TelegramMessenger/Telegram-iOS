@@ -87,12 +87,12 @@ private func processChartData(data: PieChartComponent.ChartData) -> PieChartComp
 final class PieChartComponent: Component {
     struct ChartData: Equatable {
         struct Item: Equatable {
-            var id: AnyHashable
+            var id: StorageUsageScreenComponent.Category
             var displayValue: Double
             var value: Double
             var color: UIColor
             
-            init(id: AnyHashable, displayValue: Double, value: Double, color: UIColor) {
+            init(id: StorageUsageScreenComponent.Category, displayValue: Double, value: Double, color: UIColor) {
                 self.id = id
                 self.displayValue = displayValue
                 self.value = value
@@ -131,12 +131,12 @@ final class PieChartComponent: Component {
     private final class ChartDataView: UIView {
         private(set) var theme: PresentationTheme?
         private(set) var data: ChartData?
-        private(set) var selectedKey: AnyHashable?
+        private(set) var selectedKey: StorageUsageScreenComponent.Category?
         
         private var currentAnimation: (start: ChartData, end: ChartData, current: ChartData, progress: CGFloat)?
         private var animator: DisplayLinkAnimator?
         
-        private var labels: [AnyHashable: ComponentView<Empty>] = [:]
+        private var labels: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -153,7 +153,7 @@ final class PieChartComponent: Component {
             self.animator?.invalidate()
         }
         
-        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
+        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: StorageUsageScreenComponent.Category?, animated: Bool) {
             let data = processChartData(data: data)
             
             if self.theme !== theme || self.data != data || self.selectedKey != selectedKey {
@@ -366,7 +366,7 @@ final class PieChartComponent: Component {
                         
                         var minDistance: CGFloat = 1000.0
                         for distance in distances {
-                            minDistance = min(minDistance, distance + 1.0)
+                            minDistance = min(minDistance, distance)
                         }
                         
                         let diagonalAngle = atan2(labelSize.height, labelSize.width)
@@ -467,8 +467,8 @@ final class PieChartComponent: Component {
     
     class View: UIView {
         private let dataView: ChartDataView
-        private var labels: [AnyHashable: ComponentView<Empty>] = [:]
-        var selectedKey: AnyHashable?
+        private var labels: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
+        var selectedKey: StorageUsageScreenComponent.Category?
         
         private weak var state: EmptyComponentState?
         

@@ -1379,7 +1379,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }))
                 
                 let setText: String
-                if user.photo.first?.isPersonal == true {
+                if user.photo.first?.isPersonal == true || state.updatingAvatar != nil {
                     setText = presentationData.strings.UserInfo_ChangeCustomPhoto(compactName).string
                 } else {
                     setText = presentationData.strings.UserInfo_SetCustomPhoto(compactName).string
@@ -3117,7 +3117,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let lastName = strongSelf.headerNode.editingContentNode.editingTextForKey(.lastName) ?? ""
                             
-                            if peer.firstName != firstName || peer.lastName != lastName {
+                            if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName {
                                 if firstName.isEmpty && lastName.isEmpty {
                                     if strongSelf.hapticFeedback == nil {
                                         strongSelf.hapticFeedback = HapticFeedback()
@@ -7179,7 +7179,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 confirmationAction = nil
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: mode == .suggest)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: [.custom, .suggest].contains(mode))!
             mixin.stickersContext = paintStickersContext
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in

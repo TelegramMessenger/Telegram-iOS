@@ -7299,6 +7299,7 @@ Sorry for the inconvenience.";
 "Contacts.Sort.ByLastSeen" = "by Last Seen";
 
 "ClearCache.Progress" = "Clearing the Cache • %d%";
+"ClearCache.NoProgress" = "Clearing the Cache";
 "ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";
 
 "Share.ShareAsLink" = "Share as Link";
