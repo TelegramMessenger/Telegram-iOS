@@ -17,7 +17,7 @@ import SolidRoundedButtonComponent
 
 final class StorageCategoriesComponent: Component {
     struct CategoryData: Equatable {
-        var key: AnyHashable
+        var key: StorageUsageScreenComponent.Category
         var color: UIColor
         var title: String
         var size: Int64
@@ -25,7 +25,7 @@ final class StorageCategoriesComponent: Component {
         var isSelected: Bool
         var subcategories: [CategoryData]
         
-        init(key: AnyHashable, color: UIColor, title: String, size: Int64, sizeFraction: Double, isSelected: Bool, subcategories: [CategoryData]) {
+        init(key: StorageUsageScreenComponent.Category, color: UIColor, title: String, size: Int64, sizeFraction: Double, isSelected: Bool, subcategories: [CategoryData]) {
             self.key = key
             self.title = title
             self.color = color
@@ -39,18 +39,27 @@ final class StorageCategoriesComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let categories: [CategoryData]
-    let toggleCategorySelection: (AnyHashable) -> Void
+    let isOtherExpanded: Bool
+    let toggleCategorySelection: (StorageUsageScreenComponent.Category) -> Void
+    let toggleOtherExpanded: () -> Void
+    let clearAction: () -> Void
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         categories: [CategoryData],
-        toggleCategorySelection: @escaping (AnyHashable) -> Void
+        isOtherExpanded: Bool,
+        toggleCategorySelection: @escaping (StorageUsageScreenComponent.Category) -> Void,
+        toggleOtherExpanded: @escaping () -> Void,
+        clearAction: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
         self.categories = categories
+        self.isOtherExpanded = isOtherExpanded
         self.toggleCategorySelection = toggleCategorySelection
+        self.toggleOtherExpanded = toggleOtherExpanded
+        self.clearAction = clearAction
     }
     
     static func ==(lhs: StorageCategoriesComponent, rhs: StorageCategoriesComponent) -> Bool {
@@ -63,14 +72,16 @@ final class StorageCategoriesComponent: Component {
         if lhs.categories != rhs.categories {
             return false
         }
+        if lhs.isOtherExpanded != rhs.isOtherExpanded {
+            return false
+        }
         return true
     }
     
     class View: UIView {
-        private var itemViews: [AnyHashable: ComponentView<Empty>] = [:]
+        private var itemViews: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
         private let button = ComponentView<Empty>()
         
-        private var expandedCategory: AnyHashable?
         private var component: StorageCategoriesComponent?
         private weak var state: EmptyComponentState?
         
@@ -88,6 +99,8 @@ final class StorageCategoriesComponent: Component {
         func update(component: StorageCategoriesComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
+            
+            let expandedCategory: StorageUsageScreenComponent.Category? = component.isOtherExpanded ? .other : nil
             
             var totalSelectedSize: Int64 = 0
             var hasDeselected = false
@@ -111,7 +124,7 @@ final class StorageCategoriesComponent: Component {
             
             var contentHeight: CGFloat = 0.0
             
-            var validKeys = Set<AnyHashable>()
+            var validKeys = Set<StorageUsageScreenComponent.Category>()
             for i in 0 ..< component.categories.count {
                 let category = component.categories[i]
                 validKeys.insert(category.key)
@@ -134,7 +147,7 @@ final class StorageCategoriesComponent: Component {
                         strings: component.strings,
                         category: category,
                         isExpandedLevel: false,
-                        isExpanded: self.expandedCategory == category.key,
+                        isExpanded: expandedCategory == category.key,
                         hasNext: i != component.categories.count - 1,
                         action: { [weak self] key, actionType in
                             guard let self, let component = self.component else {
@@ -144,12 +157,7 @@ final class StorageCategoriesComponent: Component {
                             switch actionType {
                             case .generic:
                                 if let category = component.categories.first(where: { $0.key == key }), !category.subcategories.isEmpty {
-                                    if self.expandedCategory == category.key {
-                                        self.expandedCategory = nil
-                                    } else {
-                                        self.expandedCategory = category.key
-                                    }
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                    component.toggleOtherExpanded()
                                 } else {
                                     component.toggleCategorySelection(key)
                                 }
@@ -172,7 +180,7 @@ final class StorageCategoriesComponent: Component {
                 contentHeight += itemSize.height
             }
             
-            var removeKeys: [AnyHashable] = []
+            var removeKeys: [StorageUsageScreenComponent.Category] = []
             for (key, itemView) in self.itemViews {
                 if !validKeys.contains(key) {
                     if let itemComponentView = itemView.view {
@@ -221,7 +229,11 @@ final class StorageCategoriesComponent: Component {
                     animationName: nil,
                     iconPosition: .right,
                     iconSpacing: 4.0,
-                    action: {
+                    action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.clearAction()
                     }
                 )),
                 environment: {},

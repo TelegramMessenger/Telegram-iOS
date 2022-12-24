@@ -34,6 +34,47 @@ private let completionKey = "CAAnimationUtils_completion"
 public let kCAMediaTimingFunctionSpring = "CAAnimationUtilsSpringCurve"
 public let kCAMediaTimingFunctionCustomSpringPrefix = "CAAnimationUtilsSpringCustomCurve"
 
+private final class FrameRangeContext {
+    private var animationCount: Int = 0
+    private var displayLink: CADisplayLink?
+    
+    init() {
+    }
+    
+    func add() {
+        self.animationCount += 1
+        self.update()
+    }
+    
+    func remove() {
+        self.animationCount -= 1
+        if self.animationCount < 0 {
+            self.animationCount = 0
+            assertionFailure()
+        }
+        self.update()
+    }
+    
+    @objc func displayEvent() {
+    }
+    
+    private func update() {
+        if self.animationCount != 0 {
+            if self.displayLink == nil {
+                let displayLink = CADisplayLink(target: self, selector: #selector(self.displayEvent))
+                self.displayLink = displayLink
+                displayLink.add(to: .main, forMode: .common)
+                displayLink.isPaused = false
+            }
+        } else if let displayLink = self.displayLink {
+            self.displayLink = nil
+            displayLink.invalidate()
+        }
+    }
+}
+
+private let frameRangeContext = FrameRangeContext()
+
 public extension CAAnimation {
     var completion: ((Bool) -> Void)? {
         get {
@@ -56,7 +97,7 @@ private func adjustFrameRate(animation: CAAnimation) {
     if #available(iOS 15.0, *) {
         let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
         if maxFps > 61.0 {
-            animation.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: maxFps, preferred: maxFps)
         }
     }
 }
@@ -175,6 +216,8 @@ public extension CALayer {
         if let completion = completion {
             animationGroup.delegate = CALayerAnimationDelegate(animation: animationGroup, completion: completion)
         }
+        
+        adjustFrameRate(animation: animationGroup)
         
         self.add(animationGroup, forKey: key)
     }

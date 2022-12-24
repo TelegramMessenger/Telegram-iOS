@@ -268,7 +268,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 self.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, userLocation: .other, userContentType: .gif, fileReference: videoFileReference, layerHolder: layerHolder)
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, userLocation: .other, userContentType: .other, fileReference: videoFileReference, layerHolder: layerHolder)
                 self.videoLayer = (thumbnailLayer, manager, layerHolder)
                 thumbnailLayer.ready = { [weak self, weak thumbnailLayer, weak manager] in
                     if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {

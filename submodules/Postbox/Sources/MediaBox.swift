@@ -1278,7 +1278,7 @@ public final class MediaBox {
         }
     }
     
-    public func updateResourceIndex(completion: @escaping () -> Void) -> Disposable {
+    public func updateResourceIndex(lowImpact: Bool, completion: @escaping () -> Void) -> Disposable {
         let basePath = self.basePath
         let storageBox = self.storageBox
         
@@ -1318,7 +1318,14 @@ public final class MediaBox {
                         if addedCount != 0 {
                             postboxLog("UpdateResourceIndex: added \(addedCount) unreferenced ids")
                         }
-                        processNext()
+                        
+                        if lowImpact {
+                            processQueue.after(0.4, {
+                                processNext()
+                            })
+                        } else {
+                            processNext()
+                        }
                     })
                 }
             }

@@ -19,13 +19,20 @@ import AvatarNode
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 
 private final class PeerListItemComponent: Component {
+    enum SelectionState: Equatable {
+        case none
+        case editing(isSelected: Bool)
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let sideInset: CGFloat
     let title: String
     let peer: EnginePeer?
     let label: String
+    let selectionState: SelectionState
     let hasNext: Bool
+    let action: (EnginePeer) -> Void
     
     init(
         context: AccountContext,
@@ -34,7 +41,9 @@ private final class PeerListItemComponent: Component {
         title: String,
         peer: EnginePeer?,
         label: String,
-        hasNext: Bool
+        selectionState: SelectionState,
+        hasNext: Bool,
+        action: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -42,7 +51,9 @@ private final class PeerListItemComponent: Component {
         self.title = title
         self.peer = peer
         self.label = label
+        self.selectionState = selectionState
         self.hasNext = hasNext
+        self.action = action
     }
     
     static func ==(lhs: PeerListItemComponent, rhs: PeerListItemComponent) -> Bool {
@@ -64,6 +75,9 @@ private final class PeerListItemComponent: Component {
         if lhs.label != rhs.label {
             return false
         }
+        if lhs.selectionState != rhs.selectionState {
+            return false
+        }
         if lhs.hasNext != rhs.hasNext {
             return false
         }
@@ -76,6 +90,11 @@ private final class PeerListItemComponent: Component {
         private let separatorLayer: SimpleLayer
         private let avatarNode: AvatarNode
         
+        private var checkLayer: CheckLayer?
+        
+        private var highlightBackgroundFrame: CGRect?
+        private var highlightBackgroundLayer: SimpleLayer?
+        
         private var component: PeerListItemComponent?
         
         override init(frame: CGRect) {
@@ -87,23 +106,115 @@ private final class PeerListItemComponent: Component {
             
             self.layer.addSublayer(self.separatorLayer)
             self.layer.addSublayer(self.avatarNode.layer)
+            
+            self.highligthedChanged = { [weak self] isHighlighted in
+                guard let self, let component = self.component, let highlightBackgroundFrame = self.highlightBackgroundFrame else {
+                    return
+                }
+                
+                if isHighlighted, case .none = component.selectionState {
+                    self.superview?.bringSubviewToFront(self)
+                    
+                    let highlightBackgroundLayer: SimpleLayer
+                    if let current = self.highlightBackgroundLayer {
+                        highlightBackgroundLayer = current
+                    } else {
+                        highlightBackgroundLayer = SimpleLayer()
+                        self.highlightBackgroundLayer = highlightBackgroundLayer
+                        self.layer.insertSublayer(highlightBackgroundLayer, above: self.separatorLayer)
+                        highlightBackgroundLayer.backgroundColor = component.theme.list.itemHighlightedBackgroundColor.cgColor
+                    }
+                    highlightBackgroundLayer.frame = highlightBackgroundFrame
+                    highlightBackgroundLayer.opacity = 1.0
+                } else {
+                    if let highlightBackgroundLayer = self.highlightBackgroundLayer {
+                        self.highlightBackgroundLayer = nil
+                        highlightBackgroundLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak highlightBackgroundLayer] _ in
+                            highlightBackgroundLayer?.removeFromSuperlayer()
+                        })
+                    }
+                }
+            }
+            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
+        @objc private func pressed() {
+            guard let component = self.component, let peer = component.peer else {
+                return
+            }
+            component.action(peer)
+        }
+        
         func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
+            
+            var hasSelectionUpdated = false
+            if let previousComponent = self.component {
+                switch previousComponent.selectionState {
+                case .none:
+                    if case .none = component.selectionState {
+                    } else {
+                        hasSelectionUpdated = true
+                    }
+                case .editing:
+                    if case .editing = component.selectionState {
+                    } else {
+                        hasSelectionUpdated = true
+                    }
+                }
+            }
+            
             self.component = component
             
             let height: CGFloat = 52.0
-            let leftInset: CGFloat = 62.0 + component.sideInset
+            var leftInset: CGFloat = 62.0 + component.sideInset
+            var avatarLeftInset: CGFloat = component.sideInset + 10.0
+            
+            if case let .editing(isSelected) = component.selectionState {
+                leftInset += 48.0
+                avatarLeftInset += 48.0
+                
+                let checkSize: CGFloat = 22.0
+                
+                let checkLayer: CheckLayer
+                if let current = self.checkLayer {
+                    checkLayer = current
+                    if themeUpdated {
+                        checkLayer.theme = CheckNodeTheme(theme: component.theme, style: .plain)
+                    }
+                    checkLayer.setSelected(isSelected, animated: !transition.animation.isImmediate)
+                } else {
+                    checkLayer = CheckLayer(theme: CheckNodeTheme(theme: component.theme, style: .plain))
+                    self.checkLayer = checkLayer
+                    self.layer.addSublayer(checkLayer)
+                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
+                    checkLayer.setSelected(isSelected, animated: false)
+                    checkLayer.setNeedsDisplay()
+                }
+                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: 20.0, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+            } else {
+                if let checkLayer = self.checkLayer {
+                    self.checkLayer = nil
+                    transition.setPosition(layer: checkLayer, position: CGPoint(x: -checkLayer.bounds.width * 0.5, y: checkLayer.position.y), completion: { [weak checkLayer] _ in
+                        checkLayer?.removeFromSuperlayer()
+                    })
+                }
+            }
+            
             let rightInset: CGFloat = 16.0 + component.sideInset
             
             let avatarSize: CGFloat = 40.0
             
-            self.avatarNode.frame = CGRect(origin: CGPoint(x: component.sideInset + 10.0, y: floor((height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+            let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floor((height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+            if self.avatarNode.bounds.isEmpty {
+                self.avatarNode.frame = avatarFrame
+            } else {
+                transition.setFrame(layer: self.avatarNode.layer, frame: avatarFrame)
+            }
             if let peer = component.peer {
                 self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
             }
@@ -117,6 +228,12 @@ private final class PeerListItemComponent: Component {
                 containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
             )
             
+            let previousTitleFrame = self.title.view?.frame
+            var previousTitleContents: UIView?
+            if hasSelectionUpdated {
+                previousTitleContents = self.title.view?.snapshotView(afterScreenUpdates: false)
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -125,15 +242,31 @@ private final class PeerListItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftInset - rightInset - labelSize.width - 4.0, height: 100.0)
             )
-            
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
                     self.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize))
+                titleView.frame = titleFrame
+                if let previousTitleFrame, previousTitleFrame.origin.x != titleFrame.origin.x {
+                    transition.animatePosition(view: titleView, from: CGPoint(x: previousTitleFrame.origin.x - titleFrame.origin.x, y: 0.0), to: CGPoint(), additive: true)
+                }
+                
+                if let previousTitleFrame, let previousTitleContents, previousTitleFrame.size != titleSize {
+                    previousTitleContents.frame = CGRect(origin: previousTitleFrame.origin, size: previousTitleFrame.size)
+                    self.addSubview(previousTitleContents)
+                    
+                    transition.setFrame(view: previousTitleContents, frame: CGRect(origin: titleFrame.origin, size: previousTitleFrame.size))
+                    transition.setAlpha(view: previousTitleContents, alpha: 0.0, completion: { [weak previousTitleContents] _ in
+                        previousTitleContents?.removeFromSuperview()
+                    })
+                    transition.animateAlpha(view: titleView, from: 0.0, to: 1.0)
+                }
             }
             if let labelView = self.label.view {
                 if labelView.superview == nil {
+                    labelView.isUserInteractionEnabled = false
                     self.addSubview(labelView)
                 }
                 transition.setFrame(view: labelView, frame: CGRect(origin: CGPoint(x: availableSize.width - rightInset - labelSize.width, y: floor((height - labelSize.height) / 2.0)), size: labelSize))
@@ -144,6 +277,8 @@ private final class PeerListItemComponent: Component {
             }
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: leftInset, y: height), size: CGSize(width: availableSize.width - leftInset, height: UIScreenPixel)))
             self.separatorLayer.isHidden = !component.hasNext
+            
+            self.highlightBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height + ((component.hasNext) ? UIScreenPixel : 0.0)))
             
             return CGSize(width: availableSize.width, height: height)
         }
@@ -201,13 +336,19 @@ final class StoragePeerListPanelComponent: Component {
     
     let context: AccountContext
     let items: Items?
+    let selectionState: StorageUsageScreenComponent.SelectionState?
+    let peerAction: (EnginePeer) -> Void
 
     init(
         context: AccountContext,
-        items: Items?
+        items: Items?,
+        selectionState: StorageUsageScreenComponent.SelectionState?,
+        peerAction: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
         self.items = items
+        self.selectionState = selectionState
+        self.peerAction = peerAction
     }
     
     static func ==(lhs: StoragePeerListPanelComponent, rhs: StoragePeerListPanelComponent) -> Bool {
@@ -215,6 +356,9 @@ final class StoragePeerListPanelComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.selectionState != rhs.selectionState {
             return false
         }
         return true
@@ -337,6 +481,13 @@ final class StoragePeerListPanelComponent: Component {
                         self.visibleItems[id] = itemView
                     }
                     
+                    let itemSelectionState: PeerListItemComponent.SelectionState
+                    if let selectionState = component.selectionState {
+                        itemSelectionState = .editing(isSelected: selectionState.selectedPeers.contains(id))
+                    } else {
+                        itemSelectionState = .none
+                    }
+                    
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(PeerListItemComponent(
@@ -346,7 +497,9 @@ final class StoragePeerListPanelComponent: Component {
                             title: item.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                             peer: item.peer,
                             label: dataSizeString(item.size, formatting: dataSizeFormatting),
-                            hasNext: index != items.items.count - 1
+                            selectionState: itemSelectionState,
+                            hasNext: index != items.items.count - 1,
+                            action: component.peerAction
                         )),
                         environment: {},
                         containerSize: CGSize(width: itemLayout.containerWidth, height: itemLayout.itemHeight)
@@ -392,7 +545,10 @@ final class StoragePeerListPanelComponent: Component {
                     title: "ABCDEF",
                     peer: nil,
                     label: "1000",
-                    hasNext: false
+                    selectionState: .none,
+                    hasNext: false,
+                    action: { _ in
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
@@ -408,7 +564,14 @@ final class StoragePeerListPanelComponent: Component {
             
             self.ignoreScrolling = true
             let contentOffset = self.scrollView.bounds.minY
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setPosition(view: self.scrollView, position: CGRect(origin: CGPoint(), size: availableSize).center)
+            var scrollBounds = self.scrollView.bounds
+            scrollBounds.size = availableSize
+            if !environment.isScrollable {
+                scrollBounds.origin = CGPoint()
+            }
+            transition.setBounds(view: self.scrollView, bounds: scrollBounds)
+            self.scrollView.isScrollEnabled = environment.isScrollable
             let contentSize = CGSize(width: availableSize.width, height: itemLayout.contentHeight)
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
@@ -419,7 +582,7 @@ final class StoragePeerListPanelComponent: Component {
                 transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: -deltaOffset), to: CGPoint(), additive: true)
             }
             self.ignoreScrolling = false
-            self.updateScrolling(transition: .immediate)
+            self.updateScrolling(transition: transition)
             
             return availableSize
         }

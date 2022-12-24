@@ -1317,7 +1317,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         var signals: Signal<Never, NoError> = .complete()
                         
                         for (_, context, _) in activeAccounts.accounts {
-                            signals = signals |> then(context.account.cleanupTasks())
+                            signals = signals |> then(context.account.cleanupTasks(lowImpact: false))
                         }
                         
                         disposable.set(signals.start(completed: {

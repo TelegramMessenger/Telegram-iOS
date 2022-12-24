@@ -77,6 +77,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetDatabaseAndCache(PresentationTheme)
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
+    case reindexCache
     case resetBiometricsData(PresentationTheme)
     case resetWebViewCache(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
@@ -111,7 +112,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -170,40 +171,42 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 21
         case .reindexUnread:
             return 22
-        case .resetBiometricsData:
+        case .reindexCache:
             return 23
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 24
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 25
-        case .photoPreview:
+        case .optimizeDatabase:
             return 26
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 27
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 28
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 29
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 30
-        case .experimentalBackground:
+        case .acceleratedStickers:
             return 31
-        case .inlineForums:
+        case .experimentalBackground:
             return 32
-        case .localTranscription:
+        case .inlineForums:
             return 33
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 34
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 35
-        case .playerEmbedding:
+        case .restorePurchases:
             return 36
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 37
-        case .voiceConference:
+        case .playlistPlayback:
             return 38
+        case .voiceConference:
+            return 39
         case let .preferredVideoCodec(index, _, _, _):
-            return 39 + index
+            return 40 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -967,6 +970,46 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     controller.dismiss()
                 })
             })
+        case .reindexCache:
+            return ItemListActionItem(presentationData: presentationData, title: "Reindex Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                
+                var signal = context.engine.resources.reindexCacheInBackground(lowImpact: false)
+                
+                var cancelImpl: (() -> Void)?
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    arguments.presentController(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.15, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                let reindexDisposable = MetaDisposable()
+                
+                signal = signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                cancelImpl = {
+                    reindexDisposable.set(nil)
+                }
+                reindexDisposable.set((signal
+                |> deliverOnMainQueue).start(completed: {
+                }))
+            })
         case .resetBiometricsData:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -1210,6 +1253,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.resetHoles(presentationData.theme))
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
+        entries.append(.reindexCache)
         entries.append(.resetWebViewCache(presentationData.theme))
     }
     entries.append(.optimizeDatabase(presentationData.theme))

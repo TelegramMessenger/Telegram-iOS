@@ -113,7 +113,7 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         guard let file = self.file else {
             return
         }
-        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: self.userLocation, userContentType: .gif, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
+        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: self.userLocation, userContentType: .other, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
         self.frameManager = frameManager
         frameManager.started = { [weak self] in
             guard let strongSelf = self else {

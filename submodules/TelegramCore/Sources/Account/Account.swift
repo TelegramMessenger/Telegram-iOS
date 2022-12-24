@@ -1280,14 +1280,17 @@ public class Account {
         self.viewTracker.reset()
     }
     
-    public func cleanupTasks() -> Signal<Never, NoError> {
+    public func cleanupTasks(lowImpact: Bool) -> Signal<Never, NoError> {
         let postbox = self.postbox
         
-        return Signal { subscriber in
-            return postbox.mediaBox.updateResourceIndex(completion: {
-                subscriber.putCompletion()
-            })
-        }
+        return _internal_reindexCacheInBackground(account: self, lowImpact: lowImpact)
+        |> then(
+            Signal { subscriber in
+                return postbox.mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                    subscriber.putCompletion()
+                })
+            }
+        )
     }
     
     public func restartContactManagement() {

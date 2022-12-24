@@ -81,16 +81,12 @@ public final class ConstantDisplayLinkAnimator {
         guard let displayLink = self.displayLink else {
             return
         }
-        if #available(iOS 10.0, *) {
-            let preferredFramesPerSecond: Int
-            if self.frameInterval == 1 {
-                preferredFramesPerSecond = 60
-            } else {
-                preferredFramesPerSecond = 30
+        if self.frameInterval == 1 {
+            if #available(iOS 15.0, *) {
+                self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
             }
-            displayLink.preferredFramesPerSecond = preferredFramesPerSecond
         } else {
-            displayLink.frameInterval = self.frameInterval
+            displayLink.preferredFramesPerSecond = 30
         }
     }
     
