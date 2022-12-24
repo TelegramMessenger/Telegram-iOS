@@ -891,7 +891,7 @@ final class StorageUsageScreenComponent: Component {
                 } else {
                     doneStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
                     self.doneStatusNode = doneStatusNode
-                    self.addSubnode(doneStatusNode)
+                    self.scrollView.addSubnode(doneStatusNode)
                     animateIn = true
                 }
                 let doneSize = CGSize(width: 100.0, height: 100.0)
@@ -903,7 +903,7 @@ final class StorageUsageScreenComponent: Component {
                 } else {
                     doneStatusCircle = SimpleShapeLayer()
                     self.doneStatusCircle = doneStatusCircle
-                    self.layer.addSublayer(doneStatusCircle)
+                    self.scrollView.layer.addSublayer(doneStatusCircle)
                     doneStatusCircle.opacity = 0.0
                 }
                 
