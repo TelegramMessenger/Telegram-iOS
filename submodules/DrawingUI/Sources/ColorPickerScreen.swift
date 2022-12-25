@@ -40,13 +40,15 @@ private struct ColorSelectionImage: Equatable {
     let topRightRadius: CGFloat
     let bottomLeftRadius: CGFloat
     let bottomRightRadius: CGFloat
+    let isLight: Bool
     
-    init(size: CGSize, topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat) {
+    init(size: CGSize, topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, isLight: Bool) {
         self.size = size
         self.topLeftRadius = topLeftRadius
         self.topRightRadius = topRightRadius
         self.bottomLeftRadius = bottomLeftRadius
         self.bottomRightRadius = bottomRightRadius
+        self.isLight = isLight
     }
     
     public static func ==(lhs: ColorSelectionImage, rhs: ColorSelectionImage) -> Bool {
@@ -65,18 +67,21 @@ private struct ColorSelectionImage: Equatable {
         if lhs.bottomRightRadius != rhs.bottomRightRadius {
             return false
         }
+        if lhs.isLight != rhs.isLight {
+            return false
+        }
         return true
     }
     
     mutating func getImage() -> UIImage {
         if self._image == nil {
-            self._image = generateColorSelectionImage(size: self.size, topLeftRadius: self.topLeftRadius, topRightRadius: self.topRightRadius, bottomLeftRadius: self.bottomLeftRadius, bottomRightRadius: self.bottomRightRadius)
+            self._image = generateColorSelectionImage(size: self.size, topLeftRadius: self.topLeftRadius, topRightRadius: self.topRightRadius, bottomLeftRadius: self.bottomLeftRadius, bottomRightRadius: self.bottomRightRadius, isLight: self.isLight)
         }
         return self._image!
     }
 }
 
-private func generateColorSelectionImage(size: CGSize, topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat) -> UIImage? {
+private func generateColorSelectionImage(size: CGSize, topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, isLight: Bool) -> UIImage? {
     let margin: CGFloat = 10.0
     let realSize = size
     
@@ -88,7 +93,7 @@ private func generateColorSelectionImage(size: CGSize, topLeftRadius: CGFloat, t
         
         context.setShadow(offset: CGSize(), blur: 9.0, color: UIColor(rgb: 0x000000, alpha: 0.15).cgColor)
         context.setLineWidth(3.0 - UIScreenPixel)
-        context.setStrokeColor(UIColor(rgb: 0x1a1a1c).cgColor)
+        context.setStrokeColor(UIColor(rgb: isLight ? 0xffffff : 0x1a1a1c).cgColor)
         context.strokePath()
     })
     return image
@@ -686,7 +691,10 @@ final class ColorGridComponent: Component {
                 }  else if selectedColorIndex == palleteColors.count - 1 {
                     bottomRightRadius = largeCornerRadius
                 }
-                var selectionKnobImage = ColorSelectionImage(size: CGSize(width: squareSize, height: squareSize), topLeftRadius: topLeftRadius, topRightRadius: topRightRadius, bottomLeftRadius: bottomLeftRadius, bottomRightRadius: bottomRightRadius)
+                
+                let isLight = (selectedColor?.toUIColor().lightness ?? 1.0) < 0.5 ? true : false
+                
+                var selectionKnobImage = ColorSelectionImage(size: CGSize(width: squareSize, height: squareSize), topLeftRadius: topLeftRadius, topRightRadius: topRightRadius, bottomLeftRadius: bottomLeftRadius, bottomRightRadius: bottomRightRadius, isLight: isLight)
                 if selectionKnobImage != self.selectionKnobImage {
                     self.selectionKnob.image = selectionKnobImage.getImage()
                     self.selectionKnobImage = selectionKnobImage
@@ -2425,6 +2433,7 @@ private final class ColorPickerSheetComponent: CombinedComponent {
                         isDisplaying: environment.value.isVisible,
                         isCentered: environment.metrics.widthClass == .regular,
                         hasInputHeight: !environment.inputHeight.isZero,
+                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

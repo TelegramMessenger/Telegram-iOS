@@ -88,6 +88,7 @@
                           statusBarHeight:(CGFloat)statusBarHeight
                               inputHeight:(CGFloat)inputHeight
                               orientation:(UIInterfaceOrientation)orientation
+                                isRegular:(bool)isRegular
                                  animated:(BOOL)animated;
 
 @end

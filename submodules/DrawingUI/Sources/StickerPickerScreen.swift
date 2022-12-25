@@ -659,6 +659,7 @@ class StickerPickerScreen: ViewController {
             let isLandscape = layout.orientation == .landscape
             let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
             let topInset: CGFloat
+            var bottomInset = layout.intrinsicInsets.bottom
             if let (panInitialTopInset, panOffset, _) = self.panGestureArguments {
                 if effectiveExpanded {
                     topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
@@ -672,7 +673,7 @@ class StickerPickerScreen: ViewController {
             
             let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
             self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
-            
+                        
             let clipFrame: CGRect
             let contentFrame: CGRect
             if layout.metrics.widthClass == .compact {
@@ -719,9 +720,11 @@ class StickerPickerScreen: ViewController {
                 
                 let maxSide = max(layout.size.width, layout.size.height)
                 let minSide = min(layout.size.width, layout.size.height)
-                let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
+                let containerSize = CGSize(width: floorToScreenPixels(min(layout.size.width - 20.0, floor(maxSide / 2.0)) * 0.66), height: floorToScreenPixels((min(layout.size.height, minSide) - verticalInset * 2.0) * 0.66))
                 clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
                 contentFrame = clipFrame
+                
+                bottomInset = 0.0
             }
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
@@ -741,7 +744,7 @@ class StickerPickerScreen: ViewController {
                             theme: self.theme,
                             strings: self.presentationData.strings,
                             deviceMetrics: layout.deviceMetrics,
-                            bottomInset: layout.intrinsicInsets.bottom,
+                            bottomInset: bottomInset,
                             content: content,
                             backgroundColor: self.theme.list.itemBlocksBackgroundColor,
                             separatorColor: self.theme.list.blocksBackgroundColor
