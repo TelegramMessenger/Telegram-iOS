@@ -231,6 +231,7 @@ final class StorageUsageScreenComponent: Component {
         
         private var selectionState: SelectionState?
         
+        private var clearingDisplayTimestamp: Double?
         private var isClearing: Bool = false {
             didSet {
                 if self.isClearing != oldValue {
@@ -288,6 +289,8 @@ final class StorageUsageScreenComponent: Component {
         private var selectionPanel: ComponentView<Empty>?
         
         private var clearingNode: StorageUsageClearProgressOverlayNode?
+        
+        private var loadingView: UIActivityIndicatorView?
         
         private var component: StorageUsageScreenComponent?
         private weak var state: EmptyComponentState?
@@ -466,6 +469,40 @@ final class StorageUsageScreenComponent: Component {
             self.state = state
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            
+            if self.currentStats == nil {
+                let loadingView: UIActivityIndicatorView
+                if let current = self.loadingView {
+                    loadingView = current
+                } else {
+                    let style: UIActivityIndicatorView.Style
+                    if environment.theme.overallDarkAppearance {
+                        style = .whiteLarge
+                    } else {
+                        if #available(iOS 13.0, *) {
+                            style = .large
+                        } else {
+                            style = .gray
+                        }
+                    }
+                    loadingView = UIActivityIndicatorView(style: style)
+                    self.loadingView = loadingView
+                    loadingView.sizeToFit()
+                    self.insertSubview(loadingView, belowSubview: self.scrollView)
+                }
+                let loadingViewSize = loadingView.bounds.size
+                transition.setFrame(view: loadingView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - loadingViewSize.width) / 2.0), y: floor((availableSize.height - loadingViewSize.height) / 2.0)), size: loadingViewSize))
+                if !loadingView.isAnimating {
+                    loadingView.startAnimating()
+                }
+            } else {
+                if let loadingView = self.loadingView {
+                    self.loadingView = nil
+                    loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingView] _ in
+                        loadingView?.removeFromSuperview()
+                    })
+                }
+            }
             
             if self.statsDisposable == nil {
                 let context = component.context
@@ -1568,6 +1605,7 @@ final class StorageUsageScreenComponent: Component {
                     clearingNode = StorageUsageClearProgressOverlayNode(presentationData: component.context.sharedContext.currentPresentationData.with { $0 })
                     self.clearingNode = clearingNode
                     self.addSubnode(clearingNode)
+                    self.clearingDisplayTimestamp = CFAbsoluteTimeGetCurrent()
                 }
                 
                 let clearingSize = CGSize(width: availableSize.width, height: availableSize.height)
@@ -1581,10 +1619,26 @@ final class StorageUsageScreenComponent: Component {
                 if let clearingNode = self.clearingNode {
                     self.clearingNode = nil
                     
-                    let animationTransition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
-                    animationTransition.setAlpha(view: clearingNode.view, alpha: 0.0, completion: { [weak clearingNode] _ in
-                        clearingNode?.removeFromSupernode()
-                    })
+                    var delay: Double = 0.0
+                    if let clearingDisplayTimestamp = self.clearingDisplayTimestamp {
+                        let timeDelta = CFAbsoluteTimeGetCurrent() - clearingDisplayTimestamp
+                        if timeDelta < 0.12 {
+                            delay = 0.0
+                        } else if timeDelta < 0.4 {
+                            delay = 0.4
+                        }
+                    }
+                    
+                    if delay == 0.0 {
+                        let animationTransition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                        animationTransition.setAlpha(view: clearingNode.view, alpha: 0.0, completion: { [weak clearingNode] _ in
+                            clearingNode?.removeFromSupernode()
+                        })
+                    } else {
+                        clearingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: delay, removeOnCompletion: false, completion: { [weak clearingNode] _ in
+                            clearingNode?.removeFromSupernode()
+                        })
+                    }
                 }
             }
             
@@ -1610,6 +1664,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             self.statsDisposable = (component.context.engine.resources.collectStorageUsageStats()
+                                    |> delay(0.18, queue: .mainQueue())
             |> deliverOnMainQueue).start(next: { [weak self] stats in
                 guard let self, let component = self.component else {
                     completion()
