@@ -1647,6 +1647,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
+                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
+                        itemNode.openMessageContextMenu()
+                        return
+                    }
+                    
                     let chosenReaction: MessageReaction.Reaction?
                     
                     switch reaction {
