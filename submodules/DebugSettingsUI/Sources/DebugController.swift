@@ -77,6 +77,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetDatabaseAndCache(PresentationTheme)
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
+    case resetCacheIndex
     case reindexCache
     case resetBiometricsData(PresentationTheme)
     case resetWebViewCache(PresentationTheme)
@@ -112,7 +113,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -171,42 +172,44 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 21
         case .reindexUnread:
             return 22
-        case .reindexCache:
+        case .resetCacheIndex:
             return 23
-        case .resetBiometricsData:
+        case .reindexCache:
             return 24
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 25
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 26
-        case .photoPreview:
+        case .optimizeDatabase:
             return 27
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 28
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 29
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 30
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 31
-        case .experimentalBackground:
+        case .acceleratedStickers:
             return 32
-        case .inlineForums:
+        case .experimentalBackground:
             return 33
-        case .localTranscription:
+        case .inlineForums:
             return 34
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 35
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 36
-        case .playerEmbedding:
+        case .restorePurchases:
             return 37
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 38
-        case .voiceConference:
+        case .playlistPlayback:
             return 39
+        case .voiceConference:
+            return 40
         case let .preferredVideoCodec(index, _, _, _):
-            return 40 + index
+            return 41 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -970,6 +973,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     controller.dismiss()
                 })
             })
+        case .resetCacheIndex:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Cache Index [!]", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                
+                context.account.postbox.mediaBox.storageBox.reset()
+            })
         case .reindexCache:
             return ItemListActionItem(presentationData: presentationData, title: "Reindex Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1253,6 +1264,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.resetHoles(presentationData.theme))
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
+        entries.append(.resetCacheIndex)
         entries.append(.reindexCache)
         entries.append(.resetWebViewCache(presentationData.theme))
     }

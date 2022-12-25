@@ -247,7 +247,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                             return nil
                                                         }
                                                     }
-                                                } else if let customPeerPhotoMode, case .custom = customPeerPhotoMode {
+                                                } else if let customPeerPhotoMode = customPeerPhotoMode, case .custom = customPeerPhotoMode {
                                                     transaction.updatePeerCachedData(peerIds: Set([peer.id])) { peerId, cachedPeerData in
                                                         if let cachedPeerData = cachedPeerData as? CachedUserData {
                                                             return cachedPeerData.withUpdatedPersonalPhoto(.known(image))
@@ -384,7 +384,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                         return nil
                                     }
                                 }
-                            } else if let customPeerPhotoMode, case .custom = customPeerPhotoMode {
+                            } else if let customPeerPhotoMode = customPeerPhotoMode, case .custom = customPeerPhotoMode {
                                 transaction.updatePeerCachedData(peerIds: Set([peer.id])) { peerId, cachedPeerData in
                                     if let cachedPeerData = cachedPeerData as? CachedUserData {
                                         return cachedPeerData.withUpdatedPersonalPhoto(.known(nil))

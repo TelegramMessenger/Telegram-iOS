@@ -167,7 +167,7 @@ final class StorageCategoryItemComponent: Component {
         }
         
         func update(component: StorageCategoryItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let themeUpdated = self.component?.theme !== component.theme
+            let themeUpdated = self.component?.theme !== component.theme || self.component?.category.color != component.category.color
             
             self.component = component
             
@@ -181,7 +181,7 @@ final class StorageCategoryItemComponent: Component {
             
             let rightInset: CGFloat = 16.0
             
-            var availableWidth: CGFloat = availableSize.width - leftInset
+            var availableWidth: CGFloat = availableSize.width - leftInset - rightInset
             
             if !component.category.subcategories.isEmpty {
                 let iconView: UIImageView
@@ -218,23 +218,23 @@ final class StorageCategoryItemComponent: Component {
             
             let labelSize = self.label.update(
                 transition: transition,
-                component: AnyComponent(Text(text: dataSizeString(Int(component.category.size), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: ".")), font: Font.regular(17.0), color: component.theme.list.itemSecondaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: dataSizeString(Int(component.category.size), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: ".")), font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
-            availableWidth = max(1.0, availableWidth - labelSize.width - 4.0)
+            availableWidth = max(1.0, availableWidth - labelSize.width - 1.0)
             
             let titleValueSize = self.titleValue.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "\(fractionString)%", font: Font.regular(17.0), color: component.theme.list.itemSecondaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(fractionString)%", font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
-            availableWidth = max(1.0, availableWidth - titleValueSize.width - 1.0)
+            availableWidth = max(1.0, availableWidth - titleValueSize.width - 4.0)
             
             let titleSize = self.title.update(
                 transition: transition,
-                component: AnyComponent(Text(text: component.category.title, font: Font.regular(17.0), color: component.theme.list.itemPrimaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.category.title, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )
@@ -276,7 +276,21 @@ final class StorageCategoryItemComponent: Component {
                 transition.setFrame(view: labelView, frame: labelFrame)
             }
             
+            var copyCheckLayer: CheckLayer?
             if themeUpdated {
+                if !transition.animation.isImmediate {
+                    let copyLayer = CheckLayer(theme: self.checkLayer.theme)
+                    copyLayer.frame = self.checkLayer.frame
+                    copyLayer.setSelected(self.checkLayer.selected, animated: false)
+                    self.layer.addSublayer(copyLayer)
+                    copyCheckLayer = copyLayer
+                    transition.setAlpha(layer: copyLayer, alpha: 0.0, completion: { [weak copyLayer] _ in
+                        copyLayer?.removeFromSuperlayer()
+                    })
+                    self.checkLayer.opacity = 0.0
+                    transition.setAlpha(layer: self.checkLayer, alpha: 1.0)
+                }
+                
                 self.checkLayer.theme = CheckNodeTheme(
                     backgroundColor: component.category.color,
                     strokeColor: component.theme.list.itemCheckColors.foregroundColor,
@@ -289,7 +303,11 @@ final class StorageCategoryItemComponent: Component {
             
             let checkDiameter: CGFloat = 22.0
             let checkFrame = CGRect(origin: CGPoint(x: titleFrame.minX - 20.0 - checkDiameter, y: floor((height - checkDiameter) / 2.0)), size: CGSize(width: checkDiameter, height: checkDiameter))
-            self.checkLayer.frame = checkFrame
+            transition.setFrame(layer: self.checkLayer, frame: checkFrame)
+            
+            if let copyCheckLayer {
+                transition.setFrame(layer: copyCheckLayer, frame: checkFrame)
+            }
             
             transition.setFrame(view: self.checkButtonArea, frame: CGRect(origin: CGPoint(x: additionalLeftInset, y: 0.0), size: CGSize(width: leftInset - additionalLeftInset, height: height)))
             

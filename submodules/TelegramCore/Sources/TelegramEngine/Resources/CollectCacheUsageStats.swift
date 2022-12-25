@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
+import DarwinDirStat
 
 public enum PeerCacheUsageCategory: Int32 {
     case image = 0
@@ -91,10 +92,14 @@ public final class AllStorageUsageStats {
         }
     }
     
+    public var deviceAvailableSpace: Int64
+    public var deviceFreeSpace: Int64
     public fileprivate(set) var totalStats: StorageUsageStats
     public fileprivate(set) var peers: [EnginePeer.Id: PeerStats]
     
-    public init(totalStats: StorageUsageStats, peers: [EnginePeer.Id: PeerStats]) {
+    public init(deviceAvailableSpace: Int64, deviceFreeSpace: Int64, totalStats: StorageUsageStats, peers: [EnginePeer.Id: PeerStats]) {
+        self.deviceAvailableSpace = deviceAvailableSpace
+        self.deviceFreeSpace = deviceFreeSpace
         self.totalStats = totalStats
         self.peers = peers
     }
@@ -242,7 +247,13 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
                 }
             }
             
+            let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
+            let deviceAvailableSpace = (systemAttributes?[FileAttributeKey.systemSize] as? NSNumber)?.int64Value ?? 0
+            let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+            
             return AllStorageUsageStats(
+                deviceAvailableSpace: deviceAvailableSpace,
+                deviceFreeSpace: deviceFreeSpace,
                 totalStats: total,
                 peers: peers
             )
@@ -257,7 +268,8 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
             if !categories.contains(category) {
                 continue
             }
-            for id in value.messages.keys {
+            
+            for (id, _) in value.messages.sorted(by: { $0.value >= $1.value }).prefix(1000) {
                 if result[id] == nil {
                     if let message = existingMessages[id] {
                         result[id] = message

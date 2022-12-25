@@ -7299,6 +7299,7 @@ Sorry for the inconvenience.";
 "Contacts.Sort.ByLastSeen" = "by Last Seen";
 
 "ClearCache.Progress" = "Clearing the Cache • %d%";
+"ClearCache.NoProgress" = "Clearing the Cache";
 "ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";
 
 "Share.ShareAsLink" = "Share as Link";
@@ -8561,3 +8562,33 @@ Sorry for the inconvenience.";
 
 "Paint.MoveForward" = "Move Forward";
 
+"StorageManagement.Title" = "Storage Usage";
+"StorageManagement.TitleCleared" = "Storage Cleared";
+
+"StorageManagement.DescriptionCleared" = "All media can be re-downloaded from the Telegram cloud if you need it again.";
+"StorageManagement.DescriptionChatUsage" = "This chat uses %1$@%% of your Telegram cache.";
+"StorageManagement.DescriptionAppUsage" = "Telegram uses %1$@%% of your free disk space.";
+
+"StorageManagement.ClearAll" = "Clear All Cache";
+"StorageManagement.ClearSelected" = "Clear Selected";
+
+"StorageManagement.SectionPhotos" = "Photos";
+"StorageManagement.SectionVideos" = "Videos";
+"StorageManagement.SectionFiles" = "Files";
+"StorageManagement.SectionMusic" = "Music";
+"StorageManagement.SectionOther" = "Other";
+"StorageManagement.SectionStickers" = "Stickers";
+"StorageManagement.SectionAvatars" = "Avatars";
+"StorageManagement.SectionMiscellaneous" = "Miscellaneous";
+
+"StorageManagement.SectionsDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"StorageManagement.AutoremoveHeader" = "AUTO-REMOVE CACHED MEDIA";
+"StorageManagement.AutoremoveDescription" = "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.";
+
+"StorageManagement.AutoremoveSpaceDescription" = "If your cache size exceeds this limit, the oldest media will be deleted.";
+
+"StorageManagement.TabChats" = "Chats";
+"StorageManagement.TabMedia" = "Media";
+"StorageManagement.TabFiles" = "Files";
+"StorageManagement.TabMusic" = "Music";

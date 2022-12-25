@@ -193,11 +193,10 @@ public final class MediaBox {
             postboxLog(string)
         }), basePath: basePath + "/storage")
         
-        self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
-            //self.basePath,
+        self.timeBasedCleanup = TimeBasedCleanup(storageBox: self.storageBox, generalPaths: [
             self.basePath + "/cache",
             self.basePath + "/animation-cache"
-        ], shortLivedPaths: [
+        ], totalSizeBasedPath: self.basePath, shortLivedPaths: [
             self.basePath + "/short-cache"
         ])
         
@@ -212,7 +211,7 @@ public final class MediaBox {
         self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
     }
     
-    private static func idForFileName(name: String) -> String {
+    public static func idForFileName(name: String) -> String {
         if name.hasSuffix("_partial.meta") {
             return String(name[name.startIndex ..< name.index(name.endIndex, offsetBy: -13)])
         } else if name.hasSuffix("_partial") {
@@ -1292,6 +1291,39 @@ public final class MediaBox {
             
             let scanContext = ScanFilesContext(path: basePath)
             
+            func processStale(nextId: Data?) {
+                let _ = (storageBox.enumerateItems(startingWith: nextId, limit: 1000)
+                |> deliverOn(processQueue)).start(next: { ids, realNextId in
+                    var staleIds: [Data] = []
+                    
+                    for id in ids {
+                        if let name = String(data: id, encoding: .utf8) {
+                            if self.resourceUsage(id: MediaResourceId(name)) == 0 {
+                                staleIds.append(id)
+                            }
+                        } else {
+                            staleIds.append(id)
+                        }
+                    }
+                    
+                    if !staleIds.isEmpty {
+                        storageBox.remove(ids: staleIds)
+                    }
+                    
+                    if realNextId == nil {
+                        completion()
+                    } else {
+                        if lowImpact {
+                            processQueue.after(0.4, {
+                                processStale(nextId: realNextId)
+                            })
+                        } else {
+                            processStale(nextId: realNextId)
+                        }
+                    }
+                })
+            }
+            
             func processNext() {
                 processQueue.async {
                     if isCancelled {
@@ -1300,7 +1332,7 @@ public final class MediaBox {
                     
                     let results = scanContext.nextBatch(count: 32000)
                     if results.isEmpty {
-                        completion()
+                        processStale(nextId: nil)
                         return
                     }
                     
