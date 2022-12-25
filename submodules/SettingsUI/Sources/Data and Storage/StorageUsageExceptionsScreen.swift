@@ -315,7 +315,6 @@ public func storageUsageExceptionsScreen(
                 filter.insert(.onlyGroups)
             case .privateChats:
                 filter.insert(.onlyPrivateChats)
-                filter.insert(.excludeSavedMessages)
                 filter.insert(.excludeSecretChats)
             case .channels:
                 filter.insert(.onlyChannels)
