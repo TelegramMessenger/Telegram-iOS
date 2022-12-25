@@ -287,7 +287,6 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             self.dustNode.revealed = { [weak self] in
                 self?.isRevealed = true
                 self?.blurredImageNode.removeFromSupernode()
-                self?.isUserInteractionEnabled = false
             }
             self.dustNode.tapped = { [weak self] in
                 self?.isRevealed = true
@@ -295,7 +294,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             }
         } else {
             self.blurredImageNode.isHidden = true
-            self.isUserInteractionEnabled = false
+            self.isRevealed = true
         }
         self.blurredImageNode.frame = imageFrame
                 
@@ -1941,7 +1940,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var tappable = false
             switch state {
             case .play, .pause, .download, .none:
-                tappable = false
+                tappable = true
             default:
                 break
             }

@@ -228,26 +228,6 @@ final class NeonTool: DrawingElement {
         self.activePath = bezierPath
                 
         return true
-        
-//        if self.points.isEmpty {
-//            self.points[self.ctr] = point
-//            return
-//        }
-//        self.ctr += 1
-//        self.points[self.ctr] = point
-//
-//        if self.ctr == 4 {
-//            self.points[3] = CGPoint(x: (self.points[2]!.x + self.points[4]!.x) / 2.0, y: (self.points[2]!.y + self.points[4]!.y) / 2.0)
-//
-//            self.path.move(to: self.points[0]!)
-//            self.path.addCurve(to: self.points[3]!, controlPoint1: self.points[1]!, controlPoint2: self.points[2]!)
-//
-//            self.points[0] = self.points[3]!
-//            self.points[1] = self.points[4]!
-//
-//            self.ctr = 1
-//            self.addedSegments += 1
-//        }
     }
     
     private func currentBezierPath(_ ctr: Int) -> UIBezierPath? {

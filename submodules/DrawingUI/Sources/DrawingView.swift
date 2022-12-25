@@ -129,6 +129,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     public var screenSize: CGSize
     
+    private var previousPointTimestamp: Double?
+    
     init(size: CGSize) {
         self.imageSize = size
         self.screenSize = size
@@ -202,11 +204,13 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             guard let strongSelf = self else {
                 return
             }
+            let currentTimestamp = CACurrentMediaTime()
             switch state {
             case .began:
                 strongSelf.isDrawing = true
                 strongSelf.previousStrokePoint = nil
-                strongSelf.drawingGestureStartTimestamp = CACurrentMediaTime()
+                strongSelf.drawingGestureStartTimestamp = currentTimestamp
+                strongSelf.previousPointTimestamp = currentTimestamp
                 
                 if strongSelf.uncommitedElement != nil {
                     strongSelf.finishDrawing(rect: CGRect(origin: .zero, size: strongSelf.imageSize), synchronous: true)
@@ -267,6 +271,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 strongSelf.uncommitedElement = newElement
                 strongSelf.updateInternalState()
             case .changed:
+                if let previousPointTimestamp = strongSelf.previousPointTimestamp, currentTimestamp - previousPointTimestamp < 0.016 {
+                    return
+                }
+                strongSelf.previousPointTimestamp = currentTimestamp
                 strongSelf.uncommitedElement?.updatePath(point, state: state)
                 
 //                if case let .direct(point) = path, let lastPoint = line.points.last {
@@ -409,7 +417,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
-    
+        
     private var longPressTimer: SwiftSignalKit.Timer?
     private var fillCircleLayer: CALayer?
     @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {

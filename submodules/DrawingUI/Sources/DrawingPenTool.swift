@@ -228,7 +228,7 @@ final class PenTool: DrawingElement {
     func setupRenderLayer() -> DrawingRenderLayer? {
         return nil
     }
-    
+        
     func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) {
         let result = self.addPoint(point, state: state)
         let resetActiveRect = result?.0 ?? false
