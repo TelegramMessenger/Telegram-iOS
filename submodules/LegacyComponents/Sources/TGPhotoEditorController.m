@@ -336,7 +336,8 @@
         _fullPaintingView = [[UIImageView alloc] init];
         _fullPaintingView.frame = _fullPreviewView.frame;
         
-        _fullEntitiesView = [_stickersContext drawingEntitiesViewWithSize:_photoEditor.originalSize];
+        CGSize size = TGScaleToSize(_photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
+        _fullEntitiesView = [_stickersContext drawingEntitiesViewWithSize:size];
         _fullEntitiesView.userInteractionEnabled = false;
         CGRect rect = [TGPhotoDrawingController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
         _fullEntitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);

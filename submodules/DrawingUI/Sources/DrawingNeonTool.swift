@@ -76,8 +76,8 @@ final class NeonTool: DrawingElement {
     let renderColor: UIColor
     
     private var pathStarted = false
-    private  let path = UIBezierPath()
-    private  var activePath: UIBezierPath?
+    private let path = UIBezierPath()
+    private var activePath: UIBezierPath?
     private var addedPaths = 0
     
     fileprivate var renderPath: CGPath?
