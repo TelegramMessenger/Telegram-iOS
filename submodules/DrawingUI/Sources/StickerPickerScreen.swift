@@ -209,7 +209,6 @@ class StickerPickerScreen: ViewController {
         let dim: ASDisplayNode
         let wrappingView: UIView
         let containerView: UIView
-        let scrollView: UIScrollView
         let hostView: ComponentHostView<Empty>
         
         private var content: StickerPickerInputData?
@@ -234,16 +233,12 @@ class StickerPickerScreen: ViewController {
             self.dim.alpha = 0.0
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             
-            self.wrappingView = UIView()
-            self.containerView = UIView()
-            self.scrollView = UIScrollView()
+            self.wrappingView = SparseContainerView()
+            self.containerView = SparseContainerView()
             self.hostView = ComponentHostView()
             
             super.init()
-            
-            self.scrollView.delegate = self
-            self.scrollView.showsVerticalScrollIndicator = false
-            
+                        
             self.containerView.clipsToBounds = true
             self.containerView.backgroundColor = .clear
             
@@ -251,8 +246,7 @@ class StickerPickerScreen: ViewController {
             
             self.view.addSubview(self.wrappingView)
             self.wrappingView.addSubview(self.containerView)
-            self.containerView.addSubview(self.scrollView)
-            self.scrollView.addSubview(self.hostView)
+            self.containerView.addSubview(self.hostView)
             
             self.contentDisposable.set(controller.inputData.start(next: { [weak self] inputData in
                 if let strongSelf = self {
@@ -359,6 +353,9 @@ class StickerPickerScreen: ViewController {
                 },
                 updateSearchQuery: { _, _ in
                 },
+                updateScrollingToItemGroup: { [weak self] in
+                    self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
@@ -432,6 +429,9 @@ class StickerPickerScreen: ViewController {
                 requestUpdate: { _ in
                 },
                 updateSearchQuery: { _, _ in
+                },
+                updateScrollingToItemGroup: { [weak self] in
+                    self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                 },
                 chatPeerId: nil,
                 peekBehavior: nil,
@@ -554,6 +554,9 @@ class StickerPickerScreen: ViewController {
                 },
                 updateSearchQuery: { _, _ in
                 },
+                updateScrollingToItemGroup: { [weak self] in
+                    self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                },
                 chatPeerId: nil,
                 peekBehavior: stickerPeekBehavior,
                 customLayout: nil,
@@ -597,11 +600,6 @@ class StickerPickerScreen: ViewController {
                 }
             }
             return true
-        }
-        
-        func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            let contentOffset = self.scrollView.contentOffset.y
-            self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -727,7 +725,6 @@ class StickerPickerScreen: ViewController {
             }
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
                         
             if let content = self.content {
                 var stickersTransition: Transition = transition
@@ -756,7 +753,6 @@ class StickerPickerScreen: ViewController {
                 )
                 contentSize.height = max(layout.size.height - navigationHeight, contentSize.height)
                 transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
-                self.scrollView.contentSize = contentSize
             }
         }
         
@@ -817,11 +813,10 @@ class StickerPickerScreen: ViewController {
                     let point = recognizer.location(in: self.view)
                     let currentHitView = self.hitTest(point, with: nil)
                     
-                    var scrollViewAndListNode = self.findScrollView(view: currentHitView)
-                    if scrollViewAndListNode?.frame.height == self.frame.width {
-                        scrollViewAndListNode = nil
+                    var scrollView = self.findScrollView(view: currentHitView)
+                    if scrollView?.frame.height == self.frame.width {
+                        scrollView = nil
                     }
-                    let scrollView = scrollViewAndListNode
                                 
                     let topInset: CGFloat
                     if self.isExpanded {

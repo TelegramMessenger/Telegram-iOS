@@ -41,7 +41,6 @@ float2 transformPointCoord(float2 pointCoord, float a, float2 anchor) {
     return float2(x, y) + anchor;
 }
 
-
 vertex Point vertex_point_func(constant Point *points [[ buffer(0) ]],
                                constant Uniforms &uniforms [[ buffer(1) ]],
                                uint vid [[ vertex_id ]])
@@ -62,23 +61,3 @@ fragment float4 fragment_point_func(Point point_data [[ stage_in ]],
     float4 color = float4(tex2d.sample(textureSampler, tex_coord));
     return float4(point_data.color.rgb, color.a * point_data.color.a);
 };
-
-// franment shader that applys original color of the texture
-fragment half4 fragment_point_func_original(Point point_data [[ stage_in ]],
-                                            texture2d<float> tex2d [[ texture(0) ]],
-                                            float2 pointCoord  [[ point_coord ]])
-{
-    constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
-    half4 color = half4(tex2d.sample(textureSampler, pointCoord));
-    return half4(color.rgb, color.a * point_data.color.a);
-};
-
-fragment float4 fragment_point_func_without_texture(Point point_data [[ stage_in ]],
-                                                    float2 pointCoord  [[ point_coord ]])
-{
-    float dist = length(pointCoord - float2(0.5));
-    if (dist >= 0.5) {
-        return float4(0);
-    }
-    return point_data.color;
-}

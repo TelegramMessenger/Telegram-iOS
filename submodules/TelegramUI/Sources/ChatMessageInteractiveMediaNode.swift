@@ -256,11 +256,19 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     }
     
     func reveal() {
+        self.isRevealed = true
         self.blurredImageNode.removeFromSupernode()
         self.dustNode.removeFromSupernode()
-        self.isUserInteractionEnabled = false
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if self.isRevealed {
+            return nil
+        }
+        return result
+    }
+        
     func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize)?, imageFrame: CGRect, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
@@ -274,14 +282,15 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             apply()
             
             self.blurredImageNode.isHidden = false
-            self.isUserInteractionEnabled = !self.dustNode.isRevealed
-            
+
+            self.isRevealed = self.dustNode.isRevealed
             self.dustNode.revealed = { [weak self] in
                 self?.isRevealed = true
                 self?.blurredImageNode.removeFromSupernode()
                 self?.isUserInteractionEnabled = false
             }
             self.dustNode.tapped = { [weak self] in
+                self?.isRevealed = true
                 self?.tapped()
             }
         } else {
@@ -1916,7 +1925,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
             displaySpoiler = true
         }
-        
+    
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
                 let extendedMediaOverlayNode = ExtendedMediaOverlayNode()
@@ -1928,6 +1937,16 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 self.pinchContainerNode.contentNode.insertSubnode(extendedMediaOverlayNode, aboveSubnode: self.imageNode)
             }
             self.extendedMediaOverlayNode?.frame = self.imageNode.frame
+            
+            var tappable = false
+            switch state {
+            case .play, .pause, .download, .none:
+                tappable = false
+            default:
+                break
+            }
+            
+            self.extendedMediaOverlayNode?.isUserInteractionEnabled = tappable
             
             var paymentText: String = ""
             outer: for attribute in message.attributes {

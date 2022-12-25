@@ -2113,6 +2113,7 @@ public final class EmojiPagerContentComponent: Component {
         public let navigationController: () -> NavigationController?
         public let requestUpdate: (Transition) -> Void
         public let updateSearchQuery: (String, String) -> Void
+        public let updateScrollingToItemGroup: () -> Void
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
@@ -2135,6 +2136,7 @@ public final class EmojiPagerContentComponent: Component {
             navigationController: @escaping () -> NavigationController?,
             requestUpdate: @escaping (Transition) -> Void,
             updateSearchQuery: @escaping (String, String) -> Void,
+            updateScrollingToItemGroup: @escaping () -> Void,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
@@ -2156,6 +2158,7 @@ public final class EmojiPagerContentComponent: Component {
             self.navigationController = navigationController
             self.requestUpdate = requestUpdate
             self.updateSearchQuery = updateSearchQuery
+            self.updateScrollingToItemGroup = updateScrollingToItemGroup
             self.chatPeerId = chatPeerId
             self.peekBehavior = peekBehavior
             self.customLayout = customLayout
@@ -7653,8 +7656,10 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
+            let isMasks = stickerNamespaces.contains(Namespaces.ItemCollection.CloudMaskPacks)
+            
             return EmojiPagerContentComponent(
-                id: "stickers",
+                id: isMasks ? "masks" : "stickers",
                 context: context,
                 avatarPeer: avatarPeer,
                 animationCache: animationCache,

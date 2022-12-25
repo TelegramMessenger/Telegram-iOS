@@ -189,7 +189,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
     
     fileprivate var minimumSize: CGSize {
         let minSize = min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height)
-        return CGSize(width: minSize * 0.1, height: minSize * 0.1)
+        return CGSize(width: minSize * 0.2, height: minSize * 0.2)
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

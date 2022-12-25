@@ -844,7 +844,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         action: { [weak self] f in
                             f.dismissWithResult(.default)
                             if let strongSelf = self {
-                                strongSelf.insertEntity.invoke(DrawingVectorEntity(type: .oneSidedArrow, color: strongSelf.currentColor, lineWidth: 0.5))
+                                strongSelf.insertEntity.invoke(DrawingVectorEntity(type: .oneSidedArrow, color: strongSelf.currentColor, lineWidth: 0.3))
                             }
                         }
                     )
@@ -2299,9 +2299,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             guard !self.dismissFontPicker(), let validLayout = self.validLayout?.0 else {
                 return
             }
+            
+            if let entityView = self.entitiesView.selectedEntityView as? DrawingTextEntityView {
+                entityView.textChanged = { [weak self] in
+                    self?.dismissFontPicker()
+                }
+            }
+            
             let fonts: [DrawingTextFont] = [
                 .sanFrancisco,
-                .other("AmericanTypewriter", "American Typewriter"),
+                .other("AmericanTypewriter", "Typewriter"),
                 .other("AvenirNext-DemiBoldItalic", "Avenir Next"),
                 .other("CourierNewPS-BoldMT", "Courier New"),
                 .other("Noteworthy-Bold", "Noteworthy"),
@@ -2312,7 +2319,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             
             var items: [ContextMenuItem] = []
             for font in fonts {
-                items.append(.action(ContextMenuActionItem(text: font.title, textFont: .custom(font.uiFont(size: 17.0)), icon: { _ in return nil }, animationName: nil, action: { [weak self] f in
+                items.append(.action(ContextMenuActionItem(text: font.title, textFont: .custom(font: font.uiFont(size: 17.0), height: 42.0, verticalOffset: font.title == "Noteworthy" ? -6.0 : nil), icon: { _ in return nil }, animationName: nil, action: { [weak self] f in
                     f.dismissWithResult(.default)
                     guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
                         return

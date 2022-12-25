@@ -876,6 +876,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }))
                 }
             },
+            updateScrollingToItemGroup: {
+            },
             chatPeerId: chatPeerId,
             peekBehavior: nil,
             customLayout: nil,
@@ -1090,6 +1092,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             updateSearchQuery: { _, _ in
             },
+            updateScrollingToItemGroup: {
+            },
             chatPeerId: chatPeerId,
             peekBehavior: stickerPeekBehavior,
             customLayout: nil,
@@ -1111,11 +1115,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             var inputData = inputData
             inputData.gifs = gifs
             
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
             if let emojiSearchResult = emojiSearchResult {
                 var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
                 if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
                     emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                        text: "No emoji found", //strongSelf.presentationData.strings.EmojiSearch_SearchStatusesEmptyResult,
+                        text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
                         iconFile: nil
                     )
                 }
@@ -1860,6 +1866,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             requestUpdate: { _ in
             },
             updateSearchQuery: { _, _ in
+            },
+            updateScrollingToItemGroup: {
             },
             chatPeerId: nil,
             peekBehavior: nil,

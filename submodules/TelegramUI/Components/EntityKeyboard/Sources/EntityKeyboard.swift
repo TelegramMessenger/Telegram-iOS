@@ -362,7 +362,7 @@ public final class EntityKeyboardComponent: Component {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.reorderPacks(category: .stickers, items: items)
+                        strongSelf.reorderPacks(category: .masks, items: items)
                     }
                 ))))
                 contentIcons.append(PagerComponentContentIcon(id: "masks", imageName: "Chat/Input/Media/EntityInputMasksIcon"))
@@ -913,6 +913,8 @@ public final class EntityKeyboardComponent: Component {
             if let topPanelView = pagerView.topPanelComponentView as? EntityKeyboardTopContainerPanelComponent.View {
                 topPanelView.internalUpdatePanelsAreCollapsed()
             }
+            self.component?.emojiContent?.inputInteractionHolder.inputInteraction?.updateScrollingToItemGroup()
+            
             pagerContentView.scrollToItemGroup(id: groupId, subgroupId: subgroupId)
             pagerView.collapseTopPanel()
         }

@@ -241,6 +241,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     var customEmojiContainerView: CustomEmojiContainerView?
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
+    var textChanged: () -> Void = {}
+    
     init(context: AccountContext, entity: DrawingTextEntity) {
         self.textView = DrawingTextView(frame: .zero)
         self.textView.clipsToBounds = false
@@ -482,6 +484,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         
         self.sizeToFit()
         self.update(afterAppendingEmoji: true)
+        
+        self.textChanged()
     }
     
     func insertText(_ text: NSAttributedString) {
@@ -1283,7 +1287,6 @@ private var availableFonts: [String: (String, String)] = {
         
         var preferredFont: String?
         for name in names {
-            print(name)
             let originalName = name
             let name = name.lowercased()
             if (!name.contains("-") || name.contains("regular")) && preferredFont == nil {
@@ -1299,6 +1302,5 @@ private var availableFonts: [String: (String, String)] = {
             result[shortname] = (preferredFont, family)
         }
     }
-    //print(result)
     return result
 }()

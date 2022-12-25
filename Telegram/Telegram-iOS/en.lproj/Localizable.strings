@@ -8161,6 +8161,7 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchReactionsEmptyResult" = "No emoji found";
 "EmojiSearch.SearchStatusesPlaceholder" = "Search Statuses";
 "EmojiSearch.SearchStatusesEmptyResult" = "No emoji found";
+"EmojiSearch.SearchEmojiEmptyResult" = "No emoji found";
 
 "ChatList.StartAction" = "Start";
 "ChatList.CloseAction" = "Close";

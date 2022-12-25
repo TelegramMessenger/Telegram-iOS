@@ -964,6 +964,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         },
                         updateSearchQuery: { _, _ in
                         },
+                        updateScrollingToItemGroup: {
+                        },
                         chatPeerId: nil,
                         peekBehavior: nil,
                         customLayout: nil,

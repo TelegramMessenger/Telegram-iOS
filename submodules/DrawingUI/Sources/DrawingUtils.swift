@@ -587,118 +587,6 @@ private func configureControlPoints(data: [CGPoint]) -> [(ctrl1: CGPoint, ctrl2:
     return []
 }
 
-class BezierPath {
-    struct Element {
-        enum ElementType {
-            case moveTo
-            case addLine
-            case cubicCurve
-            case quadCurve
-        }
-        
-        let type: ElementType
-        
-        var startPoint: Polyline.Point
-        var endPoint: Polyline.Point
-        var controlPoints: [CGPoint]
-        
-        var lengthRange: ClosedRange<CGFloat>?
-        var calculatedLength: CGFloat?
-                
-        func point(at t: CGFloat) -> CGPoint {
-            switch self.type {
-            case .addLine:
-                return self.startPoint.location.linearBezierPoint(to: self.endPoint.location, t: t)
-            case .cubicCurve:
-                return self.startPoint.location.cubicBezierPoint(to: self.endPoint.location, controlPoint1: self.controlPoints[0], controlPoint2: self.controlPoints[1], t: t)
-            case .quadCurve:
-                return self.startPoint.location.quadBezierPoint(to: self.endPoint.location, controlPoint: self.controlPoints[0], t: t)
-            default:
-                return .zero
-            }
-        }
-    }
-    
-    let path = UIBezierPath()
-    
-    var elements: [Element] = []
-    var elementCount: Int {
-        return self.elements.count
-    }
-    
-    func element(at t: CGFloat) -> (element: Element, innerT: CGFloat)? {
-        let t = min(max(0.0, t), 1.0)
-        
-        for element in elements {
-            if let lengthRange = element.lengthRange, lengthRange.contains(t) {
-                let innerT = (t - lengthRange.lowerBound) / (lengthRange.upperBound - lengthRange.lowerBound)
-                return (element, innerT)
-            }
-        }
-        return nil
-    }
-    
-    var points: [Int: CGPoint] = [:]
-    func point(at t: CGFloat) -> CGPoint? {
-        if let (element, innerT) = self.element(at: t) {
-            return element.point(at: innerT)
-        } else {
-            return nil
-        }
-    }
-    
-    func append(_ element: Element) {
-        self.elements.append(element)
-        switch element.type {
-        case .moveTo:
-            self.move(to: element.startPoint.location)
-        case .addLine:
-            self.addLine(to: element.endPoint.location)
-        case .cubicCurve:
-            self.addCurve(to: element.endPoint.location, controlPoint1: element.controlPoints[0], controlPoint2: element.controlPoints[1])
-        case .quadCurve:
-            self.addQuadCurve(to: element.endPoint.location, controlPoint: element.controlPoints[0])
-        }
-    }
-        
-    private func move(to point: CGPoint) {
-        self.path.move(to: point)
-    }
-    
-    private func addLine(to point: CGPoint) {
-        self.path.addLine(to: point)
-    }
-    
-    private func addQuadCurve(to point: CGPoint, controlPoint: CGPoint) {
-        self.path.addQuadCurve(to: point, controlPoint: controlPoint)
-    }
-    
-    private func addCurve(to point: CGPoint, controlPoint1: CGPoint, controlPoint2: CGPoint) {
-        self.path.addCurve(to: point, controlPoint1: controlPoint1, controlPoint2: controlPoint2)
-    }
-    
-    private func close() {
-        self.path.close()
-    }
-    
-    func trimming(to elementIndex: Int) -> BezierPath {
-        let outputPath = BezierPath()
-        for element in self.elements[0 ... elementIndex] {
-            outputPath.append(element)
-        }
-        return outputPath
-    }
-    
-    func closedCopy() -> BezierPath {
-        let outputPath = BezierPath()
-        for element in self.elements {
-            outputPath.append(element)
-        }
-        outputPath.close()
-        return outputPath
-    }
-}
-
 class Matrix {
     private(set) var m: [Float]
     
@@ -766,4 +654,23 @@ extension CGPoint {
     func offsetBy(_ offset: CGPoint) -> CGPoint {
         return self.offsetBy(dx: offset.x, dy: offset.y)
     }
+}
+
+func normalizeDrawingRect(_ rect: CGRect, drawingSize: CGSize) -> CGRect {
+    var rect = rect
+    if rect.origin.x < 0.0 {
+        rect.size.width += rect.origin.x
+        rect.origin.x = 0.0
+    }
+    if rect.origin.y < 0.0 {
+        rect.size.height += rect.origin.y
+        rect.origin.y = 0.0
+    }
+    if rect.maxX > drawingSize.width {
+        rect.size.width -= (rect.maxX - drawingSize.width)
+    }
+    if rect.maxY > drawingSize.height {
+        rect.size.height -= (rect.maxY - drawingSize.height)
+    }
+    return rect
 }

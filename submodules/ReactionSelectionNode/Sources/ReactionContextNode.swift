@@ -1458,6 +1458,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     }))
                 }
             },
+            updateScrollingToItemGroup: {
+            },
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: emojiContentLayout,

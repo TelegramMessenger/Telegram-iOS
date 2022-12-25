@@ -409,7 +409,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var actions: [ContextMenuItem] = []
-        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
         }, iconSource: nil, action: { c, _ in
             c.dismiss(completion: {
@@ -419,7 +419,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         if !chatPresentationInterfaceState.isPremium && !premiumConfiguration.isPremiumDisabled {
-            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { c, _ in
                 c.dismiss(completion: {
