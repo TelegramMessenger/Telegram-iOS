@@ -93,6 +93,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableReactionOverrides(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
+    case enableQuickReactionSwitch(Bool)
     case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
@@ -113,7 +114,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -206,10 +207,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 38
         case .playlistPlayback:
             return 39
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 40
+        case .voiceConference:
+            return 41
         case let .preferredVideoCodec(index, _, _, _):
-            return 41 + index
+            return 42 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -1161,6 +1164,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .enableQuickReactionSwitch(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Enable Quick Reaction", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.disableQuickReaction = !value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let _ = arguments.context else {
@@ -1283,6 +1296,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.restorePurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
+        entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
     }
     
     let codecs: [(String, String?)] = [

@@ -216,7 +216,13 @@ private final class PeerListItemComponent: Component {
                 transition.setFrame(layer: self.avatarNode.layer, frame: avatarFrame)
             }
             if let peer = component.peer {
-                self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                let clipStyle: AvatarNodeClipStyle
+                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                    clipStyle = .roundedRect
+                } else {
+                    clipStyle = .round
+                }
+                self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
             }
             
             let labelSize = self.label.update(

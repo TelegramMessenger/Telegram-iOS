@@ -8569,8 +8569,8 @@ Sorry for the inconvenience.";
 "StorageManagement.TitleCleared" = "Storage Cleared";
 
 "StorageManagement.DescriptionCleared" = "All media can be re-downloaded from the Telegram cloud if you need it again.";
-"StorageManagement.DescriptionChatUsage" = "This chat uses %1$@%% of your Telegram cache.";
-"StorageManagement.DescriptionAppUsage" = "Telegram uses %1$@%% of your free disk space.";
+"StorageManagement.DescriptionChatUsage" = "This chat uses %1$@% of your Telegram cache.";
+"StorageManagement.DescriptionAppUsage" = "Telegram uses %1$@% of your free disk space.";
 
 "StorageManagement.ClearAll" = "Clear All Cache";
 "StorageManagement.ClearSelected" = "Clear Selected";
