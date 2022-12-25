@@ -454,6 +454,7 @@ class SpoilerOverlayNode: ASDisplayNode {
         
         super.init()
         
+        self.clipsToBounds = true
         self.isUserInteractionEnabled = false
                 
         self.addSubnode(self.blurNode)
