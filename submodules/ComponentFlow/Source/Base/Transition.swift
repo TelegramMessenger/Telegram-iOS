@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 #if targetEnvironment(simulator)
 @_silgen_name("UIAnimationDragCoefficient") func UIAnimationDragCoefficient() -> Float
@@ -15,105 +16,31 @@ private extension UIView {
     }
 }
 
-@objc private class CALayerAnimationDelegate: NSObject, CAAnimationDelegate {
-    private let keyPath: String?
-    var completion: ((Bool) -> Void)?
-
-    init(animation: CAAnimation, completion: ((Bool) -> Void)?) {
-        if let animation = animation as? CABasicAnimation {
-            self.keyPath = animation.keyPath
-        } else {
-            self.keyPath = nil
-        }
-        self.completion = completion
-
-        super.init()
-    }
-
-    @objc func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
-        if let anim = anim as? CABasicAnimation {
-            if anim.keyPath != self.keyPath {
-                return
-            }
-        }
-        if let completion = self.completion {
-            completion(flag)
-        }
-    }
-}
-
-private func makeSpringAnimation(keyPath: String) -> CASpringAnimation {
-    let springAnimation = CASpringAnimation(keyPath: keyPath)
-    springAnimation.mass = 3.0;
-    springAnimation.stiffness = 1000.0
-    springAnimation.damping = 500.0
-    springAnimation.duration = 0.5
-    springAnimation.timingFunction = CAMediaTimingFunction(name: .linear)
-    return springAnimation
-}
-
 private extension CALayer {
-    func makeAnimation(from: AnyObject?, to: AnyObject, keyPath: String, duration: Double, delay: Double, curve: Transition.Animation.Curve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil) -> CAAnimation {
+    func animate(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double, curve: Transition.Animation.Curve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil) {
+        let timingFunction: String
+        let mediaTimingFunction: CAMediaTimingFunction?
         switch curve {
         case .spring:
-            let animation = makeSpringAnimation(keyPath: keyPath)
-            animation.fromValue = from
-            animation.toValue = to
-            animation.isRemovedOnCompletion = removeOnCompletion
-            animation.fillMode = .forwards
-            if let completion = completion {
-                animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
-            }
-
-            let k = Float(UIView.animationDurationFactor)
-            var speed: Float = 1.0
-            if k != 0 && k != 1 {
-                speed = Float(1.0) / k
-            }
-
-            animation.speed = speed * Float(animation.duration / duration)
-            animation.isAdditive = additive
-
-            if !delay.isZero {
-                animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor
-                animation.fillMode = .both
-            }
-
-            return animation
+            timingFunction = kCAMediaTimingFunctionSpring
+            mediaTimingFunction = nil
         default:
-            let k = Float(UIView.animationDurationFactor)
-            var speed: Float = 1.0
-            if k != 0 && k != 1 {
-                speed = Float(1.0) / k
-            }
-
-            let animation = CABasicAnimation(keyPath: keyPath)
-            if let from = from {
-                animation.fromValue = from
-            }
-            animation.toValue = to
-            animation.duration = duration
-            animation.timingFunction = curve.asTimingFunction()
-            animation.isRemovedOnCompletion = removeOnCompletion
-            animation.fillMode = .both
-            animation.speed = speed
-            animation.isAdditive = additive
-            if let completion = completion {
-                animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
-            }
-
-            if !delay.isZero {
-                animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor
-                animation.fillMode = .both
-            }
-
-            return animation
+            timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+            mediaTimingFunction = curve.asTimingFunction()
         }
-    }
-
-    func animate(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double, curve: Transition.Animation.Curve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil) {
-        let animation = self.makeAnimation(from: from, to: to, keyPath: keyPath, duration: duration, delay: delay, curve: curve, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
-        self.add(animation, forKey: additive ? nil : keyPath)
+        
+        self.animate(
+            from: from,
+            to: to,
+            keyPath: keyPath,
+            timingFunction: timingFunction,
+            duration: duration,
+            delay: delay,
+            mediaTimingFunction: mediaTimingFunction,
+            removeOnCompletion: removeOnCompletion,
+            additive: additive,
+            completion: completion
+        )
     }
 }
 

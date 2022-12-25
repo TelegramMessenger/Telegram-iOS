@@ -55,6 +55,7 @@ CABasicAnimation * _Nonnull makeSpringAnimationImpl(NSString * _Nonnull keyPath)
     springAnimation.damping = 500.0f;
     springAnimation.duration = 0.5;
     springAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+    
     return springAnimation;
 }
 

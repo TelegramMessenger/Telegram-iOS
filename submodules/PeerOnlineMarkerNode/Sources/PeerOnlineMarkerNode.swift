@@ -161,7 +161,7 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
                     }
                     
                     if animated {
-                        let initialScale: CGFloat = strongSelf.iconNode.isHidden ? 0.0 : CGFloat((strongSelf.iconNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
+                        let initialScale: CGFloat = strongSelf.iconNode.isHidden ? 0.001 : CGFloat((strongSelf.iconNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
                         let targetScale: CGFloat = online ? 1.0 : 0.0
                         if initialScale != targetScale {
                             strongSelf.iconNode.isHidden = false

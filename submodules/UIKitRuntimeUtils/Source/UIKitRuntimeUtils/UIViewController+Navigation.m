@@ -179,7 +179,8 @@ static bool notyfyingShiftState = false;
         
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIWindow class] currentSelector:@selector(initWithFrame:) newSelector:@selector(_65087dc8_initWithFrame:)];
         
-        if (@available(iOS 15.0, *)) {
+        if (@available(iOS 16.0, *)) {
+        } else if (@available(iOS 15.0, *)) {
             [RuntimeUtils swizzleInstanceMethodOfClass:[CADisplayLink class] currentSelector:@selector(setPreferredFrameRateRange:) newSelector:@selector(_65087dc8_setPreferredFrameRateRange:)];
         }
     });
