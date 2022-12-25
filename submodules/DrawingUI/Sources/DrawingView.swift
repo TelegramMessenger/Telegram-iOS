@@ -798,9 +798,19 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
             
-            if self.metalView == nil, let metalView = DrawingMetalView(size: self.imageSize) {
+            var size = self.imageSize
+            if Int(size.width) % 16 != 0 {
+                size.width = ceil(size.width / 16.0) * 16.0
+            }
+            
+            if self.metalView == nil, let metalView = DrawingMetalView(size: size) {
                 metalView.transform = self.currentDrawingViewContainer.transform
-                metalView.frame = self.currentDrawingViewContainer.frame
+                if size.width != self.imageSize.width {
+                    let scaledSize = size.preciseAspectFilled(self.currentDrawingViewContainer.frame.size)
+                    metalView.frame = CGRect(origin: .zero, size: scaledSize)
+                } else {
+                    metalView.frame = self.currentDrawingViewContainer.frame
+                }
                 self.insertSubview(metalView, aboveSubview: self.currentDrawingViewContainer)
                 self.metalView = metalView
             }
@@ -958,8 +968,17 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.drawingGesturePipeline?.transform = CGAffineTransformMakeScale(1.0 / scale, 1.0 / scale)
             
         if let metalView = self.metalView {
+            var size = self.imageSize
+            if Int(size.width) % 16 != 0 {
+                size.width = ceil(size.width / 16.0) * 16.0
+            }
             metalView.transform = transform
-            metalView.frame = self.bounds
+            if size.width != self.imageSize.width {
+                let scaledSize = size.preciseAspectFilled(self.currentDrawingViewContainer.frame.size)
+                metalView.frame = CGRect(origin: .zero, size: scaledSize)
+            } else {
+                metalView.frame = self.currentDrawingViewContainer.frame
+            }
         }
         
         self.brushSizePreviewLayer.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
@@ -975,6 +994,13 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     public var isTracking: Bool {
         return self.uncommitedElement != nil
+    }
+}
+
+private extension CGSize {
+    func preciseAspectFilled(_ size: CGSize) -> CGSize {
+        let scale = max(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
+        return CGSize(width: self.width * scale, height: self.height * scale)
     }
 }
 

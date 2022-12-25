@@ -7,7 +7,7 @@ import SwiftSignalKit
 import AppBundle
 
 final class DrawingMetalView: MTKView {
-    private let size: CGSize
+    let size: CGSize
     
     private let commandQueue: MTLCommandQueue
     fileprivate let library: MTLLibrary
@@ -21,11 +21,6 @@ final class DrawingMetalView: MTKView {
     private var markerBrush: Brush?
     
     init?(size: CGSize) {
-        var size = size
-        if Int(size.width) % 16 != 0 {
-            size.width = ceil(size.width / 16.0) * 16.0
-        }
-        
         let mainBundle = Bundle(for: DrawingView.self)
         guard let path = mainBundle.path(forResource: "DrawingUIBundle", ofType: "bundle") else {
             return nil
@@ -55,6 +50,8 @@ final class DrawingMetalView: MTKView {
         self.isOpaque = false
         self.contentScaleFactor = 1.0
         self.isPaused = true
+        self.preferredFramesPerSecond = 60
+        self.presentsWithTransaction = true
         
         self.setup()
     }
@@ -179,10 +176,12 @@ final class DrawingMetalView: MTKView {
         commandEncoder?.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
         commandEncoder?.endEncoding()
-        if let drawable = self.currentDrawable {
-            commandBuffer?.present(drawable)
-        }
         commandBuffer?.commit()
+        commandBuffer?.waitUntilScheduled()
+        self.currentDrawable?.present()
+//        if let drawable = self.currentDrawable {
+//            commandBuffer?.present(drawable)
+//        }
     }
         
     func clear() {

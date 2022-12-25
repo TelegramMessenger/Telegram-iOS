@@ -1515,11 +1515,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 let selectionCount = self.selectionCount
             
                 var hasSpoilers = false
+                var hasGeneric = false
                 if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
                     for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
                         if editingContext.spoiler(for: item) {
                             hasSpoilers = true
-                            break
+                        } else {
+                            hasGeneric = true
                         }
                     }
                 }
@@ -1565,7 +1567,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     if !items.isEmpty {
                         items.append(.separator)
                     }
-                    items.append(.action(ContextMenuActionItem(text: hasSpoilers ? strings.Attachment_DisableSpoiler : strings.Attachment_EnableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
+                    items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
                         f(.default)
                         guard let strongSelf = self else {
                             return
@@ -1573,7 +1575,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         
                         if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
                             for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
-                                editingContext.setSpoiler(!hasSpoilers, for: item)
+                                editingContext.setSpoiler(hasGeneric, for: item)
                             }
                         }
                     })))
