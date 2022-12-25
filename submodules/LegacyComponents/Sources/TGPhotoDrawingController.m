@@ -81,6 +81,11 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
         _context = context;
         _stickersContext = stickersContext;
         
+        if (entitiesView != nil) {
+            _skipEntitiesSetup = true;
+            entitiesView.userInteractionEnabled = true;
+        }
+        
         CGSize size = TGScaleToSize(photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
         _drawingAdapter = [_stickersContext drawingAdapter:size originalSize:photoEditor.originalSize isVideo:photoEditor.forVideo isAvatar:isAvatar entitiesView:entitiesView];
         _interfaceController = (UIViewController<TGPhotoDrawingInterfaceController> *)_drawingAdapter.interfaceController;
