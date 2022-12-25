@@ -718,7 +718,6 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 
-                //TODO:localize
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
                     component: AnyComponent(StorageUsageScreenSelectionPanelComponent(

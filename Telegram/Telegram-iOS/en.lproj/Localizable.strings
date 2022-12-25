@@ -8597,3 +8597,7 @@ Sorry for the inconvenience.";
 "StorageManagement.TabMusic" = "Music";
 
 "ClearCache.Never" = "Never";
+
+"GroupMembers.HideMembers" = "Hide Members";
+"GroupMembers.MembersHiddenOn" = "Switch this off to show the list of members in this group.";
+"GroupMembers.MembersHiddenOff" = "Switch this on to hide the list of members in this group. Admins will remain visible.";

@@ -195,7 +195,6 @@ final class StorageCategoriesComponent: Component {
                 self.itemViews.removeValue(forKey: key)
             }
             
-            //TODO:localize
             let clearTitle: String
             let label: String?
             if totalSelectedSize == 0 {
