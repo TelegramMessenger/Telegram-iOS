@@ -542,8 +542,8 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     
     let actionsDisposable = DisposableSet()
     
-    let cacheUsagePromise = Promise<CacheUsageStatsResult?>()
-    cacheUsagePromise.set(cacheUsageStats(context: context))
+    //let cacheUsagePromise = Promise<CacheUsageStatsResult?>()
+    //cacheUsagePromise.set(cacheUsageStats(context: context))
     
     let updateSensitiveContentDisposable = MetaDisposable()
     actionsDisposable.add(updateSensitiveContentDisposable)

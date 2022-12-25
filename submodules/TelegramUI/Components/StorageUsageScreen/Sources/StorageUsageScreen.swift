@@ -1267,7 +1267,7 @@ final class StorageUsageScreenComponent: Component {
                     let value = self.cacheSettings?.categoryStorageTimeout[mappedCategory] ?? Int32.max
                     let optionText: String
                     if value == Int32.max {
-                        optionText = environment.strings.ClearCache_Forever
+                        optionText = environment.strings.ClearCache_Never
                     } else {
                         optionText = timeIntervalString(strings: environment.strings, value: value)
                     }
