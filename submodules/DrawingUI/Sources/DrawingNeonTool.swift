@@ -76,11 +76,11 @@ final class NeonTool: DrawingElement {
     let renderColor: UIColor
     
     private var pathStarted = false
-    let path = UIBezierPath()
-    var activePath: UIBezierPath?
-    var addedSegments = 0
+    private  let path = UIBezierPath()
+    private  var activePath: UIBezierPath?
+    private var addedPaths = 0
     
-    var renderPath: CGPath?
+    fileprivate var renderPath: CGPath?
     
     var translation: CGPoint = .zero
         
@@ -128,8 +128,8 @@ final class NeonTool: DrawingElement {
         return nil
     }
     
-    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) {
-        guard self.addPoint(point, state: state) else {
+    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) {
+        guard self.addPoint(point, state: state, zoomScale: zoomScale) || state == .ended else {
             return
         }
 
@@ -144,8 +144,13 @@ final class NeonTool: DrawingElement {
             }
         }
         
-        if state == .ended, self.addedSegments == 0, let point = self.points.first {
-            self.renderPath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: point.x - self.renderLineWidth / 2.0, y: point.y - self.renderLineWidth / 2.0), size: CGSize(width: self.renderLineWidth, height: self.renderLineWidth)), transform: nil)
+        if state == .ended {
+            if let activePath = self.activePath {
+                self.path.append(activePath)
+                self.renderPath = self.path.cgPath.copy(strokingWithWidth: self.renderLineWidth, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
+            } else if self.addedPaths == 0, let point = self.points.first {
+                self.renderPath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: point.x - self.renderLineWidth / 2.0, y: point.y - self.renderLineWidth / 2.0), size: CGSize(width: self.renderLineWidth, height: self.renderLineWidth)), transform: nil)
+            }
         }
     }
         
@@ -193,8 +198,8 @@ final class NeonTool: DrawingElement {
     private var points: [CGPoint] = Array(repeating: .zero, count: 4)
     private var pointPtr = 0
     
-    private func addPoint(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) -> Bool {
-        let filterDistance: CGFloat = 10.0
+    private func addPoint(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) -> Bool {
+        let filterDistance: CGFloat = 10.0 / zoomScale
                              
         if self.pointPtr == 0 {
             self.points[0] = point.location
@@ -210,6 +215,7 @@ final class NeonTool: DrawingElement {
                 
                 if let bezierPath = self.currentBezierPath(3) {
                     self.path.append(bezierPath)
+                    self.addedPaths += 1
                     self.activePath = nil
                 }
                

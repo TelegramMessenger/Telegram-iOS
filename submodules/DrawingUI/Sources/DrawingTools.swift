@@ -65,8 +65,9 @@ final class MarkerTool: DrawingElement {
     }
     
     private var didSetup = false
-    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) {
-        if let lastPoint = self.points.last, lastPoint.isEqual(to: point.location, epsilon: 0.1) {
+    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) {
+        let filterDistance: CGFloat = 10.0 / zoomScale
+        if let lastPoint = self.points.last, lastPoint.distance(to: point.location) < filterDistance {
         } else {
             self.points.append(point.location)
         }
@@ -124,7 +125,7 @@ final class FillTool: DrawingElement {
         return nil
     }
     
-    func updatePath(_ path: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) {
+    func updatePath(_ path: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) {
     }
 
     func draw(in context: CGContext, size: CGSize) {

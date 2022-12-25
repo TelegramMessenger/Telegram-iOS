@@ -3,6 +3,7 @@ import UIKit
 import QuartzCore
 import MetalKit
 import Display
+import SwiftSignalKit
 import AppBundle
 
 final class DrawingMetalView: MTKView {
@@ -53,8 +54,15 @@ final class DrawingMetalView: MTKView {
         self.autoResizeDrawable = false
         self.isOpaque = false
         self.contentScaleFactor = 1.0
+        self.isPaused = true
         
         self.setup()
+    }
+    
+    override var isHidden: Bool {
+        didSet {
+            self.isPaused = self.isHidden
+        }
     }
     
     required init(coder: NSCoder) {
@@ -124,7 +132,12 @@ final class DrawingMetalView: MTKView {
         
         self.drawable?.clear()
         
-        self.markerBrush?.pushPoint(CGPoint(x: 100.0, y: 100.0), color: DrawingColor.clear, size: 0.0, isEnd: true)
+        Queue.mainQueue().after(0.1) {
+            self.markerBrush?.pushPoint(CGPoint(x: 100.0, y: 100.0), color: DrawingColor.clear, size: 0.0, isEnd: true)
+            Queue.mainQueue().after(0.1) {
+                self.clear()
+            }
+        }
     }
     
 

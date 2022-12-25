@@ -23,7 +23,7 @@ protocol DrawingElement: AnyObject {
     
     func setupRenderView(screenSize: CGSize) -> DrawingRenderView?
     func setupRenderLayer() -> DrawingRenderLayer?
-    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState)
+    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat)
     
     func draw(in: CGContext, size: CGSize)
 }
@@ -267,7 +267,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     }
                     strongSelf.currentDrawingLayer = renderLayer
                 }
-                newElement.updatePath(point, state: state)
+                newElement.updatePath(point, state: state, zoomScale: strongSelf.zoomScale)
                 strongSelf.uncommitedElement = newElement
                 strongSelf.updateInternalState()
             case .changed:
@@ -275,7 +275,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     return
                 }
                 strongSelf.previousPointTimestamp = currentTimestamp
-                strongSelf.uncommitedElement?.updatePath(point, state: state)
+                strongSelf.uncommitedElement?.updatePath(point, state: state, zoomScale: strongSelf.zoomScale)
                 
 //                if case let .direct(point) = path, let lastPoint = line.points.last {
 //                    if let previousStrokePoint = strongSelf.previousStrokePoint, line.points.count > 10 {
@@ -343,24 +343,22 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
 //                        strongSelf.previousStrokePoint = lastPoint.location
 //                    }
 //                }
-            case .ended:
+            case .ended, .cancelled:
                 strongSelf.isDrawing = false
                 strongSelf.strokeRecognitionTimer?.invalidate()
                 strongSelf.strokeRecognitionTimer = nil
-                strongSelf.uncommitedElement?.updatePath(point, state: state)
+                strongSelf.uncommitedElement?.updatePath(point, state: state, zoomScale: strongSelf.zoomScale)
                 
-                let bounds = strongSelf.uncommitedElement?.bounds
-                Queue.mainQueue().after(0.05) {
-                    if let bounds = bounds {
-                        strongSelf.finishDrawing(rect: bounds, synchronous: true)
+                if strongSelf.uncommitedElement?.isValid == true {
+                    let bounds = strongSelf.uncommitedElement?.bounds
+                    Queue.mainQueue().after(0.05) {
+                        if let bounds = bounds {
+                            strongSelf.finishDrawing(rect: bounds, synchronous: true)
+                        }
                     }
+                } else {
+                    strongSelf.cancelDrawing()
                 }
-                strongSelf.updateInternalState()
-            case .cancelled:
-                strongSelf.isDrawing = false
-                strongSelf.strokeRecognitionTimer?.invalidate()
-                strongSelf.strokeRecognitionTimer = nil
-                strongSelf.cancelDrawing()
                 strongSelf.updateInternalState()
             }
         }
@@ -598,6 +596,9 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                 currentDrawingLayer.removeFromSuperlayer()
             }
             self.currentDrawingLayer = nil
+        }
+        if case .marker = self.tool {
+            self.metalView?.isHidden = true
         }
     }
     

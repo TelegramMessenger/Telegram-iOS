@@ -229,8 +229,8 @@ final class PenTool: DrawingElement {
         return nil
     }
         
-    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) {
-        let result = self.addPoint(point, state: state)
+    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) {
+        let result = self.addPoint(point, state: state, zoomScale: zoomScale)
         let resetActiveRect = result?.0 ?? false
         let updatedRect = result?.1
         var combinedRect = updatedRect
@@ -410,8 +410,8 @@ final class PenTool: DrawingElement {
     
     private var previousRenderLineWidth: CGFloat?
         
-    private func addPoint(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState) -> (Bool, CGRect)? {
-        let filterDistance: CGFloat = 10.0
+    private func addPoint(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) -> (Bool, CGRect)? {
+        let filterDistance: CGFloat = 10.0 / zoomScale
                 
         var velocity = point.velocity
         if velocity.isZero {
