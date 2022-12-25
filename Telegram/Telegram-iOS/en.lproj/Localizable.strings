@@ -8591,3 +8591,5 @@ Sorry for the inconvenience.";
 "StorageManagement.TabMedia" = "Media";
 "StorageManagement.TabFiles" = "Files";
 "StorageManagement.TabMusic" = "Music";
+
+"ClearCache.Never" = "Never";
