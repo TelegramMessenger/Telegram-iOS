@@ -190,6 +190,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     
     override init() {
         self.blurredImageNode = TransformImageNode()
+        self.blurredImageNode.contentAnimations = []
          
         self.dustNode = MediaDustNode()
         
@@ -274,7 +275,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         let padding: CGFloat = 10.0
         
         if let (imageSignal, drawingSize, boundingSize) = imageSignal {
-            self.blurredImageNode.setSignal(imageSignal)
+            self.blurredImageNode.setSignal(imageSignal, attemptSynchronously: true)
             
             let imageLayout = self.blurredImageNode.asyncLayout()
             let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
