@@ -205,6 +205,7 @@ private final class AddPaymentMethodSheetComponent: CombinedComponent {
                         isDisplaying: environment.value.isVisible,
                         isCentered: false,
                         hasInputHeight: !environment.inputHeight.isZero,
+                        regularMetricsSize: nil,
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

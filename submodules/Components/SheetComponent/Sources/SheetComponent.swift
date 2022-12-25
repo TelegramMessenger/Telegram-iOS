@@ -9,12 +9,14 @@ public final class SheetComponentEnvironment: Equatable {
     public let isDisplaying: Bool
     public let isCentered: Bool
     public let hasInputHeight: Bool
+    public let regularMetricsSize: CGSize?
     public let dismiss: (Bool) -> Void
     
-    public init(isDisplaying: Bool, isCentered: Bool, hasInputHeight: Bool, dismiss: @escaping (Bool) -> Void) {
+    public init(isDisplaying: Bool, isCentered: Bool, hasInputHeight: Bool, regularMetricsSize: CGSize?, dismiss: @escaping (Bool) -> Void) {
         self.isDisplaying = isDisplaying
         self.isCentered = isCentered
         self.hasInputHeight = hasInputHeight
+        self.regularMetricsSize = regularMetricsSize
         self.dismiss = dismiss
     }
     
@@ -26,6 +28,9 @@ public final class SheetComponentEnvironment: Equatable {
             return false
         }
         if lhs.hasInputHeight != rhs.hasInputHeight {
+            return false
+        }
+        if lhs.regularMetricsSize != rhs.regularMetricsSize {
             return false
         }
         return true
@@ -49,7 +54,11 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public let backgroundColor: BackgroundColor
     public let animateOut: ActionSlot<Action<()>>
     
-    public init(content: AnyComponent<ChildEnvironmentType>, backgroundColor: BackgroundColor, animateOut: ActionSlot<Action<()>>) {
+    public init(
+        content: AnyComponent<ChildEnvironmentType>,
+        backgroundColor: BackgroundColor,
+        animateOut: ActionSlot<Action<()>>
+    ) {
         self.content = content
         self.backgroundColor = backgroundColor
         self.animateOut = animateOut
@@ -65,7 +74,6 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         if lhs.animateOut != rhs.animateOut {
             return false
         }
-        
         return true
     }
     
@@ -265,12 +273,15 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                         
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
             
-            let containerSize: CGSize
+            var containerSize: CGSize
             if sheetEnvironment.isCentered {
                 let verticalInset: CGFloat = 44.0
                 let maxSide = max(availableSize.width, availableSize.height)
                 let minSide = min(availableSize.width, availableSize.height)
                 containerSize = CGSize(width: min(availableSize.width - 20.0, floor(maxSide / 2.0)), height: min(availableSize.height, minSide) - verticalInset * 2.0)
+                if let regularMetricsSize = sheetEnvironment.regularMetricsSize {
+                    containerSize = regularMetricsSize
+                }
             } else {
                 containerSize = CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
             }

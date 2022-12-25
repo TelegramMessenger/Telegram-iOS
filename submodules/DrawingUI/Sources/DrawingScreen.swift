@@ -482,6 +482,9 @@ private final class DrawingScreenComponent: CombinedComponent {
     let updateEntitiesPlayback: ActionSlot<Bool>
     let previewBrushSize: ActionSlot<CGFloat?>
     let dismissEyedropper: ActionSlot<Void>
+    let requestPresentColorPicker: ActionSlot<Void>
+    let toggleWithEraser: ActionSlot<Void>
+    let toggleWithPreviousTool: ActionSlot<Void>
     let apply: ActionSlot<Void>
     let dismiss: ActionSlot<Void>
     
@@ -506,6 +509,9 @@ private final class DrawingScreenComponent: CombinedComponent {
         updateEntitiesPlayback: ActionSlot<Bool>,
         previewBrushSize: ActionSlot<CGFloat?>,
         dismissEyedropper: ActionSlot<Void>,
+        requestPresentColorPicker: ActionSlot<Void>,
+        toggleWithEraser: ActionSlot<Void>,
+        toggleWithPreviousTool: ActionSlot<Void>,
         apply: ActionSlot<Void>,
         dismiss: ActionSlot<Void>,
         presentColorPicker: @escaping (DrawingColor) -> Void,
@@ -528,6 +534,9 @@ private final class DrawingScreenComponent: CombinedComponent {
         self.updateEntitiesPlayback = updateEntitiesPlayback
         self.previewBrushSize = previewBrushSize
         self.dismissEyedropper = dismissEyedropper
+        self.requestPresentColorPicker = requestPresentColorPicker
+        self.toggleWithEraser = toggleWithEraser
+        self.toggleWithPreviousTool = toggleWithPreviousTool
         self.apply = apply
         self.dismiss = dismiss
         self.presentColorPicker = presentColorPicker
@@ -599,6 +608,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         private let deselectEntity: ActionSlot<Void>
         private let updateEntitiesPlayback: ActionSlot<Bool>
         private let dismissEyedropper: ActionSlot<Void>
+        private let toggleWithEraser: ActionSlot<Void>
+        private let toggleWithPreviousTool: ActionSlot<Void>
         private let present: (ViewController) -> Void
         
         var currentMode: Mode
@@ -610,14 +621,16 @@ private final class DrawingScreenComponent: CombinedComponent {
         var lastSize: CGFloat = 0.5
         
         private let stickerPickerInputData = Promise<StickerPickerInputData>()
-    
-        init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updateEntitiesPlayback: ActionSlot<Bool>, dismissEyedropper: ActionSlot<Void>, present: @escaping (ViewController) -> Void) {
+            
+        init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updateEntitiesPlayback: ActionSlot<Bool>, dismissEyedropper: ActionSlot<Void>, toggleWithEraser: ActionSlot<Void>, toggleWithPreviousTool: ActionSlot<Void>, present: @escaping (ViewController) -> Void) {
             self.context = context
             self.updateToolState = updateToolState
             self.insertEntity = insertEntity
             self.deselectEntity = deselectEntity
             self.updateEntitiesPlayback = updateEntitiesPlayback
             self.dismissEyedropper = dismissEyedropper
+            self.toggleWithEraser = toggleWithEraser
+            self.toggleWithPreviousTool = toggleWithPreviousTool
             self.present = present
             
             self.currentMode = .drawing
@@ -679,10 +692,26 @@ private final class DrawingScreenComponent: CombinedComponent {
                 
                 stickerPickerInputData.set(signal)
             })
-            
+                        
             super.init()
             
             self.loadToolState()
+            
+            self.toggleWithEraser.connect { [weak self] _ in
+                if let strongSelf = self {
+                    if strongSelf.drawingState.selectedTool == .eraser {
+                        strongSelf.updateSelectedTool(strongSelf.nextToEraserTool)
+                    } else {
+                        strongSelf.updateSelectedTool(.eraser)
+                    }
+                }
+            }
+            
+            self.toggleWithPreviousTool.connect { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.updateSelectedTool(strongSelf.previousTool)
+                }
+            }
         }
         
         func loadToolState() {
@@ -726,12 +755,25 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.updated(transition: animated ? .easeInOut(duration: 0.2) : .immediate)
         }
         
+        var previousTool: DrawingToolState.Key = .eraser
+        var nextToEraserTool: DrawingToolState.Key = .pen
+        
         func updateSelectedTool(_ tool: DrawingToolState.Key, update: Bool = true) {
             if self.selectedEntity != nil {
                 self.skipSelectedEntityUpdate = true
                 self.updateCurrentMode(.drawing, update: false)
                 self.skipSelectedEntityUpdate = false
             }
+            
+            if tool != self.drawingState.selectedTool {
+                if self.drawingState.selectedTool == .eraser {
+                    self.nextToEraserTool = tool
+                } else if tool == .eraser {
+                    self.nextToEraserTool = self.drawingState.selectedTool
+                }
+                self.previousTool = self.drawingState.selectedTool
+            }
+            
             self.drawingState = self.drawingState.withUpdatedSelectedTool(tool)
             self.currentColor = self.drawingState.currentToolState.color ?? self.currentColor
             self.updateToolState.invoke(self.drawingState.currentToolState)
@@ -893,7 +935,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, updateToolState: self.updateToolState, insertEntity: self.insertEntity, deselectEntity: self.deselectEntity, updateEntitiesPlayback: self.updateEntitiesPlayback, dismissEyedropper: self.dismissEyedropper, present: self.present)
+        return State(context: self.context, updateToolState: self.updateToolState, insertEntity: self.insertEntity, deselectEntity: self.deselectEntity, updateEntitiesPlayback: self.updateEntitiesPlayback, dismissEyedropper: self.dismissEyedropper, toggleWithEraser: self.toggleWithEraser, toggleWithPreviousTool: self.toggleWithPreviousTool, present: self.present)
     }
     
     static var body: Body {
@@ -953,10 +995,19 @@ private final class DrawingScreenComponent: CombinedComponent {
             let controller = environment.controller
             
             let strings = environment.strings
-            
+                        
             let previewBrushSize = component.previewBrushSize
             let performAction = component.performAction
             let dismissEyedropper = component.dismissEyedropper
+            
+            let apply = component.apply
+            let dismiss = component.dismiss
+            
+            let presentColorPicker = component.presentColorPicker
+            let presentFastColorPicker = component.presentFastColorPicker
+            let updateFastColorPickerPan = component.updateFastColorPickerPan
+            let dismissFastColorPicker = component.dismissFastColorPicker
+            let presentFontPicker = component.presentFontPicker
             
             component.updateState.connect { [weak state] updatedState in
                 state?.updateDrawingState(updatedState)
@@ -975,18 +1026,23 @@ private final class DrawingScreenComponent: CombinedComponent {
             component.updateSelectedEntity.connect { [weak state] entity in
                 state?.updateSelectedEntity(entity)
             }
-            
-            let apply = component.apply
-            let dismiss = component.dismiss
-            
-            let presentColorPicker = component.presentColorPicker
-            let presentFastColorPicker = component.presentFastColorPicker
-            let updateFastColorPickerPan = component.updateFastColorPickerPan
-            let dismissFastColorPicker = component.dismissFastColorPicker
-            let presentFontPicker = component.presentFontPicker
+            component.requestPresentColorPicker.connect { [weak state] _ in
+                if let state = state {
+                    presentColorPicker(state.currentColor)
+                }
+            }
                  
             let topInset = environment.safeInsets.top + 31.0
             let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
+            
+            var leftEdge: CGFloat = environment.safeInsets.left
+            var rightEdge: CGFloat = context.availableSize.width - environment.safeInsets.right
+            var availableWidth = context.availableSize.width
+            if case .regular = environment.metrics.widthClass {
+                availableWidth = 430.0
+                leftEdge = floorToScreenPixels((context.availableSize.width - availableWidth) / 2.0)
+                rightEdge = floorToScreenPixels((context.availableSize.width - availableWidth) / 2.0) + availableWidth
+            }
             
             let topGradient = topGradient.update(
                 component: BlurredGradientComponent(
@@ -1070,7 +1126,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         },
                         toggleKeyboard: nil
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - 84.0, height: 44.0),
+                    availableSize: CGSize(width: availableWidth - 84.0, height: 44.0),
                     transition: context.transition
                 )
                 context.add(textSettings
@@ -1091,8 +1147,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             }
             
 
-            let rightButtonPosition = context.availableSize.width - environment.safeInsets.right - 24.0
-            var offsetX: CGFloat = environment.safeInsets.left + 24.0
+            let rightButtonPosition = rightEdge - 24.0
+            var offsetX: CGFloat = leftEdge + 24.0
             let delta: CGFloat = (rightButtonPosition - offsetX) / 7.0
             
             let applySwatchColor: (DrawingColor) -> Void = { [weak state] color in
@@ -1351,7 +1407,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             previewBrushSize.invoke(nil)
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: 120.0),
+                    availableSize: CGSize(width: availableWidth - environment.safeInsets.left - environment.safeInsets.right, height: 120.0),
                     transition: context.transition
                 )
                 context.add(tools
@@ -1684,7 +1740,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(colorButton
-                .position(CGPoint(x: environment.safeInsets.left + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
+                .position(CGPoint(x: leftEdge + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
             )
@@ -1732,7 +1788,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: .immediate
             )
             context.add(addButton
-                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
+                .position(CGPoint(x: rightEdge - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
             )
@@ -1821,7 +1877,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         previewBrushSize.invoke(nil)
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - 57.0 - modeRightInset, height: context.availableSize.height),
+                availableSize: CGSize(width: availableWidth - 57.0 - modeRightInset, height: context.availableSize.height),
                 transition: context.transition
             )
             context.add(modeAndSize
@@ -1880,6 +1936,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private let updateEntitiesPlayback: ActionSlot<Bool>
         private let previewBrushSize: ActionSlot<CGFloat?>
         private let dismissEyedropper: ActionSlot<Void>
+        
+        private let requestPresentColorPicker: ActionSlot<Void>
+        private let toggleWithEraser: ActionSlot<Void>
+        private let toggleWithPreviousTool: ActionSlot<Void>
+        
         private let apply: ActionSlot<Void>
         private let dismiss: ActionSlot<Void>
         
@@ -1910,6 +1971,25 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 self._drawingView?.stateUpdated = { [weak self] state in
                     if let strongSelf = self {
                         strongSelf.updateState.invoke(state)
+                    }
+                }
+                self._drawingView?.requestedColorPicker = { [weak self] in
+                    if let strongSelf = self {
+                        if let _ = strongSelf.colorPickerScreen {
+                            strongSelf.dismissColorPicker()
+                        } else {
+                            strongSelf.requestPresentColorPicker.invoke(Void())
+                        }
+                    }
+                }
+                self._drawingView?.requestedEraserToggle = { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.toggleWithEraser.invoke(Void())
+                    }
+                }
+                self._drawingView?.requestedToolsToggle = { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.toggleWithPreviousTool.invoke(Void())
                     }
                 }
                 self.performAction.connect { [weak self] action in
@@ -2121,6 +2201,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             self.updateEntitiesPlayback = ActionSlot<Bool>()
             self.previewBrushSize = ActionSlot<CGFloat?>()
             self.dismissEyedropper = ActionSlot<Void>()
+            self.requestPresentColorPicker = ActionSlot<Void>()
+            self.toggleWithEraser = ActionSlot<Void>()
+            self.toggleWithPreviousTool = ActionSlot<Void>()
             self.apply = ActionSlot<Void>()
             self.dismiss = ActionSlot<Void>()
             
@@ -2234,6 +2317,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
         }
         
+        private weak var colorPickerScreen: ColorPickerScreen?
         func presentColorPicker(initialColor: DrawingColor, dismissed: @escaping () -> Void = {}) {
             self.dismissCurrentEyedropper()
             self.dismissFontPicker()
@@ -2250,6 +2334,14 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 dismissed()
             })
             controller.present(colorController, in: .window(.root))
+            self.colorPickerScreen = colorController
+        }
+        
+        func dismissColorPicker() {
+            if let colorPickerScreen = self.colorPickerScreen {
+                self.colorPickerScreen = nil
+                colorPickerScreen.dismiss()
+            }
         }
         
         private var fastColorPickerView: ColorSpectrumPickerView?
@@ -2525,6 +2617,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         updateEntitiesPlayback: self.updateEntitiesPlayback,
                         previewBrushSize: self.previewBrushSize,
                         dismissEyedropper: self.dismissEyedropper,
+                        requestPresentColorPicker: self.requestPresentColorPicker,
+                        toggleWithEraser: self.toggleWithEraser,
+                        toggleWithPreviousTool: self.toggleWithPreviousTool,
                         apply: self.apply,
                         dismiss: self.dismiss,
                         presentColorPicker: { [weak self] initialColor in
@@ -2881,10 +2976,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: orientation, transition: Transition(transition))
     }
     
-    public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, animated: Bool) {
+    public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {
         let layout = ContainerViewLayout(
             size: size,
-            metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact),
+            metrics: LayoutMetrics(widthClass: isRegular ? .regular : .compact, heightClass: isRegular ? .regular : .compact),
             deviceMetrics: DeviceMetrics(screenSize: size, scale: UIScreen.main.scale, statusBarHeight: statusBarHeight, onScreenNavigationHeight: nil),
             intrinsicInsets: intrinsicInsets,
             safeInsets: safeInsets,

@@ -35,7 +35,7 @@ private enum DrawingOperation {
     case removeEntity(DrawingEntity)
 }
 
-public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDrawingView {
+public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInteractionDelegate, TGPhotoDrawingView {
     public var zoomOut: () -> Void = {}
     
     struct NavigationState {
@@ -71,6 +71,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     var shouldBegin: (CGPoint) -> Bool = { _ in return true }
     var getFullImage: () -> UIImage? = { return nil }
     
+    var requestedColorPicker: () -> Void = {}
+    var requestedEraserToggle: () -> Void = {}
+    var requestedToolsToggle: () -> Void = {}
+    
     private var undoStack: [DrawingOperation] = []
     private var redoStack: [DrawingOperation] = []
     fileprivate var uncommitedElement: DrawingElement?
@@ -81,9 +85,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private var currentDrawingViewContainer: UIImageView
     private var currentDrawingRenderView: DrawingRenderView?
     private var currentDrawingLayer: DrawingRenderLayer?
-    
-    private var pannedSelectionView: UIView
-    
+        
     private var metalView: DrawingMetalView?
 
     private let brushSizePreviewLayer: SimpleShapeLayer
@@ -131,6 +133,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     private var previousPointTimestamp: Double?
     
+    private let pencilInteraction: UIInteraction?
+        
     init(size: CGSize) {
         self.imageSize = size
         self.screenSize = size
@@ -149,12 +153,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.currentDrawingViewContainer.backgroundColor = .clear
         self.currentDrawingViewContainer.isUserInteractionEnabled = false
         
-        self.pannedSelectionView = UIView()
-        self.pannedSelectionView.frame = CGRect(origin: .zero, size: size)
-        self.pannedSelectionView.contentScaleFactor = 1.0
-        self.pannedSelectionView.backgroundColor = .clear
-        self.pannedSelectionView.isUserInteractionEnabled = false
-        
         self.brushSizePreviewLayer = SimpleShapeLayer()
         self.brushSizePreviewLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 100.0, height: 100.0))
         self.brushSizePreviewLayer.strokeColor = UIColor(rgb: 0x919191).cgColor
@@ -166,10 +164,22 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.brushSizePreviewLayer.shadowOffset = CGSize(width: 0.0, height: 3.0)
         self.brushSizePreviewLayer.shadowRadius = 20.0
         
+        if #available(iOS 12.1, *) {
+            let pencilInteraction = UIPencilInteraction()
+            self.pencilInteraction = pencilInteraction
+        } else {
+            self.pencilInteraction = nil
+        }
+        
         super.init(frame: CGRect(origin: .zero, size: size))
     
         Queue.mainQueue().async {
             self.loadTemplates()
+        }
+        
+        if #available(iOS 12.1, *), let pencilInteraction = self.pencilInteraction as? UIPencilInteraction {
+            pencilInteraction.delegate = self
+            self.addInteraction(pencilInteraction)
         }
         
         self.backgroundColor = .clear
@@ -414,6 +424,20 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
+    }
+    
+    @available(iOS 12.1, *)
+    public func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+        switch UIPencilInteraction.preferredTapAction {
+        case .switchEraser:
+            self.requestedEraserToggle()
+        case .showColorPalette:
+            self.requestedColorPicker()
+        case .switchPrevious:
+            self.requestedToolsToggle()
+        default:
+            break
+        }
     }
         
     private var longPressTimer: SwiftSignalKit.Timer?

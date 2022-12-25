@@ -796,6 +796,7 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
                                             statusBarHeight:[_context statusBarFrame].size.height
                                                 inputHeight:_keyboardHeight
                                                 orientation:self.effectiveOrientation
+                                                  isRegular:[UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad
                                                    animated:animated];
     
 }

@@ -52,6 +52,7 @@ final class DrawingMetalView: MTKView {
         self.isPaused = true
         self.preferredFramesPerSecond = 60
         self.presentsWithTransaction = true
+        self.clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
         
         self.setup()
     }
@@ -179,9 +180,23 @@ final class DrawingMetalView: MTKView {
         commandBuffer?.commit()
         commandBuffer?.waitUntilScheduled()
         self.currentDrawable?.present()
-//        if let drawable = self.currentDrawable {
-//            commandBuffer?.present(drawable)
-//        }
+    }
+    
+    func reset() {
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        let attachment = renderPassDescriptor.colorAttachments[0]
+        attachment?.clearColor = clearColor
+        attachment?.texture = self.currentDrawable?.texture
+        attachment?.loadAction = .clear
+        attachment?.storeAction = .store
+
+        let commandBuffer = self.commandQueue.makeCommandBuffer()
+        let commandEncoder = commandBuffer?.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
+
+        commandEncoder?.endEncoding()
+        commandBuffer?.commit()
+        commandBuffer?.waitUntilScheduled()
+        self.currentDrawable?.present()
     }
         
     func clear() {
@@ -191,6 +206,7 @@ final class DrawingMetalView: MTKView {
         
         drawable.updateBuffer(with: self.size)
         drawable.clear()
+        self.reset()
     }
         
     enum BrushType {
