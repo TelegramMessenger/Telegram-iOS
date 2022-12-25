@@ -253,6 +253,9 @@
 "PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
 "PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
 
+"PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@ suggested you new profile photo";
+
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
 
@@ -8162,6 +8165,7 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchReactionsEmptyResult" = "No emoji found";
 "EmojiSearch.SearchStatusesPlaceholder" = "Search Statuses";
 "EmojiSearch.SearchStatusesEmptyResult" = "No emoji found";
+"EmojiSearch.SearchEmojiEmptyResult" = "No emoji found";
 
 "ChatList.StartAction" = "Start";
 "ChatList.CloseAction" = "Close";

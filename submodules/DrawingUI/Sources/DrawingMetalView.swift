@@ -3,10 +3,11 @@ import UIKit
 import QuartzCore
 import MetalKit
 import Display
+import SwiftSignalKit
 import AppBundle
 
 final class DrawingMetalView: MTKView {
-    private let size: CGSize
+    let size: CGSize
     
     private let commandQueue: MTLCommandQueue
     fileprivate let library: MTLLibrary
@@ -20,11 +21,6 @@ final class DrawingMetalView: MTKView {
     private var markerBrush: Brush?
     
     init?(size: CGSize) {
-        var size = size
-        if Int(size.width) % 16 != 0 {
-            size.width = ceil(size.width / 16.0) * 16.0
-        }
-        
         let mainBundle = Bundle(for: DrawingView.self)
         guard let path = mainBundle.path(forResource: "DrawingUIBundle", ofType: "bundle") else {
             return nil
@@ -49,13 +45,21 @@ final class DrawingMetalView: MTKView {
     
         super.init(frame: CGRect(origin: .zero, size: size), device: device)
         
+        self.drawableSize = self.size
         self.autoResizeDrawable = false
         self.isOpaque = false
         self.contentScaleFactor = 1.0
-        self.drawableSize = self.size
-        //self.presentsWithTransaction = true
+        self.isPaused = true
+        self.preferredFramesPerSecond = 60
+        self.presentsWithTransaction = true
         
         self.setup()
+    }
+    
+    override var isHidden: Bool {
+        didSet {
+            self.isPaused = self.isHidden
+        }
     }
     
     required init(coder: NSCoder) {
@@ -124,6 +128,13 @@ final class DrawingMetalView: MTKView {
         }
         
         self.drawable?.clear()
+        
+        Queue.mainQueue().after(0.1) {
+            self.markerBrush?.pushPoint(CGPoint(x: 100.0, y: 100.0), color: DrawingColor.clear, size: 0.0, isEnd: true)
+            Queue.mainQueue().after(0.1) {
+                self.clear()
+            }
+        }
     }
     
 
@@ -137,9 +148,6 @@ final class DrawingMetalView: MTKView {
     }
         
     override func draw(_ rect: CGRect) {
-        guard !self.isHidden || (self.drawable?.isClearing ?? false) else {
-            return
-        }
         super.draw(rect)
         
         guard let drawable = self.drawable, let texture = drawable.texture?.texture else {
@@ -168,10 +176,12 @@ final class DrawingMetalView: MTKView {
         commandEncoder?.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
         commandEncoder?.endEncoding()
-        if let drawable = self.currentDrawable {
-            commandBuffer?.present(drawable)
-        }
         commandBuffer?.commit()
+        commandBuffer?.waitUntilScheduled()
+        self.currentDrawable?.present()
+//        if let drawable = self.currentDrawable {
+//            commandBuffer?.present(drawable)
+//        }
     }
         
     func clear() {
@@ -187,17 +197,10 @@ final class DrawingMetalView: MTKView {
         case marker
     }
     
-    func updated(_ point: Polyline.Point, state: DrawingGesturePipeline.DrawingGestureState, brush: BrushType, color: DrawingColor, size: CGFloat) {
+    func updated(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, brush: BrushType, color: DrawingColor, size: CGFloat) {
         switch brush {
         case .marker:
             self.markerBrush?.updated(point, color: color, state: state, size: size)
-        }
-    }
-    
-    func setup(_ points: [CGPoint], brush: BrushType, color: DrawingColor, size: CGFloat) {
-        switch brush {
-        case .marker:
-            self.markerBrush?.setup(points, color: color, size: size)
         }
     }
 }
@@ -229,9 +232,7 @@ private class Drawable {
         self.updateBuffer(with: size)
     }
     
-    var isClearing = false
     func clear() {
-        self.isClearing = true
         self.texture?.clear()
         self.commit(wait: true)
     }
@@ -262,10 +263,6 @@ private class Drawable {
             self.commandBuffer?.waitUntilCompleted()
         }
         self.commandBuffer = nil
-        
-        if self.isClearing && wait {
-            self.isClearing = false
-        }
     }
     
     internal func makeTexture() -> Texture? {
@@ -364,7 +361,7 @@ private class Brush {
     }
                 
     private let bezier = BezierGenerator()
-    func updated(_ point: Polyline.Point, color: DrawingColor, state: DrawingGesturePipeline.DrawingGestureState, size: CGFloat) {
+    func updated(_ point: DrawingPoint, color: DrawingColor, state: DrawingGesturePipeline.DrawingGestureState, size: CGFloat) {
         let point = point.location
         switch state {
         case .began:
@@ -491,7 +488,7 @@ private class Stroke {
             
             let overlapping = max(1, line.pointSize / line.pointStep)
             var renderingColor = self.color
-            renderingColor.alpha = renderingColor.alpha / overlapping * 2.5
+            renderingColor.alpha = renderingColor.alpha / overlapping * 5.5
             
             for i in 0 ..< Int(count) {
                 let index = CGFloat(i)
@@ -524,30 +521,30 @@ class BezierGenerator {
     }
     
     init(beginPoint: CGPoint) {
-        begin(with: beginPoint)
+        self.begin(with: beginPoint)
     }
     
     func begin(with point: CGPoint) {
-        step = 0
-        points.removeAll()
-        points.append(point)
+        self.step = 0
+        self.points.removeAll()
+        self.points.append(point)
     }
     
     func pushPoint(_ point: CGPoint) -> [CGPoint] {
-        if point == points.last {
+        if point == self.points.last {
             return []
         }
-        points.append(point)
-        if points.count < 3 {
+        self.points.append(point)
+        if self.points.count < 3 {
             return []
         }
-        step += 1
+        self.step += 1
         return self.generateSmoothPathPoints()
     }
     
     func finish() {
-        step = 0
-        points.removeAll()
+        self.step = 0
+        self.points.removeAll()
     }
     
     var points: [CGPoint] = []
@@ -556,16 +553,16 @@ class BezierGenerator {
     private func generateSmoothPathPoints() -> [CGPoint] {
         var begin: CGPoint
         var control: CGPoint
-        let end = CGPoint.middle(p1: points[step], p2: points[step + 1])
+        let end = CGPoint.middle(p1: self.points[step], p2: self.points[self.step + 1])
 
         var vertices: [CGPoint] = []
-        if step == 1 {
-            begin = points[0]
-            let middle1 = CGPoint.middle(p1: points[0], p2: points[1])
-            control = CGPoint.middle(p1: middle1, p2: points[1])
+        if self.step == 1 {
+            begin = self.points[0]
+            let middle1 = CGPoint.middle(p1: self.points[0], p2: self.points[1])
+            control = CGPoint.middle(p1: middle1, p2: self.points[1])
         } else {
-            begin = CGPoint.middle(p1: points[step - 1], p2: points[step])
-            control = points[step]
+            begin = CGPoint.middle(p1: self.points[self.step - 1], p2: self.points[self.step])
+            control = self.points[self.step]
         }
         
         let distance = begin.distance(to: end)
@@ -573,9 +570,7 @@ class BezierGenerator {
 
         for i in 0 ..< segements {
             let t = CGFloat(i) / CGFloat(segements)
-            let x = pow(1 - t, 2) * begin.x + 2.0 * (1 - t) * t * control.x + t * t * end.x
-            let y = pow(1 - t, 2) * begin.y + 2.0 * (1 - t) * t * control.y + t * t * end.y
-            vertices.append(CGPoint(x: x, y: y))
+            vertices.append(begin.quadBezierPoint(to: end, controlPoint: control, t: t))
         }
         vertices.append(end)
         return vertices

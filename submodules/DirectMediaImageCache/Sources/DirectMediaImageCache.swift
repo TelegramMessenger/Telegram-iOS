@@ -345,14 +345,16 @@ public final class DirectMediaImageCache {
             return nil
         }
         
-        var resultImage: UIImage?
+        
         var blurredImage: UIImage?
+        if includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
+            blurredImage = blurredImageValue
+        }
+        
+        var resultImage: UIImage?
         for otherWidth in possibleWidths.reversed() {
             if otherWidth == width {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .square(width: otherWidth)))), let image = loadImage(data: data) {
-                    if blurredImage == nil, includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
-                        blurredImage = blurredImageValue
-                    }
                     return GetMediaResult(image: image, blurredImage: blurredImage, loadSignal: nil)
                 }
             } else {
@@ -369,16 +371,9 @@ public final class DirectMediaImageCache {
                 if let blurredImageValue = generateBlurredThumbnail(image: image) {
                     resultImage = blurredImageValue
                 }
-                if includeBlurred, let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
-                    blurredImage = blurredImageValue
-                }
             }
         }
         
-        if blurredImage == nil, includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
-            blurredImage = blurredImageValue
-        }
-
         return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: width, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
 
@@ -386,7 +381,17 @@ public final class DirectMediaImageCache {
         if synchronous {
             return self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths, includeBlurred: includeBlurred)
         } else {
-            return GetMediaResult(image: nil, blurredImage: nil, loadSignal: Signal { subscriber in
+            var immediateThumbnailData: Data?
+            if let image = media as? TelegramMediaImage {
+                immediateThumbnailData = image.immediateThumbnailData
+            } else if let file = media as? TelegramMediaFile {
+                immediateThumbnailData = file.immediateThumbnailData
+            }
+            var blurredImage: UIImage?
+            if includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
+                blurredImage = blurredImageValue
+            }
+            return GetMediaResult(image: nil, blurredImage: blurredImage, loadSignal: Signal { subscriber in
                 let result = self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths, includeBlurred: includeBlurred)
                 guard let result = result else {
                     subscriber.putNext(nil)

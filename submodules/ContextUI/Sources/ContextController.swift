@@ -52,7 +52,7 @@ public enum ContextMenuActionResult {
 public enum ContextMenuActionItemFont {
     case regular
     case small
-    case custom(UIFont)
+    case custom(font: UIFont, height: CGFloat?, verticalOffset: CGFloat?)
 }
 
 public struct ContextMenuActionItemIconSource {

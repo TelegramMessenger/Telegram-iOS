@@ -201,12 +201,16 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             self.titleLabelNode.lineSpacing = 0.1
         }
         
+        var forcedHeight: CGFloat?
+        var titleVerticalOffset: CGFloat?
         let titleFont: UIFont
         let titleBoldFont: UIFont
         switch self.item.textFont {
-        case let .custom(font):
+        case let .custom(font, height, verticalOffset):
             titleFont = font
             titleBoldFont = font
+            forcedHeight = height
+            titleVerticalOffset = verticalOffset
         case .small:
             let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
             titleFont = smallTextFont
@@ -320,15 +324,22 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         } else {
             minSize.width += sideInset
         }
-        minSize.height += verticalInset * 2.0
-        minSize.height += titleSize.height
-        if subtitle != nil {
-            minSize.height += titleSubtitleSpacing
-            minSize.height += subtitleSize.height
+        if let forcedHeight {
+            minSize.height = forcedHeight
+        } else {
+            minSize.height += verticalInset * 2.0
+            minSize.height += titleSize.height
+            if subtitle != nil {
+                minSize.height += titleSubtitleSpacing
+                minSize.height += subtitleSize.height
+            }
         }
         
         return (minSize: minSize, apply: { size, transition in
-            let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleSize)
+            var titleFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleSize)
+            if let titleVerticalOffset {
+                titleFrame = titleFrame.offsetBy(dx: 0.0, dy: titleVerticalOffset)
+            }
             let subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
             
             transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)

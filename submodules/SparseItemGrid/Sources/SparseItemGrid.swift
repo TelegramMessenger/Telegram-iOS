@@ -1159,9 +1159,17 @@ public final class SparseItemGrid: ASDisplayNode {
             self.coveringOffsetUpdated = coveringOffsetUpdated
 
             super.init()
+            
+            self.fromViewport.allowsGroupOpacity = true
+            self.toViewport.allowsGroupOpacity = true
 
             self.addSubnode(fromViewport)
             self.addSubnode(toViewport)
+        }
+        
+        deinit {
+            self.fromViewport.allowsGroupOpacity = false
+            self.toViewport.allowsGroupOpacity = false
         }
 
         func update(progress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {

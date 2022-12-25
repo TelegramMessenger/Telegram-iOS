@@ -23,7 +23,6 @@ final class PenTool: DrawingElement {
             self.contentMode = .redraw
             
             //let scale = CGSize(width: screenSize.width / max(1.0, size.width), height: screenSize.height / max(1.0, size.height))
-            
             let scale = CGSize(width: 0.33, height: 0.33)
             let viewSize = CGSize(width: size.width * scale.width, height: size.height * scale.height)
             
@@ -140,6 +139,7 @@ final class PenTool: DrawingElement {
                 parent.displaySize = rect.size
                 context.scaleBy(x: 1.0 / parent.drawScale.width, y: 1.0 / parent.drawScale.height)
                 element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
+                element.drawActiveSegments(in: context)
             }
         }
     }
@@ -153,7 +153,7 @@ final class PenTool: DrawingElement {
     
     let hasArrow: Bool
     let renderArrowLength: CGFloat
-    let renderArrowLineWidth: CGFloat
+    var renderArrowLineWidth: CGFloat
     
     let isEraser: Bool
     
@@ -179,7 +179,7 @@ final class PenTool: DrawingElement {
     }
     
     var bounds: CGRect {
-        return boundingRect(from: 0, to: self.segments.count).insetBy(dx: -20.0, dy: -20.0)
+        return normalizeDrawingRect(boundingRect(from: 0, to: self.segments.count).insetBy(dx: -20.0, dy: -20.0), drawingSize: self.drawingSize)
     }
     
     required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, hasArrow: Bool, isEraser: Bool, isBlur: Bool, blurredImage: UIImage?) {
@@ -228,42 +228,37 @@ final class PenTool: DrawingElement {
     func setupRenderLayer() -> DrawingRenderLayer? {
         return nil
     }
-    
-    var previousPoint: CGPoint?
-    func updatePath(_ path: DrawingGesturePipeline.DrawingResult, state: DrawingGesturePipeline.DrawingGestureState) {
-        guard case let .point(point) = path else {
-            return
+        
+    func updatePath(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) {
+        let result = self.addPoint(point, state: state, zoomScale: zoomScale)
+        let resetActiveRect = result?.0 ?? false
+        let updatedRect = result?.1
+        var combinedRect = updatedRect
+        if let previousActiveRect = self.previousActiveRect {
+            combinedRect = updatedRect?.union(previousActiveRect) ?? previousActiveRect
+        }
+        if resetActiveRect {
+            self.previousActiveRect = updatedRect
+        } else {
+            self.previousActiveRect = combinedRect
         }
         
-        let filterDistance: CGFloat = 20.0
-        if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.segments.count > 1 {
-            return
-        }
-        self.previousPoint = point.location
-        
-        var velocity = point.velocity
-        if velocity.isZero {
-            velocity = 1000.0
-        }
-        
-        var effectiveRenderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth - (velocity / 100.0), self.renderLineWidth))
-        if let previousRenderLineWidth = self.previousRenderLineWidth {
-            effectiveRenderLineWidth = effectiveRenderLineWidth * 0.2 + previousRenderLineWidth * 0.8
-        }
-        self.previousRenderLineWidth = effectiveRenderLineWidth
-        
-        let rect = append(point: Point(position: point.location, width: effectiveRenderLineWidth))
-        if let currentRenderView = self.currentRenderView as? RenderView, let rect = rect {
-            currentRenderView.draw(element: self, rect: rect)
+        if let currentRenderView = self.currentRenderView as? RenderView, let combinedRect {
+            currentRenderView.draw(element: self, rect: combinedRect)
         }
         
         if state == .ended {
+            if !self.activeSegments.isEmpty {
+                self.segments.append(contentsOf: self.activeSegments)
+                self.smoothPoints.append(contentsOf: self.activeSmoothPoints)
+            }
+            
             if self.hasArrow {
                 var direction: CGFloat?
                 if self.smoothPoints.count > 4 {
-                    let p2 = self.smoothPoints[self.smoothPoints.count - 1].position
+                    let p2 = self.smoothPoints[self.smoothPoints.count - 1].location
                     for i in 1 ..< min(self.smoothPoints.count - 2, 200) {
-                        let p1 = self.smoothPoints[self.smoothPoints.count - 1 - i].position
+                        let p1 = self.smoothPoints[self.smoothPoints.count - 1 - i].location
                         if p1.distance(to: p2) > self.renderArrowLength * 0.5 {
                             direction = p2.angle(to: p1)
                             break
@@ -271,7 +266,7 @@ final class PenTool: DrawingElement {
                     }
                 }
                 
-                self.arrowStart = self.smoothPoints.last?.position
+                self.arrowStart = self.smoothPoints.last?.location
                 self.arrowDirection = direction
                 self.maybeSetupArrow()
             } else if self.segments.isEmpty {
@@ -284,7 +279,7 @@ final class PenTool: DrawingElement {
                         d: CGPoint(x: point.x + radius, y: point.y + 0.1),
                         radius1: radius,
                         radius2: radius,
-                        rect: .zero
+                        rect: CGRect(origin: CGPoint(x: point.x - radius, y: point.y - radius), size: CGSize(width: radius * 2.0, height: radius * 2.0))
                     )
                 )
             }
@@ -303,6 +298,7 @@ final class PenTool: DrawingElement {
             
             self.arrowLeftPath = arrowLeftPath
             self.arrowRightPath = arrowRightPath
+            self.renderArrowLineWidth = self.smoothPoints.last?.width ?? self.renderArrowLineWidth
         }
     }
     
@@ -369,7 +365,15 @@ final class PenTool: DrawingElement {
         let radius2: CGFloat
         let rect: CGRect
                 
-        init(a: CGPoint, b: CGPoint, c: CGPoint, d: CGPoint, radius1: CGFloat, radius2: CGFloat, rect: CGRect) {
+        init(
+            a: CGPoint,
+            b: CGPoint,
+            c: CGPoint,
+            d: CGPoint,
+            radius1: CGFloat,
+            radius2: CGFloat,
+            rect: CGRect
+        ) {
             self.a = a
             self.b = b
             self.c = c
@@ -381,95 +385,185 @@ final class PenTool: DrawingElement {
     }
     
     private struct Point {
-        let position: CGPoint
+        let location: CGPoint
         let width: CGFloat
         
         init(
-            position: CGPoint,
+            location: CGPoint,
             width: CGFloat
         ) {
-            self.position = position
+            self.location = location
             self.width = width
         }
     }
     
-    private var points: [Point] = []
+    private var points: [Point] = Array(repeating: Point(location: .zero, width: 0.0), count: 4)
+    private var pointPtr = 0
+    
     private var smoothPoints: [Point] = []
+    private var activeSmoothPoints: [Point] = []
+    
     private var segments: [Segment] = []
+    private var activeSegments: [Segment] = []
+    
+    private var previousActiveRect: CGRect?
     
     private var previousRenderLineWidth: CGFloat?
-    
-    private func append(point: Point) -> CGRect? {
-        self.points.append(point)
         
-        guard self.points.count > 2 else { return nil }
+    private func addPoint(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) -> (Bool, CGRect)? {
+        let filterDistance: CGFloat = 10.0 / zoomScale
+                
+        var velocity = point.velocity
+        if velocity.isZero {
+            velocity = 1000.0
+        }
         
-        let index = self.points.count - 1
-        let point0 = self.points[index - 2]
-        let point1 = self.points[index - 1]
-        let point2 = self.points[index]
+        var renderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth - (velocity / 200.0), self.renderLineWidth))
+        if let previousRenderLineWidth = self.previousRenderLineWidth {
+            renderLineWidth = renderLineWidth * 0.3 + previousRenderLineWidth * 0.7
+        }
+        self.previousRenderLineWidth = renderLineWidth
+             
+        var resetActiveRect = false
+        var finalizedRect: CGRect?
+        if self.pointPtr == 0 {
+            self.points[0] = Point(location: point.location, width: renderLineWidth)
+            self.pointPtr += 1
+        } else {
+            let previousPoint = self.points[self.pointPtr - 1].location
+            guard previousPoint.distance(to: point.location) > filterDistance else {
+                return nil
+            }
+            
+            if self.pointPtr >= 4 {
+                self.points[3] = Point(
+                    location: self.points[2].location.point(to: point.location, t: 0.5),
+                    width: self.points[2].width
+                )
+                if var smoothPoints = self.currentSmoothPoints(3) {
+                    if let previousSmoothPoint = self.smoothPoints.last {
+                        smoothPoints.insert(previousSmoothPoint, at: 0)
+                    }
+                    let (segments, rect) = self.segments(fromSmoothPoints: smoothPoints)
+                    self.smoothPoints.append(contentsOf: smoothPoints)
+                    self.segments.append(contentsOf: segments)
+                    finalizedRect = rect
+                    
+                    self.activeSmoothPoints.removeAll()
+                    self.activeSegments.removeAll()
+                    
+                    resetActiveRect = true
+                }
+                
+                self.points[0] = self.points[3]
+                self.pointPtr = 1
+            }
+            
+            let point = Point(location: point.location, width: renderLineWidth)
+            self.points[self.pointPtr] = point
+            self.pointPtr += 1
+        }
         
-        var newSmoothPoints = self.smoothPoints(
-            fromPoint0: point0,
-            point1: point1,
-            point2: point2
-        )
+        guard let smoothPoints = self.currentSmoothPoints(self.pointPtr - 1) else {
+            if let finalizedRect {
+                return (resetActiveRect, finalizedRect)
+            } else {
+                return nil
+            }
+        }
         
-        let previousSmoothPoint = self.smoothPoints.last
-        self.smoothPoints.append(contentsOf: newSmoothPoints)
+        let (segments, rect) = self.segments(fromSmoothPoints: smoothPoints)
+        self.activeSmoothPoints = smoothPoints
+        self.activeSegments = segments
         
-        guard self.smoothPoints.count > 1 else {
+        var combinedRect: CGRect?
+        if let finalizedRect, let rect {
+            combinedRect = finalizedRect.union(rect)
+        } else {
+            combinedRect = rect ?? finalizedRect
+        }
+        if let combinedRect {
+            return (resetActiveRect, combinedRect)
+        } else {
             return nil
         }
-        
-        if let previousSmoothPoint = previousSmoothPoint {
-            newSmoothPoints.insert(previousSmoothPoint, at: 0)
-        }
-        let (nextSegments, rect) = self.segments(fromSmoothPoints: newSmoothPoints)
-        self.segments.append(contentsOf: nextSegments)
-        
-        for i in self.segments.count - nextSegments.count ..< self.segments.count {
-            let segment = self.segments[i]
-            let path = self.pathForSegment(segment)
-            self.segmentPaths[i] = path
-        }
-                
-        return rect
     }
     
-    private func smoothPoints(fromPoint0 point0: Point, point1: Point, point2: Point) -> [Point] {
-        var smoothPoints: [Point] = []
+    private func currentSmoothPoints(_ ctr: Int) -> [Point]? {
+        switch ctr {
+        case 0:
+            return [self.points[0]]
+        case 1:
+            return self.smoothPoints(.line(self.points[0], self.points[1]))
+        case 2:
+            return self.smoothPoints(.quad(self.points[0], self.points[1], self.points[2]))
+        case 3:
+            return self.smoothPoints(.cubic(self.points[0], self.points[1], self.points[2], self.points[3]))
+        default:
+            return nil
+        }
+    }
         
-        let midPoint1 = CGPoint(
-            x: (point0.position.x + point1.position.x) * 0.5,
-            y: (point0.position.y + point1.position.y) * 0.5
-        )
-        let midPoint2 = CGPoint(
-            x: (point1.position.x + point2.position.x) * 0.5,
-            y: (point1.position.y + point2.position.y) * 0.5
-        )
+    private enum SmootherInput {
+        case line(Point, Point)
+        case quad(Point, Point, Point)
+        case cubic(Point, Point, Point, Point)
         
-        let midWidth1 = (point0.width + point1.width) * 0.5
-        let midWidth2 = (point1.width + point2.width) * 0.5
+        var start: Point {
+            switch self {
+            case let .line(start, _), let .quad(start, _, _), let .cubic(start, _, _, _):
+                return start
+            }
+        }
         
+        var end: Point {
+            switch self {
+            case let .line(_, end), let .quad(_, _, end), let .cubic(_, _, _, end):
+                return end
+            }
+        }
+        
+        var distance: CGFloat {
+            return self.start.location.distance(to: self.end.location)
+        }
+    }
+    private func smoothPoints(_ input: SmootherInput) -> [Point] {
         let segmentDistance: CGFloat = 6.0
-        let distance = midPoint1.distance(to: midPoint2)
+        let distance = input.distance
         let numberOfSegments = min(48, max(floor(distance / segmentDistance), 24))
         
         let step = 1.0 / numberOfSegments
+        
+        var smoothPoints: [Point] = []
         for t in stride(from: 0, to: 1, by: step) {
-            let x = midPoint1.x * pow(1 - t, 2) + point1.position.x * 2.0 * (1 - t) * t + midPoint2.x * t * t
-            let y = midPoint1.y * pow(1 - t, 2) + point1.position.y * 2.0 * (1 - t) * t + midPoint2.y * t * t
-            let w = midWidth1 * pow(1 - t, 2) + point1.width * 2.0 * (1 - t) * t + midWidth2 * t * t
-         
-            smoothPoints.append(Point(position: CGPoint(x: x, y: y), width: w))
+            let point: Point
+            switch input {
+            case let .line(start, end):
+                point = Point(
+                    location: start.location.linearBezierPoint(to: end.location, t: t),
+                    width: CGPoint(x: start.width, y: 0.0).linearBezierPoint(to: CGPoint(x: end.width, y: 0.0), t: t).x
+                )
+            case let .quad(start, control, end):
+                let location = start.location.quadBezierPoint(to: end.location, controlPoint: control.location, t: t)
+                let width = CGPoint(x: start.width, y: 0.0).quadBezierPoint(to: CGPoint(x: end.width, y: 0.0), controlPoint: CGPoint(x: (start.width + end.width) / 2.0, y: 0.0), t: t).x
+                point = Point(
+                    location: location,
+                    width: width
+                )
+            case let .cubic(start, control1, control2, end):
+                let location = start.location.cubicBezierPoint(to: end.location, controlPoint1: control1.location, controlPoint2: control2.location, t: t)
+                let width = CGPoint(x: start.width, y: 0.0).cubicBezierPoint(to: CGPoint(x: end.width, y: 0.0), controlPoint1: CGPoint(x: (start.width + control1.width) / 2.0, y: 0.0), controlPoint2: CGPoint(x: (control2.width + end.width) / 2.0, y: 0.0), t: t).x
+                point = Point(
+                    location: location,
+                    width: width
+                )
+            }
+            smoothPoints.append(point)
         }
-        
-        smoothPoints.append(Point(position: midPoint2, width: midWidth2))
-        
+        smoothPoints.append(input.end)
         return smoothPoints
     }
-    
+
     fileprivate func boundingRect(from: Int, to: Int) -> CGRect {
         var minX: CGFloat = .greatestFiniteMagnitude
         var minY: CGFloat = .greatestFiniteMagnitude
@@ -500,9 +594,9 @@ final class PenTool: DrawingElement {
         var segments: [Segment] = []
         var updateRect = CGRect.null
         for i in 1 ..< smoothPoints.count {
-            let previousPoint = smoothPoints[i - 1].position
+            let previousPoint = smoothPoints[i - 1].location
             let previousWidth = smoothPoints[i - 1].width
-            let currentPoint = smoothPoints[i].position
+            let currentPoint = smoothPoints[i].location
             let currentWidth = smoothPoints[i].width
             let direction = CGPoint(
                 x: currentPoint.x - previousPoint.x,
@@ -638,5 +732,14 @@ final class PenTool: DrawingElement {
             context.fillPath()
         }
     }
+    
+    private func drawActiveSegments(in context: CGContext) {
+        context.setFillColor(self.renderColor.cgColor)
+        
+        for segment in self.activeSegments {
+            let path = self.pathForSegment(segment)
+            context.addPath(path)
+            context.fillPath()
+        }
+    }
 }
-

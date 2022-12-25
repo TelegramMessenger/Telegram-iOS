@@ -448,11 +448,13 @@ class SpoilerOverlayNode: ASDisplayNode {
     override init() {
         self.blurNode = ASImageNode()
         self.blurNode.displaysAsynchronously = false
+        self.blurNode.contentMode = .scaleAspectFill
          
         self.dustNode = MediaDustNode()
         
         super.init()
         
+        self.clipsToBounds = true
         self.isUserInteractionEnabled = false
                 
         self.addSubnode(self.blurNode)

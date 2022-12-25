@@ -44,7 +44,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     
     init(file: TelegramMediaFile) {
         self.uuid = UUID()
-        self.isAnimated = file.isAnimatedSticker
+        self.isAnimated = file.isAnimatedSticker || file.isVideoSticker
         
         self.file = file
         
