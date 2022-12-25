@@ -1664,7 +1664,6 @@ final class StorageUsageScreenComponent: Component {
             }
             
             self.statsDisposable = (component.context.engine.resources.collectStorageUsageStats()
-                                    |> delay(0.18, queue: .mainQueue())
             |> deliverOnMainQueue).start(next: { [weak self] stats in
                 guard let self, let component = self.component else {
                     completion()
