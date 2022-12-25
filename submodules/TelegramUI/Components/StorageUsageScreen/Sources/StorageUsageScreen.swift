@@ -289,6 +289,8 @@ final class StorageUsageScreenComponent: Component {
         
         private var clearingNode: StorageUsageClearProgressOverlayNode?
         
+        private var loadingView: UIActivityIndicatorView?
+        
         private var component: StorageUsageScreenComponent?
         private weak var state: EmptyComponentState?
         private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
@@ -466,6 +468,40 @@ final class StorageUsageScreenComponent: Component {
             self.state = state
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            
+            if self.currentStats == nil {
+                let loadingView: UIActivityIndicatorView
+                if let current = self.loadingView {
+                    loadingView = current
+                } else {
+                    let style: UIActivityIndicatorView.Style
+                    if environment.theme.overallDarkAppearance {
+                        style = .whiteLarge
+                    } else {
+                        if #available(iOS 13.0, *) {
+                            style = .large
+                        } else {
+                            style = .gray
+                        }
+                    }
+                    loadingView = UIActivityIndicatorView(style: style)
+                    self.loadingView = loadingView
+                    loadingView.sizeToFit()
+                    self.insertSubview(loadingView, belowSubview: self.scrollView)
+                }
+                let loadingViewSize = loadingView.bounds.size
+                transition.setFrame(view: loadingView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - loadingViewSize.width) / 2.0), y: floor((availableSize.height - loadingViewSize.height) / 2.0)), size: loadingViewSize))
+                if !loadingView.isAnimating {
+                    loadingView.startAnimating()
+                }
+            } else {
+                if let loadingView = self.loadingView {
+                    self.loadingView = nil
+                    loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingView] _ in
+                        loadingView?.removeFromSuperview()
+                    })
+                }
+            }
             
             if self.statsDisposable == nil {
                 let context = component.context
