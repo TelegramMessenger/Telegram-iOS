@@ -719,6 +719,7 @@ public final class StorageBox {
             let idKey = ValueBoxKey(length: 16 + 8)
             
             let mainKey = ValueBoxKey(length: 16)
+            var processedIds = Set<Data>()
             self.valueBox.scan(self.peerIdToIdTable, keys: { key in
                 let peerId = key.getInt64(0)
                 if peerId == 0 {
@@ -726,6 +727,10 @@ public final class StorageBox {
                 }
                 
                 let hashId = key.getData(8, length: 16)
+                if processedIds.contains(hashId) {
+                    return true
+                }
+                processedIds.insert(hashId)
                 
                 mainKey.setData(0, value: hashId)
                 if let currentInfoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
@@ -749,7 +754,7 @@ public final class StorageBox {
                             }
                             
                             return true
-                        }, limit: 0)
+                        }, limit: 1)
                     }
                 }
                 
