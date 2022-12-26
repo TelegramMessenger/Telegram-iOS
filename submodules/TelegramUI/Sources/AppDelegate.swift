@@ -1321,6 +1321,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         }
                         
                         disposable.set(signals.start(completed: {
+                            Logger.shared.log("App \(self.episodeId)", "Completed cleanup task")
+                            
                             task.setTaskCompleted(success: true)
                         }))
                     })
