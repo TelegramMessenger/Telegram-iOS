@@ -22,6 +22,70 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramStringFormatting
 
+#if DEBUG
+import os.signpost
+
+private class SignpostContext {
+    enum EventType {
+        case begin
+        case end
+    }
+    
+    class OpaqueData {
+    }
+    
+    static var shared: SignpostContext? = {
+        if #available(iOS 15.0, *) {
+            return SignpostContextImpl()
+        } else {
+            return nil
+        }
+    }()
+    
+    func begin(name: StaticString) -> OpaqueData {
+        preconditionFailure()
+    }
+    
+    func end(name: StaticString, data: OpaqueData) {
+    }
+}
+
+@available(iOS 15.0, *)
+private final class SignpostContextImpl: SignpostContext {
+    final class OpaqueDataImpl: OpaqueData {
+        let state: OSSignpostIntervalState
+        let timestamp: Double
+        
+        init(state: OSSignpostIntervalState, timestamp: Double) {
+            self.state = state
+            self.timestamp = timestamp
+        }
+    }
+    
+    private let signpost = OSSignposter(subsystem: "org.telegram.Telegram-iOS", category: "StorageUsageScreen")
+    private let id: OSSignpostID
+    
+    override init() {
+        self.id = self.signpost.makeSignpostID()
+        
+        super.init()
+    }
+    
+    override func begin(name: StaticString) -> OpaqueData {
+        let result = self.signpost.beginInterval(name, id: self.id)
+        return OpaqueDataImpl(state: result, timestamp: CFAbsoluteTimeGetCurrent())
+    }
+    
+    override func end(name: StaticString, data: OpaqueData) {
+        if let data = data as? OpaqueDataImpl {
+            self.signpost.endInterval(name, data.state)
+            print("Signpost \(name): \((CFAbsoluteTimeGetCurrent() - data.timestamp) * 1000.0) ms")
+        }
+    }
+}
+
+#endif
+
 private extension StorageUsageScreenComponent.Category {
     init(_ category: StorageUsageStats.CategoryKey) {
         switch category {
@@ -225,7 +289,7 @@ final class StorageUsageScreenComponent: Component {
         private var cacheSettingsExceptionCount: [CacheStorageSettings.PeerStorageCategory: Int32]?
         
         private var peerItems: StoragePeerListPanelComponent.Items?
-        private var imageItems: StorageFileListPanelComponent.Items?
+        private var imageItems: StorageMediaGridPanelComponent.Items?
         private var fileItems: StorageFileListPanelComponent.Items?
         private var musicItems: StorageFileListPanelComponent.Items?
         
@@ -629,11 +693,21 @@ final class StorageUsageScreenComponent: Component {
                             return
                         }
                         if self.selectionState == nil {
+                            #if DEBUG
+                            let signpostState = SignpostContext.shared?.begin(name: "edit")
+                            #endif
+                            
                             self.selectionState = SelectionState(
                                 selectedPeers: Set(),
                                 selectedMessages: Set()
                             )
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            
+                            #if DEBUG
+                            if let signpostState {
+                                SignpostContext.shared?.end(name: "edit", data: signpostState)
+                            }
+                            #endif
                         }
                     }
                 ).minSize(CGSize(width: 16.0, height: environment.navigationHeight - environment.statusBarHeight))),
@@ -1483,7 +1557,7 @@ final class StorageUsageScreenComponent: Component {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "images",
                     title: environment.strings.StorageManagement_TabMedia,
-                    panel: AnyComponent(StorageFileListPanelComponent(
+                    panel: AnyComponent(StorageMediaGridPanelComponent(
                         context: component.context,
                         items: self.imageItems,
                         selectionState: self.selectionState,
@@ -1716,7 +1790,7 @@ final class StorageUsageScreenComponent: Component {
                 
                 class RenderResult {
                     var messages: [MessageId: Message] = [:]
-                    var imageItems: [StorageFileListPanelComponent.Item] = []
+                    var imageItems: [StorageMediaGridPanelComponent.Item] = []
                     var fileItems: [StorageFileListPanelComponent.Item] = []
                     var musicItems: [StorageFileListPanelComponent.Item] = []
                 }
@@ -1755,7 +1829,7 @@ final class StorageUsageScreenComponent: Component {
                                 }
                                 
                                 if matches {
-                                    result.imageItems.append(StorageFileListPanelComponent.Item(
+                                    result.imageItems.append(StorageMediaGridPanelComponent.Item(
                                         message: message,
                                         size: messageSize
                                     ))
@@ -1846,7 +1920,7 @@ final class StorageUsageScreenComponent: Component {
                     
                     self.currentMessages = result.messages
                     
-                    self.imageItems = StorageFileListPanelComponent.Items(items: result.imageItems)
+                    self.imageItems = StorageMediaGridPanelComponent.Items(items: result.imageItems)
                     self.fileItems = StorageFileListPanelComponent.Items(items: result.fileItems)
                     self.musicItems = StorageFileListPanelComponent.Items(items: result.musicItems)
                     
@@ -1905,6 +1979,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.StorageManagement_ClearConfirmationText, parseMarkdown: true),
                 ActionSheetButtonItem(title: clearTitle, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     

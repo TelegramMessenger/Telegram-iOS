@@ -1371,7 +1371,7 @@ public func mediaGridMessagePhoto(account: Account, userLocation: MediaResourceU
         let fullSizeData = value._1
         let fullSizeComplete = value._3
         return { arguments in
-            guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+            guard let context = DrawingContext(size: arguments.drawingSize, opaque: arguments.corners.isEmpty && arguments.intrinsicInsets == .zero, clear: true) else {
                 return nil
             }
             
@@ -1951,7 +1951,7 @@ public func chatWebpageSnippetFile(account: Account, userLocation: MediaResource
             }
             
             if let fullSizeImage = fullSizeImage ?? (blurredImage?.cgImage) {
-                guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                guard let context = DrawingContext(size: arguments.drawingSize, opaque: arguments.corners.isEmpty && arguments.intrinsicInsets == .zero, clear: true) else {
                     return nil
                 }
                 
@@ -1980,7 +1980,7 @@ public func chatWebpageSnippetFile(account: Account, userLocation: MediaResource
                 return context
             } else {
                 if let emptyColor = arguments.emptyColor {
-                    guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                    guard let context = DrawingContext(size: arguments.drawingSize, opaque: arguments.corners.isEmpty && arguments.intrinsicInsets == .zero, clear: true) else {
                         return nil
                     }
                     
