@@ -236,7 +236,7 @@ private final class PeerListItemComponent: Component {
             
             let previousTitleFrame = self.title.view?.frame
             var previousTitleContents: UIView?
-            if hasSelectionUpdated {
+            if hasSelectionUpdated && !"".isEmpty {
                 previousTitleContents = self.title.view?.snapshotView(afterScreenUpdates: false)
             }
             
