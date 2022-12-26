@@ -113,15 +113,18 @@ final class StorageUsageScreenComponent: Component {
     let context: AccountContext
     let makeStorageUsageExceptionsScreen: (CacheStorageSettings.PeerStorageCategory) -> ViewController?
     let peer: EnginePeer?
+    let ready: Promise<Bool>
     
     init(
         context: AccountContext,
         makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?,
-        peer: EnginePeer?
+        peer: EnginePeer?,
+        ready: Promise<Bool>
     ) {
         self.context = context
         self.makeStorageUsageExceptionsScreen = makeStorageUsageExceptionsScreen
         self.peer = peer
+        self.ready = ready
     }
     
     static func ==(lhs: StorageUsageScreenComponent, rhs: StorageUsageScreenComponent) -> Bool {
@@ -562,9 +565,13 @@ final class StorageUsageScreenComponent: Component {
             } else {
                 if let loadingView = self.loadingView {
                     self.loadingView = nil
-                    loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingView] _ in
-                        loadingView?.removeFromSuperview()
-                    })
+                    if environment.isVisible {
+                        loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingView] _ in
+                            loadingView?.removeFromSuperview()
+                        })
+                    } else {
+                        loadingView.removeFromSuperview()
+                    }
                 }
             }
             
@@ -651,7 +658,12 @@ final class StorageUsageScreenComponent: Component {
             
             if let animationHint {
                 if case .firstStatsUpdate = animationHint.value {
-                    let alphaTransition: Transition = .easeInOut(duration: 0.25)
+                    let alphaTransition: Transition
+                    if environment.isVisible {
+                        alphaTransition = .easeInOut(duration: 0.25)
+                    } else {
+                        alphaTransition = .immediate
+                    }
                     alphaTransition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
                     alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
                 } else if case .clearedItems = animationHint.value {
@@ -1786,6 +1798,7 @@ final class StorageUsageScreenComponent: Component {
                 if firstTime {
                     self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
                     self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .firstStatsUpdate)))
+                    self.component?.ready.set(.single(true))
                 }
                 
                 class RenderResult {
@@ -2356,16 +2369,24 @@ final class StorageUsageScreenComponent: Component {
 public final class StorageUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
+    private let readyValue = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self.readyValue
+    }
+    
     fileprivate var childCompleted: ((@escaping () -> Void) -> Void)?
     
     public init(context: AccountContext, makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?, peer: EnginePeer? = nil) {
         self.context = context
         
-        super.init(context: context, component: StorageUsageScreenComponent(context: context, makeStorageUsageExceptionsScreen: makeStorageUsageExceptionsScreen, peer: peer), navigationBarAppearance: .transparent)
+        let componentReady = Promise<Bool>()
+        super.init(context: context, component: StorageUsageScreenComponent(context: context, makeStorageUsageExceptionsScreen: makeStorageUsageExceptionsScreen, peer: peer, ready: componentReady), navigationBarAppearance: .transparent)
         
         if peer != nil {
             self.navigationPresentation = .modal
         }
+        
+        self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
     }
     
     required public init(coder aDecoder: NSCoder) {
