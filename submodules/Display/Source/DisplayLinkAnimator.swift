@@ -1,6 +1,153 @@
 import Foundation
 import UIKit
 
+public final class SharedDisplayLinkDriver {
+    public static let shared = SharedDisplayLinkDriver()
+    
+    public final class Link {
+        private let driver: SharedDisplayLinkDriver
+        public let needsHighestFramerate: Bool
+        let update: () -> Void
+        var isValid: Bool = true
+        public var isPaused: Bool = false {
+            didSet {
+                if self.isPaused != oldValue {
+                    driver.requestUpdate()
+                }
+            }
+        }
+        
+        init(driver: SharedDisplayLinkDriver, needsHighestFramerate: Bool, update: @escaping () -> Void) {
+            self.driver = driver
+            self.needsHighestFramerate = needsHighestFramerate
+            self.update = update
+        }
+        
+        public func invalidate() {
+            self.isValid = false
+        }
+    }
+    
+    private final class RequestContext {
+        weak var link: Link?
+        
+        init(link: Link) {
+            self.link = link
+        }
+    }
+    
+    private var displayLink: CADisplayLink?
+    private var hasRequestedHighestFramerate: Bool = false
+    private var requests: [RequestContext] = []
+    
+    private var isInForeground: Bool = false
+    
+    private init() {
+        let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.isInForeground = true
+            self.update()
+        })
+        let _ = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.isInForeground = false
+            self.update()
+        })
+        
+        switch UIApplication.shared.applicationState {
+        case .active:
+            self.isInForeground = true
+        default:
+            self.isInForeground = false
+        }
+        
+        self.update()
+    }
+    
+    private func requestUpdate() {
+        self.update()
+    }
+    
+    private func update() {
+        var hasActiveItems = false
+        var needHighestFramerate = false
+        for request in self.requests {
+            if let link = request.link {
+                needHighestFramerate = link.needsHighestFramerate
+                if link.isValid && !link.isPaused {
+                    hasActiveItems = true
+                    break
+                }
+            }
+        }
+        
+        if self.isInForeground && hasActiveItems {
+            let displayLink: CADisplayLink
+            if let current = self.displayLink {
+                displayLink = current
+            } else {
+                displayLink = CADisplayLink(target: self, selector: #selector(self.displayLinkEvent))
+                self.displayLink = displayLink
+                displayLink.add(to: .main, forMode: .common)
+            }
+            if #available(iOS 15.0, *) {
+                let frameRateRange: CAFrameRateRange
+                if needHighestFramerate {
+                    frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
+                } else {
+                    frameRateRange = .default
+                }
+                if displayLink.preferredFrameRateRange != frameRateRange {
+                    displayLink.preferredFrameRateRange = frameRateRange
+                }
+            }
+            displayLink.isPaused = false
+        } else {
+            if let displayLink = self.displayLink {
+                self.displayLink = nil
+                displayLink.invalidate()
+            }
+        }
+    }
+    
+    @objc private func displayLinkEvent() {
+        var removeIndices: [Int]?
+        for i in 0 ..< self.requests.count {
+            if let link = self.requests[i].link, link.isValid {
+                link.update()
+            } else {
+                if removeIndices == nil {
+                    removeIndices = [i]
+                } else {
+                    removeIndices?.append(i)
+                }
+            }
+        }
+        if let removeIndices = removeIndices {
+            for index in removeIndices.reversed() {
+                self.requests.remove(at: index)
+            }
+            
+            if self.requests.isEmpty {
+                self.update()
+            }
+        }
+    }
+    
+    public func add(needsHighestFramerate: Bool = true, _ update: @escaping () -> Void) -> Link {
+        let link = Link(driver: self, needsHighestFramerate: needsHighestFramerate, update: update)
+        self.requests.append(RequestContext(link: link))
+        
+        self.update()
+        
+        return link
+    }
+}
+
 public final class DisplayLinkTarget: NSObject {
     private let f: () -> Void
     
@@ -14,7 +161,7 @@ public final class DisplayLinkTarget: NSObject {
 }
 
 public final class DisplayLinkAnimator {
-    private var displayLink: CADisplayLink!
+    private var displayLink: SharedDisplayLinkDriver.Link?
     private let duration: Double
     private let fromValue: CGFloat
     private let toValue: CGFloat
@@ -32,21 +179,20 @@ public final class DisplayLinkAnimator {
         
         self.startTime = CACurrentMediaTime()
         
-        self.displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
+        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
             self?.tick()
-        }), selector: #selector(DisplayLinkTarget.event))
-        self.displayLink.isPaused = false
-        self.displayLink.add(to: RunLoop.main, forMode: .common)
+        }
+        self.displayLink?.isPaused = false
     }
     
     deinit {
-        self.displayLink.isPaused = true
-        self.displayLink.invalidate()
+        self.displayLink?.isPaused = true
+        self.displayLink?.invalidate()
     }
     
     public func invalidate() {
-        self.displayLink.isPaused = true
-        self.displayLink.invalidate()
+        self.displayLink?.isPaused = true
+        self.displayLink?.invalidate()
     }
     
     @objc private func tick() {
@@ -60,14 +206,14 @@ public final class DisplayLinkAnimator {
         self.update(self.fromValue * CGFloat(1 - t) + self.toValue * CGFloat(t))
         if abs(t - 1.0) < Double.ulpOfOne {
             self.completed = true
-            self.displayLink.isPaused = true
+            self.displayLink?.isPaused = true
             self.completion()
         }
     }
 }
 
 public final class ConstantDisplayLinkAnimator {
-    private var displayLink: CADisplayLink?
+    private var displayLink: SharedDisplayLinkDriver.Link?
     private let update: () -> Void
     private var completed = false
     
@@ -81,26 +227,16 @@ public final class ConstantDisplayLinkAnimator {
         guard let displayLink = self.displayLink else {
             return
         }
-        if self.frameInterval == 1 {
-            if #available(iOS 15.0, *) {
-                self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
-            }
-        } else {
-            displayLink.preferredFramesPerSecond = 30
-        }
+        let _ = displayLink
     }
     
     public var isPaused: Bool = true {
         didSet {
             if self.isPaused != oldValue {
                 if !self.isPaused && self.displayLink == nil {
-                    let displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
+                    let displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
                         self?.tick()
-                    }), selector: #selector(DisplayLinkTarget.event))
-                    /*if #available(iOS 15.0, *) {
-                        self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
-                    }*/
-                    displayLink.add(to: RunLoop.main, forMode: .common)
+                    }
                     self.displayLink = displayLink
                     self.updateDisplayLink()
                 }

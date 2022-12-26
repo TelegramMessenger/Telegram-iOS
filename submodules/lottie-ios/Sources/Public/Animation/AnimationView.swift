@@ -412,14 +412,14 @@ final public class AnimationView: AnimationViewBase {
                                 self.f()
                             }
                         }
-                        self.workaroundDisplayLink = CADisplayLink(target: WorkaroundDisplayLinkTarget { [weak self] in
+                        /*self.workaroundDisplayLink = CADisplayLink(target: WorkaroundDisplayLinkTarget { [weak self] in
                             let _ = self?.realtimeAnimationProgress
                         }, selector: #selector(WorkaroundDisplayLinkTarget.update))
                         if #available(iOS 15.0, *) {
                           let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
                             self.workaroundDisplayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
                         }
-                        self.workaroundDisplayLink?.add(to: .main, forMode: .common)
+                        self.workaroundDisplayLink?.add(to: .main, forMode: .common)*/
                     }
                 } else {
                     if let workaroundDisplayLink = self.workaroundDisplayLink {
@@ -1305,12 +1305,6 @@ final public class AnimationView: AnimationViewBase {
     layerAnimation.fillMode = CAMediaTimingFillMode.both
     layerAnimation.repeatCount = loopMode.caAnimationConfiguration.repeatCount
     layerAnimation.autoreverses = loopMode.caAnimationConfiguration.autoreverses
-    if #available(iOS 15.0, *) {
-      let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-      if maxFps > 61.0 {
-          layerAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
-      }
-    }
 
     layerAnimation.isRemovedOnCompletion = false
     if timeOffset != 0 {

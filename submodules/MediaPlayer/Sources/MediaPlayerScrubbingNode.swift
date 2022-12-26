@@ -300,7 +300,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
 public final class MediaPlayerScrubbingNode: ASDisplayNode {
     private var contentNodes: MediaPlayerScrubbingNodeContentNodes
     
-    private var displayLink: CADisplayLink?
+    private var displayLink: SharedDisplayLinkDriver.Link?
     private var isInHierarchyValue: Bool = false
     
     private var playbackStatusValue: MediaPlayerPlaybackStatus?
@@ -798,20 +798,9 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         
         if needsAnimation {
             if self.displayLink == nil {
-                class DisplayLinkProxy: NSObject {
-                    var f: () -> Void
-                    init(_ f: @escaping () -> Void) {
-                        self.f = f
-                    }
-                    
-                    @objc func displayLinkEvent() {
-                        self.f()
-                    }
-                }
-                let displayLink = CADisplayLink(target: DisplayLinkProxy({ [weak self] in
+                let displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
                     self?.updateProgress()
-                }), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-                displayLink.add(to: .main, forMode: RunLoop.Mode.common)
+                }
                 self.displayLink = displayLink
             }
             self.displayLink?.isPaused = false
