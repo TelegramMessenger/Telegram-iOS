@@ -800,7 +800,7 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
     }
 }
 
-private func chatMessagePhotoThumbnailDatas(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, onlyFullSize: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+private func chatMessagePhotoThumbnailDatas(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, onlyFullSize: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     let fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0)
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(PixelDimensions(width: Int32(fullRepresentationSize.width), height: Int32(fullRepresentationSize.height))) {
         
@@ -810,7 +810,7 @@ private func chatMessagePhotoThumbnailDatas(account: Account, userLocation: Medi
         let signal = maybeFullSize
         |> take(1)
         |> mapToSignal { maybeData -> Signal<Tuple3<Data?, Data?, Bool>, NoError> in
-            if maybeData.complete {
+            if maybeData.complete, !forceThumbnail {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single(Tuple(nil, loadedData, true))
             } else {
@@ -850,8 +850,8 @@ private func chatMessagePhotoThumbnailDatas(account: Account, userLocation: Medi
     }
 }
 
-public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessagePhotoThumbnailDatas(account: account, userLocation: userLocation, photoReference: photoReference, onlyFullSize: onlyFullSize)
+public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, onlyFullSize: Bool = false, blurred: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessagePhotoThumbnailDatas(account: account, userLocation: userLocation, photoReference: photoReference, onlyFullSize: onlyFullSize, forceThumbnail: blurred)
     return signal
     |> map { value in
         let thumbnailData = value._0
@@ -875,7 +875,7 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
             
             var fullSizeImage: CGImage?
             var imageOrientation: UIImage.Orientation = .up
-            if let fullSizeData = fullSizeData {
+            if let fullSizeData = fullSizeData, !blurred {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
@@ -904,13 +904,18 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
-                let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 150.0, height: 150.0))
+                let thumbnailContextSize = thumbnailSize.aspectFitted(blurred ? CGSize(width: 50.0, height: 50.0) : CGSize(width: 150.0, height: 150.0))
                 if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
                     thumbnailContext.withFlippedContext { c in
                         c.interpolationQuality = .none
                         c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                     }
                     imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    if blurred {
+                        imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                        adjustSaturationInContext(context: thumbnailContext, saturation: 1.7)
+                    }
                     
                     blurredThumbnailImage = thumbnailContext.generateImage()
                 }
@@ -943,8 +948,8 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
     }
 }
 
-public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageVideoDatas(postbox: account.postbox, userLocation: userLocation, fileReference: fileReference, thumbnailSize: true, autoFetchFullSizeThumbnail: true)
+public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, blurred: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessageVideoDatas(postbox: account.postbox, userLocation: userLocation, fileReference: fileReference, thumbnailSize: true, autoFetchFullSizeThumbnail: true, forceThumbnail: blurred)
     
     return signal
     |> map { value in
@@ -974,7 +979,7 @@ public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResou
             
             var fullSizeImage: CGImage?
             var imageOrientation: UIImage.Orientation = .up
-            if let fullSizeData = fullSizeData?._0 {
+            if let fullSizeData = fullSizeData?._0, !blurred {
                 if fullSizeComplete {
                     let options = NSMutableDictionary()
                     options[kCGImageSourceShouldCache as NSString] = false as NSNumber
@@ -1002,17 +1007,22 @@ public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResou
             
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
-                if max(thumbnailImage.width, thumbnailImage.height) > 200 {
+                if max(thumbnailImage.width, thumbnailImage.height) > 200 && !blurred {
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
-                    let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 150.0, height: 150.0))
+                    let thumbnailContextSize = thumbnailSize.aspectFitted(blurred ? CGSize(width: 50.0, height: 50.0) : CGSize(width: 150.0, height: 150.0))
                     if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
                         thumbnailContext.withFlippedContext { c in
                             c.interpolationQuality = .none
                             c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                         }
                         imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                        
+                        if blurred {
+                            imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                            adjustSaturationInContext(context: thumbnailContext, saturation: 1.7)
+                        }
                         
                         blurredThumbnailImage = thumbnailContext.generateImage()
                     }
@@ -1046,8 +1056,8 @@ public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResou
     }
 }
 
-public func chatSecretPhoto(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessagePhotoDatas(postbox: account.postbox, userLocation: userLocation, photoReference: photoReference, synchronousLoad: synchronousLoad)
+public func chatSecretPhoto(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, ignoreFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessagePhotoDatas(postbox: account.postbox, userLocation: userLocation, photoReference: photoReference, synchronousLoad: synchronousLoad, forceThumbnail: ignoreFullSize)
     return signal
     |> map { value in
         let thumbnailData = value._0
@@ -1426,6 +1436,7 @@ public func mediaGridMessagePhoto(account: Account, userLocation: MediaResourceU
                         
                         if blurred {
                             telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                            adjustSaturationInContext(context: thumbnailContext, saturation: 1.7)
                         }
                         
                         blurredThumbnailImage = thumbnailContext.generateImage()
