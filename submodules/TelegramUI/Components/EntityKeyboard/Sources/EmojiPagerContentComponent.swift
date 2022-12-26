@@ -7106,8 +7106,6 @@ public final class EmojiPagerContentComponent: Component {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
                 } else if isStatusSelection {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
-                } else if isTopicIconSelection {
-                    displaySearchWithPlaceholder = strings.EmojiSearch_SearchTopicIconsPlaceholder
                 } else if isEmojiSelection {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
                     searchInitiallyHidden = false

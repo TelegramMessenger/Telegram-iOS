@@ -1514,6 +1514,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount
             
+                var isSpoilerAvailable = true
+                if let peer = self.peer, case .secretChat = peer {
+                    isSpoilerAvailable = false
+                }
+            
                 var hasSpoilers = false
                 var hasGeneric = false
                 if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
@@ -1564,22 +1569,23 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             self?.groupedValue = false
                         })))
                     }
-                    if !items.isEmpty {
-                        items.append(.separator)
-                    }
-                    items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
-                        f(.default)
-                        guard let strongSelf = self else {
-                            return
+                    if isSpoilerAvailable {
+                        if !items.isEmpty {
+                            items.append(.separator)
                         }
-                        
-                        if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
-                            for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
-                                editingContext.setSpoiler(hasGeneric, for: item)
+                        items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
+                            f(.default)
+                            guard let strongSelf = self else {
+                                return
                             }
-                        }
-                    })))
-                    
+                            
+                            if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                                    editingContext.setSpoiler(hasGeneric, for: item)
+                                }
+                            }
+                        })))
+                    }
                     return ContextController.Items(content: .list(items))
                 }
             
