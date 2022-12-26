@@ -185,6 +185,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     private var maskView: UIView?
     private var maskLayer: CAShapeLayer?
     
+    private var randomId: Int32?
     var isRevealed = false
     var tapped: () -> Void = {}
     
@@ -270,17 +271,20 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         return result
     }
         
-    func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize)?, imageFrame: CGRect, corners: ImageCorners?) {
+    func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize, Int32)?, imageFrame: CGRect, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
         
-        if let (imageSignal, drawingSize, boundingSize) = imageSignal {
-            self.blurredImageNode.setSignal(imageSignal, attemptSynchronously: true)
-            
-            let imageLayout = self.blurredImageNode.asyncLayout()
-            let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
-            let apply = imageLayout(arguments)
-            apply()
+        if let (imageSignal, drawingSize, boundingSize, randomId) = imageSignal {
+            if self.randomId != randomId {
+                self.randomId = randomId
+                self.blurredImageNode.setSignal(imageSignal, attemptSynchronously: true)
+                
+                let imageLayout = self.blurredImageNode.asyncLayout()
+                let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
+                let apply = imageLayout(arguments)
+                apply()
+            }
             
             self.blurredImageNode.isHidden = false
 
@@ -343,7 +347,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
     private var currentHighQualityImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
-    private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize)?
+    private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize, Int32)?
     private var highQualityImageNode: TransformImageNode?
 
     private var videoNode: UniversalVideoNode?
@@ -1010,7 +1014,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     return chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
                                 }
                                 updateBlurredImageSignal = { synchronousLoad, _ in
-                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true)
+                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true, synchronousLoad: true)
                                 }
                             }
                             
@@ -1399,7 +1403,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     strongSelf.currentHighQualityImageSignal = (updateImageSignal(false, true), imageDimensions)
                                     
                                     if let updateBlurredImageSignal = updateBlurredImageSignal {
-                                        strongSelf.currentBlurredImageSignal = (updateBlurredImageSignal(false, true), drawingSize, boundingSize)
+                                        strongSelf.currentBlurredImageSignal = (updateBlurredImageSignal(false, true), drawingSize, boundingSize, Int32.random(in: 0..<Int32.max))
                                     }
                                 }
                             }
