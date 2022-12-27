@@ -261,18 +261,21 @@ final class StorageMediaGridPanelComponent: Component {
     let context: AccountContext
     let items: Items?
     let selectionState: StorageUsageScreenComponent.SelectionState?
-    let peerAction: (EngineMessage.Id) -> Void
+    let action: (EngineMessage.Id) -> Void
+    let contextAction: (EngineMessage.Id, UIView, CGRect, ContextGesture) -> Void
 
     init(
         context: AccountContext,
         items: Items?,
         selectionState: StorageUsageScreenComponent.SelectionState?,
-        peerAction: @escaping (EngineMessage.Id) -> Void
+        action: @escaping (EngineMessage.Id) -> Void,
+        contextAction: @escaping (EngineMessage.Id, UIView, CGRect, ContextGesture) -> Void
     ) {
         self.context = context
         self.items = items
         self.selectionState = selectionState
-        self.peerAction = peerAction
+        self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: StorageMediaGridPanelComponent, rhs: StorageMediaGridPanelComponent) -> Bool {
@@ -360,7 +363,7 @@ final class StorageMediaGridPanelComponent: Component {
         }
     }
     
-    class View: UIView, UIScrollViewDelegate {
+    class View: ContextControllerSourceView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
         
         private var visibleLayers: [EngineMessage.Id: MediaGridLayer] = [:]
@@ -371,6 +374,8 @@ final class StorageMediaGridPanelComponent: Component {
         private var component: StorageMediaGridPanelComponent?
         private var environment: StorageUsagePanelEnvironment?
         private var itemLayout: ItemLayout?
+        
+        private weak var currentGestureItemLayer: MediaGridLayer?
         
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
@@ -395,10 +400,119 @@ final class StorageMediaGridPanelComponent: Component {
             self.addSubview(self.scrollView)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            
+            self.shouldBegin = { [weak self] point in
+                guard let self else {
+                    return false
+                }
+                
+                var itemLayer: MediaGridLayer?
+                let scrollPoint = self.convert(point, to: self.scrollView)
+                for (_, itemLayerValue) in self.visibleLayers {
+                    if itemLayerValue.frame.contains(scrollPoint) {
+                        itemLayer = itemLayerValue
+                        break
+                    }
+                }
+                
+                guard let itemLayer else {
+                    return false
+                }
+
+                self.currentGestureItemLayer = itemLayer
+
+                return true
+            }
+
+            self.customActivationProgress = { [weak self] progress, update in
+                guard let self, let itemLayer = self.currentGestureItemLayer else {
+                    return
+                }
+
+                let targetContentRect = CGRect(origin: CGPoint(), size: itemLayer.bounds.size)
+
+                let scaleSide = itemLayer.bounds.width
+                let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+                let currentScale = 1.0 * (1.0 - progress) + minScale * progress
+
+                let originalCenterOffsetX: CGFloat = itemLayer.bounds.width / 2.0 - targetContentRect.midX
+                let scaledCenterOffsetX: CGFloat = originalCenterOffsetX * currentScale
+
+                let originalCenterOffsetY: CGFloat = itemLayer.bounds.height / 2.0 - targetContentRect.midY
+                let scaledCenterOffsetY: CGFloat = originalCenterOffsetY * currentScale
+
+                let scaleMidX: CGFloat = scaledCenterOffsetX - originalCenterOffsetX
+                let scaleMidY: CGFloat = scaledCenterOffsetY - originalCenterOffsetY
+
+                switch update {
+                case .update:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    itemLayer.transform = sublayerTransform
+                case .begin:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    itemLayer.transform = sublayerTransform
+                case .ended:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    let previousTransform = itemLayer.transform
+                    itemLayer.transform = sublayerTransform
+
+                    itemLayer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "transform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+                }
+            }
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component, let itemLayer = self.currentGestureItemLayer else {
+                    return
+                }
+                self.currentGestureItemLayer = nil
+                guard let message = itemLayer.message else {
+                    return
+                }
+                let rect = self.convert(itemLayer.frame, from: self.scrollView)
+
+                component.contextAction(message.id, self, rect, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+            var foundItemLayer: MediaGridLayer?
+            for (_, itemLayer) in self.visibleLayers {
+                if let message = itemLayer.message, message.id == messageId {
+                    foundItemLayer = itemLayer
+                }
+            }
+            guard let itemLayer = foundItemLayer else {
+                return nil
+            }
+            
+            let itemFrame = self.convert(itemLayer.frame, from: self.scrollView)
+            let proxyNode = ASDisplayNode()
+            proxyNode.frame = itemFrame
+            if let contents = itemLayer.contents {
+                if let image = contents as? UIImage {
+                    proxyNode.contents = image.cgImage
+                } else {
+                    proxyNode.contents = contents
+                }
+            }
+            proxyNode.isHidden = true
+            self.addSubnode(proxyNode)
+
+            let escapeNotification = EscapeNotification {
+                proxyNode.removeFromSupernode()
+            }
+
+            return (proxyNode, proxyNode.bounds, {
+                let view = UIView()
+                view.frame = proxyNode.frame
+                view.layer.contents = proxyNode.layer.contents
+                escapeNotification.keep()
+                return (view, nil)
+            })
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -409,7 +523,7 @@ final class StorageMediaGridPanelComponent: Component {
                 let point = recognizer.location(in: self.scrollView)
                 for (id, itemLayer) in self.visibleLayers {
                     if itemLayer.frame.contains(point) {
-                        component.peerAction(id)
+                        component.action(id)
                         break
                     }
                 }

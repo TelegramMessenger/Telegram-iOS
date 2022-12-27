@@ -439,6 +439,13 @@ final class StorageUsagePanelContainerComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        var currentPanelView: UIView? {
+            guard let currentId = self.currentId, let panel = self.visiblePanels[currentId] else {
+                return nil
+            }
+            return panel.view
+        }
+        
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             return false
         }

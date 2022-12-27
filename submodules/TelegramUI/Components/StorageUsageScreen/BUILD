@@ -38,6 +38,7 @@ swift_library(
         "//submodules/AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode",
         "//submodules/LegacyComponents",
+        "//submodules/GalleryData",
     ],
     visibility = [
         "//visibility:public",

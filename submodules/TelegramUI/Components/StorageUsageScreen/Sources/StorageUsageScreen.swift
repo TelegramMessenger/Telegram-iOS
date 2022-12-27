@@ -21,6 +21,7 @@ import UndoUI
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramStringFormatting
+import GalleryData
 
 #if DEBUG
 import os.signpost
@@ -1561,6 +1562,88 @@ final class StorageUsageScreenComponent: Component {
                             } else {
                                 self.openPeer(peer: peer)
                             }
+                        },
+                        contextAction: { [weak self] peer, sourceView, gesture in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            var itemList: [ContextMenuItem] = []
+                            //TODO:localize
+                            itemList.append(.action(ContextMenuActionItem(
+                                text: "Show Details",
+                                icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor) },
+                                action: { [weak self] c, _ in
+                                    c.dismiss(completion: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.openPeer(peer: peer)
+                                    })
+                                })
+                            ))
+                            itemList.append(.action(ContextMenuActionItem(
+                                text: "Open Profile",
+                                icon: { theme in
+                                    if case .user = peer {
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
+                                    } else {
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: theme.contextMenu.primaryColor)
+                                    }
+                                },
+                                action: { [weak self] c, _ in
+                                    c.dismiss(completion: { [weak self] in
+                                        guard let self, let component = self.component, let controller = self.controller?() else {
+                                            return
+                                        }
+                                        let peerInfoController = component.context.sharedContext.makePeerInfoController(
+                                            context: component.context,
+                                            updatedPresentationData: nil,
+                                            peer: peer._asPeer(),
+                                            mode: .generic,
+                                            avatarInitiallyExpanded: false,
+                                            fromChat: false,
+                                            requestsContext: nil
+                                        )
+                                        if let peerInfoController {
+                                            controller.push(peerInfoController)
+                                        }
+                                    })
+                                })
+                            ))
+                            itemList.append(.action(ContextMenuActionItem(
+                                text: "Select",
+                                icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) },
+                                action: { [weak self] c, _ in
+                                    c.dismiss(completion: {
+                                    })
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.selectionState == nil {
+                                        self.selectionState = SelectionState()
+                                    }
+                                    self.selectionState = self.selectionState?.togglePeer(id: peer.id)
+                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                })
+                            ))
+                            let items = ContextController.Items(content: .list(itemList))
+                            
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let controller = ContextController(
+                                account: component.context.account,
+                                presentationData: presentationData,
+                                source: .extracted(StorageUsageListContextExtractedContentSource(contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+                            
+                            self.controller?()?.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    controller.dismiss()
+                                }
+                                return true
+                            })
+                            self.controller?()?.presentInGlobalOverlay(controller)
                         }
                     ))
                 ))
@@ -1573,15 +1656,25 @@ final class StorageUsageScreenComponent: Component {
                         context: component.context,
                         items: self.imageItems,
                         selectionState: self.selectionState,
-                        peerAction: { [weak self] messageId in
+                        action: { [weak self] messageId in
                             guard let self else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                self.selectionState = SelectionState()
+                            guard let message = self.currentMessages[messageId] else {
+                                return
                             }
-                            self.selectionState = self.selectionState?.toggleMessage(id: messageId)
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            if self.selectionState == nil {
+                                self.openMessage(message: message)
+                            } else {
+                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            }
+                        },
+                        contextAction: { [weak self] messageId, containerView, sourceRect, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.messageGaleryContextAction(messageId: messageId, sourceView: containerView, sourceRect: sourceRect, gesture: gesture)
                         }
                     ))
                 ))
@@ -1594,15 +1687,25 @@ final class StorageUsageScreenComponent: Component {
                         context: component.context,
                         items: self.fileItems,
                         selectionState: self.selectionState,
-                        peerAction: { [weak self] messageId in
+                        action: { [weak self] messageId in
                             guard let self else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                self.selectionState = SelectionState()
+                            guard let message = self.currentMessages[messageId] else {
+                                return
                             }
-                            self.selectionState = self.selectionState?.toggleMessage(id: messageId)
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            if self.selectionState == nil {
+                                self.openMessage(message: message)
+                            } else {
+                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            }
+                        },
+                        contextAction: { [weak self] messageId, containerView, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.messageContextAction(messageId: messageId, sourceView: containerView, gesture: gesture)
                         }
                     ))
                 ))
@@ -1615,15 +1718,30 @@ final class StorageUsageScreenComponent: Component {
                         context: component.context,
                         items: self.musicItems,
                         selectionState: self.selectionState,
-                        peerAction: { [weak self] messageId in
+                        action: { [weak self] messageId in
                             guard let self else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                self.selectionState = SelectionState()
+                            guard let message = self.currentMessages[messageId] else {
+                                return
                             }
-                            self.selectionState = self.selectionState?.toggleMessage(id: messageId)
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            if self.selectionState == nil {
+                                //self.openMessage(message: message)
+                                let _ = message
+                                
+                                self.selectionState = SelectionState()
+                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            } else {
+                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            }
+                        },
+                        contextAction: { [weak self] messageId, containerView, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.messageContextAction(messageId: messageId, sourceView: containerView, gesture: gesture)
                         }
                     ))
                 ))
@@ -1972,6 +2090,316 @@ final class StorageUsageScreenComponent: Component {
                 })
             }
             controller.push(childController)
+        }
+        
+        private func messageGaleryContextAction(messageId: EngineMessage.Id, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture) {
+            guard let component = self.component, let message = self.currentMessages[messageId] else {
+                gesture.cancel()
+                return
+            }
+            
+            let _ = (chatMediaListPreviewControllerData(
+                context: component.context,
+                chatLocation: .peer(id: message.id.peerId),
+                chatLocationContextHolder: nil,
+                message: message,
+                standalone: true,
+                reverseMessageGalleryOrder: false,
+                navigationController: self.controller?()?.navigationController as? NavigationController
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] previewData in
+                guard let self, let component = self.component, let previewData else {
+                    gesture.cancel()
+                    return
+                }
+                
+                let context = component.context
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let strings = presentationData.strings
+                
+                var items: [ContextMenuItem] = []
+                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                    c.dismiss(completion: { [weak self] in
+                        guard let self, let component = self.component, let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
+                            return
+                        }
+                        guard let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init) else {
+                            return
+                        }
+                        
+                        var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
+                        if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId = message.threadId {
+                            chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                        }
+                        
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                            navigationController: navigationController,
+                            context: component.context,
+                            chatLocation: chatLocation,
+                            subject: .message(id: .id(message.id), highlight: true, timecode: nil),
+                            keepStack: .always
+                        ))
+                    })
+                })))
+                    
+                items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuSelect, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                    })
+                    
+                    guard let self else {
+                        return
+                    }
+                    if self.selectionState == nil {
+                        self.selectionState = SelectionState()
+                    }
+                    self.selectionState = self.selectionState?.toggleMessage(id: message.id)
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                })))
+                
+                switch previewData {
+                case let .gallery(gallery):
+                    gallery.setHintWillBePresentedInPreviewingContext(true)
+                    let contextController = ContextController(
+                        account: component.context.account,
+                        presentationData: presentationData,
+                        source: .controller(StorageUsageListContextGalleryContentSourceImpl(
+                            controller: gallery,
+                            sourceView: sourceView,
+                            sourceRect: sourceRect
+                        )),
+                        items: .single(ContextController.Items(content: .list(items))),
+                        gesture: gesture
+                    )
+                    self.controller?()?.presentInGlobalOverlay(contextController)
+                case .instantPage:
+                    break
+                }
+            })
+        }
+        
+        private func messageContextAction(messageId: EngineMessage.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
+            guard let component = self.component else {
+                return
+            }
+            guard let message = self.currentMessages[messageId] else {
+                return
+            }
+            
+            //TODO:localize
+            var openTitle: String = "Open"
+            var isAudio: Bool = false
+            for media in message.media {
+                if let _ = media as? TelegramMediaImage {
+                    openTitle = "Open Photo"
+                } else if let file = media as? TelegramMediaFile {
+                    if file.isVideo {
+                        openTitle = "Open Video"
+                    } else {
+                        openTitle = "Open File"
+                    }
+                    isAudio = file.isMusic || file.isVoice
+                }
+            }
+            
+            var itemList: [ContextMenuItem] = []
+            //TODO:localize
+            if !isAudio {
+                itemList.append(.action(ContextMenuActionItem(
+                    text: openTitle,
+                    icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: theme.contextMenu.primaryColor) },
+                    action: { [weak self] c, _ in
+                        c.dismiss(completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.openMessage(message: message)
+                        })
+                    })
+                ))
+            }
+            itemList.append(.action(ContextMenuActionItem(
+                text: "View in Chat",
+                icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)
+                },
+                action: { [weak self] c, _ in
+                    c.dismiss(completion: { [weak self] in
+                        guard let self, let component = self.component, let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
+                            return
+                        }
+                        guard let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init) else {
+                            return
+                        }
+                        
+                        var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
+                        if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId = message.threadId {
+                            chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                        }
+                        
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                            navigationController: navigationController,
+                            context: component.context,
+                            chatLocation: chatLocation,
+                            subject: .message(id: .id(message.id), highlight: true, timecode: nil),
+                            keepStack: .always
+                        ))
+                    })
+                })
+            ))
+            itemList.append(.action(ContextMenuActionItem(
+                text: "Select",
+                icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) },
+                action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                    })
+                    
+                    guard let self else {
+                        return
+                    }
+                    if self.selectionState == nil {
+                        self.selectionState = SelectionState()
+                    }
+                    self.selectionState = self.selectionState?.toggleMessage(id: message.id)
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                })
+            ))
+            let items = ContextController.Items(content: .list(itemList))
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let controller = ContextController(
+                account: component.context.account,
+                presentationData: presentationData,
+                source: .extracted(StorageUsageListContextExtractedContentSource(contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+            
+            self.controller?()?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismiss()
+                }
+                return true
+            })
+            self.controller?()?.presentInGlobalOverlay(controller)
+        }
+        
+        private func openMessage(message: Message) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            let foundGalleryMessage: Message? = message
+            guard let galleryMessage = foundGalleryMessage else {
+                return
+            }
+            self.endEditing(true)
+            
+            let _ = component.context.sharedContext.openChatMessage(OpenChatMessageParams(
+                context: component.context,
+                chatLocation: .peer(id: message.id.peerId),
+                chatLocationContextHolder: nil,
+                message: galleryMessage,
+                standalone: true,
+                reverseMessageGalleryOrder: true,
+                navigationController: navigationController,
+                dismissInput: { [weak self] in
+                    self?.endEditing(true)
+                }, present: { [weak self] c, a in
+                    guard let self else {
+                        return
+                    }
+                    self.controller?()?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                },
+                transitionNode: { [weak self] messageId, media in
+                    guard let self else {
+                        return nil
+                    }
+                    
+                    if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
+                        if let currentPanelView = panelContainerView.currentPanelView as? StorageMediaGridPanelComponent.View {
+                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: media)
+                        }
+                    }
+                    
+                    return nil
+                }, addToTransitionSurface: { [weak self] view in
+                    guard let self else {
+                        return
+                    }
+                    if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
+                        panelContainerView.currentPanelView?.addSubview(view)
+                    }
+                }, openUrl: { [weak self] url in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openPeer: { [weak self] peer, navigation in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                },
+                callPeer: { _, _ in
+                    //self?.controllerInteraction?.callPeer(peerId)
+                },
+                enqueueMessage: { _ in
+                },
+                sendSticker: nil,
+                sendEmoji: nil,
+                setupTemporaryHiddenMedia: { _, _, _ in },
+                chatAvatarHiddenMedia: { _, _ in },
+                actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                    //strongSelf.openUrl(url: url, concealed: false, external: false)
+                }, openUrlIn: { [weak self] url in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openPeerMention: { [weak self] mention in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openPeer: { [weak self] peer in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openHashtag: { [weak self] peerName, hashtag in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openBotCommand: { _ in
+                }, addContact: { _ in
+                }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }),
+                centralItemUpdated: { [weak self] messageId in
+                    //let _ = self?.paneContainerNode.requestExpandTabs?()
+                    //self?.paneContainerNode.currentPane?.node.ensureMessageIsVisible(id: messageId)
+                    
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }
+            ))
         }
         
         private func requestClear(categories: Set<Category>, peers: Set<PeerId>, messages: Set<EngineMessage.Id>) {
@@ -2728,5 +3156,61 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         
         self.progressTextNode.frame = progressTextFrame
         self.descriptionTextNode.frame = descriptionTextFrame
+    }
+}
+
+private final class StorageUsageListContextGalleryContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceView: UIView?
+    let sourceRect: CGRect
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool
+    
+    init(controller: ViewController, sourceView: UIView?, sourceRect: CGRect = CGRect(origin: CGPoint(), size: CGSize()), passthroughTouches: Bool = false) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+        self.passthroughTouches = passthroughTouches
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceView = self.sourceView
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceView] in
+            if let sourceView = sourceView {
+                let rect = sourceRect.isEmpty ? sourceView.bounds : sourceRect
+                return (sourceView, rect)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+        self.controller.didAppearInContextPreview()
+    }
+}
+
+private final class StorageUsageListContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    //let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
+    
+    private let contentView: ContextExtractedContentContainingView
+    
+    init(contentView: ContextExtractedContentContainingView) {
+        self.contentView = contentView
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
