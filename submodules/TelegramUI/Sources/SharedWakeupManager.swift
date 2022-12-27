@@ -263,7 +263,16 @@ public final class SharedWakeupManager {
     
     func checkTasks() {
         var hasTasksForBackgroundExtension = false
-        if self.inForeground || self.hasActiveAudioSession {
+        
+        var hasActiveCalls = false
+        for (_, _, tasks) in self.accountsAndTasks {
+            if tasks.activeCalls {
+                hasActiveCalls = true
+                break
+            }
+        }
+        
+        if self.inForeground || self.hasActiveAudioSession || hasActiveCalls {
             if let (completion, timer) = self.currentExternalCompletion {
                 self.currentExternalCompletion = nil
                 completion()
