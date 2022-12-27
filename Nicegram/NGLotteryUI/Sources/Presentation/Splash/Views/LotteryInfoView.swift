@@ -52,7 +52,7 @@ class LotteryInfoView: UIView {
     //  MARK: - Public Functions
 
     func display(state: LotteryInfoViewState) {
-        let jackpotString = MoneyFormatter().format(state.jackpot, minimumFractionDigits: 0)
+        let jackpotString = formatLotteryJackpot(state.jackpot)
         drawSection.display(
             item: SplashSectionViewItem(
                 titleImage: nil,

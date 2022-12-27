@@ -13,7 +13,7 @@ extension MessageError: LocalizedError {
 }
 
 public var defaultErrorMessage: String {
-    return NSLocalizedString("Error.Default", comment: "")
+    return "Something went wrong. Please try again later"
 }
 
 public extension MessageError {

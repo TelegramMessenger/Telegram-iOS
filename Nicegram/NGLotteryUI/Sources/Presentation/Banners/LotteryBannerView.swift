@@ -50,7 +50,7 @@ public class LotteryBannerView: UIControl {
     //  MARK: - Public Functions
 
     public func display(jackpot: Money) {
-        moneyLabel.text = MoneyFormatter().format(jackpot, minimumFractionDigits: 0)
+        moneyLabel.text = formatLotteryJackpot(jackpot)
     }
     
     public func setCloseButton(hidden: Bool) {

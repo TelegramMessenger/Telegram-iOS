@@ -105,8 +105,11 @@ private extension SplashSectionView {
             spacing: 8,
             alignment: .center
         )
-        titleLabel.snp.contentHuggingHorizontalPriority = 249
-        titleLabel.snp.contentCompressionResistanceHorizontalPriority = 749
+        titleImageView.snp.makeConstraints { make in
+            make.size.equalTo(29)
+        }
+        badgeLabel.snp.contentHuggingHorizontalPriority = 761
+        badgeLabel.snp.contentCompressionResistanceHorizontalPriority = 762
         
         let stack = UIStackView(
             arrangedSubviews: [topStack, textView, button],

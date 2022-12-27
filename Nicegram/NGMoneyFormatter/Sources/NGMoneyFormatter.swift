@@ -13,7 +13,8 @@ public class MoneyFormatter {
     
     //  MARK: - Public Functions
     
-    public func format(_ money: Money, minimumFractionDigits: Int = 2) -> String {
+    public func format(_ money: Money, minimumFractionDigits: Int = 2, locale: Locale = .current) -> String {
+        numberFormatter.locale = locale
         numberFormatter.numberStyle = .currency
         numberFormatter.currencyCode = money.currency.isoCode
         numberFormatter.minimumFractionDigits = minimumFractionDigits

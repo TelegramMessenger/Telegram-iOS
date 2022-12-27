@@ -8,6 +8,7 @@ import NGAppContext
 import NGData
 import NGAppCache
 import NGAssistant
+import NGCore
 import NGCoreUI
 import NGTheme
 import NGAuth
@@ -2975,7 +2976,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.showLotteryBanner(jackpot: lotteryData.currentDraw.jackpot)
             }
         
-        loadLotteryDataUseCase.loadLotteryData(completion: { _ in })
+        if !hideLottery {
+            loadLotteryDataUseCase.loadLotteryData(completion: { _ in })
+        }
     }
     
     private func showLotteryBanner(jackpot: Money) {
@@ -2989,7 +2992,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     @available(iOS 13.0, *)
     private func showLotterySplash() {
-        let parentViewController = self.view.window?.rootViewController
+        let parentViewController = UIApplication.topViewController
         
         let navigation = makeDefaultNavigationController()
         

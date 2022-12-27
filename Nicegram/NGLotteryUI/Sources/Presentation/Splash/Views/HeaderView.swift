@@ -25,7 +25,7 @@ class HeaderView: UIView {
     //  MARK: - Public Functions
 
     func display(jackpot: Money) {
-        moneyLabel.text = MoneyFormatter().format(jackpot, minimumFractionDigits: 0)
+        moneyLabel.text = formatLotteryJackpot(jackpot)
     }
 }
 

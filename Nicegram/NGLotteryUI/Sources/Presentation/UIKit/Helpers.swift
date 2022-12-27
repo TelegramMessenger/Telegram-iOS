@@ -1,3 +1,4 @@
+import NGCore
 import NGCoreUI
 import NGCustomViews
 import UIKit
@@ -42,4 +43,14 @@ public extension UIView {
     static func lotterySectionsSeparator() -> UIView {
         return .separator(color: .white.withAlphaComponent(0.15))
     }
+}
+
+public func formatLotteryJackpot(_ jackpot: Money) -> String {
+    let usLocale = Locale(identifier: "en-US")
+    
+    return MoneyFormatter().format(
+        jackpot,
+        minimumFractionDigits: 0,
+        locale: usLocale
+    )
 }
