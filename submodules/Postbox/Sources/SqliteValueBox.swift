@@ -230,6 +230,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     func internalClose() {
+        self.clearStatements()
         self.database = nil
     }
     

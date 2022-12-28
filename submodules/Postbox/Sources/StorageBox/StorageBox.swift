@@ -766,7 +766,7 @@ public final class StorageBox {
             return allStats
         }
         
-        func remove(peerId: Int64?, contentTypes: [UInt8]) -> [Data] {
+        func remove(peerId: Int64?, contentTypes: [UInt8], excludeIds: [Data]) -> [Data] {
             var resultIds: [Data] = []
             
             self.valueBox.begin()
@@ -786,17 +786,20 @@ public final class StorageBox {
                 return true
             })
             
+            let excludeIds = Set(excludeIds)
+            
             if let peerId = peerId {
                 var filteredHashIds: [Data] = []
                 self.valueBox.scan(self.idToReferenceTable, keys: { key in
                     let id = key.getData(0, length: 16)
-                    if scannedIds[id] == nil {
+                    guard let realId = scannedIds[id] else {
+                        return true
+                    }
+                    if excludeIds.contains(realId) {
                         return true
                     }
                     
                     let itemPeerId = key.getInt64(16)
-                    //let messageNamespace: UInt8 = key.getUInt8(16 + 8)
-                    //let messageId = key.getInt32(16 + 8 + 1)
                     
                     if itemPeerId == peerId {
                         filteredHashIds.append(id)
@@ -812,15 +815,12 @@ public final class StorageBox {
                 }
             } else {
                 for (hashId, id) in scannedIds {
+                    if excludeIds.contains(id) {
+                        continue
+                    }
                     self.internalRemove(hashId: hashId)
                     resultIds.append(id)
                 }
-            }
-            
-            if let peerId = peerId {
-                let _ = peerId
-            } else {
-                
             }
             
             self.valueBox.commit()
@@ -828,7 +828,7 @@ public final class StorageBox {
             return Array(resultIds)
         }
         
-        func remove(peerIds: Set<PeerId>) -> [Data] {
+        func remove(peerIds: Set<PeerId>, includeIds: [Data], excludeIds: [Data]) -> [Data] {
             var resultIds: [Data] = []
             
             self.valueBox.begin()
@@ -838,7 +838,16 @@ public final class StorageBox {
                 scannedIds.formUnion(self.allInternal(peerId: peerId))
             }
             
+            for id in includeIds {
+                scannedIds.insert(id)
+            }
+            
+            let excludedIds = Set(excludeIds)
+            
             for id in scannedIds {
+                if excludedIds.contains(id) {
+                    continue
+                }
                 self.internalRemove(hashId: md5Hash(id).data)
                 resultIds.append(id)
             }
@@ -936,16 +945,16 @@ public final class StorageBox {
         }
     }
     
-    public func remove(peerId: PeerId?, contentTypes: [UInt8], completion: @escaping ([Data]) -> Void) {
+    public func remove(peerId: PeerId?, contentTypes: [UInt8], excludeIds: [Data], completion: @escaping ([Data]) -> Void) {
         self.impl.with { impl in
-            let ids = impl.remove(peerId: peerId?.toInt64(), contentTypes: contentTypes)
+            let ids = impl.remove(peerId: peerId?.toInt64(), contentTypes: contentTypes, excludeIds: excludeIds)
             completion(ids)
         }
     }
     
-    public func remove(peerIds: Set<PeerId>, completion: @escaping ([Data]) -> Void) {
+    public func remove(peerIds: Set<PeerId>, includeIds: [Data], excludeIds: [Data], completion: @escaping ([Data]) -> Void) {
         self.impl.with { impl in
-            let ids = impl.remove(peerIds: peerIds)
+            let ids = impl.remove(peerIds: peerIds, includeIds: includeIds, excludeIds: excludeIds)
             completion(ids)
         }
     }

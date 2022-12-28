@@ -284,29 +284,42 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
     }
 }
 
-func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], excludeMessages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
-        mediaBox.storageBox.remove(peerId: peerId, contentTypes: categories.map { item -> UInt8 in
-            let mappedItem: MediaResourceUserContentType
+        var resourceIds = Set<MediaResourceId>()
+        for message in excludeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &resourceIds)
+        }
+        var excludeIds: [Data] = []
+        for resourceId in resourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                excludeIds.append(data)
+            }
+        }
+        
+        var mappedContentTypes: [UInt8] = []
+        for item in categories {
             switch item {
             case .photos:
-                mappedItem = .image
+                mappedContentTypes.append(MediaResourceUserContentType.image.rawValue)
             case .videos:
-                mappedItem = .video
+                mappedContentTypes.append(MediaResourceUserContentType.video.rawValue)
             case .files:
-                mappedItem = .file
+                mappedContentTypes.append(MediaResourceUserContentType.file.rawValue)
             case .music:
-                mappedItem = .audio
+                mappedContentTypes.append(MediaResourceUserContentType.audio.rawValue)
             case .stickers:
-                mappedItem = .sticker
+                mappedContentTypes.append(MediaResourceUserContentType.sticker.rawValue)
             case .avatars:
-                mappedItem = .avatar
+                mappedContentTypes.append(MediaResourceUserContentType.avatar.rawValue)
             case .misc:
-                mappedItem = .other
+                mappedContentTypes.append(MediaResourceUserContentType.other.rawValue)
+                mappedContentTypes.append(MediaResourceUserContentType.audioVideoMessage.rawValue)
             }
-            return mappedItem.rawValue
-        }, completion: { ids in
+        }
+        
+        mediaBox.storageBox.remove(peerId: peerId, contentTypes: mappedContentTypes, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {
@@ -345,10 +358,32 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
     }
 }
 
-func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
-        mediaBox.storageBox.remove(peerIds: peerIds, completion: { ids in
+        var includeResourceIds = Set<MediaResourceId>()
+        for message in includeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &includeResourceIds)
+        }
+        var includeIds: [Data] = []
+        for resourceId in includeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                includeIds.append(data)
+            }
+        }
+        
+        var excludeResourceIds = Set<MediaResourceId>()
+        for message in excludeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &excludeResourceIds)
+        }
+        var excludeIds: [Data] = []
+        for resourceId in excludeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                excludeIds.append(data)
+            }
+        }
+        
+        mediaBox.storageBox.remove(peerIds: peerIds, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {
@@ -365,6 +400,47 @@ func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>) -> Si
     }
 }
 
+private func extractMediaResourceIds(message: Message, resourceIds: inout Set<MediaResourceId>) {
+    for media in message.media {
+        if let image = media as? TelegramMediaImage {
+            for representation in image.representations {
+                resourceIds.insert(representation.resource.id)
+            }
+        } else if let file = media as? TelegramMediaFile {
+            for representation in file.previewRepresentations {
+                resourceIds.insert(representation.resource.id)
+            }
+            resourceIds.insert(file.resource.id)
+        } else if let webpage = media as? TelegramMediaWebpage {
+            if case let .Loaded(content) = webpage.content {
+                if let image = content.image {
+                    for representation in image.representations {
+                        resourceIds.insert(representation.resource.id)
+                    }
+                }
+                if let file = content.file {
+                    for representation in file.previewRepresentations {
+                        resourceIds.insert(representation.resource.id)
+                    }
+                    resourceIds.insert(file.resource.id)
+                }
+            }
+        } else if let game = media as? TelegramMediaGame {
+            if let image = game.image {
+                for representation in image.representations {
+                    resourceIds.insert(representation.resource.id)
+                }
+            }
+            if let file = game.file {
+                for representation in file.previewRepresentations {
+                    resourceIds.insert(representation.resource.id)
+                }
+                resourceIds.insert(file.resource.id)
+            }
+        }
+    }
+}
+
 func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     
@@ -372,44 +448,7 @@ func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Nev
         DispatchQueue.global().async {
             var resourceIds = Set<MediaResourceId>()
             for message in messages {
-                for media in message.media {
-                    if let image = media as? TelegramMediaImage {
-                        for representation in image.representations {
-                            resourceIds.insert(representation.resource.id)
-                        }
-                    } else if let file = media as? TelegramMediaFile {
-                        for representation in file.previewRepresentations {
-                            resourceIds.insert(representation.resource.id)
-                        }
-                        resourceIds.insert(file.resource.id)
-                    } else if let webpage = media as? TelegramMediaWebpage {
-                        if case let .Loaded(content) = webpage.content {
-                            if let image = content.image {
-                                for representation in image.representations {
-                                    resourceIds.insert(representation.resource.id)
-                                }
-                            }
-                            if let file = content.file {
-                                for representation in file.previewRepresentations {
-                                    resourceIds.insert(representation.resource.id)
-                                }
-                                resourceIds.insert(file.resource.id)
-                            }
-                        }
-                    } else if let game = media as? TelegramMediaGame {
-                        if let image = game.image {
-                            for representation in image.representations {
-                                resourceIds.insert(representation.resource.id)
-                            }
-                        }
-                        if let file = game.file {
-                            for representation in file.previewRepresentations {
-                                resourceIds.insert(representation.resource.id)
-                            }
-                            resourceIds.insert(file.resource.id)
-                        }
-                    }
-                }
+                extractMediaResourceIds(message: message, resourceIds: &resourceIds)
             }
             
             var removeIds: [Data] = []
