@@ -766,16 +766,12 @@ public final class StorageBox {
             return allStats
         }
         
-        func remove(peerId: Int64?, contentTypes: [UInt8], excludeIds: [Data]) -> [Data] {
+        func remove(peerId: Int64?, contentTypes: [UInt8], includeIds: [Data], excludeIds: [Data]) -> [Data] {
             var resultIds: [Data] = []
             
             self.valueBox.begin()
             
             var scannedIds: [Data: Data] = [:]
-            
-            for contentType in contentTypes {
-                self.internalAddSize(contentType: contentType, delta: 0)
-            }
             
             self.valueBox.scan(self.hashIdToInfoTable, values: { key, value in
                 let info = ItemInfo(buffer: value)
@@ -785,6 +781,10 @@ public final class StorageBox {
                 scannedIds[key.getData(0, length: 16)] = info.id
                 return true
             })
+            
+            for id in includeIds {
+                scannedIds[md5Hash(id).data] = id
+            }
             
             let excludeIds = Set(excludeIds)
             
@@ -945,9 +945,9 @@ public final class StorageBox {
         }
     }
     
-    public func remove(peerId: PeerId?, contentTypes: [UInt8], excludeIds: [Data], completion: @escaping ([Data]) -> Void) {
+    public func remove(peerId: PeerId?, contentTypes: [UInt8], includeIds: [Data], excludeIds: [Data], completion: @escaping ([Data]) -> Void) {
         self.impl.with { impl in
-            let ids = impl.remove(peerId: peerId?.toInt64(), contentTypes: contentTypes, excludeIds: excludeIds)
+            let ids = impl.remove(peerId: peerId?.toInt64(), contentTypes: contentTypes, includeIds: includeIds, excludeIds: excludeIds)
             completion(ids)
         }
     }

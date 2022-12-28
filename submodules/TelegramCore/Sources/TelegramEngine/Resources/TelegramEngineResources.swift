@@ -233,8 +233,8 @@ public extension TelegramEngine {
             return _internal_renderStorageUsageStatsMessages(account: self.account, stats: stats, categories: categories, existingMessages: existingMessages)
         }
         
-        public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], excludeMessages: [Message]) -> Signal<Never, NoError> {
-            return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories, excludeMessages: excludeMessages)
+        public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
+            return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories, includeMessages: includeMessages, excludeMessages: excludeMessages)
         }
         
         public func clearStorage(peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {

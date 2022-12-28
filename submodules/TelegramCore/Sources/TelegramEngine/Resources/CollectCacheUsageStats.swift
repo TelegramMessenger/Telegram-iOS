@@ -284,15 +284,26 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
     }
 }
 
-func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], excludeMessages: [Message]) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
-        var resourceIds = Set<MediaResourceId>()
+        var includeResourceIds = Set<MediaResourceId>()
+        for message in includeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &includeResourceIds)
+        }
+        var includeIds: [Data] = []
+        for resourceId in includeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                includeIds.append(data)
+            }
+        }
+        
+        var excludeResourceIds = Set<MediaResourceId>()
         for message in excludeMessages {
-            extractMediaResourceIds(message: message, resourceIds: &resourceIds)
+            extractMediaResourceIds(message: message, resourceIds: &excludeResourceIds)
         }
         var excludeIds: [Data] = []
-        for resourceId in resourceIds {
+        for resourceId in excludeResourceIds {
             if let data = resourceId.stringRepresentation.data(using: .utf8) {
                 excludeIds.append(data)
             }
@@ -319,7 +330,7 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
             }
         }
         
-        mediaBox.storageBox.remove(peerId: peerId, contentTypes: mappedContentTypes, excludeIds: excludeIds, completion: { ids in
+        mediaBox.storageBox.remove(peerId: peerId, contentTypes: mappedContentTypes, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {

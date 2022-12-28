@@ -2509,7 +2509,7 @@ final class StorageUsageScreenComponent: Component {
                 self.isClearing = true
                 self.state?.updated(transition: .immediate)
                 
-                let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories, excludeMessages: [])
+                let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories, includeMessages: [], excludeMessages: [])
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     guard let self, let component = self.component, let currentStats = self.currentStats else {
                         return
