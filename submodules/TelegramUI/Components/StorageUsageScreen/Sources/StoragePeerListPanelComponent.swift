@@ -234,11 +234,10 @@ private final class PeerListItemComponent: Component {
             self.component = component
             self.state = state
             
-            self.isGestureEnabled = component.selectionState == .none
-            
             let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
             
             let height: CGFloat = 52.0
+            let verticalInset: CGFloat = 1.0
             var leftInset: CGFloat = 62.0 + component.sideInset
             var avatarLeftInset: CGFloat = component.sideInset + 10.0
             
@@ -259,11 +258,11 @@ private final class PeerListItemComponent: Component {
                     checkLayer = CheckLayer(theme: CheckNodeTheme(theme: component.theme, style: .plain))
                     self.checkLayer = checkLayer
                     self.containerButton.layer.addSublayer(checkLayer)
-                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
+                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
                     checkLayer.setSelected(isSelected, animated: false)
                     checkLayer.setNeedsDisplay()
                 }
-                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
             } else {
                 if let checkLayer = self.checkLayer {
                     self.checkLayer = nil
@@ -274,11 +273,10 @@ private final class PeerListItemComponent: Component {
             }
             
             let rightInset: CGFloat = contextInset * 2.0 + 16.0 + component.sideInset
-            let verticalInset: CGFloat = 1.0
             
             let avatarSize: CGFloat = 40.0
             
-            let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floor((height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+            let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floor((height - verticalInset * 2.0 - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
             if self.avatarNode.bounds.isEmpty {
                 self.avatarNode.frame = avatarFrame
             } else {

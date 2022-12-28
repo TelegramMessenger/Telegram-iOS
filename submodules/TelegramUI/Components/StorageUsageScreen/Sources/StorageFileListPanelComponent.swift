@@ -351,12 +351,11 @@ private final class FileListItemComponent: Component {
             self.component = component
             self.state = state
             
-            self.isGestureEnabled = component.selectionState == .none
-            
             let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
             
             let spacing: CGFloat = 1.0
             let height: CGFloat = 52.0
+            let verticalInset: CGFloat = 1.0
             var leftInset: CGFloat = 62.0 + component.sideInset
             var iconLeftInset: CGFloat = component.sideInset
             
@@ -377,11 +376,11 @@ private final class FileListItemComponent: Component {
                     checkLayer = CheckLayer(theme: CheckNodeTheme(theme: component.theme, style: .plain))
                     self.checkLayer = checkLayer
                     self.containerButton.layer.addSublayer(checkLayer)
-                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
+                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
                     checkLayer.setSelected(isSelected, animated: false)
                     checkLayer.setNeedsDisplay()
                 }
-                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
             } else {
                 if let checkLayer = self.checkLayer {
                     self.checkLayer = nil
@@ -392,7 +391,6 @@ private final class FileListItemComponent: Component {
             }
             
             let rightInset: CGFloat = contextInset * 2.0 + 16.0 + component.sideInset
-            let verticalInset: CGFloat = 1.0
             
             if case let .fileExtension(text) = component.icon {
                 let iconView: UIImageView
