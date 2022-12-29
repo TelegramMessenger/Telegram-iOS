@@ -989,11 +989,22 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             self.otherCategories = Set(otherListCategories.map(\.key))
-            if !otherListCategories.isEmpty {
-                var totalOtherSize: Int64 = 0
-                for listCategory in otherListCategories {
-                    totalOtherSize += listCategory.size
+            
+            var chartItems: [PieChartComponent.ChartData.Item] = []
+            for listCategory in listCategories {
+                var categoryChartFraction: CGFloat = listCategory.sizeFraction
+                if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
+                    categoryChartFraction = 0.0
                 }
+                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0))
+            }
+            
+            var totalOtherSize: Int64 = 0
+            for listCategory in otherListCategories {
+                totalOtherSize += listCategory.size
+            }
+            
+            if !otherListCategories.isEmpty {
                 let categoryFraction: Double
                 if totalOtherSize == 0 || totalSize == 0 {
                     categoryFraction = 0.0
@@ -1015,29 +1026,30 @@ final class StorageUsageScreenComponent: Component {
                     key: Category.other, color: listColor, title: Category.other.title(strings: environment.strings), size: totalOtherSize, sizeFraction: categoryFraction, isSelected: isSelected, subcategories: otherListCategories))
             }
             
-            var chartItems: [PieChartComponent.ChartData.Item] = []
-            for listCategory in listCategories {
-                var categoryChartFraction: CGFloat = listCategory.sizeFraction
-                if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
-                    categoryChartFraction = 0.0
-                }
-                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0))
-            }
+            var otherSum: CGFloat = 0.0
+            var otherRealSum: CGFloat = 0.0
             for listCategory in otherListCategories {
                 var categoryChartFraction: CGFloat = listCategory.sizeFraction
                 if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
                     categoryChartFraction = 0.0
                 }
                 
-                let visualMergeFactor: CGFloat
-                if self.isOtherCategoryExpanded {
-                    visualMergeFactor = 1.0
-                } else {
-                    visualMergeFactor = 0.0
+                var chartItem = PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0)
+                
+                if chartItem.value > 0.00001 {
+                    chartItem.value = max(chartItem.value, 0.01)
+                }
+                otherSum += chartItem.value
+                otherRealSum += chartItem.displayValue
+                
+                if !self.isOtherCategoryExpanded {
+                    chartItem.value = 0.0
                 }
                 
-                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, value: categoryChartFraction, color: self.isOtherCategoryExpanded ? listCategory.color : Category.misc.color, mergeable: true, mergeFactor: visualMergeFactor))
+                chartItems.append(chartItem)
             }
+            
+            chartItems.append(PieChartComponent.ChartData.Item(id: .other, displayValue: otherRealSum, displaySize: totalOtherSize, value: self.isOtherCategoryExpanded ? 0.0 : otherSum, color: Category.misc.color, mergeable: false, mergeFactor: 1.0))
             
             let chartData = PieChartComponent.ChartData(items: chartItems)
             self.pieChartView.parentState = state
@@ -1045,6 +1057,7 @@ final class StorageUsageScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(PieChartComponent(
                     theme: environment.theme,
+                    strings: environment.strings,
                     chartData: chartData
                 )),
                 environment: {},

@@ -13,21 +13,6 @@ import MultilineTextComponent
 import EmojiStatusComponent
 import Postbox
 
-private func interpolateChartData(start: PieChartComponent.ChartData, end: PieChartComponent.ChartData, progress: CGFloat) -> PieChartComponent.ChartData {
-    if start.items.count != end.items.count {
-        return start
-    }
-    
-    var result = end
-    for i in 0 ..< result.items.count {
-        result.items[i].value = (1.0 - progress) * start.items[i].value + progress * end.items[i].value
-        result.items[i].color = start.items[i].color.interpolateTo(end.items[i].color, fraction: progress) ?? end.items[i].color
-        result.items[i].mergeFactor = (1.0 - progress) * start.items[i].mergeFactor + progress * end.items[i].mergeFactor
-    }
-    
-    return result
-}
-
 private func processChartData(data: PieChartComponent.ChartData) -> PieChartComponent.ChartData {
     var data = data
     
@@ -87,6 +72,95 @@ private func processChartData(data: PieChartComponent.ChartData) -> PieChartComp
 
 private let chartLabelFont = Font.with(size: 16.0, design: .round, weight: .semibold)
 
+private final class ChartSelectionTooltip: Component {
+    let theme: PresentationTheme
+    let fractionText: String
+    let title: String
+    let sizeText: String
+    
+    init(
+        theme: PresentationTheme,
+        fractionText: String,
+        title: String,
+        sizeText: String
+    ) {
+        self.theme = theme
+        self.fractionText = fractionText
+        self.title = title
+        self.sizeText = sizeText
+    }
+    
+    static func ==(lhs: ChartSelectionTooltip, rhs: ChartSelectionTooltip) -> Bool {
+        return true
+    }
+    
+    final class View: UIView {
+        private let backgroundView: BlurredBackgroundView
+        private let title = ComponentView<Empty>()
+        
+        override init(frame: CGRect) {
+            self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+            
+            self.backgroundView.layer.shadowOpacity = 0.12
+            self.backgroundView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+            self.backgroundView.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+            self.backgroundView.layer.shadowRadius = 8.0
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.backgroundView)
+        }
+        
+        required init(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        func update(component: ChartSelectionTooltip, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let sideInset: CGFloat = 10.0
+            let height: CGFloat = 24.0
+            
+            let text = NSMutableAttributedString()
+            text.append(NSAttributedString(string: component.fractionText + "  ", font: Font.semibold(12.0), textColor: component.theme.list.itemPrimaryTextColor))
+            text.append(NSAttributedString(string: component.title + "  ", font: Font.regular(12.0), textColor: component.theme.list.itemPrimaryTextColor))
+            text.append(NSAttributedString(string: component.sizeText, font: Font.semibold(12.0), textColor: component.theme.list.itemAccentColor))
+            
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(text)
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+            )
+            let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            
+            let size = CGSize(width: sideInset * 2.0 + titleSize.width, height: height)
+            
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+            self.backgroundView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.88), transition: .immediate)
+            self.backgroundView.update(size: size, cornerRadius: 10.0, transition: transition.containedViewLayoutTransition)
+            
+            self.backgroundView.layer.shadowPath = UIBezierPath(roundedRect: self.backgroundView.bounds, cornerRadius: 10.0).cgPath
+            
+            return size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
 private final class ChartLabel: UIView {
     private let label: ImmediateTextView
     private var currentText: String?
@@ -138,14 +212,16 @@ final class PieChartComponent: Component {
         struct Item: Equatable {
             var id: StorageUsageScreenComponent.Category
             var displayValue: Double
+            var displaySize: Int64
             var value: Double
             var color: UIColor
             var mergeable: Bool
             var mergeFactor: CGFloat
             
-            init(id: StorageUsageScreenComponent.Category, displayValue: Double, value: Double, color: UIColor, mergeable: Bool, mergeFactor: CGFloat) {
+            init(id: StorageUsageScreenComponent.Category, displayValue: Double, displaySize: Int64, value: Double, color: UIColor, mergeable: Bool, mergeFactor: CGFloat) {
                 self.id = id
                 self.displayValue = displayValue
+                self.displaySize = displaySize
                 self.value = value
                 self.color = color
                 self.mergeable = mergeable
@@ -161,18 +237,24 @@ final class PieChartComponent: Component {
     }
     
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let chartData: ChartData
     
     init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         chartData: ChartData
     ) {
         self.theme = theme
+        self.strings = strings
         self.chartData = chartData
     }
     
     static func ==(lhs: PieChartComponent, rhs: PieChartComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.chartData != rhs.chartData {
@@ -200,6 +282,16 @@ final class PieChartComponent: Component {
             self.angle = angle
             self.radius = radius
             self.scale = scale
+        }
+        
+        func interpolateTo(_ other: CalculatedLabel, amount: CGFloat) -> CalculatedLabel {
+            return CalculatedLabel(
+                image: other.image,
+                alpha: self.alpha.interpolate(to: other.alpha, amount: amount),
+                angle: self.angle.interpolate(to: other.angle, amount: amount),
+                radius: self.radius.interpolate(to: other.radius, amount: amount),
+                scale: self.scale.interpolate(to: other.scale, amount: amount)
+            )
         }
     }
     
@@ -244,6 +336,38 @@ final class PieChartComponent: Component {
         init(size: CGSize, sections: [CalculatedSection]) {
             self.size = size
             self.sections = sections
+        }
+        
+        init(interpolating start: CalculatedLayout, to end: CalculatedLayout, progress: CGFloat, size: CGSize) {
+            self.size = size
+            self.sections = []
+            
+            for i in 0 ..< end.sections.count {
+                let right = end.sections[i]
+                
+                if i < start.sections.count {
+                    let left = start.sections[i]
+                    let innerAngle: Range<CGFloat> = left.innerAngle.lowerBound.interpolate(to: right.innerAngle.lowerBound, amount: progress) ..< left.innerAngle.upperBound.interpolate(to: right.innerAngle.upperBound, amount: progress)
+                    let outerAngle: Range<CGFloat> = left.outerAngle.lowerBound.interpolate(to: right.outerAngle.lowerBound, amount: progress) ..< left.outerAngle.upperBound.interpolate(to: right.outerAngle.upperBound, amount: progress)
+                    
+                    var label: CalculatedLabel?
+                    if let leftLabel = left.label, let rightLabel = right.label {
+                        label = leftLabel.interpolateTo(rightLabel, amount: progress)
+                    }
+                    
+                    self.sections.append(CalculatedSection(
+                        id: right.id,
+                        color: left.color.interpolateTo(right.color, fraction: progress) ?? right.color,
+                        innerAngle: innerAngle,
+                        outerAngle: outerAngle,
+                        innerRadius: left.innerRadius.interpolate(to: right.innerRadius, amount: progress),
+                        outerRadius: left.outerRadius.interpolate(to: right.outerRadius, amount: progress),
+                        label: label
+                    ))
+                } else {
+                    self.sections.append(right)
+                }
+            }
         }
         
         init(size: CGSize, items: [ChartData.Item], selectedKey: AnyHashable?) {
@@ -344,10 +468,17 @@ final class PieChartComponent: Component {
                 anglesData.append(ItemAngleData(angleValue: angleValue, startAngle: innerStartAngle, endAngle: innerEndAngle))
             }
             
-            var mergedItem: (displayValue: Double, angleData: ItemAngleData, mergeFactor: CGFloat)?
             for i in 0 ..< items.count {
                 let item = items[i]
-                let angleData = anglesData[i]
+                
+                var isDimmedBySelection = false
+                if let selectedKey {
+                    if selectedKey == AnyHashable(item.id) {
+                    } else {
+                        isDimmedBySelection = true
+                    }
+                }
+                
                 self.updateLabel(
                     index: i,
                     displayValue: item.displayValue,
@@ -355,30 +486,10 @@ final class PieChartComponent: Component {
                     innerAngle: self.sections[i].innerAngle,
                     outerAngle: self.sections[i].outerAngle,
                     innerRadius: self.sections[i].innerRadius,
-                    outerRadius: self.sections[i].outerRadius
+                    outerRadius: self.sections[i].outerRadius,
+                    isDimmedBySelection: isDimmedBySelection
                 )
-                
-                if item.mergeable {
-                    if var currentMergedItem = mergedItem {
-                        currentMergedItem.displayValue += item.displayValue
-                        currentMergedItem.angleData.startAngle = min(currentMergedItem.angleData.startAngle, angleData.startAngle)
-                        currentMergedItem.angleData.endAngle = max(currentMergedItem.angleData.endAngle, angleData.endAngle)
-                        mergedItem = currentMergedItem
-                    } else {
-                        let invertedMergeFactor: CGFloat = 1.0 - max(0.0, item.mergeFactor)
-                        mergedItem = (item.displayValue, angleData, invertedMergeFactor)
-                    }
-                }
             }
-            
-            /*if let mergedItem {
-                updateItemLabel(id: "merged", displayValue: mergedItem.displayValue, mergeFactor: mergedItem.mergeFactor, angleData: mergedItem.angleData)
-            } else {
-                if let label = self.labels["merged"] {
-                    self.labels.removeValue(forKey: "merged")
-                    label.removeFromSuperview()
-                }
-            }*/
         }
         
         private mutating func updateLabel(
@@ -388,8 +499,11 @@ final class PieChartComponent: Component {
             innerAngle: Range<CGFloat>,
             outerAngle: Range<CGFloat>,
             innerRadius: CGFloat,
-            outerRadius: CGFloat
+            outerRadius: CGFloat,
+            isDimmedBySelection: Bool
         ) {
+            let normalAlpha: CGFloat = isDimmedBySelection ? 0.0 : 1.0
+            
             let fractionValue: Double = floor(displayValue * 100.0 * 10.0) / 10.0
             let fractionString: String
             if fractionValue < 0.1 {
@@ -519,7 +633,7 @@ final class PieChartComponent: Component {
                     if currentScale >= 1.0 - 0.001 {
                         resultLabel = CalculatedLabel(
                             image: labelImage,
-                            alpha: 1.0,
+                            alpha: 1.0 * normalAlpha,
                             angle: midAngle,
                             radius: centerDistance,
                             scale: 1.0
@@ -533,7 +647,7 @@ final class PieChartComponent: Component {
                     }
                     resultLabel = CalculatedLabel(
                         image: labelImage,
-                        alpha: currentScale >= 0.2 ? 1.0 : 0.0,
+                        alpha: (currentScale >= 0.4 ? 1.0 : 0.0) * normalAlpha,
                         angle: midAngle,
                         radius: centerDistance,
                         scale: currentScale
@@ -727,6 +841,17 @@ final class PieChartComponent: Component {
             preconditionFailure()
         }
         
+        func isPointOnGraph(point: CGPoint) -> Bool {
+            if let path = self.maskLayer.path {
+                return path.contains(point)
+            }
+            return false
+        }
+        
+        func tooltipLocation() -> CGPoint {
+            return self.labelLayer.position
+        }
+        
         func update(size: CGSize, section: CalculatedSection) {
             self.maskLayer.frame = CGRect(origin: CGPoint(), size: size)
             self.gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
@@ -812,7 +937,7 @@ final class PieChartComponent: Component {
         private(set) var data: ChartData?
         private(set) var selectedKey: AnyHashable?
         
-        private var currentAnimation: (start: ChartData, end: ChartData, current: ChartData, progress: CGFloat)?
+        private var currentAnimation: (start: CalculatedLayout, startTime: Double, duration: Double)?
         private var currentLayout: CalculatedLayout?
         private var animator: DisplayLinkAnimator?
         
@@ -830,8 +955,24 @@ final class PieChartComponent: Component {
             self.backgroundColor = nil
             self.isOpaque = false
             
+            var previousTimestamp: Double?
             self.displayLink = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
-                self?.update()
+                let timestamp = CACurrentMediaTime()
+                var delta: Double
+                if let previousTimestamp {
+                    delta = timestamp - previousTimestamp
+                } else {
+                    delta = 1.0 / 60.0
+                }
+                previousTimestamp = timestamp
+                
+                if delta < 0.0 {
+                    delta = 1.0 / 60.0
+                } else if delta > 0.5 {
+                    delta = 1.0 / 60.0
+                }
+                
+                self?.update(deltaTime: CGFloat(delta))
             })
         }
         
@@ -843,6 +984,24 @@ final class PieChartComponent: Component {
             self.animator?.invalidate()
         }
         
+        func sectionKey(at point: CGPoint) -> AnyHashable? {
+            for (id, itemLayer) in self.sectionLayers {
+                if itemLayer.isPointOnGraph(point: point) {
+                    return id
+                }
+            }
+            return nil
+        }
+        
+        func tooltipLocation(forKey key: StorageUsageScreenComponent.Category) -> CGPoint? {
+            for (id, itemLayer) in self.sectionLayers {
+                if id == AnyHashable(key) {
+                    return itemLayer.tooltipLocation()
+                }
+            }
+            return nil
+        }
+        
         func setItems(theme: PresentationTheme, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
             let data = processChartData(data: data)
             
@@ -850,40 +1009,20 @@ final class PieChartComponent: Component {
                 self.theme = theme
                 self.selectedKey = selectedKey
                 
-                if animated, let previous = self.data {
+                if animated, let previous = self.currentLayout {
                     var initialState = previous
                     if let currentAnimation = self.currentAnimation {
-                        initialState = currentAnimation.current
+                        let currentProgress: Double = max(0.0, min(1.0, (CACurrentMediaTime() - currentAnimation.startTime) / currentAnimation.duration))
+                        let mappedProgress = listViewAnimationCurveSystem(CGFloat(currentProgress))
+                        initialState = CalculatedLayout(interpolating: currentAnimation.start, to: previous, progress: mappedProgress, size: previous.size)
                     }
-                    self.currentAnimation = (initialState, data, initialState, 0.0)
-                    self.currentLayout = CalculatedLayout(
+                    let targetLayout = CalculatedLayout(
                         size: CGSize(width: 200.0, height: 200.0),
-                        items: initialState.items,
+                        items: data.items,
                         selectedKey: self.selectedKey
                     )
-                    self.animator?.invalidate()
-                    self.animator = DisplayLinkAnimator(duration: 0.4, from: 0.0, to: 1.0, update: { [weak self] progress in
-                        guard let self else {
-                            return
-                        }
-                        let progress = listViewAnimationCurveSystem(progress)
-                        if let currentAnimationValue = self.currentAnimation {
-                            let interpolatedValue = interpolateChartData(start: currentAnimationValue.start, end: currentAnimationValue.end, progress: progress)
-                            self.currentAnimation = (currentAnimationValue.start, currentAnimationValue.end, interpolatedValue, progress)
-                            self.currentLayout = CalculatedLayout(
-                                size: CGSize(width: 200.0, height: 200.0),
-                                items: interpolatedValue.items,
-                                selectedKey: self.selectedKey
-                            )
-                            self.update()
-                        }
-                    }, completion: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.currentAnimation = nil
-                        self.update()
-                    })
+                    self.currentLayout = targetLayout
+                    self.currentAnimation = (initialState, CACurrentMediaTime(), 0.4)
                 } else {
                     self.currentLayout = CalculatedLayout(
                         size: CGSize(width: 200.0, height: 200.0),
@@ -894,16 +1033,28 @@ final class PieChartComponent: Component {
                 
                 self.data = data
                 
-                self.update()
+                self.update(deltaTime: 0.0)
             }
         }
         
-        private func update() {
-            self.particleSet.update(deltaTime: 1.0 / 60.0)
+        private func update(deltaTime: CGFloat) {
+            self.particleSet.update(deltaTime: deltaTime)
             
             var validIds: [AnyHashable] = []
             if let currentLayout = self.currentLayout {
-                for section in currentLayout.sections {
+                var effectiveLayout = currentLayout
+                if let currentAnimation = self.currentAnimation {
+                    let currentProgress: Double = max(0.0, min(1.0, (CACurrentMediaTime() - currentAnimation.startTime) / currentAnimation.duration))
+                    let mappedProgress = listViewAnimationCurveSystem(CGFloat(currentProgress))
+                    
+                    effectiveLayout = CalculatedLayout(interpolating: currentAnimation.start, to: currentLayout, progress: mappedProgress, size: currentLayout.size)
+                    
+                    if currentProgress >= 1.0 - CGFloat.ulpOfOne {
+                        self.currentAnimation = nil
+                    }
+                }
+                
+                for section in effectiveLayout.sections {
                     validIds.append(section.id)
                     
                     let sectionLayer: SectionLayer
@@ -932,66 +1083,15 @@ final class PieChartComponent: Component {
                 self.sectionLayers.removeValue(forKey: id)
             }
         }
-        
-        /*override func draw(_ rect: CGRect) {
-            guard let context = UIGraphicsGetCurrentContext() else {
-                return
-            }
-            guard let currentLayout = self.currentLayout else {
-                return
-            }
-            
-            let size = CGSize(width: rect.width, height: rect.height)
-            
-            for section in currentLayout.sections {
-                if section.innerAngle.lowerBound == section.innerAngle.upperBound {
-                    continue
-                }
-                let path = CGMutablePath()
-                path.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: section.innerRadius, startAngle: section.innerAngle.upperBound, endAngle: section.innerAngle.lowerBound, clockwise: true)
-                path.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: section.outerRadius, startAngle: section.outerAngle.lowerBound, endAngle: section.outerAngle.upperBound, clockwise: false)
-                
-                context.addPath(path)
-                context.clip()
-                
-                let colors: [CGColor] = [
-                    section.color.withMultipliedBrightnessBy(0.9).cgColor,
-                    section.color.cgColor,
-                    section.color.cgColor,
-                    section.color.cgColor,
-                    section.color.withMultipliedBrightnessBy(0.9).cgColor
-                ]
-                var locations: [CGFloat] = [
-                    1.0,
-                    0.9,
-                    0.5,
-                    0.1,
-                    0.0
-                ]
-                if let gradient = CGGradient(colorsSpace: nil, colors: colors as CFArray, locations: &locations) {
-                    context.drawRadialGradient(gradient, startCenter: CGPoint(x: size.width * 0.5, y: size.height * 0.5), startRadius: section.innerRadius, endCenter: CGPoint(x: size.width * 0.5, y: size.height * 0.5), endRadius: section.outerRadius, options: [])
-                }
-                
-                context.resetClip()
-                
-                //context.setFillColor(section.color.cgColor)
-                //context.fillPath()
-                
-                if let label = section.label {
-                    let position = CGPoint(x: size.width * 0.5 + cos(label.angle) * label.radius, y: size.height * 0.5 + sin(label.angle) * label.radius)
-                    let labelSize = CGSize(width: label.image.size.width * label.scale, height: label.image.size.height * label.scale)
-                    let labelFrame = CGRect(origin: CGPoint(x: position.x - labelSize.width * 0.5, y: position.y - labelSize.height * 0.5), size: labelSize)
-                    label.image.draw(in: labelFrame, blendMode: .normal, alpha: label.alpha)
-                }
-            }
-        }*/
     }
     
     class View: UIView {
         private let dataView: ChartDataView
-        private var labels: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
-        var selectedKey: StorageUsageScreenComponent.Category?
+        private var tooltip: (key: AnyHashable, value: ComponentView<Empty>)?
         
+        var selectedKey: AnyHashable?
+        
+        private var component: PieChartComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
@@ -1010,31 +1110,104 @@ final class PieChartComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                let point = recognizer.location(in: self)
-                let _ = point
-                /*for (key, layer) in self.shapeLayers {
-                    if layer.frame.contains(point), let path = layer.path {
-                        if path.contains(self.layer.convert(point, to: layer)) {
-                            if self.selectedKey == key {
-                                self.selectedKey = nil
-                            } else {
-                                self.selectedKey = key
-                            }
-                            
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                            
-                            break
-                        }
+                let point = recognizer.location(in: self.dataView)
+                if let key = self.dataView.sectionKey(at: point) {
+                    if self.selectedKey == key {
+                        self.selectedKey = nil
+                    } else {
+                        self.selectedKey = key
                     }
-                }*/
+                } else {
+                    self.selectedKey = nil
+                }
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
         
         func update(component: PieChartComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let dataUpdated = self.component?.chartData != component.chartData
+            
             self.state = state
+            self.component = component
+            
+            if dataUpdated {
+                self.selectedKey = nil
+            }
             
             transition.setFrame(view: self.dataView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - 200.0) / 2.0), y: 0.0), size: CGSize(width: 200.0, height: 200.0)))
             self.dataView.setItems(theme: component.theme, data: component.chartData, selectedKey: self.selectedKey, animated: !transition.animation.isImmediate)
+            
+            if let selectedKey = self.selectedKey?.base as? StorageUsageScreenComponent.Category, let item = component.chartData.items.first(where: { $0.id == selectedKey }) {
+                let tooltip: ComponentView<Empty>
+                var tooltipTransition = transition
+                var animateIn = false
+                if let current = self.tooltip, current.key == AnyHashable(selectedKey) {
+                    tooltip = current.value
+                } else if let current = self.tooltip {
+                    if let tooltipView = current.value.view {
+                        transition.setAlpha(view: tooltipView, alpha: 0.0, completion: { [weak tooltipView] _ in
+                            tooltipView?.removeFromSuperview()
+                        })
+                    }
+                    tooltipTransition = .immediate
+                    animateIn = true
+                    tooltip = ComponentView()
+                    self.tooltip = (selectedKey, tooltip)
+                } else {
+                    tooltipTransition = .immediate
+                    animateIn = true
+                    tooltip = ComponentView()
+                    self.tooltip = (selectedKey, tooltip)
+                }
+                
+                let fractionValue: Double = floor(item.displayValue * 100.0 * 10.0) / 10.0
+                let fractionString: String
+                if fractionValue < 0.1 {
+                    fractionString = "<0.1"
+                } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
+                    fractionString = "\(Int(fractionValue))"
+                } else {
+                    fractionString = "\(fractionValue)"
+                }
+                
+                let tooltipSize = tooltip.update(
+                    transition: tooltipTransition,
+                    component: AnyComponent(ChartSelectionTooltip(
+                        theme: component.theme,
+                        fractionText: fractionString,
+                        title: selectedKey.title(strings: component.strings),
+                        sizeText: dataSizeString(Int(item.displaySize), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                if let relativeTooltipLocation = self.dataView.tooltipLocation(forKey: selectedKey) {
+                    let tooltipLocation = relativeTooltipLocation.offsetBy(dx: self.dataView.frame.minX, dy: self.dataView.frame.minY)
+                    let tooltipFrame = CGRect(origin: CGPoint(x: floor(tooltipLocation.x - tooltipSize.width / 2.0), y: tooltipLocation.y - 16.0 - tooltipSize.height), size: tooltipSize)
+                    
+                    if let tooltipView = tooltip.view {
+                        if tooltipView.superview == nil {
+                            self.addSubview(tooltipView)
+                        }
+                        tooltipTransition.setFrame(view: tooltipView, frame: tooltipFrame)
+                        if animateIn {
+                            transition.animateAlpha(view: tooltipView, from: 0.0, to: 1.0)
+                            transition.animateScale(view: tooltipView, from: 0.8, to: 1.0)
+                        }
+                    }
+                }
+            } else {
+                if let tooltip = self.tooltip {
+                    self.tooltip = nil
+                    if let tooltipView = tooltip.value.view {
+                        transition.setAlpha(view: tooltipView, alpha: 0.0, completion: { [weak tooltipView] _ in
+                            tooltipView?.removeFromSuperview()
+                        })
+                        transition.setScale(view: tooltipView, scale: 0.8)
+                    }
+                }
+            }
             
             return CGSize(width: availableSize.width, height: 200.0)
         }
