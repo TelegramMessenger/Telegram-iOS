@@ -39,7 +39,95 @@ public func printOpenFiles() {
     }
 }
 
-private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: inout [InodeInfo]) -> ScanFilesResult {
+private final class TempScanDatabase {
+    private let queue: Queue
+    private let valueBox: SqliteValueBox
+    
+    private let accessTimeTable: ValueBoxTable
+    
+    private var nextId: Int32 = 0
+    
+    private let accessTimeKey = ValueBoxKey(length: 4 + 4)
+    private let accessInfoBuffer = WriteBuffer()
+    
+    init?(queue: Queue, basePath: String) {
+        self.queue = queue
+        guard let valueBox = SqliteValueBox(basePath: basePath, queue: queue, isTemporary: true, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+            return nil
+        }
+        self.valueBox = valueBox
+        
+        self.accessTimeTable = ValueBoxTable(id: 2, keyType: .binary, compactValuesOnCreation: true)
+    }
+    
+    func begin() {
+        self.valueBox.begin()
+    }
+    
+    func commit() {
+        self.valueBox.commit()
+    }
+    
+    func dispose() {
+        self.valueBox.internalClose()
+    }
+    
+    func add(pathBuffer: UnsafeMutablePointer<Int8>, pathSize: Int, size: Int64, timestamp: Int32) {
+        let id = self.nextId
+        self.nextId += 1
+        
+        var size = size
+        self.accessInfoBuffer.reset()
+        self.accessInfoBuffer.write(&size, length: 8)
+        self.accessInfoBuffer.write(pathBuffer, length: pathSize)
+        
+        self.accessTimeKey.setInt32(0, value: timestamp)
+        self.accessTimeKey.setInt32(4, value: id)
+        self.valueBox.set(self.accessTimeTable, key: self.accessTimeKey, value: self.accessInfoBuffer)
+    }
+    
+    func topByAccessTime(_ f: (Int64, String) -> Bool) {
+        var startKey = ValueBoxKey(length: 4)
+        startKey.setInt32(0, value: 0)
+        
+        let endKey = ValueBoxKey(length: 4)
+        endKey.setInt32(0, value: Int32.max)
+        
+        while true {
+            var lastKey: ValueBoxKey?
+            self.valueBox.range(self.accessTimeTable, start: startKey, end: endKey, values: { key, value in
+                var result = true
+                withExtendedLifetime(value, {
+                    let readBuffer = ReadBuffer(memoryBufferNoCopy: value)
+                    
+                    var size: Int64 = 0
+                    readBuffer.read(&size, offset: 0, length: 8)
+                    
+                    var pathData = Data(count: value.length - 8)
+                    pathData.withUnsafeMutableBytes { buffer -> Void in
+                        readBuffer.read(buffer.baseAddress!, offset: 0, length: buffer.count)
+                    }
+                    
+                    if let path = String(data: pathData, encoding: .utf8) {
+                        result = f(size, path)
+                    }
+                })
+                
+                lastKey = key
+                
+                return result
+            }, limit: 512)
+            
+            if let lastKey = lastKey {
+                startKey = lastKey
+            } else {
+                break
+            }
+        }
+    }
+}
+
+private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, tempDatabase: TempScanDatabase) -> ScanFilesResult {
     var result = ScanFilesResult()
     
     if let dp = opendir(path) {
@@ -63,21 +151,24 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: i
             strncat(pathBuffer, "/", 1024)
             strncat(pathBuffer, &dirp.pointee.d_name.0, 1024)
             
-            //puts(pathBuffer)
-            //puts("\n")
-            
             var value = stat()
             if stat(pathBuffer, &value) == 0 {
-                if value.st_mtimespec.tv_sec < minTimestamp {
-                    unlink(pathBuffer)
-                    result.unlinkedCount += 1
+                if (((value.st_mode) & S_IFMT) == S_IFDIR) {
+                    if includeSubdirectories {
+                        if let subPath = String(data: Data(bytes: pathBuffer, count: strnlen(pathBuffer, 1024)), encoding: .utf8) {
+                            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, tempDatabase: tempDatabase)
+                            result.totalSize += subResult.totalSize
+                            result.unlinkedCount += subResult.unlinkedCount
+                        }
+                    }
                 } else {
-                    result.totalSize += UInt64(value.st_size)
-                    inodes.append(InodeInfo(
-                        inode: value.st_ino,
-                        timestamp: Int32(clamping: value.st_mtimespec.tv_sec),
-                        size: UInt32(clamping: value.st_size)
-                    ))
+                    if value.st_mtimespec.tv_sec < minTimestamp {
+                        unlink(pathBuffer)
+                        result.unlinkedCount += 1
+                    } else {
+                        result.totalSize += UInt64(value.st_size)
+                        tempDatabase.add(pathBuffer: pathBuffer, pathSize: strnlen(pathBuffer, 1024), size: Int64(value.st_size), timestamp: Int32(value.st_mtimespec.tv_sec))
+                    }
                 }
             }
         }
@@ -87,9 +178,8 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: i
     return result
 }
 
-private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UInt64, mainStoragePath: String, storageBox: StorageBox) {
+/*private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UInt64, mainStoragePath: String, storageBox: StorageBox) {
     var removedSize: UInt64 = 0
-    
     inodes.sort(by: { lhs, rhs in
         return lhs.timestamp < rhs.timestamp
     })
@@ -138,19 +228,25 @@ private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UI
                 
                 var value = stat()
                 if stat(pathBuffer, &value) == 0 {
-                    if inodesToDelete.contains(value.st_ino) {
-                        if isMainPath {
-                            let nameLength = strnlen(&dirp.pointee.d_name.0, 1024)
-                            let nameData = Data(bytesNoCopy: &dirp.pointee.d_name.0, count: Int(nameLength), deallocator: .none)
-                            withExtendedLifetime(nameData, {
-                                if let fileName = String(data: nameData, encoding: .utf8) {
-                                    if let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
-                                        unlinkedResourceIds.append(idData)
-                                    }
-                                }
-                            })
+                    if (((value.st_mode) & S_IFMT) == S_IFDIR) {
+                        if let subPath = String(data: Data(bytes: pathBuffer, count: strnlen(pathBuffer, 1024)), encoding: .utf8) {
+                            mapFiles(paths: <#T##[String]#>, inodes: &<#T##[InodeInfo]#>, removeSize: remov, mainStoragePath: mainStoragePath, storageBox: storageBox)
                         }
-                        unlink(pathBuffer)
+                    } else {
+                        if inodesToDelete.contains(value.st_ino) {
+                            if isMainPath {
+                                let nameLength = strnlen(&dirp.pointee.d_name.0, 1024)
+                                let nameData = Data(bytesNoCopy: &dirp.pointee.d_name.0, count: Int(nameLength), deallocator: .none)
+                                withExtendedLifetime(nameData, {
+                                    if let fileName = String(data: nameData, encoding: .utf8) {
+                                        if let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
+                                            unlinkedResourceIds.append(idData)
+                                        }
+                                    }
+                                })
+                            }
+                            unlink(pathBuffer)
+                        }
                     }
                 }
             }
@@ -161,7 +257,7 @@ private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UI
     if !unlinkedResourceIds.isEmpty {
         storageBox.remove(ids: unlinkedResourceIds)
     }
-}
+}*/
 
 private final class TimeBasedCleanupImpl {
     private let queue: Queue
@@ -177,19 +273,6 @@ private final class TimeBasedCleanupImpl {
     private var shortLivedMaxStoreTime: Int32?
     private var gigabytesLimit: Int32?
     private let scheduledScanDisposable = MetaDisposable()
-    
-    
-    private struct GeneralFile : Comparable, Equatable {
-        let file: String
-        let size: Int
-        let timestamp:Int32
-        static func == (lhs: GeneralFile, rhs: GeneralFile) -> Bool {
-            return lhs.timestamp == rhs.timestamp && lhs.size == rhs.size && lhs.file == rhs.file
-        }
-        static func < (lhs: GeneralFile, rhs: GeneralFile) -> Bool {
-            return lhs.timestamp < rhs.timestamp
-        }
-    }
     
     init(queue: Queue, storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
         self.queue = queue
@@ -220,14 +303,22 @@ private final class TimeBasedCleanupImpl {
         let shortLivedPaths = self.shortLivedPaths
         let storageBox = self.storageBox
         let scanOnce = Signal<Never, NoError> { subscriber in
-            DispatchQueue.global(qos: .background).async {
+            let queue = Queue(name: "TimeBasedCleanupScan", qos: .background)
+            queue.async {
+                let tempDirectory = TempBox.shared.tempDirectory()
+                guard let tempDatabase = TempScanDatabase(queue: queue, basePath: tempDirectory.path) else {
+                    postboxLog("TimeBasedCleanup: couldn't create temp database at \(tempDirectory.path)")
+                    subscriber.putCompletion()
+                    return
+                }
+                tempDatabase.begin()
+                
                 var removedShortLivedCount: Int = 0
                 var removedGeneralCount: Int = 0
                 let removedGeneralLimitCount: Int = 0
                 
                 let startTime = CFAbsoluteTimeGetCurrent()
                 
-                var inodes: [InodeInfo] = []
                 var paths: [String] = []
                 
                 let timestamp = Int32(Date().timeIntervalSince1970)
@@ -241,7 +332,7 @@ private final class TimeBasedCleanupImpl {
                 let oldestShortLivedTimestamp = timestamp - shortLived
                 let oldestGeneralTimestamp = timestamp - general
                 for path in shortLivedPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, inodes: &inodes)
+                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, tempDatabase: tempDatabase)
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -251,7 +342,7 @@ private final class TimeBasedCleanupImpl {
                 var totalLimitSize: UInt64 = 0
                 
                 for path in generalPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, inodes: &inodes)
+                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, tempDatabase: tempDatabase)
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -259,7 +350,7 @@ private final class TimeBasedCleanupImpl {
                     totalLimitSize += scanResult.totalSize
                 }
                 do {
-                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, inodes: &inodes)
+                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, tempDatabase: tempDatabase)
                     if !paths.contains(totalSizeBasedPath) {
                         paths.append(totalSizeBasedPath)
                     }
@@ -267,9 +358,39 @@ private final class TimeBasedCleanupImpl {
                     totalLimitSize += scanResult.totalSize
                 }
                 
+                tempDatabase.commit()
+                
+                var unlinkedResourceIds: [Data] = []
+                
                 if totalLimitSize > bytesLimit {
-                    mapFiles(paths: paths, inodes: &inodes, removeSize: totalLimitSize - bytesLimit, mainStoragePath: totalSizeBasedPath, storageBox: storageBox)
+                    var remainingSize = Int64(totalLimitSize)
+                    tempDatabase.topByAccessTime { size, filePath in
+                        remainingSize -= size
+                        
+                        unlink(filePath)
+                        
+                        if (filePath as NSString).deletingLastPathComponent == totalSizeBasedPath {
+                            let fileName = (filePath as NSString).lastPathComponent
+                            if let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
+                                unlinkedResourceIds.append(idData)
+                            }
+                        }
+                        //let fileName = filePath.lastPathComponent
+                        
+                        if remainingSize >= bytesLimit {
+                            return false
+                        }
+                        
+                        return true
+                    }
                 }
+                
+                if !unlinkedResourceIds.isEmpty {
+                    storageBox.remove(ids: unlinkedResourceIds)
+                }
+                
+                tempDatabase.dispose()
+                TempBox.shared.dispose(tempDirectory)
                 
                 if removedShortLivedCount != 0 || removedGeneralCount != 0 || removedGeneralLimitCount != 0 {
                     postboxLog("[TimeBasedCleanup] \(CFAbsoluteTimeGetCurrent() - startTime) s removed \(removedShortLivedCount) short-lived files, \(removedGeneralCount) general files, \(removedGeneralLimitCount) limit files")

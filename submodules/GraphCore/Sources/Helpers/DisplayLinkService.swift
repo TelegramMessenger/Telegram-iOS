@@ -36,44 +36,6 @@ class DisplayLinkService {
         }
     }
 
-//    private init() {
-//        displayLink.add(to: .main, forMode: .common)
-//        displayLink.preferredFramesPerSecond = 60
-//        displayLink.isPaused = true
-//    }
-//
-//    // MARK: - Display Link
-//    private lazy var displayLink: CADisplayLink! = { CADisplayLink(target: self, selector: #selector(displayLinkDidFire)) } ()
-//    private var previousTickTime = 0.0
-//
-//    private func startDisplayLink() {
-//        guard displayLink.isPaused else {
-//            return
-//        }
-//        previousTickTime = CACurrentMediaTime()
-//        displayLink.isPaused = false
-//    }
-//
-//    @objc private func displayLinkDidFire(_ displayLink: CADisplayLink) {
-//        let currentTime = CACurrentMediaTime()
-//        let delta = currentTime - previousTickTime
-//        previousTickTime = currentTime
-//        let allListners = listners.allObjects
-//        var hasListners = false
-//        for listner in allListners {
-//            (listner as! DisplayLinkListner).update(delta: delta)
-//            hasListners = true
-//        }
-//
-//        if !hasListners {
-//            stopDisplayLink()
-//        }
-//    }
-//
-//    private func stopDisplayLink() {
-//        displayLink.isPaused = true
-//    }
-
     private init() {
         dispatchSourceTimer.schedule(deadline: .now() + 1.0 / 60, repeating: 1.0 / 60)
         dispatchSourceTimer.setEventHandler {

@@ -401,7 +401,6 @@ public func storageUsageExceptionsScreen(
             }
             
             subItems.append(.separator)
-            //TODO:localize
             subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
             }, action: { _, f in

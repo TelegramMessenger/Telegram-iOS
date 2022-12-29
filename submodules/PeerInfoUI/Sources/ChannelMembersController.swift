@@ -359,7 +359,6 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
     var displayHideMembers = false
     var canSetupHideMembers = false
     if let channel = view.peers[view.peerId] as? TelegramChannel, case .group = channel.info {
-        //TODO:loc
         displayHideMembers = true
         canSetupHideMembers = channel.hasPermission(.banMembers)
     }
@@ -390,14 +389,13 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
             isInteractive = false
         }
         
-        //TODO:localize
-        entries.append(.hideMembers(text: "Hide Members", disabledReason: disabledReason, isInteractive: isInteractive, value: membersHidden))
+        entries.append(.hideMembers(text: presentationData.strings.GroupMembers_HideMembers, disabledReason: disabledReason, isInteractive: isInteractive, value: membersHidden))
         
         let infoText: String
         if membersHidden {
-            infoText = "Switch this off to show the list of members in this group."
+            infoText = presentationData.strings.GroupMembers_MembersHiddenOn
         } else {
-            infoText = "Switch this on to hide the list of members in this group. Admins will remain visible."
+            infoText = presentationData.strings.GroupMembers_MembersHiddenOff
         }
         entries.append(.hideMembersInfo(infoText))
     }

@@ -22,6 +22,7 @@ private func interpolateChartData(start: PieChartComponent.ChartData, end: PieCh
     for i in 0 ..< result.items.count {
         result.items[i].value = (1.0 - progress) * start.items[i].value + progress * end.items[i].value
         result.items[i].color = start.items[i].color.interpolateTo(end.items[i].color, fraction: progress) ?? end.items[i].color
+        result.items[i].mergeFactor = (1.0 - progress) * start.items[i].mergeFactor + progress * end.items[i].mergeFactor
     }
     
     return result
@@ -139,12 +140,16 @@ final class PieChartComponent: Component {
             var displayValue: Double
             var value: Double
             var color: UIColor
+            var mergeable: Bool
+            var mergeFactor: CGFloat
             
-            init(id: StorageUsageScreenComponent.Category, displayValue: Double, value: Double, color: UIColor) {
+            init(id: StorageUsageScreenComponent.Category, displayValue: Double, value: Double, color: UIColor, mergeable: Bool, mergeFactor: CGFloat) {
                 self.id = id
                 self.displayValue = displayValue
                 self.value = value
                 self.color = color
+                self.mergeable = mergeable
+                self.mergeFactor = mergeFactor
             }
         }
         
@@ -179,12 +184,12 @@ final class PieChartComponent: Component {
     private final class ChartDataView: UIView {
         private(set) var theme: PresentationTheme?
         private(set) var data: ChartData?
-        private(set) var selectedKey: StorageUsageScreenComponent.Category?
+        private(set) var selectedKey: AnyHashable?
         
         private var currentAnimation: (start: ChartData, end: ChartData, current: ChartData, progress: CGFloat)?
         private var animator: DisplayLinkAnimator?
         
-        private var labels: [StorageUsageScreenComponent.Category: ChartLabel] = [:]
+        private var labels: [AnyHashable: ChartLabel] = [:]
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -201,7 +206,7 @@ final class PieChartComponent: Component {
             self.animator?.invalidate()
         }
         
-        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: StorageUsageScreenComponent.Category?, animated: Bool) {
+        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
             let data = processChartData(data: data)
             
             if self.theme !== theme || self.data != data || self.selectedKey != selectedKey {
@@ -253,7 +258,6 @@ final class PieChartComponent: Component {
             let innerDiameter: CGFloat = 100.0
             let spacing: CGFloat = 2.0
             let innerAngleSpacing: CGFloat = spacing / (innerDiameter * 0.5)
-            //let minAngle: CGFloat = innerAngleSpacing * 2.0 + 2.0 / (innerDiameter * 0.5)
             
             var angles: [Double] = []
             for i in 0 ..< data.items.count {
@@ -265,13 +269,23 @@ final class PieChartComponent: Component {
             let diameter: CGFloat = 200.0
             let reducedDiameter: CGFloat = 170.0
             
+            let shapeLayerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: diameter, height: diameter))
+            
+            struct ItemAngleData {
+                var angleValue: CGFloat
+                var startAngle: CGFloat
+                var endAngle: CGFloat
+            }
+            
+            var anglesData: [ItemAngleData] = []
+            
             var startAngle: CGFloat = 0.0
             for i in 0 ..< data.items.count {
                 let item = data.items[i]
                 
                 let itemOuterDiameter: CGFloat
                 if let selectedKey = self.selectedKey {
-                    if selectedKey == item.id {
+                    if selectedKey == AnyHashable(item.id) {
                         itemOuterDiameter = diameter
                     } else {
                         itemOuterDiameter = reducedDiameter
@@ -280,24 +294,54 @@ final class PieChartComponent: Component {
                     itemOuterDiameter = diameter
                 }
                 
-                let shapeLayerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: diameter, height: diameter))
-                
                 let angleSpacing: CGFloat = spacing / (itemOuterDiameter * 0.5)
                 
                 let angleValue: CGFloat = angles[i]
                 
+                var beforeSpacingFraction: CGFloat = 1.0
+                var afterSpacingFraction: CGFloat = 1.0
+                if item.mergeable {
+                    let previousItem: ChartData.Item
+                    if i == 0 {
+                        previousItem = data.items[data.items.count - 1]
+                    } else {
+                        previousItem = data.items[i - 1]
+                    }
+
+                    let nextItem: ChartData.Item
+                    if i == data.items.count - 1 {
+                        nextItem = data.items[0]
+                    } else {
+                        nextItem = data.items[i + 1]
+                    }
+                    
+                    if previousItem.mergeable {
+                        beforeSpacingFraction = item.mergeFactor * 1.0 + (1.0 - item.mergeFactor) * (-0.2)
+                    }
+                    if nextItem.mergeable {
+                        afterSpacingFraction = item.mergeFactor * 1.0 + (1.0 - item.mergeFactor) * (-0.2)
+                    }
+                }
+                
                 let innerStartAngle = startAngle + innerAngleSpacing * 0.5
+                let arcInnerStartAngle = startAngle + innerAngleSpacing * 0.5 * beforeSpacingFraction
+                
                 var innerEndAngle = startAngle + angleValue - innerAngleSpacing * 0.5
                 innerEndAngle = max(innerEndAngle, innerStartAngle)
+                var arcInnerEndAngle = startAngle + angleValue - innerAngleSpacing * 0.5 * afterSpacingFraction
+                arcInnerEndAngle = max(arcInnerEndAngle, arcInnerStartAngle)
                 
                 let outerStartAngle = startAngle + angleSpacing * 0.5
+                let arcOuterStartAngle = startAngle + angleSpacing * 0.5 * beforeSpacingFraction
                 var outerEndAngle = startAngle + angleValue - angleSpacing * 0.5
                 outerEndAngle = max(outerEndAngle, outerStartAngle)
+                var arcOuterEndAngle = startAngle + angleValue - angleSpacing * 0.5 * afterSpacingFraction
+                arcOuterEndAngle = max(arcOuterEndAngle, arcOuterStartAngle)
                 
                 let path = CGMutablePath()
                 
-                path.addArc(center: CGPoint(x: diameter * 0.5, y: diameter * 0.5), radius: innerDiameter * 0.5, startAngle: innerEndAngle, endAngle: innerStartAngle, clockwise: true)
-                path.addArc(center: CGPoint(x: diameter * 0.5, y: diameter * 0.5), radius: itemOuterDiameter * 0.5, startAngle: outerStartAngle, endAngle: outerEndAngle, clockwise: false)
+                path.addArc(center: CGPoint(x: diameter * 0.5, y: diameter * 0.5), radius: innerDiameter * 0.5, startAngle: arcInnerEndAngle, endAngle: arcInnerStartAngle, clockwise: true)
+                path.addArc(center: CGPoint(x: diameter * 0.5, y: diameter * 0.5), radius: itemOuterDiameter * 0.5, startAngle: arcOuterStartAngle, endAngle: arcOuterEndAngle, clockwise: false)
                 
                 context.addPath(path)
                 context.setFillColor(item.color.cgColor)
@@ -305,7 +349,11 @@ final class PieChartComponent: Component {
                 
                 startAngle += angleValue
                 
-                let fractionValue: Double = floor(item.displayValue * 100.0 * 10.0) / 10.0
+                anglesData.append(ItemAngleData(angleValue: angleValue, startAngle: innerStartAngle, endAngle: innerEndAngle))
+            }
+            
+            func updateItemLabel(id: AnyHashable, displayValue: Double, mergeFactor: CGFloat, angleData: ItemAngleData) {
+                let fractionValue: Double = floor(displayValue * 100.0 * 10.0) / 10.0
                 let fractionString: String
                 if fractionValue < 0.1 {
                     fractionString = "<0.1"
@@ -316,15 +364,19 @@ final class PieChartComponent: Component {
                 }
                 
                 let label: ChartLabel
-                if let current = self.labels[item.id] {
+                if let current = self.labels[id] {
                     label = current
                 } else {
                     label = ChartLabel()
-                    self.labels[item.id] = label
+                    self.labels[id] = label
                 }
                 let labelSize = label.update(text: "\(fractionString)%")
                 
                 var labelFrame: CGRect?
+                
+                let angleValue = angleData.angleValue
+                let innerStartAngle = angleData.startAngle
+                let innerEndAngle = angleData.endAngle
                 
                 if angleValue >= 0.001 {
                     for step in 0 ... 20 {
@@ -472,7 +524,8 @@ final class PieChartComponent: Component {
                     
                     var labelScale = labelFrame.width / labelSize.width
                     
-                    let normalAlpha: CGFloat = labelScale < 0.4 ? 0.0 : 1.0
+                    var normalAlpha: CGFloat = labelScale < 0.4 ? 0.0 : 1.0
+                    normalAlpha *= max(0.0, mergeFactor)
                     
                     var relLabelCenter = CGPoint(
                         x: labelFrame.midX - shapeLayerFrame.midX,
@@ -481,7 +534,7 @@ final class PieChartComponent: Component {
                     
                     let labelAlpha: CGFloat
                     if let selectedKey = self.selectedKey {
-                        if selectedKey == item.id {
+                        if selectedKey == id {
                             labelAlpha = normalAlpha
                         } else {
                             labelAlpha = 0.0
@@ -499,7 +552,7 @@ final class PieChartComponent: Component {
                     }
                     if labelView.alpha != labelAlpha {
                         let transition: Transition
-                        if animateIn {
+                        if animateIn || "".isEmpty {
                             transition = .immediate
                         } else {
                             transition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
@@ -514,6 +567,34 @@ final class PieChartComponent: Component {
                     
                     labelView.center = labelCenter
                     labelView.transform = CGAffineTransformMakeScale(labelScale, labelScale)
+                }
+            }
+            
+            var mergedItem: (displayValue: Double, angleData: ItemAngleData, mergeFactor: CGFloat)?
+            for i in 0 ..< data.items.count {
+                let item = data.items[i]
+                let angleData = anglesData[i]
+                updateItemLabel(id: item.id, displayValue: item.displayValue, mergeFactor: item.mergeFactor, angleData: angleData)
+                
+                if item.mergeable {
+                    if var currentMergedItem = mergedItem {
+                        currentMergedItem.displayValue += item.displayValue
+                        currentMergedItem.angleData.startAngle = min(currentMergedItem.angleData.startAngle, angleData.startAngle)
+                        currentMergedItem.angleData.endAngle = max(currentMergedItem.angleData.endAngle, angleData.endAngle)
+                        mergedItem = currentMergedItem
+                    } else {
+                        let invertedMergeFactor: CGFloat = 1.0 - max(0.0, item.mergeFactor)
+                        mergedItem = (item.displayValue, angleData, invertedMergeFactor)
+                    }
+                }
+            }
+            
+            if let mergedItem {
+                updateItemLabel(id: "merged", displayValue: mergedItem.displayValue, mergeFactor: mergedItem.mergeFactor, angleData: mergedItem.angleData)
+            } else {
+                if let label = self.labels["merged"] {
+                    self.labels.removeValue(forKey: "merged")
+                    label.removeFromSuperview()
                 }
             }
         }

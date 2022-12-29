@@ -21,6 +21,71 @@ import UndoUI
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramStringFormatting
+import GalleryData
+
+#if DEBUG
+import os.signpost
+
+private class SignpostContext {
+    enum EventType {
+        case begin
+        case end
+    }
+    
+    class OpaqueData {
+    }
+    
+    static var shared: SignpostContext? = {
+        if #available(iOS 15.0, *) {
+            return SignpostContextImpl()
+        } else {
+            return nil
+        }
+    }()
+    
+    func begin(name: StaticString) -> OpaqueData {
+        preconditionFailure()
+    }
+    
+    func end(name: StaticString, data: OpaqueData) {
+    }
+}
+
+@available(iOS 15.0, *)
+private final class SignpostContextImpl: SignpostContext {
+    final class OpaqueDataImpl: OpaqueData {
+        let state: OSSignpostIntervalState
+        let timestamp: Double
+        
+        init(state: OSSignpostIntervalState, timestamp: Double) {
+            self.state = state
+            self.timestamp = timestamp
+        }
+    }
+    
+    private let signpost = OSSignposter(subsystem: "org.telegram.Telegram-iOS", category: "StorageUsageScreen")
+    private let id: OSSignpostID
+    
+    override init() {
+        self.id = self.signpost.makeSignpostID()
+        
+        super.init()
+    }
+    
+    override func begin(name: StaticString) -> OpaqueData {
+        let result = self.signpost.beginInterval(name, id: self.id)
+        return OpaqueDataImpl(state: result, timestamp: CFAbsoluteTimeGetCurrent())
+    }
+    
+    override func end(name: StaticString, data: OpaqueData) {
+        if let data = data as? OpaqueDataImpl {
+            self.signpost.endInterval(name, data.state)
+            print("Signpost \(name): \((CFAbsoluteTimeGetCurrent() - data.timestamp) * 1000.0) ms")
+        }
+    }
+}
+
+#endif
 
 private extension StorageUsageScreenComponent.Category {
     init(_ category: StorageUsageStats.CategoryKey) {
@@ -49,15 +114,18 @@ final class StorageUsageScreenComponent: Component {
     let context: AccountContext
     let makeStorageUsageExceptionsScreen: (CacheStorageSettings.PeerStorageCategory) -> ViewController?
     let peer: EnginePeer?
+    let ready: Promise<Bool>
     
     init(
         context: AccountContext,
         makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?,
-        peer: EnginePeer?
+        peer: EnginePeer?,
+        ready: Promise<Bool>
     ) {
         self.context = context
         self.makeStorageUsageExceptionsScreen = makeStorageUsageExceptionsScreen
         self.peer = peer
+        self.ready = ready
     }
     
     static func ==(lhs: StorageUsageScreenComponent, rhs: StorageUsageScreenComponent) -> Bool {
@@ -107,6 +175,16 @@ final class StorageUsageScreenComponent: Component {
         let selectedPeers: Set<EnginePeer.Id>
         let selectedMessages: Set<EngineMessage.Id>
         
+        var isEmpty: Bool {
+            if !self.selectedPeers.isEmpty {
+                return false
+            }
+            if !self.selectedMessages.isEmpty {
+                return false
+            }
+            return true
+        }
+        
         init(
             selectedPeers: Set<EnginePeer.Id>,
             selectedMessages: Set<EngineMessage.Id>
@@ -132,17 +210,31 @@ final class StorageUsageScreenComponent: Component {
             return true
         }
         
-        func togglePeer(id: EnginePeer.Id) -> SelectionState {
+        func togglePeer(id: EnginePeer.Id, availableMessages: [EngineMessage.Id: Message]) -> SelectionState {
             var selectedPeers = self.selectedPeers
+            var selectedMessages = self.selectedMessages
+            
             if selectedPeers.contains(id) {
                 selectedPeers.remove(id)
+                
+                for (messageId, _) in availableMessages {
+                    if messageId.peerId == id {
+                        selectedMessages.remove(messageId)
+                    }
+                }
             } else {
                 selectedPeers.insert(id)
+                
+                for (messageId, _) in availableMessages {
+                    if messageId.peerId == id {
+                        selectedMessages.insert(messageId)
+                    }
+                }
             }
             
             return SelectionState(
                 selectedPeers: selectedPeers,
-                selectedMessages: Set()
+                selectedMessages: selectedMessages
             )
         }
         
@@ -155,7 +247,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             return SelectionState(
-                selectedPeers: Set(),
+                selectedPeers: self.selectedPeers,
                 selectedMessages: selectedMessages
             )
         }
@@ -219,17 +311,20 @@ final class StorageUsageScreenComponent: Component {
         
         private var currentStats: AllStorageUsageStats?
         private var existingCategories: Set<Category> = Set()
+        private var otherCategories: Set<Category> = Set()
         
         private var currentMessages: [MessageId: Message] = [:]
         private var cacheSettings: CacheStorageSettings?
         private var cacheSettingsExceptionCount: [CacheStorageSettings.PeerStorageCategory: Int32]?
         
         private var peerItems: StoragePeerListPanelComponent.Items?
-        private var imageItems: StorageFileListPanelComponent.Items?
+        private var imageItems: StorageMediaGridPanelComponent.Items?
         private var fileItems: StorageFileListPanelComponent.Items?
         private var musicItems: StorageFileListPanelComponent.Items?
         
         private var selectionState: SelectionState?
+        
+        private var currentSelectedPanelId: AnyHashable?
         
         private var clearingDisplayTimestamp: Double?
         private var isClearing: Bool = false {
@@ -433,11 +528,22 @@ final class StorageUsageScreenComponent: Component {
                 animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
                 animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
                 
+                var buttonsMasterAlpha: CGFloat = 1.0
+                if let component = self.component, component.peer != nil {
+                    buttonsMasterAlpha = 0.0
+                } else {
+                    if self.currentSelectedPanelId == nil || self.currentSelectedPanelId == AnyHashable("peers") {
+                        buttonsMasterAlpha = 1.0
+                    } else {
+                        buttonsMasterAlpha = 0.0
+                    }
+                }
+                
                 if let navigationEditButtonView = self.navigationEditButton.view {
-                    animatedTransition.setAlpha(view: navigationEditButtonView, alpha: (self.selectionState == nil ? 1.0 : 0.0) * navigationBackgroundAlpha)
+                    animatedTransition.setAlpha(view: navigationEditButtonView, alpha: (self.selectionState == nil ? 1.0 : 0.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
                 }
                 if let navigationDoneButtonView = self.navigationDoneButton.view {
-                    animatedTransition.setAlpha(view: navigationDoneButtonView, alpha: (self.selectionState == nil ? 0.0 : 1.0) * navigationBackgroundAlpha)
+                    animatedTransition.setAlpha(view: navigationDoneButtonView, alpha: (self.selectionState == nil ? 0.0 : 1.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
                 }
                 
                 let expansionDistance: CGFloat = 32.0
@@ -498,9 +604,13 @@ final class StorageUsageScreenComponent: Component {
             } else {
                 if let loadingView = self.loadingView {
                     self.loadingView = nil
-                    loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingView] _ in
-                        loadingView?.removeFromSuperview()
-                    })
+                    if environment.isVisible {
+                        loadingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingView] _ in
+                            loadingView?.removeFromSuperview()
+                        })
+                    } else {
+                        loadingView.removeFromSuperview()
+                    }
                 }
             }
             
@@ -587,7 +697,12 @@ final class StorageUsageScreenComponent: Component {
             
             if let animationHint {
                 if case .firstStatsUpdate = animationHint.value {
-                    let alphaTransition: Transition = .easeInOut(duration: 0.25)
+                    let alphaTransition: Transition
+                    if environment.isVisible {
+                        alphaTransition = .easeInOut(duration: 0.25)
+                    } else {
+                        alphaTransition = .immediate
+                    }
                     alphaTransition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
                     alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
                 } else if case .clearedItems = animationHint.value {
@@ -629,11 +744,21 @@ final class StorageUsageScreenComponent: Component {
                             return
                         }
                         if self.selectionState == nil {
+                            #if DEBUG
+                            let signpostState = SignpostContext.shared?.begin(name: "edit")
+                            #endif
+                            
                             self.selectionState = SelectionState(
                                 selectedPeers: Set(),
                                 selectedMessages: Set()
                             )
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            
+                            #if DEBUG
+                            if let signpostState {
+                                SignpostContext.shared?.end(name: "edit", data: signpostState)
+                            }
+                            #endif
                         }
                     }
                 ).minSize(CGSize(width: 16.0, height: environment.navigationHeight - environment.statusBarHeight))),
@@ -679,7 +804,7 @@ final class StorageUsageScreenComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             var bottomInset: CGFloat = environment.safeInsets.bottom
-            if let selectionState = self.selectionState {
+            if let selectionState = self.selectionState, !selectionState.isEmpty {
                 let selectionPanel: ComponentView<Empty>
                 var selectionPanelTransition = transition
                 if let current = self.selectionPanel {
@@ -692,15 +817,6 @@ final class StorageUsageScreenComponent: Component {
                 
                 var selectedSize: Int64 = 0
                 if let currentStats = self.currentStats {
-                    for peerId in selectionState.selectedPeers {
-                        if let stats = currentStats.peers[peerId] {
-                            let peerSize = stats.stats.categories.values.reduce(0, {
-                                $0 + $1.size
-                            })
-                            selectedSize += peerSize
-                        }
-                    }
-                    
                     let contextStats: StorageUsageStats
                     if let peer = component.peer {
                         contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
@@ -708,17 +824,40 @@ final class StorageUsageScreenComponent: Component {
                         contextStats = currentStats.totalStats
                     }
                     
+                    for peerId in selectionState.selectedPeers {
+                        if let stats = currentStats.peers[peerId] {
+                            let peerSize = stats.stats.categories.values.reduce(0, {
+                                $0 + $1.size
+                            })
+                            selectedSize += peerSize
+                            
+                            for (messageId, _) in self.currentMessages {
+                                if messageId.peerId == peerId {
+                                    if !selectionState.selectedMessages.contains(messageId) {
+                                            inner: for (_, category) in contextStats.categories {
+                                            if let messageSize = category.messages[messageId] {
+                                                selectedSize -= messageSize
+                                                break inner
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     for messageId in selectionState.selectedMessages {
                         for (_, category) in contextStats.categories {
                             if let messageSize = category.messages[messageId] {
-                                selectedSize += messageSize
+                                if !selectionState.selectedPeers.contains(messageId.peerId) {
+                                    selectedSize += messageSize
+                                }
                                 break
                             }
                         }
                     }
                 }
                 
-                //TODO:localize
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
                     component: AnyComponent(StorageUsageScreenSelectionPanelComponent(
@@ -760,7 +899,7 @@ final class StorageUsageScreenComponent: Component {
             
             contentHeight += environment.statusBarHeight + topInset
             
-            let chartOrder: [Category] = [
+            let allCategories: [Category] = [
                 .photos,
                 .videos,
                 .files,
@@ -783,14 +922,7 @@ final class StorageUsageScreenComponent: Component {
                 self.selectedCategories.removeAll()
             }
             
-            var chartItems: [PieChartComponent.ChartData.Item] = []
             var listCategories: [StorageCategoriesComponent.CategoryData] = []
-            
-            let otherCategories: [Category] = [
-                .stickers,
-                .avatars,
-                .misc
-            ]
             
             var totalSize: Int64 = 0
             if let currentStats = self.currentStats {
@@ -805,7 +937,7 @@ final class StorageUsageScreenComponent: Component {
                     totalSize += value.size
                 }
                 
-                for category in chartOrder {
+                for category in allCategories {
                     let mappedCategory: StorageUsageStats.CategoryKey
                     switch category {
                     case .photos:
@@ -838,18 +970,6 @@ final class StorageUsageScreenComponent: Component {
                         categoryFraction = Double(categorySize) / Double(totalSize)
                     }
                     
-                    var categoryChartFraction: CGFloat = categoryFraction
-                    if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(category) {
-                        categoryChartFraction = 0.0
-                    }
-                    
-                    var chartCategoryColor = category.color
-                    if !self.isOtherCategoryExpanded && otherCategories.contains(category) {
-                        chartCategoryColor = Category.misc.color
-                    }
-                    
-                    chartItems.append(PieChartComponent.ChartData.Item(id: category, displayValue: categoryFraction, value: categoryChartFraction, color: chartCategoryColor))
-                    
                     if categorySize != 0 {
                         listCategories.append(StorageCategoriesComponent.CategoryData(
                             key: category, color: category.color, title: category.title(strings: environment.strings), size: categorySize, sizeFraction: categoryFraction, isSelected: self.selectedCategories.contains(category), subcategories: []))
@@ -857,15 +977,18 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             
+            listCategories.sort(by: { $0.sizeFraction > $1.sizeFraction })
+            
             var otherListCategories: [StorageCategoriesComponent.CategoryData] = []
-            for listCategory in listCategories {
-                if otherCategories.contains(where: { $0 == listCategory.key }) {
-                    otherListCategories.append(listCategory)
+            if listCategories.count > 5 {
+                for i in (4 ..< listCategories.count).reversed() {
+                    if listCategories[i].sizeFraction < 0.04 {
+                        otherListCategories.insert(listCategories[i], at: 0)
+                        listCategories.remove(at: i)
+                    }
                 }
             }
-            listCategories = listCategories.filter { item in
-                return !otherCategories.contains(where: { $0 == item.key })
-            }
+            self.otherCategories = Set(otherListCategories.map(\.key))
             if !otherListCategories.isEmpty {
                 var totalOtherSize: Int64 = 0
                 for listCategory in otherListCategories {
@@ -892,27 +1015,28 @@ final class StorageUsageScreenComponent: Component {
                     key: Category.other, color: listColor, title: Category.other.title(strings: environment.strings), size: totalOtherSize, sizeFraction: categoryFraction, isSelected: isSelected, subcategories: otherListCategories))
             }
             
-            if !self.isOtherCategoryExpanded {
-                var otherSum: CGFloat = 0.0
-                var otherRealSum: CGFloat = 0.0
-                for i in 0 ..< chartItems.count {
-                    if otherCategories.contains(chartItems[i].id) {
-                        var itemValue = chartItems[i].value
-                        if itemValue > 0.00001 {
-                            itemValue = max(itemValue, 0.01)
-                        }
-                        otherSum += itemValue
-                        otherRealSum += chartItems[i].displayValue
-                        if case .misc = chartItems[i].id {
-                        } else {
-                            chartItems[i].value = 0.0
-                        }
-                    }
+            var chartItems: [PieChartComponent.ChartData.Item] = []
+            for listCategory in listCategories {
+                var categoryChartFraction: CGFloat = listCategory.sizeFraction
+                if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
+                    categoryChartFraction = 0.0
                 }
-                if let index = chartItems.firstIndex(where: { $0.id == .misc }) {
-                    chartItems[index].value = otherSum
-                    chartItems[index].displayValue = otherRealSum
+                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0))
+            }
+            for listCategory in otherListCategories {
+                var categoryChartFraction: CGFloat = listCategory.sizeFraction
+                if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
+                    categoryChartFraction = 0.0
                 }
+                
+                let visualMergeFactor: CGFloat
+                if self.isOtherCategoryExpanded {
+                    visualMergeFactor = 1.0
+                } else {
+                    visualMergeFactor = 0.0
+                }
+                
+                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, value: categoryChartFraction, color: self.isOtherCategoryExpanded ? listCategory.color : Category.misc.color, mergeable: true, mergeFactor: visualMergeFactor))
             }
             
             let chartData = PieChartComponent.ChartData(items: chartItems)
@@ -1168,8 +1292,7 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             if key == Category.other {
-                                var otherCategories: [Category] = [.stickers, .avatars, .misc]
-                                otherCategories = otherCategories.filter(self.existingCategories.contains)
+                                let otherCategories = self.otherCategories.filter(self.existingCategories.contains)
                                 if !otherCategories.isEmpty {
                                     if otherCategories.allSatisfy(self.selectedCategories.contains) {
                                         for item in otherCategories {
@@ -1471,11 +1594,93 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             if let selectionState = self.selectionState {
-                                self.selectionState = selectionState.togglePeer(id: peer.id)
+                                self.selectionState = selectionState.togglePeer(id: peer.id, availableMessages: self.currentMessages)
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             } else {
                                 self.openPeer(peer: peer)
                             }
+                        },
+                        contextAction: { [weak self] peer, sourceView, gesture in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            var itemList: [ContextMenuItem] = []
+                            //TODO:localize
+                            itemList.append(.action(ContextMenuActionItem(
+                                text: "Show Details",
+                                icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor) },
+                                action: { [weak self] c, _ in
+                                    c.dismiss(completion: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.openPeer(peer: peer)
+                                    })
+                                })
+                            ))
+                            itemList.append(.action(ContextMenuActionItem(
+                                text: "Open Profile",
+                                icon: { theme in
+                                    if case .user = peer {
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
+                                    } else {
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: theme.contextMenu.primaryColor)
+                                    }
+                                },
+                                action: { [weak self] c, _ in
+                                    c.dismiss(completion: { [weak self] in
+                                        guard let self, let component = self.component, let controller = self.controller?() else {
+                                            return
+                                        }
+                                        let peerInfoController = component.context.sharedContext.makePeerInfoController(
+                                            context: component.context,
+                                            updatedPresentationData: nil,
+                                            peer: peer._asPeer(),
+                                            mode: .generic,
+                                            avatarInitiallyExpanded: false,
+                                            fromChat: false,
+                                            requestsContext: nil
+                                        )
+                                        if let peerInfoController {
+                                            controller.push(peerInfoController)
+                                        }
+                                    })
+                                })
+                            ))
+                            itemList.append(.action(ContextMenuActionItem(
+                                text: "Select",
+                                icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) },
+                                action: { [weak self] c, _ in
+                                    c.dismiss(completion: {
+                                    })
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.selectionState == nil {
+                                        self.selectionState = SelectionState()
+                                    }
+                                    self.selectionState = self.selectionState?.togglePeer(id: peer.id, availableMessages: self.currentMessages)
+                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                })
+                            ))
+                            let items = ContextController.Items(content: .list(itemList))
+                            
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let controller = ContextController(
+                                account: component.context.account,
+                                presentationData: presentationData,
+                                source: .extracted(StorageUsageListContextExtractedContentSource(contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+                            
+                            self.controller?()?.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    controller.dismiss()
+                                }
+                                return true
+                            })
+                            self.controller?()?.presentInGlobalOverlay(controller)
                         }
                     ))
                 ))
@@ -1484,12 +1689,15 @@ final class StorageUsageScreenComponent: Component {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "images",
                     title: environment.strings.StorageManagement_TabMedia,
-                    panel: AnyComponent(StorageFileListPanelComponent(
+                    panel: AnyComponent(StorageMediaGridPanelComponent(
                         context: component.context,
                         items: self.imageItems,
-                        selectionState: self.selectionState,
-                        peerAction: { [weak self] messageId in
+                        selectionState: self.selectionState ?? SelectionState(),
+                        action: { [weak self] messageId in
                             guard let self else {
+                                return
+                            }
+                            guard let _ = self.currentMessages[messageId] else {
                                 return
                             }
                             if self.selectionState == nil {
@@ -1497,6 +1705,12 @@ final class StorageUsageScreenComponent: Component {
                             }
                             self.selectionState = self.selectionState?.toggleMessage(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        },
+                        contextAction: { [weak self] messageId, containerView, sourceRect, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.messageGaleryContextAction(messageId: messageId, sourceView: containerView, sourceRect: sourceRect, gesture: gesture)
                         }
                     ))
                 ))
@@ -1508,9 +1722,12 @@ final class StorageUsageScreenComponent: Component {
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
                         items: self.fileItems,
-                        selectionState: self.selectionState,
-                        peerAction: { [weak self] messageId in
+                        selectionState: self.selectionState ?? SelectionState(),
+                        action: { [weak self] messageId in
                             guard let self else {
+                                return
+                            }
+                            guard let _ = self.currentMessages[messageId] else {
                                 return
                             }
                             if self.selectionState == nil {
@@ -1518,6 +1735,12 @@ final class StorageUsageScreenComponent: Component {
                             }
                             self.selectionState = self.selectionState?.toggleMessage(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        },
+                        contextAction: { [weak self] messageId, containerView, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.messageContextAction(messageId: messageId, sourceView: containerView, gesture: gesture)
                         }
                     ))
                 ))
@@ -1529,16 +1752,31 @@ final class StorageUsageScreenComponent: Component {
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
                         items: self.musicItems,
-                        selectionState: self.selectionState,
-                        peerAction: { [weak self] messageId in
+                        selectionState: self.selectionState ?? SelectionState(),
+                        action: { [weak self] messageId in
                             guard let self else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                self.selectionState = SelectionState()
+                            guard let message = self.currentMessages[messageId] else {
+                                return
                             }
-                            self.selectionState = self.selectionState?.toggleMessage(id: messageId)
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            if self.selectionState == nil {
+                                //self.openMessage(message: message)
+                                let _ = message
+                                
+                                self.selectionState = SelectionState()
+                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            } else {
+                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            }
+                        },
+                        contextAction: { [weak self] messageId, containerView, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.messageContextAction(messageId: messageId, sourceView: containerView, gesture: gesture)
                         }
                     ))
                 ))
@@ -1552,8 +1790,15 @@ final class StorageUsageScreenComponent: Component {
                         strings: environment.strings,
                         dateTimeFormat: environment.dateTimeFormat,
                         insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: bottomInset, right: environment.safeInsets.right),
-                        items: panelItems)
-                    ),
+                        items: panelItems,
+                        currentPanelUpdated: { [weak self] id, transition in
+                            guard let self else {
+                                return
+                            }
+                            self.currentSelectedPanelId = id
+                            self.state?.updated(transition: transition)
+                        }
+                    )),
                     environment: {
                         StorageUsagePanelContainerEnvironment(isScrollable: wasLockedAtPanels)
                     },
@@ -1713,11 +1958,12 @@ final class StorageUsageScreenComponent: Component {
                 if firstTime {
                     self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
                     self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .firstStatsUpdate)))
+                    self.component?.ready.set(.single(true))
                 }
                 
                 class RenderResult {
                     var messages: [MessageId: Message] = [:]
-                    var imageItems: [StorageFileListPanelComponent.Item] = []
+                    var imageItems: [StorageMediaGridPanelComponent.Item] = []
                     var fileItems: [StorageFileListPanelComponent.Item] = []
                     var musicItems: [StorageFileListPanelComponent.Item] = []
                 }
@@ -1756,7 +2002,7 @@ final class StorageUsageScreenComponent: Component {
                                 }
                                 
                                 if matches {
-                                    result.imageItems.append(StorageFileListPanelComponent.Item(
+                                    result.imageItems.append(StorageMediaGridPanelComponent.Item(
                                         message: message,
                                         size: messageSize
                                     ))
@@ -1847,7 +2093,7 @@ final class StorageUsageScreenComponent: Component {
                     
                     self.currentMessages = result.messages
                     
-                    self.imageItems = StorageFileListPanelComponent.Items(items: result.imageItems)
+                    self.imageItems = StorageMediaGridPanelComponent.Items(items: result.imageItems)
                     self.fileItems = StorageFileListPanelComponent.Items(items: result.fileItems)
                     self.musicItems = StorageFileListPanelComponent.Items(items: result.musicItems)
                     
@@ -1888,6 +2134,316 @@ final class StorageUsageScreenComponent: Component {
             controller.push(childController)
         }
         
+        private func messageGaleryContextAction(messageId: EngineMessage.Id, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture) {
+            guard let component = self.component, let message = self.currentMessages[messageId] else {
+                gesture.cancel()
+                return
+            }
+            
+            let _ = (chatMediaListPreviewControllerData(
+                context: component.context,
+                chatLocation: .peer(id: message.id.peerId),
+                chatLocationContextHolder: nil,
+                message: message,
+                standalone: true,
+                reverseMessageGalleryOrder: false,
+                navigationController: self.controller?()?.navigationController as? NavigationController
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] previewData in
+                guard let self, let component = self.component, let previewData else {
+                    gesture.cancel()
+                    return
+                }
+                
+                let context = component.context
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let strings = presentationData.strings
+                
+                var items: [ContextMenuItem] = []
+                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                    c.dismiss(completion: { [weak self] in
+                        guard let self, let component = self.component, let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
+                            return
+                        }
+                        guard let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init) else {
+                            return
+                        }
+                        
+                        var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
+                        if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId = message.threadId {
+                            chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                        }
+                        
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                            navigationController: navigationController,
+                            context: component.context,
+                            chatLocation: chatLocation,
+                            subject: .message(id: .id(message.id), highlight: true, timecode: nil),
+                            keepStack: .always
+                        ))
+                    })
+                })))
+                    
+                items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuSelect, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                    })
+                    
+                    guard let self else {
+                        return
+                    }
+                    if self.selectionState == nil {
+                        self.selectionState = SelectionState()
+                    }
+                    self.selectionState = self.selectionState?.toggleMessage(id: message.id)
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                })))
+                
+                switch previewData {
+                case let .gallery(gallery):
+                    gallery.setHintWillBePresentedInPreviewingContext(true)
+                    let contextController = ContextController(
+                        account: component.context.account,
+                        presentationData: presentationData,
+                        source: .controller(StorageUsageListContextGalleryContentSourceImpl(
+                            controller: gallery,
+                            sourceView: sourceView,
+                            sourceRect: sourceRect
+                        )),
+                        items: .single(ContextController.Items(content: .list(items))),
+                        gesture: gesture
+                    )
+                    self.controller?()?.presentInGlobalOverlay(contextController)
+                case .instantPage:
+                    break
+                }
+            })
+        }
+        
+        private func messageContextAction(messageId: EngineMessage.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
+            guard let component = self.component else {
+                return
+            }
+            guard let message = self.currentMessages[messageId] else {
+                return
+            }
+            
+            //TODO:localize
+            var openTitle: String = "Open"
+            var isAudio: Bool = false
+            for media in message.media {
+                if let _ = media as? TelegramMediaImage {
+                    openTitle = "Open Photo"
+                } else if let file = media as? TelegramMediaFile {
+                    if file.isVideo {
+                        openTitle = "Open Video"
+                    } else {
+                        openTitle = "Open File"
+                    }
+                    isAudio = file.isMusic || file.isVoice
+                }
+            }
+            
+            var itemList: [ContextMenuItem] = []
+            //TODO:localize
+            if !isAudio {
+                itemList.append(.action(ContextMenuActionItem(
+                    text: openTitle,
+                    icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: theme.contextMenu.primaryColor) },
+                    action: { [weak self] c, _ in
+                        c.dismiss(completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.openMessage(message: message)
+                        })
+                    })
+                ))
+            }
+            itemList.append(.action(ContextMenuActionItem(
+                text: "View in Chat",
+                icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)
+                },
+                action: { [weak self] c, _ in
+                    c.dismiss(completion: { [weak self] in
+                        guard let self, let component = self.component, let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
+                            return
+                        }
+                        guard let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init) else {
+                            return
+                        }
+                        
+                        var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
+                        if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId = message.threadId {
+                            chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                        }
+                        
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                            navigationController: navigationController,
+                            context: component.context,
+                            chatLocation: chatLocation,
+                            subject: .message(id: .id(message.id), highlight: true, timecode: nil),
+                            keepStack: .always
+                        ))
+                    })
+                })
+            ))
+            itemList.append(.action(ContextMenuActionItem(
+                text: "Select",
+                icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) },
+                action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                    })
+                    
+                    guard let self else {
+                        return
+                    }
+                    if self.selectionState == nil {
+                        self.selectionState = SelectionState()
+                    }
+                    self.selectionState = self.selectionState?.toggleMessage(id: message.id)
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                })
+            ))
+            let items = ContextController.Items(content: .list(itemList))
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let controller = ContextController(
+                account: component.context.account,
+                presentationData: presentationData,
+                source: .extracted(StorageUsageListContextExtractedContentSource(contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+            
+            self.controller?()?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismiss()
+                }
+                return true
+            })
+            self.controller?()?.presentInGlobalOverlay(controller)
+        }
+        
+        private func openMessage(message: Message) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            let foundGalleryMessage: Message? = message
+            guard let galleryMessage = foundGalleryMessage else {
+                return
+            }
+            self.endEditing(true)
+            
+            let _ = component.context.sharedContext.openChatMessage(OpenChatMessageParams(
+                context: component.context,
+                chatLocation: .peer(id: message.id.peerId),
+                chatLocationContextHolder: nil,
+                message: galleryMessage,
+                standalone: true,
+                reverseMessageGalleryOrder: true,
+                navigationController: navigationController,
+                dismissInput: { [weak self] in
+                    self?.endEditing(true)
+                }, present: { [weak self] c, a in
+                    guard let self else {
+                        return
+                    }
+                    self.controller?()?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                },
+                transitionNode: { [weak self] messageId, media in
+                    guard let self else {
+                        return nil
+                    }
+                    
+                    if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
+                        if let currentPanelView = panelContainerView.currentPanelView as? StorageMediaGridPanelComponent.View {
+                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: media)
+                        }
+                    }
+                    
+                    return nil
+                }, addToTransitionSurface: { [weak self] view in
+                    guard let self else {
+                        return
+                    }
+                    if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
+                        panelContainerView.currentPanelView?.addSubview(view)
+                    }
+                }, openUrl: { [weak self] url in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openPeer: { [weak self] peer, navigation in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                },
+                callPeer: { _, _ in
+                    //self?.controllerInteraction?.callPeer(peerId)
+                },
+                enqueueMessage: { _ in
+                },
+                sendSticker: nil,
+                sendEmoji: nil,
+                setupTemporaryHiddenMedia: { _, _, _ in },
+                chatAvatarHiddenMedia: { _, _ in },
+                actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                    //strongSelf.openUrl(url: url, concealed: false, external: false)
+                }, openUrlIn: { [weak self] url in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openPeerMention: { [weak self] mention in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openPeer: { [weak self] peer in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openHashtag: { [weak self] peerName, hashtag in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, openBotCommand: { _ in
+                }, addContact: { _ in
+                }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }),
+                centralItemUpdated: { [weak self] messageId in
+                    //let _ = self?.paneContainerNode.requestExpandTabs?()
+                    //self?.paneContainerNode.currentPane?.node.ensureMessageIsVisible(id: messageId)
+                    
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                }
+            ))
+        }
+        
         private func requestClear(categories: Set<Category>, peers: Set<PeerId>, messages: Set<EngineMessage.Id>) {
             guard let component = self.component else {
                 return
@@ -1906,6 +2462,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.StorageManagement_ClearConfirmationText, parseMarkdown: true),
                 ActionSheetButtonItem(title: clearTitle, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
@@ -1952,7 +2509,7 @@ final class StorageUsageScreenComponent: Component {
                 self.isClearing = true
                 self.state?.updated(transition: .immediate)
                 
-                let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories)
+                let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories, includeMessages: [], excludeMessages: [])
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     guard let self, let component = self.component, let currentStats = self.currentStats else {
                         return
@@ -2001,7 +2558,7 @@ final class StorageUsageScreenComponent: Component {
                         }
                     })
                 })
-            } else if !peers.isEmpty {
+            } else if !peers.isEmpty || !messages.isEmpty {
                 self.isClearing = true
                 self.state?.updated(transition: .immediate)
                 
@@ -2014,7 +2571,22 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 
-                let _ = (component.context.engine.resources.clearStorage(peerIds: peers)
+                var includeMessages: [Message] = []
+                var excludeMessages: [Message] = []
+                
+                for (id, message) in self.currentMessages {
+                    if peers.contains(id.peerId) {
+                        if !messages.contains(id) {
+                            excludeMessages.append(message)
+                        }
+                    } else {
+                        if messages.contains(id) {
+                            includeMessages.append(message)
+                        }
+                    }
+                }
+                
+                let _ = (component.context.engine.resources.clearStorage(peerIds: peers, includeMessages: includeMessages, excludeMessages: excludeMessages)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     guard let self else {
                         return
@@ -2024,48 +2596,6 @@ final class StorageUsageScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        if totalSize != 0 {
-                            self.reportClearedStorage(size: totalSize)
-                        }
-                    })
-                })
-            } else if !messages.isEmpty {
-                var messageItems: [Message] = []
-                var totalSize: Int64 = 0
-                
-                let contextStats: StorageUsageStats
-                if let peer = component.peer {
-                    contextStats = self.currentStats?.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                } else {
-                    contextStats = self.currentStats?.totalStats ?? StorageUsageStats(categories: [:])
-                }
-                
-                for id in messages {
-                    if let message = self.currentMessages[id] {
-                        messageItems.append(message)
-                        
-                        for (_, value) in contextStats.categories {
-                            if let size = value.messages[id] {
-                                totalSize += size
-                            }
-                        }
-                    }
-                }
-                
-                self.isClearing = true
-                self.state?.updated(transition: .immediate)
-                
-                let _ = (component.context.engine.resources.clearStorage(messages: messageItems)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    
-                    self.reloadStats(firstTime: false, completion: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        
                         if totalSize != 0 {
                             self.reportClearedStorage(size: totalSize)
                         }
@@ -2282,16 +2812,24 @@ final class StorageUsageScreenComponent: Component {
 public final class StorageUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
+    private let readyValue = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self.readyValue
+    }
+    
     fileprivate var childCompleted: ((@escaping () -> Void) -> Void)?
     
     public init(context: AccountContext, makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?, peer: EnginePeer? = nil) {
         self.context = context
         
-        super.init(context: context, component: StorageUsageScreenComponent(context: context, makeStorageUsageExceptionsScreen: makeStorageUsageExceptionsScreen, peer: peer), navigationBarAppearance: .transparent)
+        let componentReady = Promise<Bool>()
+        super.init(context: context, component: StorageUsageScreenComponent(context: context, makeStorageUsageExceptionsScreen: makeStorageUsageExceptionsScreen, peer: peer, ready: componentReady), navigationBarAppearance: .transparent)
         
         if peer != nil {
             self.navigationPresentation = .modal
         }
+        
+        self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -2633,5 +3171,61 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         
         self.progressTextNode.frame = progressTextFrame
         self.descriptionTextNode.frame = descriptionTextFrame
+    }
+}
+
+private final class StorageUsageListContextGalleryContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceView: UIView?
+    let sourceRect: CGRect
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool
+    
+    init(controller: ViewController, sourceView: UIView?, sourceRect: CGRect = CGRect(origin: CGPoint(), size: CGSize()), passthroughTouches: Bool = false) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+        self.passthroughTouches = passthroughTouches
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceView = self.sourceView
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceView] in
+            if let sourceView = sourceView {
+                let rect = sourceRect.isEmpty ? sourceView.bounds : sourceRect
+                return (sourceView, rect)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+        self.controller.didAppearInContextPreview()
+    }
+}
+
+private final class StorageUsageListContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    //let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
+    
+    private let contentView: ContextExtractedContentContainingView
+    
+    init(contentView: ContextExtractedContentContainingView) {
+        self.contentView = contentView
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
