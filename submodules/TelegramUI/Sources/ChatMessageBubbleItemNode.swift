@@ -625,6 +625,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 case .action, .optionalAction:
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    var tapMessage = tapMessage
+                    if selectAll, case let .group(messages) = item.content, tapMessage.text.isEmpty {
+                        for message in messages {
+                            if !message.0.text.isEmpty {
+                                tapMessage = message.0
+                                break
+                            }
+                        }
+                    }
                     item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
                 }
             }

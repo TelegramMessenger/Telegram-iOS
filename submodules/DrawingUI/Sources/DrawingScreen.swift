@@ -308,9 +308,11 @@ struct DrawingState: Equatable {
 
 final class DrawingSettings: Codable, Equatable {
     let tools: [DrawingToolState]
+    let colors: [DrawingColor]
     
-    init(tools: [DrawingToolState]) {
+    init(tools: [DrawingToolState], colors: [DrawingColor]) {
         self.tools = tools
+        self.colors = colors
     }
     
     init(from decoder: Decoder) throws {
@@ -321,6 +323,12 @@ final class DrawingSettings: Codable, Equatable {
         } else {
             self.tools = DrawingState.initial.tools
         }
+        
+        if let data = try container.decodeIfPresent(Data.self, forKey: "colors"), let colors = try? JSONDecoder().decode([DrawingColor].self, from: data) {
+            self.colors = colors
+        } else {
+            self.colors = []
+        }
     }
     
     func encode(to encoder: Encoder) throws {
@@ -329,10 +337,13 @@ final class DrawingSettings: Codable, Equatable {
         if let data = try? JSONEncoder().encode(self.tools) {
             try container.encode(data, forKey: "tools")
         }
+        if let data = try? JSONEncoder().encode(self.colors) {
+            try container.encode(data, forKey: "colors")
+        }
     }
     
     static func ==(lhs: DrawingSettings, rhs: DrawingSettings) -> Bool {
-        return lhs.tools == rhs.tools
+        return lhs.tools == rhs.tools && lhs.colors == rhs.colors
     }
 }
 
@@ -734,7 +745,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             let tools = self.drawingState.tools
             let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Void in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.drawingSettings, { _ in
-                    return PreferencesEntry(DrawingSettings(tools: tools))
+                    return PreferencesEntry(DrawingSettings(tools: tools, colors: []))
                 })
             }).start()
         }

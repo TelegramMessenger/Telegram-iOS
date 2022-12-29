@@ -390,9 +390,11 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.becomeFirstResponder()
         
         UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
-            self.transform = .identity
-            if let superview = self.superview {
-                self.center = CGPoint(x: superview.bounds.width / 2.0, y: superview.bounds.height / 2.0)
+            if let parentView = self.superview as? DrawingEntitiesView {
+                let scale = parentView.getEntityAdditionalScale() / (parentView.drawingView?.zoomScale ?? 1.0)
+                self.transform = CGAffineTransformMakeRotation(parentView.getEntityInitialRotation()).scaledBy(x: scale, y: scale)
+                
+                self.center = parentView.getEntityCenterPosition()
             }
         }
 

@@ -8565,6 +8565,12 @@ Sorry for the inconvenience.";
 
 "Paint.MoveForward" = "Move Forward";
 
+"Paint.ColorTitle" = "Colors";
+"Paint.ColorGrid" = "Grid";
+"Paint.ColorSpectrum" = "Spectrum";
+"Paint.ColorSliders" = "Sliders";
+"Paint.ColorOpacity" = "OPACITY";
+
 "StorageManagement.Title" = "Storage Usage";
 "StorageManagement.TitleCleared" = "Storage Cleared";
 

@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Display
 
+private let activeWidthFactor: CGFloat = 0.7
+
 final class PenTool: DrawingElement {
     class RenderView: UIView, DrawingRenderView {
         private weak var element: PenTool?
@@ -14,7 +16,7 @@ final class PenTool: DrawingElement {
         private var segmentsCount = 0
         
         private var drawScale = CGSize(width: 1.0, height: 1.0)
-        
+                
         func setup(size: CGSize, screenSize: CGSize, isEraser: Bool) {
             self.isEraser = isEraser
             
@@ -22,7 +24,6 @@ final class PenTool: DrawingElement {
             self.isOpaque = false
             self.contentMode = .redraw
             
-            //let scale = CGSize(width: screenSize.width / max(1.0, size.width), height: screenSize.height / max(1.0, size.height))
             let scale = CGSize(width: 0.33, height: 0.33)
             let viewSize = CGSize(width: size.width * scale.width, height: size.height * scale.height)
             
@@ -80,7 +81,26 @@ final class PenTool: DrawingElement {
             })
         }
     
-        var displaySize: CGSize?
+        var onDryingUp: () -> Void = {}
+        
+        var isDryingUp = false {
+            didSet {
+                if !self.isDryingUp {
+                    self.onDryingUp()
+                }
+            }
+        }
+        var dryingLayersCount: Int = 0 {
+            didSet {
+                if self.dryingLayersCount > 0 {
+                    self.isDryingUp = true
+                } else {
+                    self.isDryingUp = false
+                }
+            }
+        }
+    
+        fileprivate var displaySize: CGSize?
         fileprivate func draw(element: PenTool, rect: CGRect) {
             self.element = element
             
@@ -120,12 +140,68 @@ final class PenTool: DrawingElement {
                 self.start = newStart
             }
             
+            if !element.isEraser && !element.isBlur {
+                let count = CGFloat(element.segments.count - self.segmentsCount)
+                if count > 0 {
+                    let dryingPath = CGMutablePath()
+                    var abFactor: CGFloat = activeWidthFactor * 1.35
+                    let delta: CGFloat = (1.0 - abFactor) / count
+                    for i in self.segmentsCount ..< element.segments.count {
+                        let segmentPath = element.pathForSegment(element.segments[i], abFactor: abFactor, cdFactor: abFactor + delta)
+                        dryingPath.addPath(segmentPath)
+                        abFactor += delta
+                    }
+                    self.setupDrying(path: dryingPath)
+                }
+            }
+            
             self.segmentsCount = element.segments.count
             
             if let rect = rect {
-                self.activeView?.setNeedsDisplay(rect.insetBy(dx: -10.0, dy: -10.0).applying(CGAffineTransform(scaleX: 1.0 / self.drawScale.width, y: 1.0 / self.drawScale.height)))
+                self.activeView?.setNeedsDisplay(rect.insetBy(dx: -40.0, dy: -40.0).applying(CGAffineTransform(scaleX: 1.0 / self.drawScale.width, y: 1.0 / self.drawScale.height)))
             } else {
                 self.activeView?.setNeedsDisplay()
+            }
+        }
+        
+        private let dryingFactor: CGFloat = 0.4
+        func setupDrying(path: CGPath) {
+            guard let element = self.element else {
+                return
+            }
+            
+            let dryingLayer = CAShapeLayer()
+            dryingLayer.contentsScale = 1.0
+            dryingLayer.fillColor = element.renderColor.cgColor
+            dryingLayer.strokeColor = element.renderColor.cgColor
+            dryingLayer.lineWidth = element.renderLineWidth * self.dryingFactor
+            dryingLayer.path = path
+            dryingLayer.animate(from: dryingLayer.lineWidth as NSNumber, to: 0.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.4, removeOnCompletion: false, completion: { [weak dryingLayer] _ in
+                dryingLayer?.removeFromSuperlayer()
+                self.dryingLayersCount -= 1
+            })
+            dryingLayer.transform = CATransform3DMakeScale(1.0 / self.drawScale.width, 1.0 / self.drawScale.height, 1.0)
+            dryingLayer.frame = self.bounds
+            self.layer.addSublayer(dryingLayer)
+            
+            self.dryingLayersCount += 1
+        }
+        
+        private var isActiveDrying = false
+        func setupActiveSegmentsDrying() {
+            guard let element = self.element else {
+                return
+            }
+            
+            if !element.isEraser && !element.isBlur {
+                let dryingPath = CGMutablePath()
+                for segment in element.activeSegments {
+                    let segmentPath = element.pathForSegment(segment)
+                    dryingPath.addPath(segmentPath)
+                }
+                self.setupDrying(path: dryingPath)
+                self.isActiveDrying = true
+                self.setNeedsDisplay()
             }
         }
         
@@ -139,7 +215,12 @@ final class PenTool: DrawingElement {
                 parent.displaySize = rect.size
                 context.scaleBy(x: 1.0 / parent.drawScale.width, y: 1.0 / parent.drawScale.height)
                 element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
-                element.drawActiveSegments(in: context)
+                
+                if !element.isEraser || !element.isBlur {
+                    element.drawActiveSegments(in: context, strokeWidth: !parent.isActiveDrying ? element.renderLineWidth * parent.dryingFactor : nil)
+                } else {
+                    element.drawActiveSegments(in: context, strokeWidth: nil)
+                }
             }
         }
     }
@@ -169,6 +250,23 @@ final class PenTool: DrawingElement {
     var blurredImage: UIImage?
     
     private weak var currentRenderView: DrawingRenderView?
+    
+    private var points: [Point] = Array(repeating: Point(location: .zero, width: 0.0), count: 4)
+    private var pointPtr = 0
+    
+    private var smoothPoints: [Point] = []
+    private var activeSmoothPoints: [Point] = []
+    
+    private var segments: [Segment] = []
+    private var activeSegments: [Segment] = []
+    
+    private var previousActiveRect: CGRect?
+    
+    private var previousRenderLineWidth: CGFloat?
+    
+    private var segmentPaths: [Int: CGPath] = [:]
+    
+    private var useCubicBezier = true
         
     var isValid: Bool {
         if self.hasArrow {
@@ -217,7 +315,7 @@ final class PenTool: DrawingElement {
             completion()
         }
     }
-    
+        
     func setupRenderView(screenSize: CGSize) -> DrawingRenderView? {
         let view = RenderView()
         view.setup(size: self.drawingSize, screenSize: screenSize, isEraser: self.isEraser)
@@ -249,6 +347,8 @@ final class PenTool: DrawingElement {
         
         if state == .ended {
             if !self.activeSegments.isEmpty {
+                (self.currentRenderView as? RenderView)?.setupActiveSegmentsDrying()
+                
                 self.segments.append(contentsOf: self.activeSegments)
                 self.smoothPoints.append(contentsOf: self.activeSmoothPoints)
             }
@@ -279,6 +379,9 @@ final class PenTool: DrawingElement {
                         d: CGPoint(x: point.x + radius, y: point.y + 0.1),
                         radius1: radius,
                         radius2: radius,
+                        abCenter: CGPoint(x: point.x, y: point.y),
+                        cdCenter: CGPoint(x: point.x, y: point.y + 0.1),
+                        perpendicular: .zero,
                         rect: CGRect(origin: CGPoint(x: point.x - radius, y: point.y - radius), size: CGSize(width: radius * 2.0, height: radius * 2.0))
                     )
                 )
@@ -363,6 +466,9 @@ final class PenTool: DrawingElement {
         let d: CGPoint
         let radius1: CGFloat
         let radius2: CGFloat
+        let abCenter: CGPoint
+        let cdCenter: CGPoint
+        let perpendicular: CGPoint
         let rect: CGRect
                 
         init(
@@ -372,6 +478,9 @@ final class PenTool: DrawingElement {
             d: CGPoint,
             radius1: CGFloat,
             radius2: CGFloat,
+            abCenter: CGPoint,
+            cdCenter: CGPoint,
+            perpendicular: CGPoint,
             rect: CGRect
         ) {
             self.a = a
@@ -380,7 +489,42 @@ final class PenTool: DrawingElement {
             self.d = d
             self.radius1 = radius1
             self.radius2 = radius2
+            self.abCenter = abCenter
+            self.cdCenter = cdCenter
+            self.perpendicular = perpendicular
             self.rect = rect
+        }
+        
+        func withMultiplied(abFactor: CGFloat, cdFactor: CGFloat) -> Segment {
+            let a = CGPoint(
+                x: self.abCenter.x + self.perpendicular.x * self.radius1 * abFactor,
+                y: self.abCenter.y + self.perpendicular.y * self.radius1 * abFactor
+            )
+            let b = CGPoint(
+                x: self.abCenter.x - self.perpendicular.x * self.radius1 * abFactor,
+                y: self.abCenter.y - self.perpendicular.y * self.radius1 * abFactor
+            )
+            let c = CGPoint(
+                x: self.cdCenter.x + self.perpendicular.x * self.radius2 * cdFactor,
+                y: self.cdCenter.y + self.perpendicular.y * self.radius2 * cdFactor
+            )
+            let d = CGPoint(
+                x: self.cdCenter.x - self.perpendicular.x * self.radius2 * cdFactor,
+                y: self.cdCenter.y - self.perpendicular.y * self.radius2 * cdFactor
+            )
+
+            return Segment(
+                a: a,
+                b: b,
+                c: c,
+                d: d,
+                radius1: self.radius1 * abFactor,
+                radius2: self.radius2 * cdFactor,
+                abCenter: self.abCenter,
+                cdCenter: self.cdCenter,
+                perpendicular: self.perpendicular,
+                rect: self.rect
+            )
         }
     }
     
@@ -396,27 +540,16 @@ final class PenTool: DrawingElement {
             self.width = width
         }
     }
-    
-    private var points: [Point] = Array(repeating: Point(location: .zero, width: 0.0), count: 4)
-    private var pointPtr = 0
-    
-    private var smoothPoints: [Point] = []
-    private var activeSmoothPoints: [Point] = []
-    
-    private var segments: [Segment] = []
-    private var activeSegments: [Segment] = []
-    
-    private var previousActiveRect: CGRect?
-    
-    private var previousRenderLineWidth: CGFloat?
-        
+            
+    private var currentVelocity: CGFloat?
     private func addPoint(_ point: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) -> (Bool, CGRect)? {
-        let filterDistance: CGFloat = 10.0 / zoomScale
+        let filterDistance: CGFloat = 8.0 / zoomScale
                 
         var velocity = point.velocity
         if velocity.isZero {
             velocity = 1000.0
         }
+        self.currentVelocity = velocity
         
         var renderLineWidth = max(self.renderMinLineWidth, min(self.renderLineWidth - (velocity / 200.0), self.renderLineWidth))
         if let previousRenderLineWidth = self.previousRenderLineWidth {
@@ -492,9 +625,9 @@ final class PenTool: DrawingElement {
     private func currentSmoothPoints(_ ctr: Int) -> [Point]? {
         switch ctr {
         case 0:
-            return [self.points[0]]
+            return nil//return [self.points[0]]
         case 1:
-            return self.smoothPoints(.line(self.points[0], self.points[1]))
+            return nil//return self.smoothPoints(.line(self.points[0], self.points[1]))
         case 2:
             return self.smoothPoints(.quad(self.points[0], self.points[1], self.points[2]))
         case 3:
@@ -667,15 +800,29 @@ final class PenTool: DrawingElement {
             let segmentRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
             updateRect = updateRect.union(segmentRect)
 
-            let segment = Segment(a: a, b: b, c: c, d: d, radius1: previousWidth / 2.0, radius2: currentWidth / 2.0, rect: segmentRect)
+            let segment = Segment(
+                a: a,
+                b: b,
+                c: c,
+                d: d,
+                radius1: previousWidth / 2.0,
+                radius2: currentWidth / 2.0,
+                abCenter: abCenter,
+                cdCenter: cdCenter,
+                perpendicular: perpendicular,
+                rect: segmentRect
+            )
             segments.append(segment)
         }
         return (segments, !updateRect.isNull ? updateRect : nil)
     }
-    
-    private var segmentPaths: [Int: CGPath] = [:]
-    
-    private func pathForSegment(_ segment: Segment) -> CGPath {
+        
+    private func pathForSegment(_ segment: Segment, abFactor: CGFloat = 1.0, cdFactor: CGFloat = 1.0) -> CGPath {
+        var segment = segment
+        if abFactor != 1.0 || cdFactor != 1.0 {
+            segment = segment.withMultiplied(abFactor: abFactor, cdFactor: cdFactor)
+        }
+        
         let path = CGMutablePath()
         path.move(to: segment.b)
         
@@ -713,6 +860,19 @@ final class PenTool: DrawingElement {
         return path
     }
     
+    func cachedPathForSegmentIndex(_ i: Int) -> CGPath {
+        var segmentPath: CGPath
+        if let current = self.segmentPaths[i] {
+            segmentPath = current
+        } else {
+            let segment = self.segments[i]
+            let path = self.pathForSegment(segment)
+            self.segmentPaths[i] = path
+            segmentPath = path
+        }
+        return segmentPath
+    }
+    
     private func drawSegments(in context: CGContext, from: Int, to: Int) {
         context.setFillColor(self.renderColor.cgColor)
         
@@ -733,13 +893,24 @@ final class PenTool: DrawingElement {
         }
     }
     
-    private func drawActiveSegments(in context: CGContext) {
+    private func drawActiveSegments(in context: CGContext, strokeWidth: CGFloat?) {
         context.setFillColor(self.renderColor.cgColor)
+        if let strokeWidth {
+            context.setStrokeColor(self.renderColor.cgColor)
+            context.setLineWidth(strokeWidth)
+        }
         
+        var abFactor: CGFloat = activeWidthFactor
+        let delta: CGFloat = (1.0 - activeWidthFactor) / CGFloat(self.activeSegments.count + 1)
         for segment in self.activeSegments {
             let path = self.pathForSegment(segment)
             context.addPath(path)
-            context.fillPath()
+            if let _ = strokeWidth {
+                context.drawPath(using: .fillStroke)
+            } else {
+                context.fillPath()
+            }
+            abFactor += delta
         }
     }
 }
