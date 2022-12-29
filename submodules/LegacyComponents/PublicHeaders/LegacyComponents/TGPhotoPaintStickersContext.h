@@ -53,6 +53,7 @@
 
 @property (nonatomic, copy) CGPoint (^ _Nonnull getEntityCenterPosition)(void);
 @property (nonatomic, copy) CGFloat (^ _Nonnull getEntityInitialRotation)(void);
+@property (nonatomic, copy) CGFloat (^ _Nonnull getEntityAdditionalScale)(void);
 
 @property (nonatomic, copy) void(^ _Nonnull hasSelectionChanged)(bool);
 @property (nonatomic, readonly) BOOL hasSelection;

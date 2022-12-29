@@ -231,9 +231,9 @@ final class TextFontComponent: Component {
             self.button.clipsToBounds = true
             self.button.setTitle(value.title, for: .normal)
             self.button.titleLabel?.font = value.uiFont(size: 13.0)
-            self.button.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 26.0)
+            self.button.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 20.0)
             var buttonSize = self.button.sizeThatFits(availableSize)
-            buttonSize.width += 39.0 - 13.0
+            buttonSize.width += 20.0
             buttonSize.height = 30.0
             transition.setFrame(view: self.button, frame: CGRect(origin: .zero, size: buttonSize))
             self.button.layer.cornerRadius = 11.0

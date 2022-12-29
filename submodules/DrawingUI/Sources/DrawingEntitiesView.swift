@@ -134,6 +134,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
+    public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
+    
     public var hasSelectionChanged: (Bool) -> Void = { _ in }
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
     var requestedMenuForEntityView: (DrawingEntityView, Bool) -> Void = { _, _ in }
