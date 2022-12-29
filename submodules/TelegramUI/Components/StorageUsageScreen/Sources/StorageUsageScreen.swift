@@ -1188,7 +1188,7 @@ final class StorageUsageScreenComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.requestClear(fromCategories: true)
+                            self.requestClear(fromCategories: false)
                         }
                     )),
                     environment: {},
@@ -1634,7 +1634,7 @@ final class StorageUsageScreenComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.requestClear(fromCategories: false)
+                            self.requestClear(fromCategories: true)
                         }
                     )),
                     environment: {},
