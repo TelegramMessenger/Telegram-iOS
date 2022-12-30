@@ -306,23 +306,385 @@ final class StorageUsageScreenComponent: Component {
         }
     }
     
+    private final class AggregatedData {
+        let peerId: EnginePeer.Id?
+        let stats: AllStorageUsageStats
+        let contextStats: StorageUsageStats
+        let messages: [MessageId: Message]
+        
+        var isSelectingPeers: Bool = false
+        private(set) var selectionState: SelectionState
+        
+        let existingCategories: Set<Category>
+        private(set) var selectedCategories: Set<Category>
+        
+        let peerItems: StoragePeerListPanelComponent.Items?
+        let imageItems: StorageMediaGridPanelComponent.Items?
+        let fileItems: StorageFileListPanelComponent.Items?
+        let musicItems: StorageFileListPanelComponent.Items?
+        
+        private let allPhotos: Set<EngineMessage.Id>
+        private let allVideos: Set<EngineMessage.Id>
+        private let allFiles: Set<EngineMessage.Id>
+        private let allMusic: Set<EngineMessage.Id>
+        
+        private(set) var selectedSize: Int64 = 0
+        private(set) var clearIncludeMessages: [Message] = []
+        private(set) var clearExcludeMessages: [Message] = []
+        
+        init(
+            peerId: EnginePeer.Id?,
+            stats: AllStorageUsageStats,
+            messages: [MessageId: Message],
+            peerItems: StoragePeerListPanelComponent.Items?,
+            imageItems: StorageMediaGridPanelComponent.Items?,
+            fileItems: StorageFileListPanelComponent.Items?,
+            musicItems: StorageFileListPanelComponent.Items?
+        ) {
+            self.peerId = peerId
+            self.stats = stats
+            if let peerId {
+                self.contextStats = stats.peers[peerId]?.stats ?? StorageUsageStats(categories: [:])
+            } else {
+                self.contextStats = stats.totalStats
+            }
+            
+            self.messages = messages
+            
+            self.selectionState = SelectionState()
+            
+            self.peerItems = peerItems
+            self.imageItems = imageItems
+            self.fileItems = fileItems
+            self.musicItems = musicItems
+            
+            var allPhotos = Set<EngineMessage.Id>()
+            var allVideos = Set<EngineMessage.Id>()
+            if let imageItems = self.imageItems {
+                for item in imageItems.items {
+                    var isImage = false
+                    for media in item.message.media {
+                        if media is TelegramMediaImage {
+                            isImage = true
+                            break
+                        }
+                    }
+                    if isImage {
+                        allPhotos.insert(item.message.id)
+                    } else {
+                        allVideos.insert(item.message.id)
+                    }
+                }
+            }
+            self.allPhotos = allPhotos
+            self.allVideos = allVideos
+            
+            var allFiles = Set<EngineMessage.Id>()
+            if let fileItems = self.fileItems {
+                for item in fileItems.items {
+                    allFiles.insert(item.message.id)
+                }
+            }
+            self.allFiles = allFiles
+            
+            var allMusic = Set<EngineMessage.Id>()
+            if let musicItems = self.musicItems {
+                for item in musicItems.items {
+                    allMusic.insert(item.message.id)
+                }
+            }
+            self.allMusic = allMusic
+            
+            var existingCategories = Set<Category>()
+            for (category, value) in self.contextStats.categories {
+                if value.size != 0 {
+                    existingCategories.insert(StorageUsageScreenComponent.Category(category))
+                }
+            }
+            self.existingCategories = existingCategories
+            self.selectedCategories = existingCategories
+            
+            if self.peerId != nil {
+                var selectedMessages = self.selectionState.selectedMessages
+                selectedMessages.formUnion(self.allPhotos)
+                selectedMessages.formUnion(self.allVideos)
+                selectedMessages.formUnion(self.allFiles)
+                selectedMessages.formUnion(self.allMusic)
+                
+                self.selectionState = SelectionState(selectedPeers: self.selectionState.selectedPeers, selectedMessages: selectedMessages)
+            }
+            
+            self.refreshSelectionStats()
+        }
+        
+        func setIsCategorySelected(category: Category, isSelected: Bool) {
+            if isSelected {
+                self.selectedCategories.insert(category)
+            } else {
+                self.selectedCategories.remove(category)
+            }
+            
+            if self.peerId != nil {
+                var selectedMessages = self.selectionState.selectedMessages
+                switch category {
+                case .photos:
+                    if isSelected {
+                        selectedMessages.formUnion(self.allPhotos)
+                    } else {
+                        selectedMessages.subtract(self.allPhotos)
+                    }
+                case .videos:
+                    if isSelected {
+                        selectedMessages.formUnion(self.allVideos)
+                    } else {
+                        selectedMessages.subtract(self.allVideos)
+                    }
+                case .files:
+                    if let fileItems = self.fileItems {
+                        for item in fileItems.items {
+                            if isSelected {
+                                selectedMessages.insert(item.message.id)
+                            } else {
+                                selectedMessages.remove(item.message.id)
+                            }
+                        }
+                    }
+                case .music:
+                    if let fileItems = self.musicItems {
+                        for item in fileItems.items {
+                            if isSelected {
+                                selectedMessages.insert(item.message.id)
+                            } else {
+                                selectedMessages.remove(item.message.id)
+                            }
+                        }
+                    }
+                default:
+                    break
+                }
+                self.selectionState = SelectionState(selectedPeers: self.selectionState.selectedPeers, selectedMessages: selectedMessages)
+            }
+            
+            self.refreshSelectionStats()
+        }
+        
+        func clearPeerSelection() {
+            self.selectionState = SelectionState(selectedPeers: Set(), selectedMessages: Set())
+            
+            self.refreshSelectionStats()
+        }
+        
+        func togglePeerSelection(id: EnginePeer.Id) {
+            self.selectionState = self.selectionState.togglePeer(id: id, availableMessages: self.messages)
+            
+            self.refreshSelectionStats()
+        }
+        
+        func toggleMessageSelection(id: EngineMessage.Id) {
+            self.selectionState = self.selectionState.toggleMessage(id: id)
+            
+            if self.peerId != nil {
+                if self.allPhotos.contains(id) {
+                    if !self.selectionState.selectedMessages.contains(id) {
+                        if self.allPhotos.intersection(self.selectionState.selectedMessages).isEmpty {
+                            self.selectedCategories.remove(.photos)
+                        }
+                    } else {
+                        if self.allPhotos.intersection(self.selectionState.selectedMessages) == self.allPhotos {
+                            self.selectedCategories.insert(.photos)
+                        }
+                    }
+                } else if self.allVideos.contains(id) {
+                    if !self.selectionState.selectedMessages.contains(id) {
+                        if self.allVideos.intersection(self.selectionState.selectedMessages).isEmpty {
+                            self.selectedCategories.remove(.videos)
+                        }
+                    } else {
+                        if self.allVideos.intersection(self.selectionState.selectedMessages) == self.allVideos {
+                            self.selectedCategories.insert(.videos)
+                        }
+                    }
+                } else if self.allFiles.contains(id) {
+                    if !self.selectionState.selectedMessages.contains(id) {
+                        if self.allFiles.intersection(self.selectionState.selectedMessages).isEmpty {
+                            self.selectedCategories.remove(.files)
+                        }
+                    } else {
+                        if self.allFiles.intersection(self.selectionState.selectedMessages) == self.allFiles {
+                            self.selectedCategories.insert(.files)
+                        }
+                    }
+                } else if self.allMusic.contains(id) {
+                    if !self.selectionState.selectedMessages.contains(id) {
+                        if self.allMusic.intersection(self.selectionState.selectedMessages).isEmpty {
+                            self.selectedCategories.remove(.music)
+                        }
+                    } else {
+                        if self.allMusic.intersection(self.selectionState.selectedMessages) == self.allMusic {
+                            self.selectedCategories.insert(.music)
+                        }
+                    }
+                }
+            }
+            
+            self.refreshSelectionStats()
+        }
+        
+        private func refreshSelectionStats() {
+            if let _ = self.peerId {
+                var selectedSize: Int64 = 0
+                for (category, value) in self.contextStats.categories {
+                    let mappedCategory = StorageUsageScreenComponent.Category(category)
+                    if self.selectedCategories.contains(mappedCategory) {
+                        selectedSize += value.size
+                    }
+                }
+                
+                var clearIncludeMessages: [Message] = []
+                var clearExcludeMessages: [Message] = []
+                
+                if self.selectedCategories.contains(.photos) {
+                    let deselectedPhotos = self.allPhotos.subtracting(self.selectionState.selectedMessages)
+                    if !deselectedPhotos.isEmpty, let imageItems = self.imageItems {
+                        for item in imageItems.items {
+                            if deselectedPhotos.contains(item.message.id) {
+                                selectedSize -= item.size
+                                clearExcludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                } else {
+                    let selectedPhotos = self.allPhotos.intersection(self.selectionState.selectedMessages)
+                    if !selectedPhotos.isEmpty, let imageItems = self.imageItems {
+                        for item in imageItems.items {
+                            if selectedPhotos.contains(item.message.id) {
+                                selectedSize += item.size
+                                clearIncludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                }
+                
+                if self.selectedCategories.contains(.videos) {
+                    let deselectedVideos = self.allVideos.subtracting(self.selectionState.selectedMessages)
+                    if !deselectedVideos.isEmpty, let imageItems = self.imageItems {
+                        for item in imageItems.items {
+                            if deselectedVideos.contains(item.message.id) {
+                                selectedSize -= item.size
+                                clearExcludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                } else {
+                    let selectedVideos = self.allVideos.intersection(self.selectionState.selectedMessages)
+                    if !selectedVideos.isEmpty, let imageItems = self.imageItems {
+                        for item in imageItems.items {
+                            if selectedVideos.contains(item.message.id) {
+                                selectedSize += item.size
+                                clearIncludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                }
+                
+                if self.selectedCategories.contains(.files) {
+                    let deselectedFiles = self.allFiles.subtracting(self.selectionState.selectedMessages)
+                    if !deselectedFiles.isEmpty, let fileItems = self.fileItems {
+                        for item in fileItems.items {
+                            if deselectedFiles.contains(item.message.id) {
+                                selectedSize -= item.size
+                                clearExcludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                } else {
+                    let selectedFiles = self.allFiles.intersection(self.selectionState.selectedMessages)
+                    if !selectedFiles.isEmpty, let fileItems = self.fileItems {
+                        for item in fileItems.items {
+                            if selectedFiles.contains(item.message.id) {
+                                selectedSize += item.size
+                                clearIncludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                }
+                
+                if self.selectedCategories.contains(.music) {
+                    let deselectedMusic = self.allMusic.subtracting(self.selectionState.selectedMessages)
+                    if !deselectedMusic.isEmpty, let musicItems = self.musicItems {
+                        for item in musicItems.items {
+                            if deselectedMusic.contains(item.message.id) {
+                                selectedSize -= item.size
+                                clearExcludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                } else {
+                    let selectedMusic = self.allMusic.intersection(self.selectionState.selectedMessages)
+                    if !selectedMusic.isEmpty, let musicItems = self.musicItems {
+                        for item in musicItems.items {
+                            if selectedMusic.contains(item.message.id) {
+                                selectedSize += item.size
+                                clearIncludeMessages.append(item.message)
+                            }
+                        }
+                    }
+                }
+                
+                self.selectedSize = selectedSize
+                self.clearExcludeMessages = clearExcludeMessages
+                self.clearIncludeMessages = clearIncludeMessages
+            } else {
+                var selectedSize: Int64 = 0
+                    
+                for peerId in self.selectionState.selectedPeers {
+                    if let stats = self.stats.peers[peerId] {
+                        let peerSize = stats.stats.categories.values.reduce(0, {
+                            $0 + $1.size
+                        })
+                        selectedSize += peerSize
+                        
+                        for (messageId, _) in self.messages {
+                            if messageId.peerId == peerId {
+                                if !self.selectionState.selectedMessages.contains(messageId) {
+                                    inner: for (_, category) in stats.stats.categories {
+                                        if let messageSize = category.messages[messageId] {
+                                            selectedSize -= messageSize
+                                            break inner
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                for messageId in self.selectionState.selectedMessages {
+                    for (_, category) in self.contextStats.categories {
+                        if let messageSize = category.messages[messageId] {
+                            if !self.selectionState.selectedPeers.contains(messageId.peerId) {
+                                selectedSize += messageSize
+                            }
+                            break
+                        }
+                    }
+                }
+                
+                self.selectedSize = selectedSize
+                self.clearIncludeMessages = []
+                self.clearExcludeMessages = []
+            }
+        }
+    }
+    
     class View: UIView, UIScrollViewDelegate {
         private let scrollView: ScrollViewImpl
         
-        private var currentStats: AllStorageUsageStats?
-        private var existingCategories: Set<Category> = Set()
+        private var aggregatedData: AggregatedData?
         private var otherCategories: Set<Category> = Set()
         
-        private var currentMessages: [MessageId: Message] = [:]
         private var cacheSettings: CacheStorageSettings?
         private var cacheSettingsExceptionCount: [CacheStorageSettings.PeerStorageCategory: Int32]?
-        
-        private var peerItems: StoragePeerListPanelComponent.Items?
-        private var imageItems: StorageMediaGridPanelComponent.Items?
-        private var fileItems: StorageFileListPanelComponent.Items?
-        private var musicItems: StorageFileListPanelComponent.Items?
-        
-        private var selectionState: SelectionState?
         
         private var currentSelectedPanelId: AnyHashable?
         
@@ -344,7 +706,6 @@ final class StorageUsageScreenComponent: Component {
             }
         }
         
-        private var selectedCategories: Set<Category> = Set()
         private var isOtherCategoryExpanded: Bool = false
         
         private let navigationBackgroundView: BlurredBackgroundView
@@ -539,11 +900,13 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 
+                let isSelectingPeers = self.aggregatedData?.isSelectingPeers ?? false
+                
                 if let navigationEditButtonView = self.navigationEditButton.view {
-                    animatedTransition.setAlpha(view: navigationEditButtonView, alpha: (self.selectionState == nil ? 1.0 : 0.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
+                    animatedTransition.setAlpha(view: navigationEditButtonView, alpha: (isSelectingPeers ? 0.0 : 1.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
                 }
                 if let navigationDoneButtonView = self.navigationDoneButton.view {
-                    animatedTransition.setAlpha(view: navigationDoneButtonView, alpha: (self.selectionState == nil ? 0.0 : 1.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
+                    animatedTransition.setAlpha(view: navigationDoneButtonView, alpha: (isSelectingPeers ? 1.0 : 0.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
                 }
                 
                 let expansionDistance: CGFloat = 32.0
@@ -576,7 +939,7 @@ final class StorageUsageScreenComponent: Component {
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             
-            if self.currentStats == nil {
+            if self.aggregatedData == nil {
                 let loadingView: UIActivityIndicatorView
                 if let current = self.loadingView {
                     loadingView = current
@@ -678,7 +1041,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                     self.cacheSettings = cacheSettings
                     self.cacheSettingsExceptionCount = cacheSettingsExceptionCount
-                    if self.currentStats != nil {
+                    if self.aggregatedData != nil {
                         self.state?.updated(transition: .immediate)
                     }
                 })
@@ -703,8 +1066,8 @@ final class StorageUsageScreenComponent: Component {
                     } else {
                         alphaTransition = .immediate
                     }
-                    alphaTransition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
-                    alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
+                    alphaTransition.setAlpha(view: self.scrollView, alpha: self.aggregatedData != nil ? 1.0 : 0.0)
+                    alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.aggregatedData != nil ? 1.0 : 0.0)
                 } else if case .clearedItems = animationHint.value {
                     if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
                         snapshotView.frame = self.bounds
@@ -715,8 +1078,8 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
             } else {
-                transition.setAlpha(view: self.scrollView, alpha: self.currentStats != nil ? 1.0 : 0.0)
-                transition.setAlpha(view: self.headerOffsetContainer, alpha: self.currentStats != nil ? 1.0 : 0.0)
+                transition.setAlpha(view: self.scrollView, alpha: self.aggregatedData != nil ? 1.0 : 0.0)
+                transition.setAlpha(view: self.headerOffsetContainer, alpha: self.aggregatedData != nil ? 1.0 : 0.0)
             }
             
             self.controller = environment.controller
@@ -743,22 +1106,9 @@ final class StorageUsageScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        if self.selectionState == nil {
-                            #if DEBUG
-                            let signpostState = SignpostContext.shared?.begin(name: "edit")
-                            #endif
-                            
-                            self.selectionState = SelectionState(
-                                selectedPeers: Set(),
-                                selectedMessages: Set()
-                            )
+                        if let aggregatedData = self.aggregatedData, !aggregatedData.isSelectingPeers {
+                            aggregatedData.isSelectingPeers = true
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                            
-                            #if DEBUG
-                            if let signpostState {
-                                SignpostContext.shared?.end(name: "edit", data: signpostState)
-                            }
-                            #endif
                         }
                     }
                 ).minSize(CGSize(width: 16.0, height: environment.navigationHeight - environment.statusBarHeight))),
@@ -777,10 +1127,11 @@ final class StorageUsageScreenComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(Text(text: environment.strings.Common_Done, font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
-                        guard let self else {
+                        guard let self, let aggregatedData = self.aggregatedData else {
                             return
                         }
-                        self.selectionState = nil
+                        aggregatedData.isSelectingPeers = false
+                        aggregatedData.clearPeerSelection()
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                     }
                 ).minSize(CGSize(width: 16.0, height: environment.navigationHeight - environment.statusBarHeight))),
@@ -804,7 +1155,17 @@ final class StorageUsageScreenComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             var bottomInset: CGFloat = environment.safeInsets.bottom
-            if let selectionState = self.selectionState, !selectionState.isEmpty {
+            
+            var bottomPanelSelectionData: (size: Int64, isComplete: Bool)?
+            if let aggregatedData = self.aggregatedData {
+                if let _ = component.peer {
+                    bottomPanelSelectionData = (aggregatedData.selectedSize, true)
+                } else if !aggregatedData.selectionState.isEmpty {
+                    bottomPanelSelectionData = (aggregatedData.selectedSize, false)
+                }
+            }
+            
+            if let bottomPanelSelectionData {
                 let selectionPanel: ComponentView<Empty>
                 var selectionPanelTransition = transition
                 if let current = self.selectionPanel {
@@ -815,62 +1176,19 @@ final class StorageUsageScreenComponent: Component {
                     self.selectionPanel = selectionPanel
                 }
                 
-                var selectedSize: Int64 = 0
-                if let currentStats = self.currentStats {
-                    let contextStats: StorageUsageStats
-                    if let peer = component.peer {
-                        contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                    } else {
-                        contextStats = currentStats.totalStats
-                    }
-                    
-                    for peerId in selectionState.selectedPeers {
-                        if let stats = currentStats.peers[peerId] {
-                            let peerSize = stats.stats.categories.values.reduce(0, {
-                                $0 + $1.size
-                            })
-                            selectedSize += peerSize
-                            
-                            for (messageId, _) in self.currentMessages {
-                                if messageId.peerId == peerId {
-                                    if !selectionState.selectedMessages.contains(messageId) {
-                                            inner: for (_, category) in contextStats.categories {
-                                            if let messageSize = category.messages[messageId] {
-                                                selectedSize -= messageSize
-                                                break inner
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    for messageId in selectionState.selectedMessages {
-                        for (_, category) in contextStats.categories {
-                            if let messageSize = category.messages[messageId] {
-                                if !selectionState.selectedPeers.contains(messageId.peerId) {
-                                    selectedSize += messageSize
-                                }
-                                break
-                            }
-                        }
-                    }
-                }
-                
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
                     component: AnyComponent(StorageUsageScreenSelectionPanelComponent(
                         theme: environment.theme,
-                        title: environment.strings.StorageManagement_ClearSelected,
-                        label: selectedSize == 0 ? nil : dataSizeString(Int(selectedSize), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),
-                        isEnabled: selectedSize != 0,
+                        title: bottomPanelSelectionData.isComplete ? environment.strings.StorageManagement_ClearCache : environment.strings.StorageManagement_ClearSelected,
+                        label: bottomPanelSelectionData.size == 0 ? nil : dataSizeString(Int(bottomPanelSelectionData.size), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),
+                        isEnabled: bottomPanelSelectionData.size != 0,
                         insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: environment.safeInsets.bottom, right: sideInset),
                         action: { [weak self] in
-                            guard let self, let selectionState = self.selectionState else {
+                            guard let self else {
                                 return
                             }
-                            self.requestClear(categories: Set(), peers: selectionState.selectedPeers, messages: selectionState.selectedMessages)
+                            self.requestClear(fromCategories: false)
                         }
                     )),
                     environment: {},
@@ -909,31 +1227,11 @@ final class StorageUsageScreenComponent: Component {
                 .misc
             ]
             
-            if let _ = self.currentStats {
-                if let animationHint {
-                    switch animationHint.value {
-                    case .firstStatsUpdate, .clearedItems:
-                        self.selectedCategories = self.existingCategories
-                    }
-                }
-                
-                self.selectedCategories.formIntersection(self.existingCategories)
-            } else {
-                self.selectedCategories.removeAll()
-            }
-            
             var listCategories: [StorageCategoriesComponent.CategoryData] = []
             
             var totalSize: Int64 = 0
-            if let currentStats = self.currentStats {
-                let contextStats: StorageUsageStats
-                if let peer = component.peer {
-                    contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                } else {
-                    contextStats = currentStats.totalStats
-                }
-                
-                for (_, value) in contextStats.categories {
+            if let aggregatedData = self.aggregatedData {
+                for (_, value) in aggregatedData.contextStats.categories {
                     totalSize += value.size
                 }
                 
@@ -959,7 +1257,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     var categorySize: Int64 = 0
-                    if let categoryData = contextStats.categories[mappedCategory] {
+                    if let categoryData = aggregatedData.contextStats.categories[mappedCategory] {
                         categorySize = categoryData.size
                     }
                     
@@ -972,7 +1270,7 @@ final class StorageUsageScreenComponent: Component {
                     
                     if categorySize != 0 {
                         listCategories.append(StorageCategoriesComponent.CategoryData(
-                            key: category, color: category.color, title: category.title(strings: environment.strings), size: categorySize, sizeFraction: categoryFraction, isSelected: self.selectedCategories.contains(category), subcategories: []))
+                            key: category, color: category.color, title: category.title(strings: environment.strings), size: categorySize, sizeFraction: categoryFraction, isSelected: aggregatedData.selectedCategories.contains(category), subcategories: []))
                     }
                 }
             }
@@ -989,11 +1287,22 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             self.otherCategories = Set(otherListCategories.map(\.key))
-            if !otherListCategories.isEmpty {
-                var totalOtherSize: Int64 = 0
-                for listCategory in otherListCategories {
-                    totalOtherSize += listCategory.size
+            
+            var chartItems: [PieChartComponent.ChartData.Item] = []
+            for listCategory in listCategories {
+                var categoryChartFraction: CGFloat = listCategory.sizeFraction
+                if let aggregatedData = self.aggregatedData, !aggregatedData.selectedCategories.isEmpty && !aggregatedData.selectedCategories.contains(listCategory.key) {
+                    categoryChartFraction = 0.0
                 }
+                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0))
+            }
+            
+            var totalOtherSize: Int64 = 0
+            for listCategory in otherListCategories {
+                totalOtherSize += listCategory.size
+            }
+            
+            if !otherListCategories.isEmpty {
                 let categoryFraction: Double
                 if totalOtherSize == 0 || totalSize == 0 {
                     categoryFraction = 0.0
@@ -1001,7 +1310,7 @@ final class StorageUsageScreenComponent: Component {
                     categoryFraction = Double(totalOtherSize) / Double(totalSize)
                 }
                 let isSelected = otherListCategories.allSatisfy { item in
-                    return self.selectedCategories.contains(item.key)
+                    return self.aggregatedData?.selectedCategories.contains(item.key) ?? false
                 }
                 
                 let listColor: UIColor
@@ -1015,29 +1324,30 @@ final class StorageUsageScreenComponent: Component {
                     key: Category.other, color: listColor, title: Category.other.title(strings: environment.strings), size: totalOtherSize, sizeFraction: categoryFraction, isSelected: isSelected, subcategories: otherListCategories))
             }
             
-            var chartItems: [PieChartComponent.ChartData.Item] = []
-            for listCategory in listCategories {
-                var categoryChartFraction: CGFloat = listCategory.sizeFraction
-                if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
-                    categoryChartFraction = 0.0
-                }
-                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0))
-            }
+            var otherSum: CGFloat = 0.0
+            var otherRealSum: CGFloat = 0.0
             for listCategory in otherListCategories {
                 var categoryChartFraction: CGFloat = listCategory.sizeFraction
-                if !self.selectedCategories.isEmpty && !self.selectedCategories.contains(listCategory.key) {
+                if let aggregatedData = self.aggregatedData, !aggregatedData.selectedCategories.isEmpty, !aggregatedData.selectedCategories.contains(listCategory.key) {
                     categoryChartFraction = 0.0
                 }
                 
-                let visualMergeFactor: CGFloat
-                if self.isOtherCategoryExpanded {
-                    visualMergeFactor = 1.0
-                } else {
-                    visualMergeFactor = 0.0
+                var chartItem = PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0)
+                
+                if chartItem.value > 0.00001 {
+                    chartItem.value = max(chartItem.value, 0.01)
+                }
+                otherSum += chartItem.value
+                otherRealSum += chartItem.displayValue
+                
+                if !self.isOtherCategoryExpanded {
+                    chartItem.value = 0.0
                 }
                 
-                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, value: categoryChartFraction, color: self.isOtherCategoryExpanded ? listCategory.color : Category.misc.color, mergeable: true, mergeFactor: visualMergeFactor))
+                chartItems.append(chartItem)
             }
+            
+            chartItems.append(PieChartComponent.ChartData.Item(id: .other, displayValue: otherRealSum, displaySize: totalOtherSize, value: self.isOtherCategoryExpanded ? 0.0 : otherSum, color: Category.misc.color, mergeable: false, mergeFactor: 1.0))
             
             let chartData = PieChartComponent.ChartData(items: chartItems)
             self.pieChartView.parentState = state
@@ -1045,6 +1355,7 @@ final class StorageUsageScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(PieChartComponent(
                     theme: environment.theme,
+                    strings: environment.strings,
                     chartData: chartData
                 )),
                 environment: {},
@@ -1059,7 +1370,7 @@ final class StorageUsageScreenComponent: Component {
                 transition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
                 transition.setAlpha(view: pieChartComponentView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             }
-            if let _ = self.currentStats, listCategories.isEmpty {
+            if let _ = self.aggregatedData, listCategories.isEmpty {
                 let checkColor = UIColor(rgb: 0x34C759)
                 
                 let doneStatusNode: RadialStatusNode
@@ -1149,22 +1460,15 @@ final class StorageUsageScreenComponent: Component {
             let totalUsageText: String
             if listCategories.isEmpty {
                 totalUsageText = environment.strings.StorageManagement_DescriptionCleared
-            } else if let currentStats = self.currentStats {
-                let contextStats: StorageUsageStats
-                if let peer = component.peer {
-                    contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                } else {
-                    contextStats = currentStats.totalStats
-                }
-                
+            } else if let aggregatedData = self.aggregatedData {
                 var totalStatsSize: Int64 = 0
-                for (_, value) in contextStats.categories {
+                for (_, value) in aggregatedData.contextStats.categories {
                     totalStatsSize += value.size
                 }
                 
                 if let _ = component.peer {
                     var allStatsSize: Int64 = 0
-                    for (_, value) in currentStats.totalStats.categories {
+                    for (_, value) in aggregatedData.stats.totalStats.categories {
                         allStatsSize += value.size
                     }
                     
@@ -1188,8 +1492,8 @@ final class StorageUsageScreenComponent: Component {
                     totalUsageText = environment.strings.StorageManagement_DescriptionChatUsage(fractionString).string
                 } else {
                     let fraction: Double
-                    if currentStats.deviceFreeSpace != 0 && totalStatsSize != 0 {
-                        fraction = Double(totalStatsSize) / Double(currentStats.deviceFreeSpace + totalStatsSize)
+                    if aggregatedData.stats.deviceFreeSpace != 0 && totalStatsSize != 0 {
+                        fraction = Double(totalStatsSize) / Double(aggregatedData.stats.deviceFreeSpace + totalStatsSize)
                     } else {
                         fraction = 0.0
                     }
@@ -1258,7 +1562,11 @@ final class StorageUsageScreenComponent: Component {
                 } else {
                     chartAvatarNode = AvatarNode(font: avatarPlaceholderFont(size: 17.0))
                     self.chartAvatarNode = chartAvatarNode
-                    self.scrollView.addSubview(chartAvatarNode.view)
+                    if let pieChartComponentView = self.pieChartView.view {
+                        self.scrollView.insertSubview(chartAvatarNode.view, belowSubview: pieChartComponentView)
+                    } else {
+                        self.scrollView.addSubview(chartAvatarNode.view)
+                    }
                     chartAvatarNode.frame = avatarFrame
                     
                     chartAvatarNode.setPeer(context: component.context, theme: environment.theme, peer: peer, displayDimensions: avatarSize)
@@ -1287,28 +1595,29 @@ final class StorageUsageScreenComponent: Component {
                         strings: environment.strings,
                         categories: listCategories,
                         isOtherExpanded: self.isOtherCategoryExpanded,
+                        displayAction: component.peer == nil,
                         toggleCategorySelection: { [weak self] key in
-                            guard let self else {
+                            guard let self, let aggregatedData = self.aggregatedData else {
                                 return
                             }
                             if key == Category.other {
-                                let otherCategories = self.otherCategories.filter(self.existingCategories.contains)
+                                let otherCategories = self.otherCategories.filter(aggregatedData.existingCategories.contains)
                                 if !otherCategories.isEmpty {
-                                    if otherCategories.allSatisfy(self.selectedCategories.contains) {
+                                    if otherCategories.allSatisfy(aggregatedData.selectedCategories.contains) {
                                         for item in otherCategories {
-                                            self.selectedCategories.remove(item)
+                                            aggregatedData.setIsCategorySelected(category: item, isSelected: false)
                                         }
                                     } else {
                                         for item in otherCategories {
-                                            let _ = self.selectedCategories.insert(item)
+                                            aggregatedData.setIsCategorySelected(category: item, isSelected: true)
                                         }
                                     }
                                 }
                             } else {
-                                if self.selectedCategories.contains(key) {
-                                    self.selectedCategories.remove(key)
+                                if aggregatedData.selectedCategories.contains(key) {
+                                    aggregatedData.setIsCategorySelected(category: key, isSelected: false)
                                 } else {
-                                    self.selectedCategories.insert(key)
+                                    aggregatedData.setIsCategorySelected(category: key, isSelected: true)
                                 }
                             }
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
@@ -1325,7 +1634,7 @@ final class StorageUsageScreenComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.requestClear(categories: self.selectedCategories, peers: Set(), messages: Set())
+                            self.requestClear(fromCategories: true)
                         }
                     )),
                     environment: {},
@@ -1581,20 +1890,21 @@ final class StorageUsageScreenComponent: Component {
             }
             
             var panelItems: [StorageUsagePanelContainerComponent.Item] = []
-            if let peerItems = self.peerItems, !peerItems.items.isEmpty, !listCategories.isEmpty {
+            if let aggregatedData = self.aggregatedData, let peerItems = aggregatedData.peerItems, !peerItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "peers",
                     title: environment.strings.StorageManagement_TabChats,
                     panel: AnyComponent(StoragePeerListPanelComponent(
                         context: component.context,
-                        items: self.peerItems,
-                        selectionState: self.selectionState,
+                        items: peerItems,
+                        selectionState: aggregatedData.isSelectingPeers ? aggregatedData.selectionState : nil,
                         peerAction: { [weak self] peer in
-                            guard let self else {
+                            guard let self, let aggregatedData = self.aggregatedData else {
                                 return
                             }
-                            if let selectionState = self.selectionState {
-                                self.selectionState = selectionState.togglePeer(id: peer.id, availableMessages: self.currentMessages)
+                            if aggregatedData.isSelectingPeers {
+                                aggregatedData.togglePeerSelection(id: peer.id)
+                                
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             } else {
                                 self.openPeer(peer: peer)
@@ -1655,13 +1965,10 @@ final class StorageUsageScreenComponent: Component {
                                     c.dismiss(completion: {
                                     })
                                     
-                                    guard let self else {
+                                    guard let self, let aggregatedData = self.aggregatedData else {
                                         return
                                     }
-                                    if self.selectionState == nil {
-                                        self.selectionState = SelectionState()
-                                    }
-                                    self.selectionState = self.selectionState?.togglePeer(id: peer.id, availableMessages: self.currentMessages)
+                                    aggregatedData.togglePeerSelection(id: peer.id)
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                                 })
                             ))
@@ -1685,25 +1992,22 @@ final class StorageUsageScreenComponent: Component {
                     ))
                 ))
             }
-            if let imageItems = self.imageItems, !imageItems.items.isEmpty, !listCategories.isEmpty {
+            if let aggregatedData = self.aggregatedData, let imageItems = aggregatedData.imageItems, !imageItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "images",
                     title: environment.strings.StorageManagement_TabMedia,
                     panel: AnyComponent(StorageMediaGridPanelComponent(
                         context: component.context,
-                        items: self.imageItems,
-                        selectionState: self.selectionState ?? SelectionState(),
+                        items: aggregatedData.imageItems,
+                        selectionState: aggregatedData.selectionState,
                         action: { [weak self] messageId in
-                            guard let self else {
+                            guard let self, let aggregatedData = self.aggregatedData else {
                                 return
                             }
-                            guard let _ = self.currentMessages[messageId] else {
+                            guard let _ = aggregatedData.messages[messageId] else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                self.selectionState = SelectionState()
-                            }
-                            self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                            aggregatedData.toggleMessageSelection(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                         },
                         contextAction: { [weak self] messageId, containerView, sourceRect, gesture in
@@ -1715,25 +2019,22 @@ final class StorageUsageScreenComponent: Component {
                     ))
                 ))
             }
-            if let fileItems = self.fileItems, !fileItems.items.isEmpty, !listCategories.isEmpty {
+            if let aggregatedData = self.aggregatedData, let fileItems = aggregatedData.fileItems, !fileItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "files",
                     title: environment.strings.StorageManagement_TabFiles,
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
-                        items: self.fileItems,
-                        selectionState: self.selectionState ?? SelectionState(),
+                        items: fileItems,
+                        selectionState: aggregatedData.selectionState,
                         action: { [weak self] messageId in
-                            guard let self else {
+                            guard let self, let aggregatedData = self.aggregatedData else {
                                 return
                             }
-                            guard let _ = self.currentMessages[messageId] else {
+                            guard let _ = aggregatedData.messages[messageId] else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                self.selectionState = SelectionState()
-                            }
-                            self.selectionState = self.selectionState?.toggleMessage(id: messageId)
+                            aggregatedData.toggleMessageSelection(id: messageId)
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                         },
                         contextAction: { [weak self] messageId, containerView, gesture in
@@ -1745,32 +2046,23 @@ final class StorageUsageScreenComponent: Component {
                     ))
                 ))
             }
-            if let musicItems = self.musicItems, !musicItems.items.isEmpty, !listCategories.isEmpty {
+            if let aggregatedData = self.aggregatedData, let musicItems = aggregatedData.musicItems, !musicItems.items.isEmpty, !listCategories.isEmpty {
                 panelItems.append(StorageUsagePanelContainerComponent.Item(
                     id: "music",
                     title: environment.strings.StorageManagement_TabMusic,
                     panel: AnyComponent(StorageFileListPanelComponent(
                         context: component.context,
-                        items: self.musicItems,
-                        selectionState: self.selectionState ?? SelectionState(),
+                        items: musicItems,
+                        selectionState: aggregatedData.selectionState,
                         action: { [weak self] messageId in
-                            guard let self else {
+                            guard let self, let aggregatedData = self.aggregatedData else {
                                 return
                             }
-                            guard let message = self.currentMessages[messageId] else {
+                            guard let _ = aggregatedData.messages[messageId] else {
                                 return
                             }
-                            if self.selectionState == nil {
-                                //self.openMessage(message: message)
-                                let _ = message
-                                
-                                self.selectionState = SelectionState()
-                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                            } else {
-                                self.selectionState = self.selectionState?.toggleMessage(id: messageId)
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                            }
+                            aggregatedData.toggleMessageSelection(id: messageId)
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                         },
                         contextAction: { [weak self] messageId, containerView, gesture in
                             guard let self else {
@@ -1915,24 +2207,6 @@ final class StorageUsageScreenComponent: Component {
                     return
                 }
                 
-                var existingCategories = Set<Category>()
-                let contextStats: StorageUsageStats
-                if let peer = component.peer {
-                    contextStats = stats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                } else {
-                    contextStats = stats.totalStats
-                }
-                for (category, value) in contextStats.categories {
-                    if value.size != 0 {
-                        existingCategories.insert(StorageUsageScreenComponent.Category(category))
-                    }
-                }
-                
-                if firstTime {
-                    self.currentStats = stats
-                    self.existingCategories = existingCategories
-                }
-                
                 var peerItems: [StoragePeerListPanelComponent.Item] = []
                 
                 if component.peer == nil {
@@ -1955,8 +2229,20 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 
+                let initialAggregatedData = AggregatedData(
+                    peerId: component.peer?.id,
+                    stats: stats,
+                    messages: [:],
+                    peerItems: StoragePeerListPanelComponent.Items(items: peerItems),
+                    imageItems: nil,
+                    fileItems: nil,
+                    musicItems: nil
+                )
+                let contextStats = initialAggregatedData.contextStats
+                
                 if firstTime {
-                    self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
+                    self.aggregatedData = initialAggregatedData
+                    
                     self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .firstStatsUpdate)))
                     self.component?.ready.set(.single(true))
                 }
@@ -1968,7 +2254,7 @@ final class StorageUsageScreenComponent: Component {
                     var musicItems: [StorageFileListPanelComponent.Item] = []
                 }
                 
-                self.messagesDisposable = (component.context.engine.resources.renderStorageUsageStatsMessages(stats: contextStats, categories: [.files, .photos, .videos, .music], existingMessages: self.currentMessages)
+                self.messagesDisposable = (component.context.engine.resources.renderStorageUsageStatsMessages(stats: contextStats, categories: [.files, .photos, .videos, .music], existingMessages: self.aggregatedData?.messages ?? [:])
                 |> deliverOn(Queue())
                 |> map { messages -> RenderResult in
                     let result = RenderResult()
@@ -2085,25 +2371,15 @@ final class StorageUsageScreenComponent: Component {
                         }
                     }
                     
-                    if !firstTime {
-                        self.currentStats = stats
-                        self.existingCategories = existingCategories
-                        self.peerItems = StoragePeerListPanelComponent.Items(items: peerItems)
-                    }
-                    
-                    self.currentMessages = result.messages
-                    
-                    self.imageItems = StorageMediaGridPanelComponent.Items(items: result.imageItems)
-                    self.fileItems = StorageFileListPanelComponent.Items(items: result.fileItems)
-                    self.musicItems = StorageFileListPanelComponent.Items(items: result.musicItems)
-                    
-                    if self.selectionState != nil {
-                        if result.imageItems.isEmpty && result.fileItems.isEmpty && result.musicItems.isEmpty && peerItems.isEmpty {
-                            self.selectionState = nil
-                        } else {
-                            self.selectionState = nil
-                        }
-                    }
+                    self.aggregatedData = AggregatedData(
+                        peerId: component.peer?.id,
+                        stats: stats,
+                        messages: result.messages,
+                        peerItems: initialAggregatedData.peerItems,
+                        imageItems: StorageMediaGridPanelComponent.Items(items: result.imageItems),
+                        fileItems: StorageFileListPanelComponent.Items(items: result.fileItems),
+                        musicItems: StorageFileListPanelComponent.Items(items: result.musicItems)
+                    )
                     
                     self.isClearing = false
                     
@@ -2135,7 +2411,7 @@ final class StorageUsageScreenComponent: Component {
         }
         
         private func messageGaleryContextAction(messageId: EngineMessage.Id, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture) {
-            guard let component = self.component, let message = self.currentMessages[messageId] else {
+            guard let component = self.component, let aggregatedData = self.aggregatedData, let message = aggregatedData.messages[messageId] else {
                 gesture.cancel()
                 return
             }
@@ -2190,13 +2466,10 @@ final class StorageUsageScreenComponent: Component {
                     c.dismiss(completion: {
                     })
                     
-                    guard let self else {
+                    guard let self, let aggregatedData = self.aggregatedData else {
                         return
                     }
-                    if self.selectionState == nil {
-                        self.selectionState = SelectionState()
-                    }
-                    self.selectionState = self.selectionState?.toggleMessage(id: message.id)
+                    aggregatedData.toggleMessageSelection(id: message.id)
                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 })))
                 
@@ -2222,10 +2495,10 @@ final class StorageUsageScreenComponent: Component {
         }
         
         private func messageContextAction(messageId: EngineMessage.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
-            guard let component = self.component else {
+            guard let component = self.component, let aggregatedData = self.aggregatedData else {
                 return
             }
-            guard let message = self.currentMessages[messageId] else {
+            guard let message = aggregatedData.messages[messageId] else {
                 return
             }
             
@@ -2297,13 +2570,10 @@ final class StorageUsageScreenComponent: Component {
                     c.dismiss(completion: {
                     })
                     
-                    guard let self else {
+                    guard let self, let aggregatedData = self.aggregatedData else {
                         return
                     }
-                    if self.selectionState == nil {
-                        self.selectionState = SelectionState()
-                    }
-                    self.selectionState = self.selectionState?.toggleMessage(id: message.id)
+                    aggregatedData.toggleMessageSelection(id: message.id)
                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 })
             ))
@@ -2444,21 +2714,24 @@ final class StorageUsageScreenComponent: Component {
             ))
         }
         
-        private func requestClear(categories: Set<Category>, peers: Set<PeerId>, messages: Set<EngineMessage.Id>) {
-            guard let component = self.component else {
+        private func requestClear(fromCategories: Bool) {
+            guard let component = self.component, let aggregatedData = self.aggregatedData else {
                 return
             }
             let context = component.context
-            
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationData: presentationData)
             
             let clearTitle: String
-            if categories == self.existingCategories {
-                clearTitle = presentationData.strings.StorageManagement_ClearAll
-            } else {
+            if let _ = aggregatedData.peerId {
                 clearTitle = presentationData.strings.StorageManagement_ClearSelected
+            } else {
+                if aggregatedData.selectedCategories == aggregatedData.existingCategories {
+                    clearTitle = presentationData.strings.StorageManagement_ClearAll
+                } else {
+                    clearTitle = presentationData.strings.StorageManagement_ClearSelected
+                }
             }
             
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -2466,7 +2739,7 @@ final class StorageUsageScreenComponent: Component {
                 ActionSheetButtonItem(title: clearTitle, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
-                    self?.commitClear(categories: categories, peers: peers, messages: messages)
+                    self?.commitClear(fromCategories: fromCategories)
                 })
             ]), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -2476,12 +2749,172 @@ final class StorageUsageScreenComponent: Component {
             self.controller?()?.present(actionSheet, in: .window(.root))
         }
         
-        private func commitClear(categories: Set<Category>, peers: Set<PeerId>, messages: Set<EngineMessage.Id>) {
-            guard let component = self.component else {
+        private func commitClear(fromCategories: Bool) {
+            guard let component = self.component, let aggregatedData = self.aggregatedData else {
                 return
             }
             
-            if !categories.isEmpty {
+            if let _ = aggregatedData.peerId {
+                var mappedCategories: [StorageUsageStats.CategoryKey] = []
+                for category in aggregatedData.selectedCategories {
+                    switch category {
+                    case .photos:
+                        mappedCategories.append(.photos)
+                    case .videos:
+                        mappedCategories.append(.videos)
+                    case .files:
+                        mappedCategories.append(.files)
+                    case .music:
+                        mappedCategories.append(.music)
+                    case .other:
+                        break
+                    case .stickers:
+                        mappedCategories.append(.stickers)
+                    case .avatars:
+                        mappedCategories.append(.avatars)
+                    case .misc:
+                        mappedCategories.append(.misc)
+                    }
+                }
+                
+                self.isClearing = true
+                self.state?.updated(transition: .immediate)
+                
+                let totalSize = aggregatedData.selectedSize
+                
+                let _ = (component.context.engine.resources.clearStorage(peerId: component.peer?.id, categories: mappedCategories, includeMessages: aggregatedData.clearIncludeMessages, excludeMessages: aggregatedData.clearExcludeMessages)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    guard let self, let _ = self.component else {
+                        return
+                    }
+                    
+                    self.reloadStats(firstTime: false, completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if totalSize != 0 {
+                            self.reportClearedStorage(size: totalSize)
+                        }
+                    })
+                })
+            } else {
+                if fromCategories {
+                    var mappedCategories: [StorageUsageStats.CategoryKey] = []
+                    for category in aggregatedData.selectedCategories {
+                        switch category {
+                        case .photos:
+                            mappedCategories.append(.photos)
+                        case .videos:
+                            mappedCategories.append(.videos)
+                        case .files:
+                            mappedCategories.append(.files)
+                        case .music:
+                            mappedCategories.append(.music)
+                        case .other:
+                            break
+                        case .stickers:
+                            mappedCategories.append(.stickers)
+                        case .avatars:
+                            mappedCategories.append(.avatars)
+                        case .misc:
+                            mappedCategories.append(.misc)
+                        }
+                    }
+                    
+                    self.isClearing = true
+                    self.state?.updated(transition: .immediate)
+                    
+                    let _ = (component.context.engine.resources.clearStorage(peerId: component.peer?.id, categories: mappedCategories, includeMessages: [], excludeMessages: [])
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self, let _ = self.component, let aggregatedData = self.aggregatedData else {
+                            return
+                        }
+                        var totalSize: Int64 = 0
+                        
+                        let contextStats = aggregatedData.contextStats
+                        
+                        for category in aggregatedData.selectedCategories {
+                            let mappedCategory: StorageUsageStats.CategoryKey
+                            switch category {
+                            case .photos:
+                                mappedCategory = .photos
+                            case .videos:
+                                mappedCategory = .videos
+                            case .files:
+                                mappedCategory = .files
+                            case .music:
+                                mappedCategory = .music
+                            case .other:
+                                continue
+                            case .stickers:
+                                mappedCategory = .stickers
+                            case .avatars:
+                                mappedCategory = .avatars
+                            case .misc:
+                                mappedCategory = .misc
+                            }
+                            
+                            if let value = contextStats.categories[mappedCategory] {
+                                totalSize += value.size
+                            }
+                        }
+                        
+                        self.reloadStats(firstTime: false, completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            if totalSize != 0 {
+                                self.reportClearedStorage(size: totalSize)
+                            }
+                        })
+                    })
+                } else {
+                    self.isClearing = true
+                    self.state?.updated(transition: .immediate)
+                    
+                    var totalSize: Int64 = 0
+                    if let peerItems = aggregatedData.peerItems {
+                        for item in peerItems.items {
+                            if aggregatedData.selectionState.selectedPeers.contains(item.peer.id) {
+                                totalSize += item.size
+                            }
+                        }
+                    }
+                    
+                    var includeMessages: [Message] = []
+                    var excludeMessages: [Message] = []
+                    
+                    for (id, message) in aggregatedData.messages {
+                        if aggregatedData.selectionState.selectedPeers.contains(id.peerId) {
+                            if !aggregatedData.selectionState.selectedMessages.contains(id) {
+                                excludeMessages.append(message)
+                            }
+                        } else {
+                            if aggregatedData.selectionState.selectedMessages.contains(id) {
+                                includeMessages.append(message)
+                            }
+                        }
+                    }
+                    
+                    let _ = (component.context.engine.resources.clearStorage(peerIds: aggregatedData.selectionState.selectedPeers, includeMessages: includeMessages, excludeMessages: excludeMessages)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.reloadStats(firstTime: false, completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            if totalSize != 0 {
+                                self.reportClearedStorage(size: totalSize)
+                            }
+                        })
+                    })
+                }
+            }
+            
+            /*if !aggregatedData.selectedCategories.isEmpty {
                 let peerId: EnginePeer.Id? = component.peer?.id
                 
                 var mappedCategories: [StorageUsageStats.CategoryKey] = []
@@ -2511,17 +2944,12 @@ final class StorageUsageScreenComponent: Component {
                 
                 let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories, includeMessages: [], excludeMessages: [])
                 |> deliverOnMainQueue).start(completed: { [weak self] in
-                    guard let self, let component = self.component, let currentStats = self.currentStats else {
+                    guard let self, let _ = self.component, let aggregatedData = self.aggregatedData else {
                         return
                     }
                     var totalSize: Int64 = 0
                     
-                    let contextStats: StorageUsageStats
-                    if let peer = component.peer {
-                        contextStats = currentStats.peers[peer.id]?.stats ?? StorageUsageStats(categories: [:])
-                    } else {
-                        contextStats = currentStats.totalStats
-                    }
+                    let contextStats = aggregatedData.contextStats
                     
                     for category in categories {
                         let mappedCategory: StorageUsageStats.CategoryKey
@@ -2559,49 +2987,8 @@ final class StorageUsageScreenComponent: Component {
                     })
                 })
             } else if !peers.isEmpty || !messages.isEmpty {
-                self.isClearing = true
-                self.state?.updated(transition: .immediate)
                 
-                var totalSize: Int64 = 0
-                if let peerItems = self.peerItems {
-                    for item in peerItems.items {
-                        if peers.contains(item.peer.id) {
-                            totalSize += item.size
-                        }
-                    }
-                }
-                
-                var includeMessages: [Message] = []
-                var excludeMessages: [Message] = []
-                
-                for (id, message) in self.currentMessages {
-                    if peers.contains(id.peerId) {
-                        if !messages.contains(id) {
-                            excludeMessages.append(message)
-                        }
-                    } else {
-                        if messages.contains(id) {
-                            includeMessages.append(message)
-                        }
-                    }
-                }
-                
-                let _ = (component.context.engine.resources.clearStorage(peerIds: peers, includeMessages: includeMessages, excludeMessages: excludeMessages)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    
-                    self.reloadStats(firstTime: false, completion: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        if totalSize != 0 {
-                            self.reportClearedStorage(size: totalSize)
-                        }
-                    })
-                })
-            }
+            }*/
         }
         
         private func openKeepMediaCategory(mappedCategory: CacheStorageSettings.PeerStorageCategory, sourceView: StoragePeerTypeItemComponent.View) {
