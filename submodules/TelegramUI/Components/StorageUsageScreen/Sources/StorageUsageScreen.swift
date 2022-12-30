@@ -1606,7 +1606,11 @@ final class StorageUsageScreenComponent: Component {
                 )
                 if let chartTotalLabelView = self.chartTotalLabel.view {
                     if chartTotalLabelView.superview == nil {
-                        self.scrollView.addSubview(chartTotalLabelView)
+                        if let pieChartComponentView = self.pieChartView.view {
+                            self.scrollView.insertSubview(chartTotalLabelView, belowSubview: pieChartComponentView)
+                        } else {
+                            self.scrollView.addSubview(chartTotalLabelView)
+                        }
                     }
                     let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
                     transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
