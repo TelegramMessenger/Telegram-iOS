@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/CheckNode",
         "//submodules/Markdown",
         "//submodules/ContextUI",

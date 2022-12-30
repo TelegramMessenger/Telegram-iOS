@@ -22,6 +22,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramStringFormatting
 import GalleryData
+import AnimatedTextComponent
 
 #if DEBUG
 import os.signpost
@@ -1230,9 +1231,13 @@ final class StorageUsageScreenComponent: Component {
             var listCategories: [StorageCategoriesComponent.CategoryData] = []
             
             var totalSize: Int64 = 0
+            var totalSelectedCategorySize: Int64 = 0
             if let aggregatedData = self.aggregatedData {
-                for (_, value) in aggregatedData.contextStats.categories {
+                for (key, value) in aggregatedData.contextStats.categories {
                     totalSize += value.size
+                    if aggregatedData.selectedCategories.contains(Category(key)) {
+                        totalSelectedCategorySize += value.size
+                    }
                 }
                 
                 for category in allCategories {
@@ -1262,10 +1267,12 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     let categoryFraction: Double
-                    if categorySize == 0 || totalSize == 0 {
+                    if !aggregatedData.selectedCategories.contains(category) {
+                        categoryFraction = 0.0
+                    } else if categorySize == 0 || totalSelectedCategorySize == 0 {
                         categoryFraction = 0.0
                     } else {
-                        categoryFraction = Double(categorySize) / Double(totalSize)
+                        categoryFraction = Double(categorySize) / Double(totalSelectedCategorySize)
                     }
                     
                     if categorySize != 0 {
@@ -1275,15 +1282,13 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             
-            listCategories.sort(by: { $0.sizeFraction > $1.sizeFraction })
+            listCategories.sort(by: { $0.size > $1.size })
             
             var otherListCategories: [StorageCategoriesComponent.CategoryData] = []
             if listCategories.count > 5 {
                 for i in (4 ..< listCategories.count).reversed() {
-                    if listCategories[i].sizeFraction < 0.04 {
-                        otherListCategories.insert(listCategories[i], at: 0)
-                        listCategories.remove(at: i)
-                    }
+                    otherListCategories.insert(listCategories[i], at: 0)
+                    listCategories.remove(at: i)
                 }
             }
             self.otherCategories = Set(otherListCategories.map(\.key))
@@ -1303,12 +1308,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             if !otherListCategories.isEmpty {
-                let categoryFraction: Double
-                if totalOtherSize == 0 || totalSize == 0 {
-                    categoryFraction = 0.0
-                } else {
-                    categoryFraction = Double(totalOtherSize) / Double(totalSize)
-                }
+                let categoryFraction: Double = otherListCategories.reduce(0.0, { $0 + $1.sizeFraction })
                 let isSelected = otherListCategories.allSatisfy { item in
                     return self.aggregatedData?.selectedCategories.contains(item.key) ?? false
                 }
@@ -1573,15 +1573,43 @@ final class StorageUsageScreenComponent: Component {
                 }
                 transition.setAlpha(view: chartAvatarNode.view, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             } else {
+                let sizeText = dataSizeString(Int(totalSelectedCategorySize), forceDecimal: true, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: "."))
+                
+                var animatedTextItems: [AnimatedTextComponent.Item] = []
+                var remainingSizeText = sizeText
+                if let index = remainingSizeText.firstIndex(of: ".") {
+                    animatedTextItems.append(AnimatedTextComponent.Item(id: "n-full", content: .text(String(remainingSizeText[remainingSizeText.startIndex ..< index]))))
+                    animatedTextItems.append(AnimatedTextComponent.Item(id: "dot", content: .text(".")))
+                    remainingSizeText = String(remainingSizeText[remainingSizeText.index(after: index)...])
+                }
+                if let index = remainingSizeText.firstIndex(of: " ") {
+                    animatedTextItems.append(AnimatedTextComponent.Item(id: "n-fract", content: .text(String(remainingSizeText[remainingSizeText.startIndex ..< index]))))
+                    remainingSizeText = String(remainingSizeText[index...])
+                }
+                if !remainingSizeText.isEmpty {
+                    animatedTextItems.append(AnimatedTextComponent.Item(id: "rest", isUnbreakable: true, content: .text(remainingSizeText)))
+                }
+                
                 let chartTotalLabelSize = self.chartTotalLabel.update(
                     transition: transition,
-                    component: AnyComponent(Text(text: dataSizeString(Int(totalSize), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")), font: Font.with(size: 20.0, design: .round, weight: .bold), color: environment.theme.list.itemPrimaryTextColor)), environment: {}, containerSize: CGSize(width: 200.0, height: 200.0)
+                    /*component: AnyComponent(Text(
+                        text: dataSizeString(Int(totalSelectedCategorySize), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),
+                        font: Font.with(size: 20.0, design: .round, weight: .bold), color: environment.theme.list.itemPrimaryTextColor
+                    )),*/
+                    component: AnyComponent(AnimatedTextComponent(
+                        font: Font.with(size: 20.0, design: .round, weight: .bold),
+                        color: environment.theme.list.itemPrimaryTextColor,
+                        items: animatedTextItems
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 200.0)
                 )
                 if let chartTotalLabelView = self.chartTotalLabel.view {
                     if chartTotalLabelView.superview == nil {
                         self.scrollView.addSubview(chartTotalLabelView)
                     }
-                    transition.setFrame(view: chartTotalLabelView, frame: CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize))
+                    let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
+                    transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
                     transition.setAlpha(view: chartTotalLabelView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
                 }
             }
@@ -2727,7 +2755,7 @@ final class StorageUsageScreenComponent: Component {
             if let _ = aggregatedData.peerId {
                 clearTitle = presentationData.strings.StorageManagement_ClearSelected
             } else {
-                if aggregatedData.selectedCategories == aggregatedData.existingCategories {
+                if aggregatedData.selectedCategories == aggregatedData.existingCategories, fromCategories {
                     clearTitle = presentationData.strings.StorageManagement_ClearAll
                 } else {
                     clearTitle = presentationData.strings.StorageManagement_ClearSelected
