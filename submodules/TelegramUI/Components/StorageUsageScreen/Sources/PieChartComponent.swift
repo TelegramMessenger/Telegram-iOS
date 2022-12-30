@@ -1163,11 +1163,11 @@ final class PieChartComponent: Component {
                 let fractionValue: Double = floor(item.displayValue * 100.0 * 10.0) / 10.0
                 let fractionString: String
                 if fractionValue < 0.1 {
-                    fractionString = "<0.1"
+                    fractionString = "<0.1%"
                 } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
-                    fractionString = "\(Int(fractionValue))"
+                    fractionString = "\(Int(fractionValue))%"
                 } else {
-                    fractionString = "\(fractionValue)"
+                    fractionString = "\(fractionValue)%"
                 }
                 
                 let tooltipSize = tooltip.update(

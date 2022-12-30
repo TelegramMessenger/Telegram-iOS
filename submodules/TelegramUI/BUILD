@@ -351,6 +351,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/TelegramUI/Components/ChatInputNode",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/TelegramUI/Components/StorageUsageScreen",
         "//submodules/MediaPasteboardUI:MediaPasteboardUI",
         "//submodules/DrawingUI:DrawingUI",
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
