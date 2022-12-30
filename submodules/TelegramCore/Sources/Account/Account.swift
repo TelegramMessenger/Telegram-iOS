@@ -52,6 +52,19 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
     })
 }
 
+func _internal_test(_ network: Network) -> Signal<Bool, String> {
+    return network.request(Api.functions.help.test()) |> map { result in
+        switch result {
+        case .boolFalse:
+            return false
+        case .boolTrue:
+            return true
+        }
+    } |> mapError { error in
+        return error.description
+    }
+}
+
 public class UnauthorizedAccount {
     public let networkArguments: NetworkInitializationArguments
     public let id: AccountRecordId
