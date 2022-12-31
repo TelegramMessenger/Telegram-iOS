@@ -8,6 +8,7 @@ import Display
 import UniversalMediaPlayer
 import TelegramPresentationData
 import RangeSet
+import ShimmerEffect
 
 private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 
@@ -22,6 +23,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private let rightTimestampNode: MediaPlayerTimeTextNode
     private let infoNode: ASTextNode
     private let scrubberNode: MediaPlayerScrubbingNode
+    private let shimmerEffectNode: ShimmerEffectForegroundNode
     
     private let hapticFeedback = HapticFeedback()
     
@@ -31,6 +33,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private var fetchStatusDisposable = MetaDisposable()
     private var scrubbingDisposable = MetaDisposable()
     private var chapterDisposable = MetaDisposable()
+    private var loadingDisposable = MetaDisposable()
     
     private var leftTimestampNodePushed = false
     private var rightTimestampNodePushed = false
@@ -66,6 +69,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     init(chapters: [MediaPlayerScrubbingChapter]) {
         self.chapters = chapters
         self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: scrubberBackgroundColor, foregroundColor: scrubberForegroundColor, bufferingColor: scrubberBufferingColor, chapters: chapters))
+        self.shimmerEffectNode = ShimmerEffectForegroundNode()
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
@@ -123,19 +127,20 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     deinit {
         self.scrubbingDisposable.dispose()
         self.fetchStatusDisposable.dispose()
+        self.chapterDisposable.dispose()
+        self.loadingDisposable.dispose()
     }
     
-    var collapsed: Bool?
+    var isLoading = false
+    var isCollapsed: Bool?
     func setCollapsed(_ collapsed: Bool, animated: Bool) {
-        guard self.collapsed != collapsed else {
+        guard self.isCollapsed != collapsed else {
             return
         }
         
-        self.collapsed = collapsed
+        self.isCollapsed = collapsed
         
-        let alpha: CGFloat = collapsed ? 0.0 : 1.0
-        self.leftTimestampNode.alpha = alpha
-        self.rightTimestampNode.alpha = alpha
+        self.updateTimestampsVisibility(animated: animated)
         self.updateScrubberVisibility(animated: animated)
         
         if let (size, _, _) = self.containerLayout {
@@ -143,12 +148,19 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }
     }
     
+    func updateTimestampsVisibility(animated: Bool) {
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        let alpha: CGFloat = self.isCollapsed == true || self.isLoading ? 0.0 : 1.0
+        transition.updateAlpha(node: self.leftTimestampNode, alpha: alpha)
+        transition.updateAlpha(node: self.rightTimestampNode, alpha: alpha)
+    }
+    
     private func updateScrubberVisibility(animated: Bool) {
-        var collapsed = self.collapsed
+        var collapsed = self.isCollapsed
         var alpha: CGFloat = 1.0
         if let playbackStatus = self.playbackStatus, playbackStatus.duration <= 30.0 {
         } else {
-            alpha = self.collapsed == true ? 0.0 : 1.0
+            alpha = self.isCollapsed == true ? 0.0 : 1.0
             collapsed = false
         }
         self.scrubberNode.setCollapsed(collapsed == true, animated: animated)
@@ -174,6 +186,30 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.rightTimestampNode.status = mappedStatus
         
         if let mappedStatus = mappedStatus {
+            self.loadingDisposable.set((mappedStatus
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self {
+                    if status.duration < 1.0 {
+                        strongSelf.isLoading = true
+                        strongSelf.updateTimestampsVisibility(animated: true)
+                        
+                        if strongSelf.shimmerEffectNode.supernode == nil {
+                            strongSelf.scrubberNode.containerNode.addSubnode(strongSelf.shimmerEffectNode)
+                        }
+                    } else {
+                        strongSelf.isLoading = false
+                        strongSelf.updateTimestampsVisibility(animated: true)
+                        if strongSelf.shimmerEffectNode.supernode != nil {
+                            strongSelf.shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.shimmerEffectNode.removeFromSupernode()
+                                }
+                            })
+                        }
+                    }
+                }
+            }))
+            
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 if let strongSelf = self, status.duration > 1.0, strongSelf.chapters.count > 0 {
@@ -320,9 +356,14 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         let infoSize = self.infoNode.measure(infoConstrainedSize)
         self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
         transition.updatePosition(node: self.infoNode, position: CGPoint(x: size.width / 2.0, y: infoOffset + infoSize.height / 2.0))
-        self.infoNode.alpha = size.width < size.height && self.collapsed == false ? 1.0 : 0.0
+        self.infoNode.alpha = size.width < size.height && self.isCollapsed == false ? 1.0 : 0.0
         
-        self.scrubberNode.frame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
+        let scrubberFrame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
+        self.scrubberNode.frame = scrubberFrame
+        self.shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: scrubberFrame.size), within: scrubberFrame.size)
+        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.75), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
+        self.shimmerEffectNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 4.0), size: CGSize(width: scrubberFrame.size.width, height: 5.0))
+        self.shimmerEffectNode.cornerRadius = 2.5
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

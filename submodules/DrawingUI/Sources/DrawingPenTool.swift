@@ -216,7 +216,7 @@ final class PenTool: DrawingElement {
                 context.scaleBy(x: 1.0 / parent.drawScale.width, y: 1.0 / parent.drawScale.height)
                 element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
                 
-                if !element.isEraser || !element.isBlur {
+                if !element.isEraser && !element.isBlur {
                     element.drawActiveSegments(in: context, strokeWidth: !parent.isActiveDrying ? element.renderLineWidth * parent.dryingFactor : nil)
                 } else {
                     element.drawActiveSegments(in: context, strokeWidth: nil)

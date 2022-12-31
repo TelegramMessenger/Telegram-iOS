@@ -188,8 +188,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     case .info:
                         self.authorNameNode.isHidden = false
                         self.dateNode.isHidden = false
-                        self.backwardButton.isHidden = true
-                        self.forwardButton.isHidden = true
+                        self.hasSeekControls = false
                         self.playbackControlButton.isHidden = true
                         self.statusButtonNode.isHidden = true
                         self.statusNode.isHidden = true
@@ -197,8 +196,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.currentIsPaused = true
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
-                        self.backwardButton.isHidden = !seekable
-                        self.forwardButton.isHidden = !seekable
+                        self.hasSeekControls = seekable
                         if status == .Local {
                             self.playbackControlButton.isHidden = false
                             self.playPauseIconNode.enqueueState(.play, animated: true)
@@ -226,8 +224,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.currentIsPaused = paused
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
-                        self.backwardButton.isHidden = !seekable
-                        self.forwardButton.isHidden = !seekable
+                        self.hasSeekControls = seekable
                         self.playbackControlButton.isHidden = false
                         
                         let icon: PlayPauseIconNodeState
@@ -241,6 +238,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.statusNode.isHidden = true
                 }
             }
+        }
+    }
+    
+    var hasSeekControls: Bool = false {
+        didSet {
+            let alpha = self.hasSeekControls ? 1.0 : 0.0
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            transition.updateAlpha(node: self.backwardButton, alpha: alpha)
+            transition.updateAlpha(node: self.forwardButton, alpha: alpha)
+            self.backwardButton.isUserInteractionEnabled = self.hasSeekControls
+            self.forwardButton.isUserInteractionEnabled = self.hasSeekControls
         }
     }
     
@@ -339,11 +347,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.dateNode.displaysAsynchronously = false
         
         self.backwardButton = PlaybackButtonNode()
-        self.backwardButton.isHidden = true
+        self.backwardButton.alpha = 0.0
+        self.backwardButton.isUserInteractionEnabled = false
         self.backwardButton.backgroundIconNode.image = backwardImage
         
         self.forwardButton = PlaybackButtonNode()
-        self.forwardButton.isHidden = true
+        self.forwardButton.alpha = 0.0
+        self.forwardButton.isUserInteractionEnabled = false
         self.forwardButton.forward = true
         self.forwardButton.backgroundIconNode.image = forwardImage
         
