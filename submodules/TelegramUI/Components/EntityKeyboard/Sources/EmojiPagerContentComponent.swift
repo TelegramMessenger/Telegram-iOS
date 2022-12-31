@@ -6663,7 +6663,7 @@ public final class EmojiPagerContentComponent: Component {
                 if hasPremium {
                     maxTopLineCount = 2
                 } else {
-                    maxTopLineCount = 5
+                    maxTopLineCount = 6
                 }
                 
                 for reactionItem in topReactionItems {
@@ -6721,7 +6721,7 @@ public final class EmojiPagerContentComponent: Component {
                 if hasPremium {
                     maxRecentLineCount = 10
                 } else {
-                    maxRecentLineCount = 5
+                    maxRecentLineCount = 10
                 }
                 
                 let popularTitle = hasRecent ? strings.Chat_ReactionSection_Recent : strings.Chat_ReactionSection_Popular

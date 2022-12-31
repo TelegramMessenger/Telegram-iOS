@@ -91,6 +91,7 @@ public final class HashtagSearchController: TelegramBaseController {
             gesture?.cancel()
         }, present: { _ in
         }, openForumThread: { _, _ in
+        }, openStorageManagement: {
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)

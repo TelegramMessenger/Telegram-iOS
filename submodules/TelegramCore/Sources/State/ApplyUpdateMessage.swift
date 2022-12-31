@@ -41,7 +41,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
     }
 }
 
-func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, cacheReferenceKey: CachedSentMediaReferenceKey?, result: Api.Updates, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let messageId: Int32?
         var apiMessage: Api.Message?
@@ -282,6 +282,27 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                     if let authorId = updatedMessage.authorId {
                         updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 0, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
                     }
+                }
+            }
+            
+            if updatedMessage.id.namespace == Namespaces.Message.Cloud, let cacheReferenceKey = cacheReferenceKey {
+                var storeMedia: Media?
+                var mediaCount = 0
+                for media in updatedMessage.media {
+                    if let image = media as? TelegramMediaImage {
+                        storeMedia = image
+                        mediaCount += 1
+                    } else if let file = media as? TelegramMediaFile {
+                        storeMedia = file
+                        mediaCount += 1
+                    }
+                }
+                if mediaCount > 1 {
+                    storeMedia = nil
+                }
+                
+                if let storeMedia = storeMedia {
+                    storeCachedSentMediaReference(transaction: transaction, key: cacheReferenceKey, media: storeMedia)
                 }
             }
         }

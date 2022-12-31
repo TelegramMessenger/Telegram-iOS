@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "Lottie",
-    module_name = "Lottie",
+    name = "AnimatedTextComponent",
+    module_name = "AnimatedTextComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,7 +10,9 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/Display"
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/Display",
+        "//submodules/ComponentFlow",
     ],
     visibility = [
         "//visibility:public",

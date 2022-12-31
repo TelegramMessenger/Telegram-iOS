@@ -13,21 +13,6 @@ import MultilineTextComponent
 import EmojiStatusComponent
 import Postbox
 
-private func interpolateChartData(start: PieChartComponent.ChartData, end: PieChartComponent.ChartData, progress: CGFloat) -> PieChartComponent.ChartData {
-    if start.items.count != end.items.count {
-        return start
-    }
-    
-    var result = end
-    for i in 0 ..< result.items.count {
-        result.items[i].value = (1.0 - progress) * start.items[i].value + progress * end.items[i].value
-        result.items[i].color = start.items[i].color.interpolateTo(end.items[i].color, fraction: progress) ?? end.items[i].color
-        result.items[i].mergeFactor = (1.0 - progress) * start.items[i].mergeFactor + progress * end.items[i].mergeFactor
-    }
-    
-    return result
-}
-
 private func processChartData(data: PieChartComponent.ChartData) -> PieChartComponent.ChartData {
     var data = data
     
@@ -87,6 +72,95 @@ private func processChartData(data: PieChartComponent.ChartData) -> PieChartComp
 
 private let chartLabelFont = Font.with(size: 16.0, design: .round, weight: .semibold)
 
+private final class ChartSelectionTooltip: Component {
+    let theme: PresentationTheme
+    let fractionText: String
+    let title: String
+    let sizeText: String
+    
+    init(
+        theme: PresentationTheme,
+        fractionText: String,
+        title: String,
+        sizeText: String
+    ) {
+        self.theme = theme
+        self.fractionText = fractionText
+        self.title = title
+        self.sizeText = sizeText
+    }
+    
+    static func ==(lhs: ChartSelectionTooltip, rhs: ChartSelectionTooltip) -> Bool {
+        return true
+    }
+    
+    final class View: UIView {
+        private let backgroundView: BlurredBackgroundView
+        private let title = ComponentView<Empty>()
+        
+        override init(frame: CGRect) {
+            self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+            
+            self.backgroundView.layer.shadowOpacity = 0.12
+            self.backgroundView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+            self.backgroundView.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+            self.backgroundView.layer.shadowRadius = 8.0
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.backgroundView)
+        }
+        
+        required init(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        func update(component: ChartSelectionTooltip, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let sideInset: CGFloat = 10.0
+            let height: CGFloat = 24.0
+            
+            let text = NSMutableAttributedString()
+            text.append(NSAttributedString(string: component.fractionText + "  ", font: Font.semibold(12.0), textColor: component.theme.list.itemPrimaryTextColor))
+            text.append(NSAttributedString(string: component.title + "  ", font: Font.regular(12.0), textColor: component.theme.list.itemPrimaryTextColor))
+            text.append(NSAttributedString(string: component.sizeText, font: Font.semibold(12.0), textColor: component.theme.list.itemAccentColor))
+            
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(text)
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+            )
+            let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            
+            let size = CGSize(width: sideInset * 2.0 + titleSize.width, height: height)
+            
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+            self.backgroundView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.88), transition: .immediate)
+            self.backgroundView.update(size: size, cornerRadius: 10.0, transition: transition.containedViewLayoutTransition)
+            
+            self.backgroundView.layer.shadowPath = UIBezierPath(roundedRect: self.backgroundView.bounds, cornerRadius: 10.0).cgPath
+            
+            return size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
 private final class ChartLabel: UIView {
     private let label: ImmediateTextView
     private var currentText: String?
@@ -138,14 +212,16 @@ final class PieChartComponent: Component {
         struct Item: Equatable {
             var id: StorageUsageScreenComponent.Category
             var displayValue: Double
+            var displaySize: Int64
             var value: Double
             var color: UIColor
             var mergeable: Bool
             var mergeFactor: CGFloat
             
-            init(id: StorageUsageScreenComponent.Category, displayValue: Double, value: Double, color: UIColor, mergeable: Bool, mergeFactor: CGFloat) {
+            init(id: StorageUsageScreenComponent.Category, displayValue: Double, displaySize: Int64, value: Double, color: UIColor, mergeable: Bool, mergeFactor: CGFloat) {
                 self.id = id
                 self.displayValue = displayValue
+                self.displaySize = displaySize
                 self.value = value
                 self.color = color
                 self.mergeable = mergeable
@@ -161,18 +237,24 @@ final class PieChartComponent: Component {
     }
     
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let chartData: ChartData
     
     init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         chartData: ChartData
     ) {
         self.theme = theme
+        self.strings = strings
         self.chartData = chartData
     }
     
     static func ==(lhs: PieChartComponent, rhs: PieChartComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.chartData != rhs.chartData {
@@ -181,77 +263,118 @@ final class PieChartComponent: Component {
         return true
     }
     
-    private final class ChartDataView: UIView {
-        private(set) var theme: PresentationTheme?
-        private(set) var data: ChartData?
-        private(set) var selectedKey: AnyHashable?
+    private struct CalculatedLabel {
+        var image: UIImage
+        var alpha: CGFloat
+        var angle: CGFloat
+        var radius: CGFloat
+        var scale: CGFloat
         
-        private var currentAnimation: (start: ChartData, end: ChartData, current: ChartData, progress: CGFloat)?
-        private var animator: DisplayLinkAnimator?
+        init(
+            image: UIImage,
+            alpha: CGFloat,
+            angle: CGFloat,
+            radius: CGFloat,
+            scale: CGFloat
+        ) {
+            self.image = image
+            self.alpha = alpha
+            self.angle = angle
+            self.radius = radius
+            self.scale = scale
+        }
         
-        private var labels: [AnyHashable: ChartLabel] = [:]
+        func interpolateTo(_ other: CalculatedLabel, amount: CGFloat) -> CalculatedLabel {
+            return CalculatedLabel(
+                image: other.image,
+                alpha: self.alpha.interpolate(to: other.alpha, amount: amount),
+                angle: self.angle.interpolate(to: other.angle, amount: amount),
+                radius: self.radius.interpolate(to: other.radius, amount: amount),
+                scale: self.scale.interpolate(to: other.scale, amount: amount)
+            )
+        }
+    }
+    
+    private struct CalculatedSection {
+        var id: StorageUsageScreenComponent.Category
+        var color: UIColor
+        var innerAngle: Range<CGFloat>
+        var outerAngle: Range<CGFloat>
+        var innerRadius: CGFloat
+        var outerRadius: CGFloat
+        var label: CalculatedLabel?
         
-        override init(frame: CGRect) {
-            super.init(frame: frame)
+        init(
+            id: StorageUsageScreenComponent.Category,
+            color: UIColor,
+            innerAngle: Range<CGFloat>,
+            outerAngle: Range<CGFloat>,
+            innerRadius: CGFloat,
+            outerRadius: CGFloat,
+            label: CalculatedLabel?
+        ) {
+            self.id = id
+            self.color = color
+            self.innerAngle = innerAngle
+            self.outerAngle = outerAngle
+            self.innerRadius = innerRadius
+            self.outerRadius = outerRadius
+            self.label = label
+        }
+    }
+    
+    private struct ItemAngleData {
+        var angleValue: CGFloat
+        var startAngle: CGFloat
+        var endAngle: CGFloat
+    }
+    
+    private struct CalculatedLayout {
+        var size: CGSize
+        var sections: [CalculatedSection]
+        
+        init(size: CGSize, sections: [CalculatedSection]) {
+            self.size = size
+            self.sections = sections
+        }
+        
+        init(interpolating start: CalculatedLayout, to end: CalculatedLayout, progress: CGFloat, size: CGSize) {
+            self.size = size
+            self.sections = []
             
-            self.backgroundColor = nil
-            self.isOpaque = false
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        deinit {
-            self.animator?.invalidate()
-        }
-        
-        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
-            let data = processChartData(data: data)
-            
-            if self.theme !== theme || self.data != data || self.selectedKey != selectedKey {
-                self.theme = theme
-                self.selectedKey = selectedKey
+            for i in 0 ..< end.sections.count {
+                let right = end.sections[i]
                 
-                if animated, let previous = self.data {
-                    var initialState = previous
-                    if let currentAnimation = self.currentAnimation {
-                        initialState = currentAnimation.current
+                if i < start.sections.count {
+                    let left = start.sections[i]
+                    let innerAngle: Range<CGFloat> = left.innerAngle.lowerBound.interpolate(to: right.innerAngle.lowerBound, amount: progress) ..< left.innerAngle.upperBound.interpolate(to: right.innerAngle.upperBound, amount: progress)
+                    let outerAngle: Range<CGFloat> = left.outerAngle.lowerBound.interpolate(to: right.outerAngle.lowerBound, amount: progress) ..< left.outerAngle.upperBound.interpolate(to: right.outerAngle.upperBound, amount: progress)
+                    
+                    var label: CalculatedLabel?
+                    if let leftLabel = left.label, let rightLabel = right.label {
+                        label = leftLabel.interpolateTo(rightLabel, amount: progress)
                     }
-                    self.currentAnimation = (initialState, data, initialState, 0.0)
-                    self.animator?.invalidate()
-                    self.animator = DisplayLinkAnimator(duration: 0.4, from: 0.0, to: 1.0, update: { [weak self] progress in
-                        guard let self else {
-                            return
-                        }
-                        let progress = listViewAnimationCurveSystem(progress)
-                        if let currentAnimationValue = self.currentAnimation {
-                            self.currentAnimation = (currentAnimationValue.start, currentAnimationValue.end, interpolateChartData(start: currentAnimationValue.start, end: currentAnimationValue.end, progress: progress), progress)
-                            self.setNeedsDisplay()
-                        }
-                    }, completion: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.currentAnimation = nil
-                        self.setNeedsDisplay()
-                    })
+                    
+                    self.sections.append(CalculatedSection(
+                        id: right.id,
+                        color: left.color.interpolateTo(right.color, fraction: progress) ?? right.color,
+                        innerAngle: innerAngle,
+                        outerAngle: outerAngle,
+                        innerRadius: left.innerRadius.interpolate(to: right.innerRadius, amount: progress),
+                        outerRadius: left.outerRadius.interpolate(to: right.outerRadius, amount: progress),
+                        label: label
+                    ))
+                } else {
+                    self.sections.append(right)
                 }
-                
-                self.data = data
-                
-                self.setNeedsDisplay()
             }
         }
         
-        override func draw(_ rect: CGRect) {
-            guard let context = UIGraphicsGetCurrentContext() else {
-                return
-            }
-            guard let _ = self.theme, let data = self.currentAnimation?.current ?? self.data else {
-                return
-            }
-            if data.items.isEmpty {
+        init(size: CGSize, items: [ChartData.Item], selectedKey: AnyHashable?) {
+            self.size = size
+            self.sections = []
+            
+            if items.isEmpty {
                 return
             }
             
@@ -260,8 +383,8 @@ final class PieChartComponent: Component {
             let innerAngleSpacing: CGFloat = spacing / (innerDiameter * 0.5)
             
             var angles: [Double] = []
-            for i in 0 ..< data.items.count {
-                let item = data.items[i]
+            for i in 0 ..< items.count {
+                let item = items[i]
                 let angle = item.value * CGFloat.pi * 2.0
                 angles.append(angle)
             }
@@ -269,22 +392,14 @@ final class PieChartComponent: Component {
             let diameter: CGFloat = 200.0
             let reducedDiameter: CGFloat = 170.0
             
-            let shapeLayerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: diameter, height: diameter))
-            
-            struct ItemAngleData {
-                var angleValue: CGFloat
-                var startAngle: CGFloat
-                var endAngle: CGFloat
-            }
-            
             var anglesData: [ItemAngleData] = []
             
             var startAngle: CGFloat = 0.0
-            for i in 0 ..< data.items.count {
-                let item = data.items[i]
+            for i in 0 ..< items.count {
+                let item = items[i]
                 
                 let itemOuterDiameter: CGFloat
-                if let selectedKey = self.selectedKey {
+                if let selectedKey {
                     if selectedKey == AnyHashable(item.id) {
                         itemOuterDiameter = diameter
                     } else {
@@ -303,16 +418,16 @@ final class PieChartComponent: Component {
                 if item.mergeable {
                     let previousItem: ChartData.Item
                     if i == 0 {
-                        previousItem = data.items[data.items.count - 1]
+                        previousItem = items[items.count - 1]
                     } else {
-                        previousItem = data.items[i - 1]
+                        previousItem = items[i - 1]
                     }
 
                     let nextItem: ChartData.Item
-                    if i == data.items.count - 1 {
-                        nextItem = data.items[0]
+                    if i == items.count - 1 {
+                        nextItem = items[0]
                     } else {
-                        nextItem = data.items[i + 1]
+                        nextItem = items[i + 1]
                     }
                     
                     if previousItem.mergeable {
@@ -338,273 +453,645 @@ final class PieChartComponent: Component {
                 var arcOuterEndAngle = startAngle + angleValue - angleSpacing * 0.5 * afterSpacingFraction
                 arcOuterEndAngle = max(arcOuterEndAngle, arcOuterStartAngle)
                 
-                let path = CGMutablePath()
-                
-                path.addArc(center: CGPoint(x: diameter * 0.5, y: diameter * 0.5), radius: innerDiameter * 0.5, startAngle: arcInnerEndAngle, endAngle: arcInnerStartAngle, clockwise: true)
-                path.addArc(center: CGPoint(x: diameter * 0.5, y: diameter * 0.5), radius: itemOuterDiameter * 0.5, startAngle: arcOuterStartAngle, endAngle: arcOuterEndAngle, clockwise: false)
-                
-                context.addPath(path)
-                context.setFillColor(item.color.cgColor)
-                context.fillPath()
+                self.sections.append(CalculatedSection(
+                    id: item.id,
+                    color: item.color,
+                    innerAngle: arcInnerStartAngle ..< arcInnerEndAngle,
+                    outerAngle: arcOuterStartAngle ..< arcOuterEndAngle,
+                    innerRadius: innerDiameter * 0.5,
+                    outerRadius: itemOuterDiameter * 0.5,
+                    label: nil
+                ))
                 
                 startAngle += angleValue
                 
                 anglesData.append(ItemAngleData(angleValue: angleValue, startAngle: innerStartAngle, endAngle: innerEndAngle))
             }
             
-            func updateItemLabel(id: AnyHashable, displayValue: Double, mergeFactor: CGFloat, angleData: ItemAngleData) {
-                let fractionValue: Double = floor(displayValue * 100.0 * 10.0) / 10.0
-                let fractionString: String
-                if fractionValue < 0.1 {
-                    fractionString = "<0.1"
-                } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
-                    fractionString = "\(Int(fractionValue))"
-                } else {
-                    fractionString = "\(fractionValue)"
-                }
+            for i in 0 ..< items.count {
+                let item = items[i]
                 
-                let label: ChartLabel
-                if let current = self.labels[id] {
-                    label = current
-                } else {
-                    label = ChartLabel()
-                    self.labels[id] = label
-                }
-                let labelSize = label.update(text: "\(fractionString)%")
-                
-                var labelFrame: CGRect?
-                
-                let angleValue = angleData.angleValue
-                let innerStartAngle = angleData.startAngle
-                let innerEndAngle = angleData.endAngle
-                
-                if angleValue >= 0.001 {
-                    for step in 0 ... 20 {
-                        let stepFraction: CGFloat = CGFloat(step) / 20.0
-                        let centerOffset: CGFloat = 0.5 * (1.0 - stepFraction) + 0.65 * stepFraction
-                        
-                        let midAngle: CGFloat = (innerStartAngle + innerEndAngle) * 0.5
-                        let centerDistance: CGFloat = (innerDiameter * 0.5 + (diameter * 0.5 - innerDiameter * 0.5) * centerOffset)
-                        
-                        let relLabelCenter = CGPoint(
-                            x: cos(midAngle) * centerDistance,
-                            y: sin(midAngle) * centerDistance
-                        )
-                        
-                        let labelCenter = CGPoint(
-                            x: shapeLayerFrame.midX + relLabelCenter.x,
-                            y: shapeLayerFrame.midY + relLabelCenter.y
-                        )
-                        
-                        func lineCircleIntersection(_ center: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ r: CGFloat) -> CGFloat {
-                            let dx: CGFloat = p2.x - p1.x
-                            let dy: CGFloat = p2.y - p1.y
-                            let dr: CGFloat = sqrt(dx * dx + dy * dy)
-                            let D: CGFloat = p1.x * p2.y - p2.x * p1.y
-                            
-                            var minDistance: CGFloat = 10000.0
-                            
-                            for i in 0 ..< 2 {
-                                let signFactor: CGFloat = i == 0 ? 1.0 : (-1.0)
-                                let dysign: CGFloat = dy < 0.0 ? -1.0 : 1.0
-                                let ix: CGFloat = (D * dy + signFactor * dysign * dx * sqrt(r * r * dr * dr - D * D)) / (dr * dr)
-                                let iy: CGFloat = (-D * dx + signFactor * abs(dy) * sqrt(r * r * dr * dr - D * D)) / (dr * dr)
-                                let distance: CGFloat = sqrt(pow(ix - center.x, 2.0) + pow(iy - center.y, 2.0))
-                                minDistance = min(minDistance, distance)
-                            }
-                            
-                            return minDistance
-                        }
-                        
-                        func lineLineIntersection(_ p1: CGPoint, _ p2: CGPoint, _ p3: CGPoint, _ p4: CGPoint) -> CGFloat {
-                            let x1 = p1.x
-                            let y1 = p1.y
-                            let x2 = p2.x
-                            let y2 = p2.y
-                            let x3 = p3.x
-                            let y3 = p3.y
-                            let x4 = p4.x
-                            let y4 = p4.y
-                            
-                            let d: CGFloat = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
-                            if abs(d) <= 0.00001 {
-                                return 10000.0
-                            }
-                            
-                            let px: CGFloat = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d
-                            let py: CGFloat = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d
-                            
-                            let distance: CGFloat = sqrt(pow(px - p1.x, 2.0) + pow(py - p1.y, 2.0))
-                            return distance
-                        }
-                        
-                        let intersectionOuterTopRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), diameter * 0.5)
-                        let intersectionInnerTopRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), innerDiameter * 0.5)
-                        let intersectionOuterBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), diameter * 0.5)
-                        let intersectionInnerBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), innerDiameter * 0.5)
-                        
-                        let horizontalInset: CGFloat = 2.0
-                        let intersectionOuterLeft = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y), diameter * 0.5) - horizontalInset
-                        let intersectionInnerLeft = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y), innerDiameter * 0.5) - horizontalInset
-                        
-                        let intersectionLine1TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerStartAngle), y: sin(innerStartAngle)))
-                        let intersectionLine1BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerStartAngle), y: sin(innerStartAngle)))
-                        let intersectionLine2TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerEndAngle), y: sin(innerEndAngle)))
-                        let intersectionLine2BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerEndAngle), y: sin(innerEndAngle)))
-                        
-                        var distances: [CGFloat] = [
-                            intersectionOuterTopRight,
-                            intersectionInnerTopRight,
-                            intersectionOuterBottomRight,
-                            intersectionInnerBottomRight,
-                            intersectionOuterLeft,
-                            intersectionInnerLeft
-                        ]
-                        
-                        if angleValue < CGFloat.pi / 2.0 {
-                            distances.append(contentsOf: [
-                                intersectionLine1TopRight,
-                                intersectionLine1BottomRight,
-                                intersectionLine2TopRight,
-                                intersectionLine2BottomRight
-                            ] as [CGFloat])
-                        }
-                        
-                        var minDistance: CGFloat = 1000.0
-                        for distance in distances {
-                            minDistance = min(minDistance, max(distance, 1.0))
-                        }
-                        
-                        let diagonalAngle = atan2(labelSize.height, labelSize.width)
-                        
-                        let maxHalfWidth = cos(diagonalAngle) * minDistance
-                        let maxHalfHeight = sin(diagonalAngle) * minDistance
-                        
-                        let maxSize = CGSize(width: maxHalfWidth * 2.0, height: maxHalfHeight * 2.0)
-                        let finalSize = CGSize(width: min(labelSize.width, maxSize.width), height: min(labelSize.height, maxSize.height))
-                        
-                        let currentFrame = CGRect(origin: CGPoint(x: labelCenter.x - finalSize.width * 0.5, y: labelCenter.y - finalSize.height * 0.5), size: finalSize)
-                        
-                        if finalSize.width >= labelSize.width {
-                            labelFrame = currentFrame
-                            break
-                        }
-                        if let labelFrame {
-                            if labelFrame.width > finalSize.width {
-                                continue
-                            }
-                        }
-                        labelFrame = currentFrame
+                var isDimmedBySelection = false
+                if let selectedKey {
+                    if selectedKey == AnyHashable(item.id) {
+                    } else {
+                        isDimmedBySelection = true
                     }
-                } else {
-                    let midAngle: CGFloat = (innerStartAngle + innerEndAngle) * 0.5
-                    let centerDistance: CGFloat = (innerDiameter * 0.5 + (diameter * 0.5 - innerDiameter * 0.5) * 0.5)
+                }
+                
+                self.updateLabel(
+                    index: i,
+                    displayValue: item.displayValue,
+                    mergeFactor: item.mergeFactor,
+                    innerAngle: self.sections[i].innerAngle,
+                    outerAngle: self.sections[i].outerAngle,
+                    innerRadius: self.sections[i].innerRadius,
+                    outerRadius: self.sections[i].outerRadius,
+                    isDimmedBySelection: isDimmedBySelection
+                )
+            }
+        }
+        
+        private mutating func updateLabel(
+            index: Int,
+            displayValue: Double,
+            mergeFactor: CGFloat,
+            innerAngle: Range<CGFloat>,
+            outerAngle: Range<CGFloat>,
+            innerRadius: CGFloat,
+            outerRadius: CGFloat,
+            isDimmedBySelection: Bool
+        ) {
+            let normalAlpha: CGFloat = isDimmedBySelection ? 0.0 : 1.0
+            
+            let fractionValue: Double = floor(displayValue * 100.0 * 10.0) / 10.0
+            let fractionString: String
+            if fractionValue < 0.1 {
+                fractionString = "<0.1"
+            } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
+                fractionString = "\(Int(fractionValue))"
+            } else {
+                fractionString = "\(fractionValue)"
+            }
+            
+            let labelString = NSAttributedString(string: "\(fractionString)%", font: chartLabelFont, textColor: .white)
+            let labelBounds = labelString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
+            let labelSize = CGSize(width: ceil(labelBounds.width), height: ceil(labelBounds.height))
+            guard let labelImage = generateImage(labelSize, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                UIGraphicsPushContext(context)
+                labelString.draw(in: labelBounds)
+                UIGraphicsPopContext()
+            }) else {
+                return
+            }
+            
+            var resultLabel: CalculatedLabel?
+            
+            if innerAngle.upperBound - innerAngle.lowerBound >= 0.001 {
+                for step in 0 ... 10 {
+                    let stepFraction: CGFloat = CGFloat(step) / 10.0
+                    let centerOffset: CGFloat = 0.5 * (1.0 - stepFraction) + 0.65 * stepFraction
+                    
+                    let midAngle: CGFloat = (innerAngle.lowerBound + innerAngle.upperBound) * 0.5
+                    let centerDistance: CGFloat = (innerRadius + (outerRadius - innerRadius) * centerOffset)
                     
                     let relLabelCenter = CGPoint(
                         x: cos(midAngle) * centerDistance,
                         y: sin(midAngle) * centerDistance
                     )
                     
-                    let labelCenter = CGPoint(
-                        x: shapeLayerFrame.midX + relLabelCenter.x,
-                        y: shapeLayerFrame.midY + relLabelCenter.y
-                    )
-                    
-                    let minSize = labelSize.aspectFitted(CGSize(width: 4.0, height: 4.0))
-                    labelFrame = CGRect(origin: CGPoint(x: labelCenter.x - minSize.width * 0.5, y: labelCenter.y - minSize.height * 0.5), size: minSize)
-                }
-                
-                let labelView = label
-                if let labelFrame {
-                    var animateIn: Bool = false
-                    if labelView.superview == nil {
-                        animateIn = true
-                        self.addSubview(labelView)
-                    }
-                    
-                    var labelScale = labelFrame.width / labelSize.width
-                    
-                    var normalAlpha: CGFloat = labelScale < 0.4 ? 0.0 : 1.0
-                    normalAlpha *= max(0.0, mergeFactor)
-                    
-                    var relLabelCenter = CGPoint(
-                        x: labelFrame.midX - shapeLayerFrame.midX,
-                        y: labelFrame.midY - shapeLayerFrame.midY
-                    )
-                    
-                    let labelAlpha: CGFloat
-                    if let selectedKey = self.selectedKey {
-                        if selectedKey == id {
-                            labelAlpha = normalAlpha
-                        } else {
-                            labelAlpha = 0.0
-                            
-                            let reducedFactor: CGFloat = (reducedDiameter - innerDiameter) / (diameter - innerDiameter)
-                            let reducedDiameterFactor: CGFloat = reducedDiameter / diameter
-                            
-                            labelScale *= reducedFactor
-                            
-                            relLabelCenter.x *= reducedDiameterFactor
-                            relLabelCenter.y *= reducedDiameterFactor
+                    func lineCircleIntersection(_ center: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ r: CGFloat) -> CGFloat {
+                        let dx: CGFloat = p2.x - p1.x
+                        let dy: CGFloat = p2.y - p1.y
+                        let dr: CGFloat = sqrt(dx * dx + dy * dy)
+                        let D: CGFloat = p1.x * p2.y - p2.x * p1.y
+                        
+                        var minDistance: CGFloat = 10000.0
+                        
+                        for i in 0 ..< 2 {
+                            let signFactor: CGFloat = i == 0 ? 1.0 : (-1.0)
+                            let dysign: CGFloat = dy < 0.0 ? -1.0 : 1.0
+                            let ix: CGFloat = (D * dy + signFactor * dysign * dx * sqrt(r * r * dr * dr - D * D)) / (dr * dr)
+                            let iy: CGFloat = (-D * dx + signFactor * abs(dy) * sqrt(r * r * dr * dr - D * D)) / (dr * dr)
+                            let distance: CGFloat = sqrt(pow(ix - center.x, 2.0) + pow(iy - center.y, 2.0))
+                            minDistance = min(minDistance, distance)
                         }
-                    } else {
-                        labelAlpha = normalAlpha
+                        
+                        return minDistance
                     }
-                    if labelView.alpha != labelAlpha {
-                        let transition: Transition
-                        if animateIn || "".isEmpty {
-                            transition = .immediate
-                        } else {
-                            transition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+                    
+                    func lineLineIntersection(_ p1: CGPoint, _ p2: CGPoint, _ p3: CGPoint, _ p4: CGPoint) -> CGFloat {
+                        let x1 = p1.x
+                        let y1 = p1.y
+                        let x2 = p2.x
+                        let y2 = p2.y
+                        let x3 = p3.x
+                        let y3 = p3.y
+                        let x4 = p4.x
+                        let y4 = p4.y
+                        
+                        let d: CGFloat = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+                        if abs(d) <= 0.00001 {
+                            return 10000.0
                         }
-                        transition.setAlpha(view: labelView, alpha: labelAlpha)
+                        
+                        let px: CGFloat = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / d
+                        let py: CGFloat = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / d
+                        
+                        let distance: CGFloat = sqrt(pow(px - p1.x, 2.0) + pow(py - p1.y, 2.0))
+                        return distance
                     }
                     
-                    let labelCenter = CGPoint(
-                        x: shapeLayerFrame.midX + relLabelCenter.x,
-                        y: shapeLayerFrame.midY + relLabelCenter.y
+                    let intersectionOuterTopRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), outerRadius)
+                    let intersectionInnerTopRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), innerRadius)
+                    let intersectionOuterBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), outerRadius)
+                    let intersectionInnerBottomRight = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), innerRadius)
+                    
+                    let horizontalInset: CGFloat = 2.0
+                    let intersectionOuterLeft = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y), outerRadius) - horizontalInset
+                    let intersectionInnerLeft = lineCircleIntersection(relLabelCenter, relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y), innerRadius) - horizontalInset
+                    
+                    let intersectionLine1TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerAngle.lowerBound), y: sin(innerAngle.lowerBound)))
+                    let intersectionLine1BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerAngle.lowerBound), y: sin(innerAngle.lowerBound)))
+                    let intersectionLine2TopRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y + labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerAngle.upperBound), y: sin(innerAngle.upperBound)))
+                    let intersectionLine2BottomRight = lineLineIntersection(relLabelCenter, CGPoint(x: relLabelCenter.x + labelSize.width * 0.5, y: relLabelCenter.y - labelSize.height * 0.5), CGPoint(), CGPoint(x: cos(innerAngle.upperBound), y: sin(innerAngle.upperBound)))
+                    
+                    var distances: [CGFloat] = [
+                        intersectionOuterTopRight,
+                        intersectionInnerTopRight,
+                        intersectionOuterBottomRight,
+                        intersectionInnerBottomRight,
+                        intersectionOuterLeft,
+                        intersectionInnerLeft
+                    ]
+                    
+                    if innerAngle.upperBound - innerAngle.lowerBound < CGFloat.pi / 2.0 {
+                        distances.append(contentsOf: [
+                            intersectionLine1TopRight,
+                            intersectionLine1BottomRight,
+                            intersectionLine2TopRight,
+                            intersectionLine2BottomRight
+                        ] as [CGFloat])
+                    }
+                    
+                    var minDistance: CGFloat = 1000.0
+                    for distance in distances {
+                        minDistance = min(minDistance, max(distance, 1.0))
+                    }
+                    
+                    let diagonalAngle = atan2(labelSize.height, labelSize.width)
+                    
+                    let maxHalfWidth = cos(diagonalAngle) * minDistance
+                    let maxHalfHeight = sin(diagonalAngle) * minDistance
+                    
+                    let maxSize = CGSize(width: maxHalfWidth * 2.0, height: maxHalfHeight * 2.0)
+                    let finalSize = CGSize(width: min(labelSize.width, maxSize.width), height: min(labelSize.height, maxSize.height))
+                    
+                    let currentScale = finalSize.width / labelSize.width
+                    
+                    if currentScale >= 1.0 - 0.001 {
+                        resultLabel = CalculatedLabel(
+                            image: labelImage,
+                            alpha: 1.0 * normalAlpha,
+                            angle: midAngle,
+                            radius: centerDistance,
+                            scale: 1.0
+                        )
+                        break
+                    }
+                    if let resultLabel {
+                        if resultLabel.scale > currentScale {
+                            continue
+                        }
+                    }
+                    resultLabel = CalculatedLabel(
+                        image: labelImage,
+                        alpha: (currentScale >= 0.4 ? 1.0 : 0.0) * normalAlpha,
+                        angle: midAngle,
+                        radius: centerDistance,
+                        scale: currentScale
                     )
-                    
-                    labelView.center = labelCenter
-                    labelView.transform = CGAffineTransformMakeScale(labelScale, labelScale)
                 }
-            }
-            
-            var mergedItem: (displayValue: Double, angleData: ItemAngleData, mergeFactor: CGFloat)?
-            for i in 0 ..< data.items.count {
-                let item = data.items[i]
-                let angleData = anglesData[i]
-                updateItemLabel(id: item.id, displayValue: item.displayValue, mergeFactor: item.mergeFactor, angleData: angleData)
-                
-                if item.mergeable {
-                    if var currentMergedItem = mergedItem {
-                        currentMergedItem.displayValue += item.displayValue
-                        currentMergedItem.angleData.startAngle = min(currentMergedItem.angleData.startAngle, angleData.startAngle)
-                        currentMergedItem.angleData.endAngle = max(currentMergedItem.angleData.endAngle, angleData.endAngle)
-                        mergedItem = currentMergedItem
-                    } else {
-                        let invertedMergeFactor: CGFloat = 1.0 - max(0.0, item.mergeFactor)
-                        mergedItem = (item.displayValue, angleData, invertedMergeFactor)
-                    }
-                }
-            }
-            
-            if let mergedItem {
-                updateItemLabel(id: "merged", displayValue: mergedItem.displayValue, mergeFactor: mergedItem.mergeFactor, angleData: mergedItem.angleData)
             } else {
-                if let label = self.labels["merged"] {
-                    self.labels.removeValue(forKey: "merged")
-                    label.removeFromSuperview()
+                let midAngle: CGFloat = (innerAngle.lowerBound + innerAngle.upperBound) * 0.5
+                let centerDistance: CGFloat = (innerRadius + (outerRadius - innerRadius) * 0.5)
+                
+                resultLabel = CalculatedLabel(
+                    image: labelImage,
+                    alpha: 0.0,
+                    angle: midAngle,
+                    radius: centerDistance,
+                    scale: 0.001
+                )
+            }
+            
+            if let resultLabel {
+                self.sections[index].label = resultLabel
+            }
+        }
+    }
+    
+    private struct Particle {
+        var trackIndex: Int
+        var position: CGPoint
+        var scale: CGFloat
+        var alpha: CGFloat
+        var direction: CGPoint
+        var velocity: CGFloat
+        
+        init(
+            trackIndex: Int,
+            position: CGPoint,
+            scale: CGFloat,
+            alpha: CGFloat,
+            direction: CGPoint,
+            velocity: CGFloat
+        ) {
+            self.trackIndex = trackIndex
+            self.position = position
+            self.scale = scale
+            self.alpha = alpha
+            self.direction = direction
+            self.velocity = velocity
+        }
+        
+        mutating func update(deltaTime: CGFloat) {
+            var position = self.position
+            position.x += self.direction.x * self.velocity * deltaTime
+            position.y += self.direction.y * self.velocity * deltaTime
+            self.position = position
+        }
+    }
+    
+    private final class ParticleSet {
+        private(set) var particles: [Particle] = []
+        
+        init() {
+            self.generateParticles(preAdvance: true)
+        }
+        
+        private func generateParticles(preAdvance: Bool) {
+            let maxDirections = 24
+            
+            if self.particles.count < maxDirections {
+                var allTrackIndices: [Int] = Array(repeating: 0, count: maxDirections)
+                for i in 0 ..< maxDirections {
+                    allTrackIndices[i] = i
                 }
+                var takenIndexCount = 0
+                for particle in self.particles {
+                    allTrackIndices[particle.trackIndex] = -1
+                    takenIndexCount += 1
+                }
+                var availableTrackIndices: [Int] = []
+                availableTrackIndices.reserveCapacity(maxDirections - takenIndexCount)
+                for index in allTrackIndices {
+                    if index != -1 {
+                        availableTrackIndices.append(index)
+                    }
+                }
+                
+                if !availableTrackIndices.isEmpty {
+                    availableTrackIndices.shuffle()
+                    
+                    for takeIndex in availableTrackIndices {
+                        let directionIndex = takeIndex
+                        let angle = (CGFloat(directionIndex % maxDirections) / CGFloat(maxDirections)) * CGFloat.pi * 2.0
+                        
+                        let direction = CGPoint(x: cos(angle), y: sin(angle))
+                        let velocity = CGFloat.random(in: 20.0 ..< 40.0)
+                        let alpha = CGFloat.random(in: 0.1 ..< 0.4)
+                        let scale = CGFloat.random(in: 0.5 ... 1.0) * 0.22
+                        
+                        var position = CGPoint(x: 100.0, y: 100.0)
+                        var initialOffset: CGFloat = 0.4
+                        if preAdvance {
+                            initialOffset = CGFloat.random(in: initialOffset ... 1.0)
+                        }
+                        position.x += direction.x * initialOffset * 105.0
+                        position.y += direction.y * initialOffset * 105.0
+                        
+                        let particle = Particle(
+                            trackIndex: directionIndex,
+                            position: position,
+                            scale: scale,
+                            alpha: alpha,
+                            direction: direction,
+                            velocity: velocity
+                        )
+                        self.particles.append(particle)
+                    }
+                }
+            }
+        }
+        
+        func update(deltaTime: CGFloat) {
+            let size = CGSize(width: 200.0, height: 200.0)
+            let radius2 = pow(size.width * 0.5 + 10.0, 2.0)
+            for i in (0 ..< self.particles.count).reversed() {
+                self.particles[i].update(deltaTime: deltaTime)
+                let position = self.particles[i].position
+                
+                if pow(position.x - size.width * 0.5, 2.0) + pow(position.y - size.height * 0.5, 2.0) > radius2 {
+                    self.particles.remove(at: i)
+                }
+            }
+            
+            self.generateParticles(preAdvance: false)
+        }
+    }
+    
+    private final class SectionLayer: SimpleLayer {
+        private let maskLayer: SimpleShapeLayer
+        private let gradientLayer: SimpleGradientLayer
+        private let labelLayer: SimpleLayer
+        
+        private var currentLabelImage: UIImage?
+        
+        private var particleImage: UIImage?
+        private var particleLayers: [SimpleLayer] = []
+        
+        init(category: StorageUsageScreenComponent.Category) {
+            self.maskLayer = SimpleShapeLayer()
+            self.maskLayer.fillColor = UIColor.white.cgColor
+            
+            self.gradientLayer = SimpleGradientLayer()
+            self.gradientLayer.type = .radial
+            self.gradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+            self.gradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+            
+            self.labelLayer = SimpleLayer()
+            
+            super.init()
+            
+            self.mask = self.maskLayer
+            self.addSublayer(self.gradientLayer)
+            self.addSublayer(self.labelLayer)
+            
+            switch category {
+            case .photos:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticlePhotos")?.precomposed()
+            case .videos:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleVideos")?.precomposed()
+            case .files:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleDocuments")?.precomposed()
+            case .music:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleMusic")?.precomposed()
+            case .other:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleOther")?.precomposed()
+            case .stickers:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleStickers")?.precomposed()
+            case .avatars:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleAvatars")?.precomposed()
+            case .misc:
+                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleOther")?.precomposed()
+            }
+        }
+        
+        override init(layer: Any) {
+            self.maskLayer = SimpleShapeLayer()
+            self.gradientLayer = SimpleGradientLayer()
+            self.labelLayer = SimpleLayer()
+            
+            super.init(layer: layer)
+        }
+        
+        required init(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        func isPointOnGraph(point: CGPoint) -> Bool {
+            if let path = self.maskLayer.path {
+                return path.contains(point)
+            }
+            return false
+        }
+        
+        func tooltipLocation() -> CGPoint {
+            return self.labelLayer.position
+        }
+        
+        func update(size: CGSize, section: CalculatedSection) {
+            self.maskLayer.frame = CGRect(origin: CGPoint(), size: size)
+            self.gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
+            
+            let normalColor = section.color.cgColor
+            let darkerColor = section.color.withMultipliedBrightnessBy(0.96).cgColor
+            let colors: [CGColor] = [
+                darkerColor,
+                normalColor,
+                normalColor,
+                normalColor,
+                darkerColor
+            ]
+            self.gradientLayer.colors = colors
+            
+            let locations: [CGFloat] = [
+                0.0,
+                0.3,
+                0.5,
+                0.7,
+                1.0
+            ]
+            self.gradientLayer.locations = locations.map { location in
+                let location = location * 0.5 + 0.5
+                return location as NSNumber
+            }
+            
+            let path = CGMutablePath()
+            path.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: section.innerRadius, startAngle: section.innerAngle.upperBound, endAngle: section.innerAngle.lowerBound, clockwise: true)
+            path.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: section.outerRadius, startAngle: section.outerAngle.lowerBound, endAngle: section.outerAngle.upperBound, clockwise: false)
+            self.maskLayer.path = path
+            
+            if let label = section.label {
+                if self.currentLabelImage !== label.image {
+                    self.currentLabelImage = label.image
+                    self.labelLayer.contents = label.image.cgImage
+                }
+                
+                let position = CGPoint(x: size.width * 0.5 + cos(label.angle) * label.radius, y: size.height * 0.5 + sin(label.angle) * label.radius)
+                let labelSize = CGSize(width: label.image.size.width * label.scale, height: label.image.size.height * label.scale)
+                let labelFrame = CGRect(origin: CGPoint(x: position.x - labelSize.width * 0.5, y: position.y - labelSize.height * 0.5), size: labelSize)
+                self.labelLayer.frame = labelFrame
+                self.labelLayer.opacity = Float(label.alpha)
+            } else {
+                self.currentLabelImage = nil
+                self.labelLayer.contents = nil
+            }
+        }
+        
+        func updateParticles(particleSet: ParticleSet) {
+            guard let particleImage = self.particleImage else {
+                return
+            }
+            for i in 0 ..< particleSet.particles.count {
+                let particle = particleSet.particles[i]
+                
+                let particleLayer: SimpleLayer
+                if i < self.particleLayers.count {
+                    particleLayer = self.particleLayers[i]
+                    particleLayer.isHidden = false
+                } else {
+                    particleLayer = SimpleLayer()
+                    particleLayer.contents = particleImage.cgImage
+                    particleLayer.bounds = CGRect(origin: CGPoint(), size: particleImage.size)
+                    self.particleLayers.append(particleLayer)
+                    self.insertSublayer(particleLayer, above: self.gradientLayer)
+                }
+                
+                particleLayer.position = particle.position
+                particleLayer.transform = CATransform3DMakeScale(particle.scale, particle.scale, 1.0)
+                particleLayer.opacity = Float(particle.alpha)
+            }
+            if particleSet.particles.count < self.particleLayers.count {
+                for i in particleSet.particles.count ..< self.particleLayers.count {
+                    self.particleLayers[i].isHidden = true
+                }
+            }
+        }
+    }
+    
+    private final class ChartDataView: UIView {
+        private(set) var theme: PresentationTheme?
+        private(set) var data: ChartData?
+        private(set) var selectedKey: AnyHashable?
+        
+        private var currentAnimation: (start: CalculatedLayout, startTime: Double, duration: Double)?
+        private var currentLayout: CalculatedLayout?
+        private var animator: DisplayLinkAnimator?
+        
+        private var displayLink: SharedDisplayLinkDriver.Link?
+        
+        private var sectionLayers: [AnyHashable: SectionLayer] = [:]
+        private let particleSet: ParticleSet
+        private var labels: [AnyHashable: ChartLabel] = [:]
+        
+        override init(frame: CGRect) {
+            self.particleSet = ParticleSet()
+            
+            super.init(frame: frame)
+            
+            self.backgroundColor = nil
+            self.isOpaque = false
+            
+            var previousTimestamp: Double?
+            self.displayLink = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
+                let timestamp = CACurrentMediaTime()
+                var delta: Double
+                if let previousTimestamp {
+                    delta = timestamp - previousTimestamp
+                } else {
+                    delta = 1.0 / 60.0
+                }
+                previousTimestamp = timestamp
+                
+                if delta < 0.0 {
+                    delta = 1.0 / 60.0
+                } else if delta > 0.5 {
+                    delta = 1.0 / 60.0
+                }
+                
+                self?.update(deltaTime: CGFloat(delta))
+            })
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.animator?.invalidate()
+        }
+        
+        func sectionKey(at point: CGPoint) -> AnyHashable? {
+            for (id, itemLayer) in self.sectionLayers {
+                if itemLayer.isPointOnGraph(point: point) {
+                    return id
+                }
+            }
+            return nil
+        }
+        
+        func tooltipLocation(forKey key: StorageUsageScreenComponent.Category) -> CGPoint? {
+            for (id, itemLayer) in self.sectionLayers {
+                if id == AnyHashable(key) {
+                    return itemLayer.tooltipLocation()
+                }
+            }
+            return nil
+        }
+        
+        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
+            let data = processChartData(data: data)
+            
+            if self.theme !== theme || self.data != data || self.selectedKey != selectedKey {
+                self.theme = theme
+                self.selectedKey = selectedKey
+                
+                if animated, let previous = self.currentLayout {
+                    var initialState = previous
+                    if let currentAnimation = self.currentAnimation {
+                        let currentProgress: Double = max(0.0, min(1.0, (CACurrentMediaTime() - currentAnimation.startTime) / currentAnimation.duration))
+                        let mappedProgress = listViewAnimationCurveSystem(CGFloat(currentProgress))
+                        initialState = CalculatedLayout(interpolating: currentAnimation.start, to: previous, progress: mappedProgress, size: previous.size)
+                    }
+                    let targetLayout = CalculatedLayout(
+                        size: CGSize(width: 200.0, height: 200.0),
+                        items: data.items,
+                        selectedKey: self.selectedKey
+                    )
+                    self.currentLayout = targetLayout
+                    self.currentAnimation = (initialState, CACurrentMediaTime(), 0.4)
+                } else {
+                    self.currentLayout = CalculatedLayout(
+                        size: CGSize(width: 200.0, height: 200.0),
+                        items: data.items,
+                        selectedKey: self.selectedKey
+                    )
+                }
+                
+                self.data = data
+                
+                self.update(deltaTime: 0.0)
+            }
+        }
+        
+        private func update(deltaTime: CGFloat) {
+            self.particleSet.update(deltaTime: deltaTime)
+            
+            var validIds: [AnyHashable] = []
+            if let currentLayout = self.currentLayout {
+                var effectiveLayout = currentLayout
+                if let currentAnimation = self.currentAnimation {
+                    let currentProgress: Double = max(0.0, min(1.0, (CACurrentMediaTime() - currentAnimation.startTime) / currentAnimation.duration))
+                    let mappedProgress = listViewAnimationCurveSystem(CGFloat(currentProgress))
+                    
+                    effectiveLayout = CalculatedLayout(interpolating: currentAnimation.start, to: currentLayout, progress: mappedProgress, size: currentLayout.size)
+                    
+                    if currentProgress >= 1.0 - CGFloat.ulpOfOne {
+                        self.currentAnimation = nil
+                    }
+                }
+                
+                for section in effectiveLayout.sections {
+                    validIds.append(section.id)
+                    
+                    let sectionLayer: SectionLayer
+                    if let current = self.sectionLayers[section.id] {
+                        sectionLayer = current
+                    } else {
+                        sectionLayer = SectionLayer(category: section.id)
+                        self.sectionLayers[section.id] = sectionLayer
+                        self.layer.addSublayer(sectionLayer)
+                    }
+                    
+                    sectionLayer.frame = CGRect(origin: CGPoint(), size: CGSize(width: 200.0, height: 200.0))
+                    sectionLayer.update(size: sectionLayer.bounds.size, section: section)
+                    sectionLayer.updateParticles(particleSet: self.particleSet)
+                }
+            }
+            
+            var removeIds: [AnyHashable] = []
+            for (id, sectionLayer) in self.sectionLayers {
+                if !validIds.contains(id) {
+                    removeIds.append(id)
+                    sectionLayer.removeFromSuperlayer()
+                }
+            }
+            for id in removeIds {
+                self.sectionLayers.removeValue(forKey: id)
             }
         }
     }
     
     class View: UIView {
         private let dataView: ChartDataView
-        private var labels: [StorageUsageScreenComponent.Category: ComponentView<Empty>] = [:]
-        var selectedKey: StorageUsageScreenComponent.Category?
+        private var tooltip: (key: AnyHashable, value: ComponentView<Empty>)?
         
+        var selectedKey: AnyHashable?
+        
+        private var component: PieChartComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
@@ -623,31 +1110,104 @@ final class PieChartComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                let point = recognizer.location(in: self)
-                let _ = point
-                /*for (key, layer) in self.shapeLayers {
-                    if layer.frame.contains(point), let path = layer.path {
-                        if path.contains(self.layer.convert(point, to: layer)) {
-                            if self.selectedKey == key {
-                                self.selectedKey = nil
-                            } else {
-                                self.selectedKey = key
-                            }
-                            
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                            
-                            break
-                        }
+                let point = recognizer.location(in: self.dataView)
+                if let key = self.dataView.sectionKey(at: point) {
+                    if self.selectedKey == key {
+                        self.selectedKey = nil
+                    } else {
+                        self.selectedKey = key
                     }
-                }*/
+                } else {
+                    self.selectedKey = nil
+                }
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
         
         func update(component: PieChartComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let dataUpdated = self.component?.chartData != component.chartData
+            
             self.state = state
+            self.component = component
+            
+            if dataUpdated {
+                self.selectedKey = nil
+            }
             
             transition.setFrame(view: self.dataView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - 200.0) / 2.0), y: 0.0), size: CGSize(width: 200.0, height: 200.0)))
             self.dataView.setItems(theme: component.theme, data: component.chartData, selectedKey: self.selectedKey, animated: !transition.animation.isImmediate)
+            
+            if let selectedKey = self.selectedKey?.base as? StorageUsageScreenComponent.Category, let item = component.chartData.items.first(where: { $0.id == selectedKey }) {
+                let tooltip: ComponentView<Empty>
+                var tooltipTransition = transition
+                var animateIn = false
+                if let current = self.tooltip, current.key == AnyHashable(selectedKey) {
+                    tooltip = current.value
+                } else if let current = self.tooltip {
+                    if let tooltipView = current.value.view {
+                        transition.setAlpha(view: tooltipView, alpha: 0.0, completion: { [weak tooltipView] _ in
+                            tooltipView?.removeFromSuperview()
+                        })
+                    }
+                    tooltipTransition = .immediate
+                    animateIn = true
+                    tooltip = ComponentView()
+                    self.tooltip = (selectedKey, tooltip)
+                } else {
+                    tooltipTransition = .immediate
+                    animateIn = true
+                    tooltip = ComponentView()
+                    self.tooltip = (selectedKey, tooltip)
+                }
+                
+                let fractionValue: Double = floor(item.displayValue * 100.0 * 10.0) / 10.0
+                let fractionString: String
+                if fractionValue < 0.1 {
+                    fractionString = "<0.1%"
+                } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
+                    fractionString = "\(Int(fractionValue))%"
+                } else {
+                    fractionString = "\(fractionValue)%"
+                }
+                
+                let tooltipSize = tooltip.update(
+                    transition: tooltipTransition,
+                    component: AnyComponent(ChartSelectionTooltip(
+                        theme: component.theme,
+                        fractionText: fractionString,
+                        title: selectedKey.title(strings: component.strings),
+                        sizeText: dataSizeString(Int(item.displaySize), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                if let relativeTooltipLocation = self.dataView.tooltipLocation(forKey: selectedKey) {
+                    let tooltipLocation = relativeTooltipLocation.offsetBy(dx: self.dataView.frame.minX, dy: self.dataView.frame.minY)
+                    let tooltipFrame = CGRect(origin: CGPoint(x: floor(tooltipLocation.x - tooltipSize.width / 2.0), y: tooltipLocation.y - 16.0 - tooltipSize.height), size: tooltipSize)
+                    
+                    if let tooltipView = tooltip.view {
+                        if tooltipView.superview == nil {
+                            self.addSubview(tooltipView)
+                        }
+                        tooltipTransition.setFrame(view: tooltipView, frame: tooltipFrame)
+                        if animateIn {
+                            transition.animateAlpha(view: tooltipView, from: 0.0, to: 1.0)
+                            transition.animateScale(view: tooltipView, from: 0.8, to: 1.0)
+                        }
+                    }
+                }
+            } else {
+                if let tooltip = self.tooltip {
+                    self.tooltip = nil
+                    if let tooltipView = tooltip.value.view {
+                        transition.setAlpha(view: tooltipView, alpha: 0.0, completion: { [weak tooltipView] _ in
+                            tooltipView?.removeFromSuperview()
+                        })
+                        transition.setScale(view: tooltipView, scale: 0.8)
+                    }
+                }
+            }
             
             return CGSize(width: availableSize.width, height: 200.0)
         }

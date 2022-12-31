@@ -29,6 +29,7 @@ import PremiumUI
 import StickerPackPreviewUI
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
+import StorageUsageScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1422,6 +1423,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
+    }
+    
+    public func makeStorageManagementController(context: AccountContext) -> ViewController {
+        return StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { [weak context] category in
+            guard let context else {
+                return nil
+            }
+            return storageUsageExceptionsScreen(context: context, category: category)
+        })
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
