@@ -8611,3 +8611,14 @@ Sorry for the inconvenience.";
 "GroupMembers.MembersHiddenOff" = "Switch this on to hide the list of members in this group. Admins will remain visible.";
 
 "StorageManagement.ClearCache" = "Clear Cache";
+
+"ChatList.StorageHintTitle" = "Free up to %@";
+"ChatList.StorageHintText" = "Clear storage space on your iPhone";
+
+"StorageManagement.PeerShowDetails" = "Show Details";
+"StorageManagement.PeerOpenProfile" = "Open Profile";
+"StorageManagement.ContextSelect" = "Select";
+"StorageManagement.ContextDeselect" = "Deselect";
+"StorageManagement.OpenPhoto" = "Open Photo";
+"StorageManagement.OpenVideo" = "Open Video";
+"StorageManagement.OpenFile" = "Open File";

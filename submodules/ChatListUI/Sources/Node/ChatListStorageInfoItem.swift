@@ -120,16 +120,16 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
             
             let themeUpdated = item.theme !== previousItem?.theme
             
-            //TODO:localize
-            let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: "Free up to ", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
             let sizeString = dataSizeString(Int64(item.sizeFraction), formatting: DataSizeStringFormatting(strings: item.strings, decimalSeparator: "."))
-            titleString.append(NSAttributedString(string: sizeString, font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor))
+            let rawTitleString = item.strings.ChatList_StorageHintTitle(sizeString)
+            let titleString = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+            if let range = rawTitleString.ranges.first {
+                titleString.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+            }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
             
-            //TODO:localize
-            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Clear storage space on your iPhone", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_StorageHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: height), insets: UIEdgeInsets())
             

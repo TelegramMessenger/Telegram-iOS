@@ -1947,10 +1947,11 @@ final class StorageUsageScreenComponent: Component {
                                 return
                             }
                             
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            
                             var itemList: [ContextMenuItem] = []
-                            //TODO:localize
                             itemList.append(.action(ContextMenuActionItem(
-                                text: "Show Details",
+                                text: presentationData.strings.StorageManagement_PeerShowDetails,
                                 icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor) },
                                 action: { [weak self] c, _ in
                                     c.dismiss(completion: { [weak self] in
@@ -1962,7 +1963,7 @@ final class StorageUsageScreenComponent: Component {
                                 })
                             ))
                             itemList.append(.action(ContextMenuActionItem(
-                                text: "Open Profile",
+                                text: presentationData.strings.StorageManagement_PeerOpenProfile,
                                 icon: { theme in
                                     if case .user = peer {
                                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
@@ -1991,7 +1992,7 @@ final class StorageUsageScreenComponent: Component {
                                 })
                             ))
                             itemList.append(.action(ContextMenuActionItem(
-                                text: "Select",
+                                text: presentationData.strings.StorageManagement_ContextSelect,
                                 icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) },
                                 action: { [weak self] c, _ in
                                     c.dismiss(completion: {
@@ -2005,8 +2006,6 @@ final class StorageUsageScreenComponent: Component {
                                 })
                             ))
                             let items = ContextController.Items(content: .list(itemList))
-                            
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                             
                             let controller = ContextController(
                                 account: component.context.account,
@@ -2468,6 +2467,20 @@ final class StorageUsageScreenComponent: Component {
                 let strings = presentationData.strings
                 
                 var items: [ContextMenuItem] = []
+                
+                items.append(.action(ContextMenuActionItem(
+                    text: presentationData.strings.StorageManagement_OpenPhoto,
+                    icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: theme.contextMenu.primaryColor) },
+                    action: { [weak self] c, _ in
+                        c.dismiss(completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.openMessage(message: message)
+                        })
+                    })
+                ))
+                
                 items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     c.dismiss(completion: { [weak self] in
                         guard let self, let component = self.component, let controller = self.controller?(), let navigationController = controller.navigationController as? NavigationController else {
@@ -2534,24 +2547,24 @@ final class StorageUsageScreenComponent: Component {
                 return
             }
             
-            //TODO:localize
-            var openTitle: String = "Open"
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var openTitle: String = presentationData.strings.Conversation_LinkDialogOpen
             var isAudio: Bool = false
             for media in message.media {
                 if let _ = media as? TelegramMediaImage {
-                    openTitle = "Open Photo"
+                    openTitle = presentationData.strings.StorageManagement_OpenPhoto
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo {
-                        openTitle = "Open Video"
+                        openTitle = presentationData.strings.StorageManagement_OpenVideo
                     } else {
-                        openTitle = "Open File"
+                        openTitle = presentationData.strings.StorageManagement_OpenFile
                     }
                     isAudio = file.isMusic || file.isVoice
                 }
             }
             
             var itemList: [ContextMenuItem] = []
-            //TODO:localize
             if !isAudio {
                 itemList.append(.action(ContextMenuActionItem(
                     text: openTitle,
@@ -2566,8 +2579,9 @@ final class StorageUsageScreenComponent: Component {
                     })
                 ))
             }
+            
             itemList.append(.action(ContextMenuActionItem(
-                text: "View in Chat",
+                text: presentationData.strings.SharedMedia_ViewInChat,
                 icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)
                 },
@@ -2596,7 +2610,7 @@ final class StorageUsageScreenComponent: Component {
                 })
             ))
             itemList.append(.action(ContextMenuActionItem(
-                text: "Select",
+                text: aggregatedData.selectionState.selectedMessages.contains(messageId) ? presentationData.strings.StorageManagement_ContextDeselect : presentationData.strings.StorageManagement_ContextSelect,
                 icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) },
                 action: { [weak self] c, _ in
                     c.dismiss(completion: {
@@ -2610,8 +2624,6 @@ final class StorageUsageScreenComponent: Component {
                 })
             ))
             let items = ContextController.Items(content: .list(itemList))
-            
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             let controller = ContextController(
                 account: component.context.account,

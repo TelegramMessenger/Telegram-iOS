@@ -1341,7 +1341,7 @@ public final class ChatListNode: ListView {
         }
         
         let storageInfo: Signal<Double?, NoError>
-        if case .chatList(groupId: .root) = location, chatListFilter == nil {
+        if "".isEmpty, case .chatList(groupId: .root) = location, chatListFilter == nil {
             let storageBox = context.account.postbox.mediaBox.storageBox
             storageInfo = storageBox.totalSize()
             |> take(1)
