@@ -769,8 +769,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let reactionContextNode = self.reactionContextNode {
                 additionalVisibleOffsetY += reactionContextNode.visibleExtensionDistance
             }
-            if case .reference = self.source {
-                if actionsFrame.maxY > layout.size.height {
+            if case let .reference(source) = self.source {
+                var actionsFrameIsOutOfScreen = false
+                if let contentAreaInScreenSpace = source.transitionInfo()?.contentAreaInScreenSpace {
+                    if !contentAreaInScreenSpace.contains(actionsFrame) {
+                        actionsFrameIsOutOfScreen = true
+                    }
+                }
+                if actionsFrame.maxY > layout.size.height || actionsFrameIsOutOfScreen {
                     actionsFrame.origin.y = contentRect.minY - actionsSize.height - contentActionsSpacing
                 }
             }
