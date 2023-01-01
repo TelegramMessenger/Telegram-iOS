@@ -157,11 +157,7 @@ public final class WriteBuffer: MemoryBuffer {
     public func write(_ data: UnsafeRawPointer, offset: Int = 0, length: Int) {
         if self.offset + length > self.capacity {
             self.capacity = self.offset + length + 256
-            if self.length == 0 {
-                self.memory = malloc(self.capacity)!
-            } else {
-                self.memory = realloc(self.memory, self.capacity)
-            }
+            self.memory = realloc(self.memory, self.capacity)
         }
         memcpy(self.memory + self.offset, data + offset, length)
         self.offset += length
@@ -172,11 +168,7 @@ public final class WriteBuffer: MemoryBuffer {
         let length = data.count
         if self.offset + length > self.capacity {
             self.capacity = self.offset + length + 256
-            if self.length == 0 {
-                self.memory = malloc(self.capacity)!
-            } else {
-                self.memory = realloc(self.memory, self.capacity)
-            }
+            self.memory = realloc(self.memory, self.capacity)
         }
         data.copyBytes(to: self.memory.advanced(by: offset).assumingMemoryBound(to: UInt8.self), count: length)
         self.offset += length

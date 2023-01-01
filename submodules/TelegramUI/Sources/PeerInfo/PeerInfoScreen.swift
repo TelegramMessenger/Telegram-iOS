@@ -7983,8 +7983,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
             let strings = strongSelf.presentationData.strings
 
-            var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
-            let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+            weak var weakPane = pane
+            func generateAction(_ isZoomIn: Bool) -> ContextMenuActionItem {
+                weak var pane = weakPane
+                
                 let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
                 let canZoom: Bool = nextZoomLevel != nil
 
@@ -7995,14 +7997,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         return
                     }
                     pane.updateZoomLevel(level: zoomLevel)
-                    if let recurseGenerateAction = recurseGenerateAction {
-                        action.updateAction(0, recurseGenerateAction(true))
-                        action.updateAction(1, recurseGenerateAction(false))
-                    }
+                    action.updateAction(0, generateAction(true))
+                    action.updateAction(1, generateAction(false))
                 } : nil)
-            }
-            recurseGenerateAction = { isZoomIn in
-                return generateAction(isZoomIn)
             }
 
             items.append(.action(generateAction(true)))
