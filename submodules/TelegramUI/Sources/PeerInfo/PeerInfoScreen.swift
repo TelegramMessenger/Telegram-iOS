@@ -42,7 +42,6 @@ import ChatListUI
 import CallListUI
 import AccountUtils
 import PassportUI
-import AuthTransferUI
 import DeviceAccess
 import LegacyMediaPickerUI
 import TelegramNotices

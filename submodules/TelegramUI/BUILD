@@ -268,7 +268,6 @@ swift_library(
         "//submodules/Svg:Svg",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/TooltipUI:TooltipUI",
-        "//submodules/AuthTransferUI:AuthTransferUI",
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/FileMediaResourceStatus:FileMediaResourceStatus",
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
