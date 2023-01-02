@@ -6,7 +6,7 @@ import TelegramPresentationData
 import WallpaperBackgroundNode
 import AnimatedCountLabelNode
 
-private let badgeFont = Font.regular(13.0)
+private let badgeFont = Font.with(size: 13.0, traits: [.monospacedNumbers])
 
 enum ChatHistoryNavigationButtonType {
     case down
@@ -197,7 +197,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
                     }
                 })
                 self.badgeBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            } else if previousValue != self.currentValue {
+            } else if previousValue < self.currentValue {
                 self.badgeBackgroundNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.12, removeOnCompletion: false, completion: { [weak self] finished in
                     if let strongSelf = self {
                         strongSelf.badgeBackgroundNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.12, removeOnCompletion: false, completion: { _ in

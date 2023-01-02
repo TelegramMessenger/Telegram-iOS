@@ -307,6 +307,7 @@ private final class FrameNode: ASDisplayNode {
         
         for line in self.lines {
             line.strokeColor = UIColor.white.cgColor
+            line.fillColor = UIColor.clear.cgColor
             line.lineWidth = 4.0
             line.lineCap = .round
             self.layer.addSublayer(line)

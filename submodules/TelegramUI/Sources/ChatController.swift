@@ -9668,7 +9668,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let peerId = self.chatLocation.peerId
             if let subject = self.subject, case .scheduledMessages = subject {
             } else {
-                self.buttonUnreadCountDisposable = (self.context.chatLocationUnreadCount(for: self.chatLocation, contextHolder: self.chatLocationContextHolder)
+                let throttledUnreadCountSignal = self.context.chatLocationUnreadCount(for: self.chatLocation, contextHolder: self.chatLocationContextHolder)
+                |> mapToThrottled { value -> Signal<Int, NoError> in
+                    return .single(value) |> then(.complete() |> delay(0.2, queue: Queue.mainQueue()))
+                }
+                self.buttonUnreadCountDisposable = (throttledUnreadCountSignal
                 |> deliverOnMainQueue).start(next: { [weak self] count in
                     guard let strongSelf = self else {
                         return
