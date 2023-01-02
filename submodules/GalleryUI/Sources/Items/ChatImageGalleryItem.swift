@@ -20,6 +20,7 @@ import TranslateUI
 import ShareController
 import UndoUI
 import ContextUI
+import SaveToCameraRoll
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -485,7 +486,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
                 
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                         |> deliverOnMainQueue).start(next: { [weak self] peer in
                     guard let strongSelf = self, let peer = peer else {
                         return
                     }
@@ -501,82 +502,34 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     f(.default)
                 })
             })))
+            
+            if !message.isCopyProtected(), let media = self.contextAndMedia?.1 {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: media)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        guard let controller = strongSelf.galleryController() else {
+                            return
+                        }
+                        controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    })
+                })))
+            }
         }
+        
+        if self.canDelete() {
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] _, f in
+                f(.default)
 
-//            if #available(iOS 11.0, *) {
-//                items.append(.action(ContextMenuActionItem(text: "AirPlay", textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/AirPlay"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-//                    f(.default)
-//                    guard let strongSelf = self else {
-//                        return
-//                    }
-//                    strongSelf.beginAirPlaySetup()
-//                })))
-//            }
-        
-//        if let (message, _, _) = strongSelf.contentInfo() {
-//            for media in message.media {
-//                if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-//                    let url = content.url
-//
-//                    let item = OpenInItem.url(url: url)
-//                    let openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
-//                    items.append(.action(ContextMenuActionItem(text: openText, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                        f(.default)
-//
-//                        if let strongSelf = self, let controller = strongSelf.galleryController() {
-//                            var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-//                            if !presentationData.theme.overallDarkAppearance {
-//                                presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-//                            }
-//                            let actionSheet = OpenInActionSheetController(context: strongSelf.context, forceTheme: presentationData.theme, item: item, openUrl: { [weak self] url in
-//                                if let strongSelf = self {
-//                                    strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: strongSelf.baseNavigationController(), dismissInput: {})
-//                                }
-//                            })
-//                            controller.present(actionSheet, in: .window(.root))
-//                        }
-//                    })))
-//                    break
-//                }
-//            }
-//        }
-        
-//        if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() {
-//            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
-//                f(.default)
-//
-//                if let strongSelf = self {
-//                    switch strongSelf.fetchStatus {
-//                    case .Local:
-//                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
-//                        |> deliverOnMainQueue).start(completed: {
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            guard let controller = strongSelf.galleryController() else {
-//                                return
-//                            }
-//                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-//                        })
-//                    default:
-//                        guard let controller = strongSelf.galleryController() else {
-//                            return
-//                        }
-//                        controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-//                        })]), in: .window(.root))
-//                    }
-//                }
-//            })))
-//        }
-//        if strongSelf.canDelete() {
-//            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
-//                f(.default)
-//
-//                if let strongSelf = self {
-//                    strongSelf.footerContentNode.deleteButtonPressed()
-//                }
-//            })))
-//        }
+                if let strongSelf = self {
+                    strongSelf.footerContentNode.deleteButtonPressed()
+                }
+            })))
+        }
 
         return .single(items)
     }
@@ -676,6 +629,13 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 self.zoomableContent = (largestSize.cgSize, self.imageNode)
                 self.setupStatus(resource: fileReference.media.resource)
+                
+                var barButtonItems: [UIBarButtonItem] = []
+                if self.message != nil {
+                    let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
+                    barButtonItems.append(moreMenuItem)
+                }
+                self._rightBarButtonItems.set(.single(barButtonItems))
             } else {
                 self._ready.set(.single(Void()))
             }
