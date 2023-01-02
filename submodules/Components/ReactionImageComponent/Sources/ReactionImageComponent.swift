@@ -31,12 +31,8 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
             }
             
             var customColor: UIColor?
-            for attribute in animation.attributes {
-                if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                    if isSingleColor {
-                        customColor = nil
-                    }
-                }
+            if animation.isCustomTemplateEmoji {
+                customColor = nil
             }
             
             let fetchFrame = animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: MediaResourceReference.standalone(resource: animation.resource), type: type, keyframeOnly: true, customColor: customColor)

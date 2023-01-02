@@ -651,6 +651,26 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return hasSticker
     }
     
+    public var isCustomTemplateEmoji: Bool {
+        for attribute in self.attributes {
+            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute, let packReference = packReference {
+                if isSingleColor {
+                    return true
+                }
+                switch packReference {
+                case let .id(id, _):
+                    if id == 1269403972611866647 {
+                        return true
+                    }
+                default:
+                    break
+                }
+                break
+            }
+        }
+        return false
+    }
+    
     public var isPremiumEmoji: Bool {
         for attribute in self.attributes {
             if case let .CustomEmoji(isPremium, _, _, _) = attribute {

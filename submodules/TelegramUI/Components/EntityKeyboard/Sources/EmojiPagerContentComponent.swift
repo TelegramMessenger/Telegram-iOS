@@ -243,12 +243,7 @@ public final class EntityKeyboardAnimationData: Equatable {
         } else {
             type = .still
         }
-        var isTemplate = false
-        for attribute in file.attributes {
-            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                isTemplate = isSingleColor
-            }
-        }
+        let isTemplate = file.isCustomTemplateEmoji
         self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData, isReaction: isReaction, isTemplate: isTemplate)
     }
     
@@ -6442,11 +6437,11 @@ public final class EmojiPagerContentComponent: Component {
                     existingIds.insert(file.fileId)
                     
                     var tintMode: Item.TintMode = .none
+                    if file.isCustomTemplateEmoji {
+                        tintMode = .accent
+                    }
                     for attribute in file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
-                            if isSingleColor {
-                                tintMode = .accent
-                            }
+                        if case let .CustomEmoji(_, _, _, packReference) = attribute {
                             switch packReference {
                             case let .id(id, _):
                                 if id == 773947703670341676 || id == 2964141614563343 {
@@ -6501,11 +6496,11 @@ public final class EmojiPagerContentComponent: Component {
                     existingIds.insert(file.fileId)
                     
                     var tintMode: Item.TintMode = .none
+                    if file.isCustomTemplateEmoji {
+                        tintMode = .accent
+                    }
                     for attribute in file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
-                            if isSingleColor {
-                                tintMode = .accent
-                            }
+                        if case let .CustomEmoji(_, _, _, packReference) = attribute {
                             switch packReference {
                             case let .id(id, _):
                                 if id == 773947703670341676 || id == 2964141614563343 {
@@ -6547,11 +6542,11 @@ public final class EmojiPagerContentComponent: Component {
                         existingIds.insert(file.fileId)
                         
                         var tintMode: Item.TintMode = .none
+                        if file.isCustomTemplateEmoji {
+                            tintMode = .accent
+                        }
                         for attribute in file.attributes {
-                            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
-                                if isSingleColor {
-                                    tintMode = .accent
-                                }
+                            if case let .CustomEmoji(_, _, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
                                     if id == 773947703670341676 || id == 2964141614563343 {
@@ -6599,11 +6594,11 @@ public final class EmojiPagerContentComponent: Component {
                         let resultItem: EmojiPagerContentComponent.Item
                         
                         var tintMode: Item.TintMode = .none
+                        if file.isCustomTemplateEmoji {
+                            tintMode = .accent
+                        }
                         for attribute in file.attributes {
-                            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
-                                if isSingleColor {
-                                    tintMode = .accent
-                                }
+                            if case let .CustomEmoji(_, _, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
                                     if id == 773947703670341676 || id == 2964141614563343 {
@@ -6680,12 +6675,8 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in reactionItem.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if reactionItem.file.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let animationFile = reactionItem.file
@@ -6744,12 +6735,8 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         var tintMode: Item.TintMode = .none
-                        for attribute in reactionItem.selectAnimation.attributes {
-                            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                                if isSingleColor {
-                                    tintMode = .primary
-                                }
-                            }
+                        if reactionItem.selectAnimation.isCustomTemplateEmoji {
+                            tintMode = .primary
                         }
                         
                         let animationFile = reactionItem.selectAnimation
@@ -6829,12 +6816,8 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         var tintMode: Item.TintMode = .none
-                        for attribute in animationFile.attributes {
-                            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                                if isSingleColor {
-                                    tintMode = .primary
-                                }
-                            }
+                        if animationFile.isCustomTemplateEmoji {
+                            tintMode = .primary
                         }
                         
                         let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
@@ -6881,12 +6864,8 @@ public final class EmojiPagerContentComponent: Component {
                     switch item.content {
                     case let .file(file):
                         var tintMode: Item.TintMode = .none
-                        for attribute in file.attributes {
-                            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                                if isSingleColor {
-                                    tintMode = .primary
-                                }
-                            }
+                        if file.isCustomTemplateEmoji {
+                            tintMode = .primary
                         }
                         
                         let animationData = EntityKeyboardAnimationData(file: file)
@@ -6936,15 +6915,11 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                if isStatusSelection {
-                                    tintMode = .accent
-                                } else {
-                                    tintMode = .primary
-                                }
-                            }
+                    if item.file.isCustomTemplateEmoji {
+                        if isStatusSelection {
+                            tintMode = .accent
+                        } else {
+                            tintMode = .primary
                         }
                     }
                     
@@ -7011,15 +6986,11 @@ public final class EmojiPagerContentComponent: Component {
                         
                         for item in featuredEmojiPack.topItems {
                             var tintMode: Item.TintMode = .none
-                            for attribute in item.file.attributes {
-                                if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                                    if isSingleColor {
-                                        if isStatusSelection {
-                                            tintMode = .accent
-                                        } else {
-                                            tintMode = .primary
-                                        }
-                                    }
+                            if item.file.isCustomTemplateEmoji {
+                                if isStatusSelection {
+                                    tintMode = .accent
+                                } else {
+                                    tintMode = .primary
                                 }
                             }
                             
@@ -7307,12 +7278,8 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let resultItem = EmojiPagerContentComponent.Item(
@@ -7353,12 +7320,8 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let animationData = EntityKeyboardAnimationData(file: item.file)
@@ -7391,12 +7354,8 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.media.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if item.media.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let animationData = EntityKeyboardAnimationData(file: item.media)
@@ -7452,12 +7411,8 @@ public final class EmojiPagerContentComponent: Component {
                     processedIds.insert(item.file.fileId)
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let animationData = EntityKeyboardAnimationData(file: item.file)
@@ -7495,12 +7450,8 @@ public final class EmojiPagerContentComponent: Component {
                     processedIds.insert(item.file.fileId)
                     
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let animationData = EntityKeyboardAnimationData(file: item.file)
@@ -7529,12 +7480,8 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 var tintMode: Item.TintMode = .none
-                for attribute in item.file.attributes {
-                    if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                        if isSingleColor {
-                            tintMode = .primary
-                        }
-                    }
+                if item.file.isCustomTemplateEmoji {
+                    tintMode = .primary
                 }
                 
                 let animationData = EntityKeyboardAnimationData(file: item.file)
@@ -7593,12 +7540,8 @@ public final class EmojiPagerContentComponent: Component {
                 
                 for item in featuredStickerPack.topItems {
                     var tintMode: Item.TintMode = .none
-                    for attribute in item.file.attributes {
-                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                            if isSingleColor {
-                                tintMode = .primary
-                            }
-                        }
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
                     }
                     
                     let animationData = EntityKeyboardAnimationData(file: item.file)

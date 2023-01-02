@@ -442,11 +442,11 @@ public final class EmojiStatusComponent: Component {
                     
                     var accentTint = false
                     if let _ = emojiThemeColor {
+                        if emojiFile.isCustomTemplateEmoji {
+                            accentTint = true
+                        }
                         for attribute in emojiFile.attributes {
-                            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
-                                if isSingleColor {
-                                    accentTint = true
-                                }
+                            if case let .CustomEmoji(_, _, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
                                     if id == 773947703670341676 || id == 2964141614563343 {
