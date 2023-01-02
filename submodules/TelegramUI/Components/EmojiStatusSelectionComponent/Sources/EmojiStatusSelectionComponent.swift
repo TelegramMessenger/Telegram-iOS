@@ -651,11 +651,11 @@ public final class EmojiStatusSelectionController: ViewController {
                 effectView = view
             } else if let itemFile = item.itemFile {
                 var useCleanEffect = false
+                if itemFile.isCustomTemplateEmoji {
+                    useCleanEffect = true
+                }
                 for attribute in itemFile.attributes {
-                    if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
-                        if isSingleColor {
-                            useCleanEffect = true
-                        }
+                    if case let .CustomEmoji(_, _, _, packReference) = attribute {
                         switch packReference {
                         case let .id(id, _):
                             if id == 773947703670341676 || id == 2964141614563343 {
