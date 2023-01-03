@@ -118,6 +118,15 @@ public func stringForDate(timestamp: Int32, strings: PresentationStrings) -> Str
     return formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
 }
 
+public func stringForDateWithFormat(timestamp: Int32, dateFormat: String, strings: PresentationStrings) -> String {
+    let formatter = DateFormatter()
+    formatter.timeStyle = .none
+    formatter.dateStyle = .medium
+    formatter.locale = localeWithStrings(strings)
+    formatter.dateFormat = dateFormat
+    return formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
+}
+
 public func stringForDate(date: Date, timeZone: TimeZone? = TimeZone(secondsFromGMT: 0), strings: PresentationStrings) -> String {
     let formatter = DateFormatter()
     formatter.timeStyle = .none

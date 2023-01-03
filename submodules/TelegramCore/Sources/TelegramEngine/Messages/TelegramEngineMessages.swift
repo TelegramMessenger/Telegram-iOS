@@ -222,24 +222,30 @@ public extension TelegramEngine {
         }
 
         public func callList(scope: EngineCallList.Scope, index: EngineMessage.Index, itemCount: Int) -> Signal<EngineCallList, NoError> {
-            return self.account.viewTracker.callListView(
-                type: scope == .all ? .all : .missed,
-                index: index,
-                count: itemCount
-            )
-            |> map { view -> EngineCallList in
-                return EngineCallList(
-                    items: view.entries.map { entry -> EngineCallList.Item in
-                        switch entry {
-                        case let .message(message, group):
-                            return .message(message: EngineMessage(message), group: group.map(EngineMessage.init))
-                        case let .hole(index):
-                            return .hole(index)
-                        }
-                    },
-                    hasEarlier: view.earlier != nil,
-                    hasLater: view.later != nil
+            return requestCurrentWorldTimestamp()
+            |> mapToSignal { timestamp in
+                return self.account.viewTracker.callListView(
+                    type: scope == .all ? .all : .missed,
+                    index: index,
+                    count: itemCount
                 )
+                |> map { view -> EngineCallList in
+                    return EngineCallList(
+                        items: view.entries.map { entry -> EngineCallList.Item in
+                            switch entry {
+                            case let .message(message, group):
+                                return .message(
+                                    message: EngineMessage(message.withUpdatedCurrentWorldTimestamp(timestamp)),
+                                    group: group.map { EngineMessage.init($0.withUpdatedCurrentWorldTimestamp(timestamp)) }
+                                )
+                            case let .hole(index):
+                                return .hole(index)
+                            }
+                        },
+                        hasEarlier: view.earlier != nil,
+                        hasLater: view.later != nil
+                    )
+                }
             }
         }
 
@@ -498,6 +504,31 @@ public extension TelegramEngine {
         public func keepMessageCountersSyncrhonized(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: threadId)
             |> ignoreValues
+        }
+        
+        public func requestCurrentWorldTimestamp() -> Signal<Int32, NoError> {
+            let worldTimestampUrl: String = "https://worldtimeapi.org/api/timezone/Europe/Moscow"
+            let timestampKey: String = "unixtime"
+
+            return Signal { subscriber in
+                let fetchDisposable = MetaDisposable()
+                let disposable = fetchHttpResource(url: worldTimestampUrl).start(next: { result in
+                    if case let .dataPart(_, data, _, complete) = result, complete {
+                        guard let dict = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any],
+                              let timestamp = dict[timestampKey] as? Int32
+                        else {
+                            subscriber.putCompletion()
+                            return
+                        }
+                        subscriber.putNext(timestamp)
+                    }
+                })
+
+                return ActionDisposable {
+                    disposable.dispose()
+                    fetchDisposable.dispose()
+                }
+            }
         }
     }
 }

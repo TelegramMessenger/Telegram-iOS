@@ -659,12 +659,13 @@ public final class Message {
     public let associatedMessageIds: [MessageId]
     public let associatedMedia: [MediaId: Media]
     public let associatedThreadInfo: AssociatedThreadInfo?
+    public let currentWorldTimestamp: Int32
     
     public var index: MessageIndex {
         return MessageIndex(id: self.id, timestamp: self.timestamp)
     }
     
-    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, groupingKey: Int64?, groupInfo: MessageGroupInfo?, threadId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId], associatedMedia: [MediaId: Media], associatedThreadInfo: AssociatedThreadInfo?) {
+    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, groupingKey: Int64?, groupInfo: MessageGroupInfo?, threadId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId], associatedMedia: [MediaId: Media], associatedThreadInfo: AssociatedThreadInfo?, currentWorldTimestamp: Int32 = 0) {
         self.stableId = stableId
         self.stableVersion = stableVersion
         self.id = id
@@ -687,6 +688,7 @@ public final class Message {
         self.associatedMessageIds = associatedMessageIds
         self.associatedMedia = associatedMedia
         self.associatedThreadInfo = associatedThreadInfo
+        self.currentWorldTimestamp = currentWorldTimestamp
     }
     
     public func withUpdatedStableVersion(stableVersion: UInt32) -> Message {
@@ -731,6 +733,10 @@ public final class Message {
     
     public func withUpdatedAuthor(_ author: Peer?) -> Message {
         return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo)
+    }
+    
+    public func withUpdatedCurrentWorldTimestamp(_ currentWorldTimestamp: Int32) -> Message {
+        return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo, currentWorldTimestamp: currentWorldTimestamp)
     }
 }
 
