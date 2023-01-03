@@ -123,10 +123,19 @@ private extension StorageUsageStats {
                 mappedCategory = .avatars
             case MediaResourceUserContentType.sticker.rawValue:
                 mappedCategory = .stickers
+            case MediaResourceUserContentType.other.rawValue:
+                mappedCategory = .misc
+            case MediaResourceUserContentType.audioVideoMessage.rawValue:
+                mappedCategory = .misc
             default:
                 mappedCategory = .misc
             }
-            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+            if mappedCategories[mappedCategory] == nil {
+                mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+            } else {
+                mappedCategories[mappedCategory]?.size += value.size
+                mappedCategories[mappedCategory]?.messages.merge(value.messages, uniquingKeysWith: { lhs, _ in lhs})
+            }
         }
         
         self.init(categories: mappedCategories)
@@ -134,7 +143,7 @@ private extension StorageUsageStats {
 }
 
 func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
-    let additionalStats = Signal<Int64, NoError> { subscriber in
+    /*let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {
             var totalSize: Int64 = 0
             
@@ -207,7 +216,9 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
         }
         
         return EmptyDisposable
-    }
+    }*/
+    
+    let additionalStats = account.postbox.mediaBox.cacheStorageBox.totalSize() |> take(1)
     
     return combineLatest(
         additionalStats,
@@ -264,6 +275,7 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
 func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
     return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
         var result: [EngineMessage.Id: Message] = [:]
+        var peerInChatList: [EnginePeer.Id: Bool] = [:]
         for (category, value) in stats.categories {
             if !categories.contains(category) {
                 continue
@@ -273,8 +285,23 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
                 if result[id] == nil {
                     if let message = existingMessages[id] {
                         result[id] = message
-                    } else if let message = transaction.getMessage(id) {
-                        result[id] = message
+                    } else {
+                        var matches = false
+                        if let peerInChatListValue = peerInChatList[id.peerId] {
+                            if peerInChatListValue {
+                                matches = true
+                            }
+                        } else {
+                            let peerInChatListValue = transaction.getPeerChatListIndex(id.peerId) != nil
+                            peerInChatList[id.peerId] = peerInChatListValue
+                            if peerInChatListValue {
+                                matches = true
+                            }
+                        }
+                        
+                        if matches, let message = transaction.getMessage(id) {
+                            result[id] = message
+                        }
                     }
                 }
             }
@@ -327,6 +354,9 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
             case .misc:
                 mappedContentTypes.append(MediaResourceUserContentType.other.rawValue)
                 mappedContentTypes.append(MediaResourceUserContentType.audioVideoMessage.rawValue)
+                
+                // Legacy value for Gif
+                mappedContentTypes.append(5)
             }
         }
         
@@ -356,6 +386,8 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                             }
                         }
                     }
+                    
+                    mediaBox.cacheStorageBox.reset()
                     
                     subscriber.putCompletion()
                 } else {

@@ -92,6 +92,8 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.arrowNode)
+        
+        self.zPosition = 1.0
     }
     
     override func didLoad() {

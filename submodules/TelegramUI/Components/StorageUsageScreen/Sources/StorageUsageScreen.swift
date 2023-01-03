@@ -727,6 +727,8 @@ final class StorageUsageScreenComponent: Component {
         private var doneStatusCircle: SimpleShapeLayer?
         private var doneStatusNode: RadialStatusNode?
         
+        private let scrollContainerView: UIView
+        
         private let pieChartView = ComponentView<Empty>()
         private let chartTotalLabel = ComponentView<Empty>()
         private let categoriesView = ComponentView<Empty>()
@@ -777,6 +779,8 @@ final class StorageUsageScreenComponent: Component {
             self.navigationSeparatorLayerContainer = SimpleLayer()
             self.navigationSeparatorLayerContainer.opacity = 0.0
             
+            self.scrollContainerView = UIView()
+            
             self.scrollView = ScrollViewImpl()
             
             self.keepDurationSectionContainerView = UIView()
@@ -805,7 +809,9 @@ final class StorageUsageScreenComponent: Component {
             self.scrollView.clipsToBounds = true
             self.addSubview(self.scrollView)
             
-            self.scrollView.addSubview(self.keepDurationSectionContainerView)
+            self.scrollView.addSubview(self.scrollContainerView)
+            
+            self.scrollContainerView.addSubview(self.keepDurationSectionContainerView)
             
             self.scrollView.layer.addSublayer(self.headerProgressBackgroundLayer)
             self.scrollView.layer.addSublayer(self.headerProgressForegroundLayer)
@@ -1070,9 +1076,10 @@ final class StorageUsageScreenComponent: Component {
                     alphaTransition.setAlpha(view: self.scrollView, alpha: self.aggregatedData != nil ? 1.0 : 0.0)
                     alphaTransition.setAlpha(view: self.headerOffsetContainer, alpha: self.aggregatedData != nil ? 1.0 : 0.0)
                 } else if case .clearedItems = animationHint.value {
-                    if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
-                        snapshotView.frame = self.bounds
-                        self.addSubview(snapshotView)
+                    if let snapshotView = self.scrollContainerView.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.frame = self.scrollContainerView.frame
+                        self.scrollView.insertSubview(snapshotView, aboveSubview: self.scrollContainerView)
+                        self.scrollContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                             snapshotView?.removeFromSuperview()
                         })
@@ -1347,12 +1354,20 @@ final class StorageUsageScreenComponent: Component {
                 chartItems.append(chartItem)
             }
             
-            chartItems.append(PieChartComponent.ChartData.Item(id: .other, displayValue: otherRealSum, displaySize: totalOtherSize, value: self.isOtherCategoryExpanded ? 0.0 : otherSum, color: Category.misc.color, mergeable: false, mergeFactor: 1.0))
+            if !listCategories.isEmpty {
+                chartItems.append(PieChartComponent.ChartData.Item(id: .other, displayValue: otherRealSum, displaySize: totalOtherSize, value: self.isOtherCategoryExpanded ? 0.0 : otherSum, color: Category.misc.color, mergeable: false, mergeFactor: 1.0))
+            }
             
             let chartData = PieChartComponent.ChartData(items: chartItems)
             self.pieChartView.parentState = state
+            
+            var pieChartTransition = transition
+            if transition.animation.isImmediate, let animationHint, case .clearedItems = animationHint.value {
+                pieChartTransition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+            }
+            
             let pieChartSize = self.pieChartView.update(
-                transition: transition,
+                transition: pieChartTransition,
                 component: AnyComponent(PieChartComponent(
                     theme: environment.theme,
                     strings: environment.strings,
@@ -1367,8 +1382,8 @@ final class StorageUsageScreenComponent: Component {
                     self.scrollView.addSubview(pieChartComponentView)
                 }
                 
-                transition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
-                transition.setAlpha(view: pieChartComponentView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
+                pieChartTransition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
+                //transition.setAlpha(view: pieChartComponentView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             }
             if let _ = self.aggregatedData, listCategories.isEmpty {
                 let checkColor = UIColor(rgb: 0x34C759)
@@ -1392,7 +1407,7 @@ final class StorageUsageScreenComponent: Component {
                 } else {
                     doneStatusCircle = SimpleShapeLayer()
                     self.doneStatusCircle = doneStatusCircle
-                    self.scrollView.layer.addSublayer(doneStatusCircle)
+                    //self.scrollView.layer.addSublayer(doneStatusCircle)
                     doneStatusCircle.opacity = 0.0
                 }
                 
@@ -1431,7 +1446,11 @@ final class StorageUsageScreenComponent: Component {
             if listCategories.isEmpty {
                 headerText = environment.strings.StorageManagement_TitleCleared
             } else if let peer = component.peer {
-                headerText = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                if peer.id == component.context.account.peerId {
+                    headerText = environment.strings.DialogList_SavedMessages
+                } else {
+                    headerText = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                }
             } else {
                 headerText = environment.strings.StorageManagement_Title
             }
@@ -1527,7 +1546,7 @@ final class StorageUsageScreenComponent: Component {
             let headerDescriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - headerDescriptionSize.width) / 2.0), y: contentHeight), size: headerDescriptionSize)
             if let headerDescriptionComponentView = self.headerDescriptionView.view {
                 if headerDescriptionComponentView.superview == nil {
-                    self.scrollView.addSubview(headerDescriptionComponentView)
+                    self.scrollContainerView.addSubview(headerDescriptionComponentView)
                 }
                 transition.setFrame(view: headerDescriptionComponentView, frame: headerDescriptionFrame)
             }
@@ -1562,14 +1581,14 @@ final class StorageUsageScreenComponent: Component {
                 } else {
                     chartAvatarNode = AvatarNode(font: avatarPlaceholderFont(size: 17.0))
                     self.chartAvatarNode = chartAvatarNode
-                    if let pieChartComponentView = self.pieChartView.view {
-                        self.scrollView.insertSubview(chartAvatarNode.view, belowSubview: pieChartComponentView)
-                    } else {
-                        self.scrollView.addSubview(chartAvatarNode.view)
-                    }
+                    self.scrollContainerView.addSubview(chartAvatarNode.view)
                     chartAvatarNode.frame = avatarFrame
                     
-                    chartAvatarNode.setPeer(context: component.context, theme: environment.theme, peer: peer, displayDimensions: avatarSize)
+                    if peer.id == component.context.account.peerId {
+                        chartAvatarNode.setPeer(context: component.context, theme: environment.theme, peer: peer, overrideImage: .savedMessagesIcon, displayDimensions: avatarSize)
+                    } else {
+                        chartAvatarNode.setPeer(context: component.context, theme: environment.theme, peer: peer, displayDimensions: avatarSize)
+                    }
                 }
                 transition.setAlpha(view: chartAvatarNode.view, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             } else {
@@ -1606,11 +1625,7 @@ final class StorageUsageScreenComponent: Component {
                 )
                 if let chartTotalLabelView = self.chartTotalLabel.view {
                     if chartTotalLabelView.superview == nil {
-                        if let pieChartComponentView = self.pieChartView.view {
-                            self.scrollView.insertSubview(chartTotalLabelView, belowSubview: pieChartComponentView)
-                        } else {
-                            self.scrollView.addSubview(chartTotalLabelView)
-                        }
+                        self.scrollContainerView.addSubview(chartTotalLabelView)
                     }
                     let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
                     transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
@@ -1674,7 +1689,7 @@ final class StorageUsageScreenComponent: Component {
                 )
                 if let categoriesComponentView = self.categoriesView.view {
                     if categoriesComponentView.superview == nil {
-                        self.scrollView.addSubview(categoriesComponentView)
+                        self.scrollContainerView.addSubview(categoriesComponentView)
                     }
                     
                     transition.setFrame(view: categoriesComponentView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: categoriesSize))
@@ -1697,7 +1712,7 @@ final class StorageUsageScreenComponent: Component {
                 let categoriesDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: categoriesDescriptionSize)
                 if let categoriesDescriptionComponentView = self.categoriesDescriptionView.view {
                     if categoriesDescriptionComponentView.superview == nil {
-                        self.scrollView.addSubview(categoriesDescriptionComponentView)
+                        self.scrollContainerView.addSubview(categoriesDescriptionComponentView)
                     }
                     transition.setFrame(view: categoriesDescriptionComponentView, frame: categoriesDescriptionFrame)
                 }
@@ -1728,7 +1743,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepDurationTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepDurationTitleSize)
                 if let keepDurationTitleComponentView = self.keepDurationTitleView.view {
                     if keepDurationTitleComponentView.superview == nil {
-                        self.scrollView.addSubview(keepDurationTitleComponentView)
+                        self.scrollContainerView.addSubview(keepDurationTitleComponentView)
                     }
                     transition.setFrame(view: keepDurationTitleComponentView, frame: keepDurationTitleFrame)
                 }
@@ -1830,7 +1845,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepDurationDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepDurationDescriptionSize)
                 if let keepDurationDescriptionComponentView = self.keepDurationDescriptionView.view {
                     if keepDurationDescriptionComponentView.superview == nil {
-                        self.scrollView.addSubview(keepDurationDescriptionComponentView)
+                        self.scrollContainerView.addSubview(keepDurationDescriptionComponentView)
                     }
                     transition.setFrame(view: keepDurationDescriptionComponentView, frame: keepDurationDescriptionFrame)
                 }
@@ -1856,7 +1871,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepSizeTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepSizeTitleSize)
                 if let keepSizeTitleComponentView = self.keepSizeTitleView.view {
                     if keepSizeTitleComponentView.superview == nil {
-                        self.scrollView.addSubview(keepSizeTitleComponentView)
+                        self.scrollContainerView.addSubview(keepSizeTitleComponentView)
                     }
                     transition.setFrame(view: keepSizeTitleComponentView, frame: keepSizeTitleFrame)
                 }
@@ -1887,7 +1902,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepSizeFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: keepSizeSize)
                 if let keepSizeComponentView = self.keepSizeView.view {
                     if keepSizeComponentView.superview == nil {
-                        self.scrollView.addSubview(keepSizeComponentView)
+                        self.scrollContainerView.addSubview(keepSizeComponentView)
                     }
                     transition.setFrame(view: keepSizeComponentView, frame: keepSizeFrame)
                 }
@@ -1913,7 +1928,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepSizeDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepSizeDescriptionSize)
                 if let keepSizeDescriptionComponentView = self.keepSizeDescriptionView.view {
                     if keepSizeDescriptionComponentView.superview == nil {
-                        self.scrollView.addSubview(keepSizeDescriptionComponentView)
+                        self.scrollContainerView.addSubview(keepSizeDescriptionComponentView)
                     }
                     transition.setFrame(view: keepSizeDescriptionComponentView, frame: keepSizeDescriptionFrame)
                 }
@@ -2129,7 +2144,7 @@ final class StorageUsageScreenComponent: Component {
                 )
                 if let panelContainerView = self.panelContainer.view {
                     if panelContainerView.superview == nil {
-                        self.scrollView.addSubview(panelContainerView)
+                        self.scrollContainerView.addSubview(panelContainerView)
                     }
                     transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: panelContainerSize))
                 }
@@ -2146,6 +2161,7 @@ final class StorageUsageScreenComponent: Component {
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
             }
+            transition.setFrame(view: self.scrollContainerView, frame: CGRect(origin: CGPoint(), size: contentSize))
             
             var scrollViewBounds = self.scrollView.bounds
             scrollViewBounds.size = availableSize
@@ -2181,7 +2197,7 @@ final class StorageUsageScreenComponent: Component {
                 clearingNode.updateLayout(size: clearingSize, transition: .immediate)
                 
                 if animateIn {
-                    clearingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.15)
+                    clearingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.4)
                 }
             } else {
                 if let clearingNode = self.clearingNode {
@@ -2190,10 +2206,10 @@ final class StorageUsageScreenComponent: Component {
                     var delay: Double = 0.0
                     if let clearingDisplayTimestamp = self.clearingDisplayTimestamp {
                         let timeDelta = CFAbsoluteTimeGetCurrent() - clearingDisplayTimestamp
-                        if timeDelta < 0.12 {
+                        if timeDelta < 0.4 {
                             delay = 0.0
-                        } else if timeDelta < 0.4 {
-                            delay = 0.4
+                        } else if timeDelta < 1.0 {
+                            delay = 1.0
                         }
                     }
                     
@@ -2414,7 +2430,9 @@ final class StorageUsageScreenComponent: Component {
                     
                     self.isClearing = false
                     
-                    self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
+                    if !firstTime {
+                        self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
+                    }
                     
                     completion()
                 })
@@ -2468,8 +2486,21 @@ final class StorageUsageScreenComponent: Component {
                 
                 var items: [ContextMenuItem] = []
                 
+                var openTitle: String = presentationData.strings.StorageManagement_OpenPhoto
+                for media in message.media {
+                    if let _ = media as? TelegramMediaImage {
+                        openTitle = presentationData.strings.StorageManagement_OpenPhoto
+                    } else if let file = media as? TelegramMediaFile {
+                        if file.isVideo {
+                            openTitle = presentationData.strings.StorageManagement_OpenVideo
+                        } else {
+                            openTitle = presentationData.strings.StorageManagement_OpenFile
+                        }
+                    }
+                }
+                
                 items.append(.action(ContextMenuActionItem(
-                    text: presentationData.strings.StorageManagement_OpenPhoto,
+                    text: openTitle,
                     icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: theme.contextMenu.primaryColor) },
                     action: { [weak self] c, _ in
                         c.dismiss(completion: { [weak self] in

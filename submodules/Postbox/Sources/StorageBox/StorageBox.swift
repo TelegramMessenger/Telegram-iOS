@@ -472,6 +472,8 @@ public final class StorageBox {
                 for peerId in self.peerIdsReferencing(hashId: hashId) {
                     self.internalAddSize(peerId: peerId, contentType: info.contentType, delta: sizeDelta)
                 }
+            } else {
+                self.internalAdd(reference: StorageBox.Reference(peerId: 0, messageNamespace: 0, messageId: 0), to: id, contentType: 0, size: size)
             }
             
             self.valueBox.commit()
