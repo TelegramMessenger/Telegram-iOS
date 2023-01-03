@@ -548,6 +548,25 @@ public struct Transition {
         }
     }
     
+    public func animateCornerRadius(layer: CALayer, from fromValue: CGFloat, to toValue: CGFloat) {
+        switch self.animation {
+        case .none:
+            break
+        case let .curve(duration, curve):
+            layer.animate(
+                from: fromValue as NSNumber,
+                to: toValue as NSNumber,
+                keyPath: "cornerRadius",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: nil
+            )
+        }
+    }
+    
     public func animateBoundsOrigin(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:

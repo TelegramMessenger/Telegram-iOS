@@ -691,7 +691,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 previewImageNode.cornerRadius = 8.0
                 previewImageNode.contentMode = .scaleAspectFill
                 self.previewImageNode = previewImageNode
+                previewImageNode.alpha = 0
                 self.addSubnode(previewImageNode)
+                transition.updateAlpha(node: previewImageNode, alpha: 1)
             }
             previewImageNode.image = previewImage
             let previewSize = CGSize(width: 40.0, height: 40.0)
