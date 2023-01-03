@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import CoreServices
 import Display
 import ComponentFlow
 import LegacyComponents
@@ -921,7 +922,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         }
         
         func addTextEntity() {
-            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
+            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
             self.insertEntity.invoke(textEntity)
         }
         
@@ -934,7 +935,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 self?.updateEntitiesPlayback.invoke(true)
                 
                 if let file = file {
-                    let stickerEntity = DrawingStickerEntity(file: file)
+                    let stickerEntity = DrawingStickerEntity(content: .file(file))
                     self?.insertEntity.invoke(stickerEntity)
                 } else {
                     self?.updateCurrentMode(.drawing)
@@ -1085,6 +1086,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     component: TextSettingsComponent(
                         color: nil,
                         style: DrawingTextStyle(style: textEntity.style),
+                        animation: DrawingTextAnimation(animation: textEntity.animation),
                         alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                         font: DrawingTextFont(font: textEntity.font),
                         isEmojiKeyboard: false,
@@ -1106,6 +1108,27 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 nextStyle = .regular
                             }
                             textEntity.style = nextStyle
+                            if let entityView = textEntity.currentEntityView {
+                                entityView.update()
+                            }
+                            state?.updated(transition: .easeInOut(duration: 0.2))
+                        },
+                        toggleAnimation: { [weak state, weak textEntity] in
+                            guard let textEntity = textEntity else {
+                                return
+                            }
+                            var nextAnimation: DrawingTextEntity.Animation
+                            switch textEntity.animation {
+                            case .none:
+                                nextAnimation = .typing
+                            case .typing:
+                                nextAnimation = .wiggle
+                            case .wiggle:
+                                nextAnimation = .zoomIn
+                            case .zoomIn:
+                                nextAnimation = .none
+                            }
+                            textEntity.animation = nextAnimation
                             if let entityView = textEntity.currentEntityView {
                                 entityView.update()
                             }
@@ -1933,7 +1956,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     }
 }
 
-public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
+public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, UIDropInteractionDelegate {
     fileprivate final class Node: ViewControllerTracingNode {
         private weak var controller: DrawingScreen?
         private let context: AccountContext
@@ -1942,7 +1965,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private let performAction: ActionSlot<DrawingView.Action>
         private let updateToolState: ActionSlot<DrawingToolState>
         private let updateSelectedEntity: ActionSlot<DrawingEntity?>
-        private let insertEntity: ActionSlot<DrawingEntity>
+        fileprivate let insertEntity: ActionSlot<DrawingEntity>
         private let deselectEntity: ActionSlot<Void>
         private let updateEntitiesPlayback: ActionSlot<Bool>
         private let previewBrushSize: ActionSlot<CGFloat?>
@@ -2683,6 +2706,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                             TextSettingsComponent(
                                 color: textEntity.color,
                                 style: DrawingTextStyle(style: textEntity.style),
+                                animation: DrawingTextAnimation(animation: textEntity.animation),
                                 alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                                 font: DrawingTextFont(font: textEntity.font),
                                 isEmojiKeyboard: entityView.textView.inputView != nil,
@@ -2725,6 +2749,29 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                         nextStyle = .regular
                                     }
                                     textEntity.style = nextStyle
+                                    entityView.update()
+                                    
+                                    if let (layout, orientation) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, transition: .immediate)
+                                    }
+                                },
+                                toggleAnimation: { [weak self] in
+                                    self?.dismissFontPicker()
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    var nextAnimation: DrawingTextEntity.Animation
+                                    switch textEntity.animation {
+                                    case .none:
+                                        nextAnimation = .typing
+                                    case .typing:
+                                        nextAnimation = .wiggle
+                                    case .wiggle:
+                                        nextAnimation = .zoomIn
+                                    case .zoomIn:
+                                        nextAnimation = .none
+                                    }
+                                    textEntity.animation = nextAnimation
                                     entityView.update()
                                     
                                     if let (layout, orientation) = strongSelf.validLayout {
@@ -2893,6 +2940,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         self.displayNode = Node(controller: self, context: self.context)
 
         super.displayNodeDidLoad()
+        
+        let dropInteraction = UIDropInteraction(delegate: self)
+        self.view.addInteraction(dropInteraction)
     }
     
     public func generateResultData() -> TGPaintingData? {
@@ -2944,15 +2994,17 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         
         var stickers: [Any] = []
         for entity in self.entitiesView.entities {
-            if let sticker = entity as? DrawingStickerEntity {
+            if let sticker = entity as? DrawingStickerEntity, case let .file(file) = sticker.content {
                 let coder = PostboxEncoder()
-                coder.encodeRootObject(sticker.file)
+                coder.encodeRootObject(file)
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
-                    let coder = PostboxEncoder()
-                    coder.encodeRootObject(sticker.file)
-                    stickers.append(coder.makeData())        
+                    if case let .file(file) = sticker.content {
+                        let coder = PostboxEncoder()
+                        coder.encodeRootObject(file)
+                        stickers.append(coder.makeData())
+                    }
                 }
             }
         }
@@ -3003,5 +3055,45 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         )
         self.orientation = orientation
         self.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
+        return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDropSession) -> UIDropProposal {
+        //self.chatDisplayNode.updateDropInteraction(isActive: true)
+        
+        let operation: UIDropOperation
+        operation = .copy
+        return UIDropProposal(operation: operation)
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
+        session.loadObjects(ofClass: UIImage.self) { [weak self] imageItems in
+            guard let strongSelf = self else {
+                return
+            }
+            let images = imageItems as! [UIImage]
+            
+            //strongSelf.chatDisplayNode.updateDropInteraction(isActive: false)
+            if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
+                let entity = DrawingStickerEntity(content: .image(image))
+                strongSelf.node.insertEntity.invoke(entity)
+            }
+        }
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidExit session: UIDropSession) {
+        //self.chatDisplayNode.updateDropInteraction(isActive: false)
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidEnd session: UIDropSession) {
+        //self.chatDisplayNode.updateDropInteraction(isActive: false)
     }
 }
