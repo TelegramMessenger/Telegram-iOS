@@ -9,11 +9,11 @@
 	<key>INIntentDefinitionNamespace</key>
 	<string>p74MWb</string>
 	<key>INIntentDefinitionSystemVersion</key>
-	<string>20C69</string>
+	<string>21G115</string>
 	<key>INIntentDefinitionToolsBuildVersion</key>
-	<string>12D4e</string>
+	<string>14A400</string>
 	<key>INIntentDefinitionToolsVersion</key>
-	<string>12.4</string>
+	<string>14.0.1</string>
 	<key>INIntents</key>
 	<array>
 		<dict>
@@ -51,6 +51,36 @@
 							<integer>8</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Large</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>12</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>ExtraLarge</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryInline</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryCorner</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryCircular</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>2</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryRectangular</string>
 						</dict>
 					</array>
 					<key>INIntentParameterConfigurable</key>
@@ -163,6 +193,36 @@
 							<integer>16</integer>
 							<key>INIntentParameterArraySizeSizeClass</key>
 							<string>Large</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>12</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>ExtraLarge</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryInline</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryCorner</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>1</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryCircular</string>
+						</dict>
+						<dict>
+							<key>INIntentParameterArraySizeSize</key>
+							<integer>2</integer>
+							<key>INIntentParameterArraySizeSizeClass</key>
+							<string>AccessoryRectangular</string>
 						</dict>
 					</array>
 					<key>INIntentParameterConfigurable</key>
