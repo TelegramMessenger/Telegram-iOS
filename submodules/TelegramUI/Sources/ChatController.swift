@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeSearchFiltering
+
 import Foundation
 import UIKit
 import Postbox
@@ -86,8 +88,6 @@ import EmojiStatusComponent
 import ChatTimerScreen
 import MediaPasteboardUI
 import ChatListHeaderComponent
-
-import PtgForeignAgentNoticeSearchFiltering
 
 #if DEBUG
 import os.signpost

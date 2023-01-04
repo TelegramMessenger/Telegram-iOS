@@ -1,3 +1,6 @@
+import PtgSettings
+import PtgSecretPasscodes
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -14,9 +17,6 @@ import MeshAnimationCache
 import InAppPurchaseManager
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgSettings
-import PtgSecretPasscodes
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void

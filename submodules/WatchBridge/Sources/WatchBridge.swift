@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import Postbox
 import TelegramCore
@@ -5,7 +7,6 @@ import WatchCommon
 import TelegramPresentationData
 import LegacyUI
 import PhoneNumberFormat
-import PtgForeignAgentNoticeRemoval
 
 private func legacyImageLocationUri(resource: MediaResource) -> String? {
     if let resource = resource as? CloudPeerPhotoSizeMediaResource {

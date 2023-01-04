@@ -1,3 +1,5 @@
+import FakePasscode
+
 import Foundation
 import UIKit
 import Display
@@ -17,7 +19,6 @@ import PremiumUI
 import AnimationCache
 import MultiAnimationRenderer
 import Postbox
-import FakePasscode
 
 public enum ChatListNodeMode {
     case chatList

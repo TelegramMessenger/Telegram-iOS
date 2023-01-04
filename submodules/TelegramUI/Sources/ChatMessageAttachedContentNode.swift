@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import Postbox
@@ -18,8 +20,6 @@ import GalleryData
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeRemoval
 
 private let buttonFont = Font.semibold(13.0)
 

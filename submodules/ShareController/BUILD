@@ -10,6 +10,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
+        
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Postbox:Postbox",
@@ -37,8 +39,6 @@ swift_library(
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/TelegramUI/Components/EmojiStatusComponent:EmojiStatusComponent",
-
-        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
     visibility = [
         "//visibility:public",

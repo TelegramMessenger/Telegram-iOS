@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -9,8 +11,6 @@ import TelegramPresentationData
 import AccountContext
 import TelegramStringFormatting
 import ChatPresentationInterfaceState
-
-import PtgForeignAgentNoticeRemoval
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()

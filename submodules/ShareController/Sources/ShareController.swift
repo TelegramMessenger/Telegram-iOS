@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import Display
@@ -16,7 +18,6 @@ import StickerResources
 import SaveToCameraRoll
 import TelegramStringFormatting
 import WallpaperBackgroundNode
-import PtgForeignAgentNoticeRemoval
 
 public struct ShareControllerAction {
     let title: String

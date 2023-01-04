@@ -1,3 +1,5 @@
+import PtgSettings
+
 import Foundation
 import SwiftSignalKit
 import Postbox
@@ -10,7 +12,6 @@ import TelegramUIPreferences
 import WidgetItemsUtils
 import AccountContext
 import AppLock
-import PtgSettings
 
 import GeneratedSources
 

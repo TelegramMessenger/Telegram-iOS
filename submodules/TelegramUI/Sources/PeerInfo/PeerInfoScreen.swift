@@ -1,3 +1,9 @@
+import FakePasscode
+import FakePasscodeUI
+import PasscodeUI
+import PtgSecretPasscodes
+import PtgSecretPasscodesUI
+
 import Foundation
 import UIKit
 import Display
@@ -83,12 +89,6 @@ import ChatTimerScreen
 import NotificationPeerExceptionController
 import StickerPackPreviewUI
 import ChatListHeaderComponent
-
-import FakePasscode
-import FakePasscodeUI
-import PasscodeUI
-import PtgSecretPasscodes
-import PtgSecretPasscodesUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }

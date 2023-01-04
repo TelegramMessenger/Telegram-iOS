@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -18,8 +20,6 @@ import InvisibleInkDustNode
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeRemoval
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext

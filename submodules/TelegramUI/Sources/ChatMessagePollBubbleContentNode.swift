@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -11,8 +13,6 @@ import AccountContext
 import AvatarNode
 import TelegramPresentationData
 import ChatMessageBackground
-
-import PtgForeignAgentNoticeRemoval
 
 func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
     if poll.isClosed {

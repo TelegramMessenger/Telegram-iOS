@@ -10,6 +10,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
+        
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/Postbox:Postbox",
@@ -26,7 +28,6 @@ swift_library(
         "//submodules/LegacyUI:LegacyUI",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     	"//submodules/WatchBridge/Impl:WatchBridgeImpl",
-        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
     visibility = [
         "//visibility:public",

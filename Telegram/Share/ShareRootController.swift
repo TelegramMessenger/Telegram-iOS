@@ -1,7 +1,8 @@
+import AppLockState
+
 import UIKit
 import TelegramUI
 import BuildConfig
-import AppLockState
 
 @objc(ShareRootController)
 class ShareRootController: UIViewController {

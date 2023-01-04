@@ -10,6 +10,9 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/FakePasscode:FakePasscode",
+        "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
+        
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
@@ -86,9 +89,6 @@ swift_library(
         "//submodules/PeerInfoUI",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/TelegramUI/Components/ChatListTitleView",
-        
-        "//submodules/FakePasscode:FakePasscode",
-        "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
     ],
     visibility = [
         "//visibility:public",

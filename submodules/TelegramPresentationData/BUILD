@@ -10,6 +10,9 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/PtgSettings:PtgSettings",
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
+        
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Postbox:Postbox",
         "//submodules/Display:Display",
@@ -21,8 +24,6 @@ swift_library(
         "//submodules/Sunrise:Sunrise",
         "//submodules/TinyThumbnail:TinyThumbnail",
         "//Telegram:PresentationStrings",
-        "//submodules/PtgSettings:PtgSettings",
-        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
     ],
     visibility = [
         "//visibility:public",

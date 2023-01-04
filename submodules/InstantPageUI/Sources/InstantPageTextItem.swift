@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import TelegramCore
@@ -9,7 +11,6 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import ContextUI
-import PtgForeignAgentNoticeRemoval
 
 public final class InstantPageUrlItem: Equatable {
     public let url: String

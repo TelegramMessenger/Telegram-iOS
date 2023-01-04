@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -10,8 +12,6 @@ import ContextUI
 import ChatListUI
 import TelegramPresentationData
 import SwiftSignalKit
-
-import PtgForeignAgentNoticeRemoval
 
 struct ChatMessageItemWidthFill {
     var compactInset: CGFloat

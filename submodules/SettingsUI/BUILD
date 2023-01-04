@@ -10,6 +10,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/FakePasscodeUI:FakePasscodeUI",
+        
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
@@ -108,8 +110,6 @@ swift_library(
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
         "//submodules/TelegramUI/Components/ChatTimerScreen",
-        
-        "//submodules/FakePasscodeUI:FakePasscodeUI",
     ],
     visibility = [
         "//visibility:public",

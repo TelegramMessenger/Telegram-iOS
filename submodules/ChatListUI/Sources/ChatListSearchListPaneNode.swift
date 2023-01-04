@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeSearchFiltering
+
 import AsyncDisplayKit
 import Display
 import TelegramCore
@@ -30,8 +32,6 @@ import Postbox
 import FetchManagerImpl
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeSearchFiltering
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers

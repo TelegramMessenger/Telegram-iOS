@@ -1,3 +1,5 @@
+import FakePasscode
+
 import Foundation
 import UIKit
 import Display
@@ -10,7 +12,6 @@ import TelegramUIPreferences
 import AccountContext
 import LocalAuth
 import TelegramStringFormatting
-import FakePasscode
 
 public final class PasscodeEntryControllerPresentationArguments {
     let animated: Bool

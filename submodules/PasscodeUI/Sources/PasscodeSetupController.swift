@@ -1,3 +1,5 @@
+import FakePasscode
+
 import Foundation
 import UIKit
 import Display
@@ -7,7 +9,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AccountContext
-import FakePasscode
 
 public enum PasscodeSetupControllerMode {
     case setup(change: Bool, allowChangeType: Bool, PasscodeEntryFieldType)

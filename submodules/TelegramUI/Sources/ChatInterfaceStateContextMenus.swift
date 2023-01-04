@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import Postbox
@@ -32,8 +34,6 @@ import Pasteboard
 import SettingsUI
 import PremiumUI
 import TextNodeWithEntities
-
-import PtgForeignAgentNoticeRemoval
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
