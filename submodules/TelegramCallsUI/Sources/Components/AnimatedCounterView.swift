@@ -50,14 +50,14 @@ public final class AnimatedCountView: UIView {
         subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 12, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
     }
     
-    func update(countString: String, subtitle: String) {
+    func update(countString: String, subtitle: String, fontSize: CGFloat = 48.0) {
         self.setupGradientAnimations()
         
         let text: String = countString
-        self.countLabel.fontSize = 48
-        self.countLabel.attributedText = NSAttributedString(string: text, font: Font.with(size: 48, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
+        self.countLabel.fontSize = fontSize
+        self.countLabel.attributedText = NSAttributedString(string: text, font: Font.with(size: fontSize, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
         
-        self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, attributes: [.font: UIFont.systemFont(ofSize: 16, weight: .semibold)])
+        self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, attributes: [.font: UIFont.systemFont(ofSize: max(floor(fontSize / 3), 12), weight: .semibold)])
         self.subtitleLabel.isHidden = subtitle.isEmpty
     }
     

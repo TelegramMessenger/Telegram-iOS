@@ -214,7 +214,8 @@ final class MediaStreamVideoComponent: Component {
                         loadingBlurView.layer.add(anim, forKey: "opacity")
                     }
                 }
-                loadingBlurView.layer.zPosition = 999
+                loadingBlurView.layer.zPosition = 998
+                self.noSignalView?.layer.zPosition = loadingBlurView.layer.zPosition + 1
                 if shimmerBorderLayer.superlayer == nil {
                     loadingBlurView.contentView.layer.addSublayer(shimmerBorderLayer)
                 }
@@ -230,9 +231,10 @@ final class MediaStreamVideoComponent: Component {
                 borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
                 borderMask.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
                 borderMask.lineWidth = 3
+                borderMask.compositingFilter = "softLightBlendMode"
                 shimmerBorderLayer.mask = borderMask
                 
-                borderShimmer = .init()
+                borderShimmer = StandaloneShimmerEffect()
                 borderShimmer.layer = shimmerBorderLayer
                 borderShimmer.updateHorizontal(background: .clear, foreground: .white)
                 loadingBlurView.alpha = 1
@@ -314,7 +316,6 @@ final class MediaStreamVideoComponent: Component {
                         UIView.animate(withDuration: 0.3) {
                             videoBlurView.alpha = 1
                         }
-                        
                         self.maskGradientLayer.type = .radial
                         self.maskGradientLayer.colors = [UIColor(rgb: 0x000000, alpha: 0.5).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
                         self.maskGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
@@ -409,13 +410,18 @@ final class MediaStreamVideoComponent: Component {
             } else if component.isFullscreen {
                 if fullScreenBackgroundPlaceholder.superview == nil {
                     insertSubview(fullScreenBackgroundPlaceholder, at: 0)
+                    transition.animateAlpha(view: fullScreenBackgroundPlaceholder, from: 0, to: 1)
                 }
                 fullScreenBackgroundPlaceholder.backgroundColor = UIColor.black.withAlphaComponent(0.5)
             } else {
-                fullScreenBackgroundPlaceholder.removeFromSuperview()
+                transition.animateAlpha(view: fullScreenBackgroundPlaceholder, from: 1, to: 0, completion: { didComplete in
+                    if didComplete {
+                        self.fullScreenBackgroundPlaceholder.removeFromSuperview()
+                    }
+                })
             }
             fullScreenBackgroundPlaceholder.frame = .init(origin: .zero, size: availableSize)
-            
+//            fullScreenBackgroundPlaceholder.isHidden = true
             let videoInset: CGFloat
             if !component.isFullscreen {
                 videoInset = 16
@@ -556,6 +562,8 @@ final class MediaStreamVideoComponent: Component {
                         self.noSignalView = noSignalView
                         // TODO: above blurred animation
                         self.addSubview(noSignalView)
+                        noSignalView.layer.zPosition = loadingBlurView.layer.zPosition + 1
+                        
                         noSignalView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     }
                     

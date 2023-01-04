@@ -403,16 +403,19 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
     
     private let getController: () -> ContextControllerProtocol?
     private let item: ContextMenuCustomItem
+    private let requestDismiss: (ContextMenuActionResult) -> Void
     
     private var presentationData: PresentationData?
     private var itemNode: ContextMenuCustomNode?
     
     init(
         getController: @escaping () -> ContextControllerProtocol?,
-        item: ContextMenuCustomItem
+        item: ContextMenuCustomItem,
+        requestDismiss: @escaping (ContextMenuActionResult) -> Void
     ) {
         self.getController = getController
         self.item = item
+        self.requestDismiss = requestDismiss
         
         super.init()
     }
@@ -433,7 +436,12 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
                 presentationData: presentationData,
                 getController: self.getController,
                 actionSelected: { result in
-                    let _ = result
+                    switch result {
+                    case .dismissWithoutContent/* where ContextMenuActionResult.safeStreamRecordingDismissWithoutContent == .dismissWithoutContent*/:
+                        self.requestDismiss(result)
+                        
+                    default: break
+                    }
                 }
             )
             self.itemNode = itemNode
@@ -505,7 +513,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                     return Item(
                         node: ContextControllerActionsListCustomItemNode(
                             getController: getController,
-                            item: customItem
+                            item: customItem,
+                            requestDismiss: requestDismiss
                         ),
                         separatorNode: ASDisplayNode()
                     )

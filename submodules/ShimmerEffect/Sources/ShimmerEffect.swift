@@ -500,7 +500,7 @@ public final class StandaloneShimmerEffect {
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             guard let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations) else { return }
             
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.3), options: CGGradientDrawingOptions())
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.2), end: CGPoint(x: size.width, y: 0.8), options: CGGradientDrawingOptions())
         })
         
         self.updateHorizontalLayer()
@@ -533,14 +533,28 @@ public final class StandaloneShimmerEffect {
         layer.contents = image.cgImage
         
         if layer.animation(forKey: "shimmer") == nil {
+            var delay: TimeInterval { 1.6 }
             let animation = CABasicAnimation(keyPath: "contentsRect.origin.x")
-            animation.fromValue = 1.0 as NSNumber
-            animation.toValue = -1.0 as NSNumber
+            animation.fromValue = NSNumber(floatLiteral: delay)
+            animation.toValue = NSNumber(floatLiteral: -delay)
             animation.isAdditive = true
             animation.repeatCount = .infinity
-            animation.duration = 0.8
-            animation.beginTime = layer.convertTime(1.0, from: nil)
+            animation.duration = 0.8 * delay
+            animation.timingFunction = .init(name: .easeInEaseOut)
+//            animation.beginTime = layer.convertTime(1.0, from: nil)
             layer.add(animation, forKey: "shimmer")
+            /*let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
+            opacityAnimation.values = [0.0, 1.0, 0.0]
+            opacityAnimation.keyTimes = [0, 0.5, 0]
+            opacityAnimation.calculationMode = .linear
+//            opacityAnimation.fromValue = 2.0 as NSNumber
+//            opacityAnimation.toValue = -2.0 as NSNumber
+//            opacityAnimation.isAdditive = true
+            opacityAnimation.repeatCount = .infinity
+            opacityAnimation.duration = 1.6
+            opacityAnimation.timingFunctions = [.init(name: .easeInEaseOut)]
+//            opacityAnimation.beginTime = layer.convertTime(1.0, from: nil)
+            layer.add(opacityAnimation, forKey: "opacity")*/
         }
     }
 }

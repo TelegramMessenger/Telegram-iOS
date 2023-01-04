@@ -95,12 +95,12 @@ final class StreamSheetComponent: CombinedComponent {
         override func draw(_ rect: CGRect) {
             super.draw(rect)
             // Debug interactive area
-//            guard let context = UIGraphicsGetCurrentContext() else { return }
-//            context.setFillColor(UIColor.red.cgColor)
-//            overlayComponentsFrames.forEach { frame in
-//                context.addRect(frame)
-//                context.fillPath()
-//            }
+            guard let context = UIGraphicsGetCurrentContext() else { return }
+            context.setFillColor(UIColor.red.withAlphaComponent(0.3).cgColor)
+            overlayComponentsFrames.forEach { frame in
+                context.addRect(frame)
+                context.fillPath()
+            }
         }
     }
     
@@ -172,6 +172,8 @@ final class StreamSheetComponent: CombinedComponent {
                     transition: context.transition
                 )
             }
+            // TODO: replace
+            let isFullscreen = context.component.participantsCount == -1
             
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: topOffset + context.component.sheetHeight / 2))
@@ -182,7 +184,7 @@ final class StreamSheetComponent: CombinedComponent {
             
             if let topItem = topItem {
                 context.add(topItem
-                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + 32))
+                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 32)))
                 )
                 (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
             }
@@ -297,16 +299,21 @@ final class ParticipantsComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: ComponentFlow.EmptyComponentState, environment: ComponentFlow.Environment<ComponentFlow.Empty>, transition: ComponentFlow.Transition) -> CGSize {
         view.counter.update(
-            countString: count > 0 ? presentationStringsFormattedNumber(Int32(count), ",") : "",
-            subtitle: count > 0 ? "watching" : "no viewers"
+            countString: self.count > 0 ? presentationStringsFormattedNumber(Int32(count), ",") : "",
+            subtitle: self.showsSubtitle ? (self.count > 0 ? "watching" : "no viewers") : "",
+            fontSize: self.fontSize
         )// environment.strings.LiveStream_NoViewers)
         return availableSize
     }
     
     private let count: Int
+    private let showsSubtitle: Bool
+    private let fontSize: CGFloat
     
-    init(count: Int) {
+    init(count: Int, showsSubtitle: Bool = true, fontSize: CGFloat = 48) {
         self.count = count
+        self.showsSubtitle = showsSubtitle
+        self.fontSize = fontSize
     }
     
     final class View: UIView {
