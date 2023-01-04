@@ -339,9 +339,6 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         } else {
             categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageServiceFiles, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
         }
-#if DEBUG
-        categories.append(StorageUsageCategory(title: "Secret Chat Thumbnails", size: stats.secretChatThumbSize, fraction: CGFloat(stats.secretChatThumbSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
-#endif
         categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageOtherApps, size: otherAppsSpace, fraction: CGFloat(otherAppsSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color2))
         categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageFree, size: freeSpace, fraction: CGFloat(freeSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color3))
         
@@ -640,7 +637,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             overlayNode.setProgressSignal(progressPromise.get())
                             controller?.setItemGroupOverlayNode(groupIndex: 0, node: overlayNode)
                             
-                            let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize, secretChatThumbSize: stats.secretChatThumbSize)
+                            let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize)
                             
                             cancelImpl = {
                                 clearDisposable.set(nil)
@@ -813,7 +810,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 overlayNode.setProgressSignal(progressPromise.get())
                                 controller?.setItemGroupOverlayNode(groupIndex: 0, node: overlayNode)
                                 
-                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize, secretChatThumbSize: stats.secretChatThumbSize)
+                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                                 
                                 cancelImpl = {
                                     clearDisposable.set(nil)
@@ -924,7 +921,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         
                         var signal = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
                         
-                        let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize, secretChatThumbSize: stats.secretChatThumbSize)
+                        let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                         
                         var cancelImpl: (() -> Void)?
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

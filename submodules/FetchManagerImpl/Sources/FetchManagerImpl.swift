@@ -256,9 +256,9 @@ private final class FetchManagerCategoryContext {
                     |> deliverOnMainQueue).start(next: { _ in
                         Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                         entryCompleted(id)
-                    }, error: { [weak self] _ in
-                        self?.cancelEntry(id, isCompleted: false)
-                        self?.postbox.mediaBox.cancelInteractiveResourceFetch(entry.resourceReference.resource)
+//                    }, error: { [weak self] _ in
+//                        self?.cancelEntry(id, isCompleted: false)
+//                        self?.postbox.mediaBox.cancelInteractiveResourceFetch(entry.resourceReference.resource)
                     })
                 } else {
                     assertionFailure()
@@ -385,9 +385,9 @@ private final class FetchManagerCategoryContext {
                         |> deliverOnMainQueue).start(next: { _ in
                             Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                             entryCompleted(topEntryId)
-                        }, error: { [weak self] _ in
-                            self?.cancelEntry(topEntryId, isCompleted: false)
-                            self?.postbox.mediaBox.cancelInteractiveResourceFetch(entry.resourceReference.resource)
+//                        }, error: { [weak self] _ in
+//                            self?.cancelEntry(topEntryId, isCompleted: false)
+//                            self?.postbox.mediaBox.cancelInteractiveResourceFetch(entry.resourceReference.resource)
                         })
                     }
                     return true

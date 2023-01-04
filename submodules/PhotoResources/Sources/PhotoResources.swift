@@ -1,3 +1,5 @@
+import Pdf
+
 import Foundation
 import UIKit
 import Postbox
@@ -340,6 +342,28 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
     let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
     
     if !thumbnailGenerationMimeTypes.contains(fileReference.media.mimeType) {
+        // generate good-quality thumbnail for pdf in cache if it is fully downloaded
+        if fileReference.media.mimeType == "application/pdf" && thumbnailRepresentation == nil {
+            // it does not actually fetches here, it registers for download completion and then updates thumbnail in cache
+            let fetchSignal = Signal<CachedMediaResourceRepresentationResult, NoError> { subscriber in
+                return account.postbox.mediaBox.resourceData(fileReference.media.resource).start(next: { data in
+                    if data.complete {
+                        if let image = generatePdfPreviewImage(url: URL(fileURLWithPath: data.path), size: CGSize(width: 256.0, height: 256.0)), let jpegData = image.jpegData(compressionQuality: 0.5) {
+                            subscriber.putNext(.reset)
+                            subscriber.putNext(.data(jpegData))
+                            subscriber.putNext(.done)
+                        }
+                        subscriber.putCompletion()
+                    }
+                })
+            }
+            return account.postbox.mediaBox.customResourceData(id: "pdf-preview", baseResourceId: fileReference.media.resource.id.stringRepresentation, pathExtension: nil, complete: false, fetch: { fetchSignal }, keepDuration: .general, attemptSynchronously: false)
+            |> distinctUntilChanged(isEqual: { $0.complete == $1.complete })
+            |> map { data in
+                return Tuple(decodedThumbnailData, data.complete ? data.path : nil, data.complete)
+            }
+        }
+        
         if let decodedThumbnailData = decodedThumbnailData {
             if autoFetchFullSizeThumbnail, let thumbnailRepresentation = thumbnailRepresentation, (thumbnailRepresentation.dimensions.width > 200 || thumbnailRepresentation.dimensions.height > 200) {
                 return Signal { subscriber in

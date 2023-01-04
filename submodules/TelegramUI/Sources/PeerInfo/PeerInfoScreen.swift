@@ -8951,7 +8951,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
 }
 
-public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveToPasscodeSwitch, KeyShortcutResponder {
+public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
     private let context: AccountContext
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peerId: PeerId
@@ -9568,10 +9568,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveT
         
         let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
-    }
-    
-    public func passcodeSwitched() {
-        self.requestLayout(transition: .immediate) // show/hide version
     }
     
     public var keyShortcuts: [KeyShortcut] {

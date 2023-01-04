@@ -16,6 +16,9 @@ objc_library(
     deps = [
         "//third-party/mozjpeg:mozjpeg",
     ],
+    sdk_frameworks = [
+        "Accelerate",
+    ],
     visibility = [
         "//visibility:public",
     ]

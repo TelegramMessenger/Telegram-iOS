@@ -184,8 +184,6 @@ public final class MediaBox {
         try! FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
     }()
     
-    private let allSecretChatIdsDisposable = MetaDisposable()
-    
     public init(basePath: String) {
         self.basePath = basePath
         
@@ -202,14 +200,8 @@ public final class MediaBox {
         let _ = self.ensureDirectoryCreated
     }
     
-    deinit {
-        self.allSecretChatIdsDisposable.dispose()
-    }
-    
-    public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32, allSecretChatIds: Signal<Set<Int64>, NoError>) {
-        self.allSecretChatIdsDisposable.set(allSecretChatIds.start(next: { [weak self] allSecretChatIds in
-            self?.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit, allSecretChatIds: allSecretChatIds)
-        }))
+    public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
@@ -307,6 +299,7 @@ public final class MediaBox {
             link(pathsFrom.complete, pathsTo.complete)
             unlink(pathsFrom.partial)
             unlink(pathsFrom.complete)
+            unlink(pathsFrom.partial + ".meta")
         }
     }
     
@@ -1194,6 +1187,7 @@ public final class MediaBox {
                     } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
                         result[wrappedId] = Int64(size)
                     }
+                    // size of .meta file is not considered?
                 }
                 subscriber.putNext(result)
                 subscriber.putCompletion()
@@ -1210,7 +1204,7 @@ public final class MediaBox {
                 var excludeNames = Set<String>()
                 for id in combinedExcludeIds {
                     let partial = "\(self.fileNameForId(id))_partial"
-                    let meta = "\(self.fileNameForId(id))_meta"
+                    let meta = "\(partial).meta"
                     let complete = self.fileNameForId(id)
                     
                     excludeNames.insert(meta)
