@@ -366,6 +366,7 @@ swift_library(
         "//submodules/PasswordSetupUI:PasswordSetupUIResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
         "//submodules/PremiumUI:PremiumUIResources",
+        "//submodules/DrawingUI:DrawingUIResources",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
         ":GeneratedPresentationStrings/Resources/PresentationStrings.data",
@@ -441,9 +442,9 @@ official_apple_pay_merchants = [
     "merchant.org.telegram.Best2pay.test",
     "merchant.psbank.test.telegramios",
     "merchant.psbank.prod.telegramios",
-    #"merchant.org.telegram.billinenet.test",
-    #"merchant.org.telegram.billinenet.prod",
-    #"merchant.org.telegram.portmone.test",
+    "merchant.org.telegram.billinenet.test",
+    "merchant.org.telegram.billinenet.prod",
+    "merchant.org.telegram.portmone.test",
 ]
 
 official_bundle_ids = [
@@ -1862,6 +1863,7 @@ plist_fragment(
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>{telegram_bundle_id}.refresh</string>
+        <string>{telegram_bundle_id}.cleanup</string>
     </array>
     <key>CFBundleAllowMixedLocalizations</key>
     <true/>
@@ -1962,6 +1964,7 @@ plist_fragment(
         <string>location</string>
         <string>remote-notification</string>
         <string>voip</string>
+        <string>processing</string>
     </array>
     <key>UIDeviceFamily</key>
     <array>

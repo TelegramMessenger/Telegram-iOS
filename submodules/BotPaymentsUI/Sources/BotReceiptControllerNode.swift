@@ -12,9 +12,11 @@ import TelegramStringFormatting
 
 final class BotReceiptControllerArguments {
     fileprivate let account: Account
+    fileprivate let source: BotPaymentInvoiceSource
     
-    fileprivate init(account: Account) {
+    fileprivate init(account: Account, source: BotPaymentInvoiceSource) {
         self.account = account
+        self.source = source
     }
 }
 
@@ -154,7 +156,7 @@ enum BotReceiptEntry: ItemListNodeEntry {
         let arguments = arguments as! BotReceiptControllerArguments
         switch self {
             case let .header(theme, invoice, botName):
-                return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
+                return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, source: arguments.source, botName: botName, sectionId: self.section)
             case let .price(_, theme, text, value, hasSeparator, isFinal):
                 return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, shimmeringIndex: nil, sectionId: self.section)
             case let .paymentMethod(_, text, value):
@@ -284,7 +286,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let arguments = BotReceiptControllerArguments(account: context.account)
+        let arguments = BotReceiptControllerArguments(account: context.account, source: .message(messageId))
         
         let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(
             context.sharedContext.presentationData,

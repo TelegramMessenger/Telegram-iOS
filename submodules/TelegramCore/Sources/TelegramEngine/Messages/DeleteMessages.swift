@@ -34,7 +34,7 @@ public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBo
         }
     }
     if !resourceIds.isEmpty {
-        let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+        let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
     }
     for id in ids {
         if id.peerId.namespace == Namespaces.Peer.CloudChannel && id.namespace == Namespaces.Message.Cloud {
@@ -62,7 +62,7 @@ func _internal_deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: M
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
     if !resourceIds.isEmpty {
-        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+        let _ = mediaBox.removeCachedResources(Array(Set(resourceIds))).start()
     }
 }
 
@@ -72,7 +72,7 @@ func _internal_deleteAllMessagesWithForwardAuthor(transaction: Transaction, medi
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
     if !resourceIds.isEmpty {
-        let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+        let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
     }
 }
 
@@ -84,7 +84,7 @@ func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId
             return true
         })
         if !resourceIds.isEmpty {
-            let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+            let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
         }
     }
     transaction.clearHistory(peerId, threadId: threadId, minTimestamp: nil, maxTimestamp: nil, namespaces: namespaces, forEachMedia: { _ in
@@ -101,7 +101,7 @@ func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox,
             return true
         })
         if !resourceIds.isEmpty {
-            let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+            let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
         }
     }
     transaction.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: { _ in

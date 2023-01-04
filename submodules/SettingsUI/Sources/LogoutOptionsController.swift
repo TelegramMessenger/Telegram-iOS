@@ -139,8 +139,8 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         |> take(1)
         |> deliverOnMainQueue
         ).start(next: { accountAndPeer, accountsAndPeers in
-            // MARK: Nicegram max accounts
-            let maximumAvailableAccounts: Int = 100
+            // MARK: Nicegram MaxAccounts
+            let maximumAvailableAccounts: Int = nicegramMaximumNumberOfAccounts
             var count: Int = 1
             for (accountContext, _, _) in accountsAndPeers {
                 if !accountContext.account.testingEnvironment {

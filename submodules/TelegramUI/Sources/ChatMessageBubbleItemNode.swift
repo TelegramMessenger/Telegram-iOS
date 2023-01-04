@@ -48,6 +48,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import ComponentFlow
 import EmojiStatusComponent
+import ChatControllerInteraction
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -134,6 +135,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageCallBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 } else if case .giftPremium = action.action {
                     result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                } else if case .suggestedProfilePhoto = action.action {
+                    result.append((message, ChatMessageProfilePhotoSuggestionContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 }
@@ -326,19 +329,6 @@ let chatMessagePeerIdColors: [UIColor] = [
 private enum ContentNodeOperation {
     case remove(index: Int)
     case insert(index: Int, node: ChatMessageBubbleContentNode)
-}
-
-class ChatPresentationContext {
-    weak var backgroundNode: WallpaperBackgroundNode?
-    let animationCache: AnimationCache
-    let animationRenderer: MultiAnimationRenderer
-
-    init(context: AccountContext, backgroundNode: WallpaperBackgroundNode?) {
-        self.backgroundNode = backgroundNode
-        
-        self.animationCache = context.animationCache
-        self.animationRenderer = context.animationRenderer
-    }
 }
 
 private func mapVisibility(_ visibility: ListViewItemNodeVisibility, boundsSize: CGSize, insets: UIEdgeInsets, to contentNode: ChatMessageBubbleContentNode) -> ListViewItemNodeVisibility {

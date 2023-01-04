@@ -85,6 +85,7 @@ public final class PresentationCallImpl: PresentationCall {
     private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
     private var audioOutputStateValue: ([AudioSessionOutput], AudioSessionOutput?) = ([], nil)
     private var currentAudioOutputValue: AudioSessionOutput = .builtin
+    private var didSetCurrentAudioOutputValue: Bool = false
     public var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
         return self.audioOutputStatePromise.get()
     }
@@ -242,6 +243,7 @@ public final class PresentationCallImpl: PresentationCall {
                 strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
                 if let currentOutput = currentOutput {
                     strongSelf.currentAudioOutputValue = currentOutput
+                    strongSelf.didSetCurrentAudioOutputValue = true
                 }
                 
                 var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
@@ -371,7 +373,9 @@ public final class PresentationCallImpl: PresentationCall {
         
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
             if let callKitIntegration = self.callKitIntegration {
-                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+                if self.didSetCurrentAudioOutputValue {
+                    callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+                }
             } else {
                 audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
                 audioSessionControl.setup(synchronous: true)
@@ -868,6 +872,7 @@ public final class PresentationCallImpl: PresentationCall {
             return
         }
         self.currentAudioOutputValue = output
+        self.didSetCurrentAudioOutputValue = true
         
         self.audioOutputStatePromise.set(.single((self.audioOutputStateValue.0, output))
         |> then(
@@ -886,6 +891,10 @@ public final class PresentationCallImpl: PresentationCall {
     
     public func debugInfo() -> Signal<(String, String), NoError> {
         return self.debugInfoValue.get()
+    }
+    
+    func video(isIncoming: Bool) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
+        return self.ongoingContext?.video(isIncoming: isIncoming)
     }
     
     public func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {

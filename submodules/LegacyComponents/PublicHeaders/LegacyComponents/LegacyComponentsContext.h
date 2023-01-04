@@ -54,6 +54,10 @@ typedef enum {
 - (void)forceStatusBarAppearanceUpdate;
 - (bool)prefersLightStatusBar;
 
+- (void)lockPortrait;
+- (void)unlockPortrait;
+- (void)disableInteractiveKeyboardGesture;
+
 - (TGNavigationBarPallete *)navigationBarPallete;
 - (TGMenuSheetPallete *)menuSheetPallete;
 - (TGMenuSheetPallete *)darkMenuSheetPallete;

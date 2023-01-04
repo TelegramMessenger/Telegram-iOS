@@ -253,6 +253,9 @@
 "PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
 "PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
 
+"PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@ suggested you new profile photo";
+
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
 
@@ -7299,6 +7302,7 @@ Sorry for the inconvenience.";
 "Contacts.Sort.ByLastSeen" = "by Last Seen";
 
 "ClearCache.Progress" = "Clearing the Cache • %d%";
+"ClearCache.NoProgress" = "Clearing the Cache";
 "ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";
 
 "Share.ShareAsLink" = "Share as Link";
@@ -8161,6 +8165,7 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchReactionsEmptyResult" = "No emoji found";
 "EmojiSearch.SearchStatusesPlaceholder" = "Search Statuses";
 "EmojiSearch.SearchStatusesEmptyResult" = "No emoji found";
+"EmojiSearch.SearchEmojiEmptyResult" = "No emoji found";
 
 "ChatList.StartAction" = "Start";
 "ChatList.CloseAction" = "Close";
@@ -8443,3 +8448,156 @@ Sorry for the inconvenience.";
 "MessageTimer.LargeShortMonths_any" = "%@m";
 "MessageTimer.LargeShortYears_1" = "%@y";
 "MessageTimer.LargeShortYears_any" = "%@y";
+
+"Channel.AdminLog.AntiSpamEnabled" = "%1$@ enabled anti-spam";
+"Channel.AdminLog.AntiSpamDisabled" = "%1$@ disabled anti-spam";
+
+"UserInfo.SuggestPhoto" = "Suggest Photo for %@";
+"UserInfo.SetCustomPhoto" = "Set Photo for %@";
+"UserInfo.ChangeCustomPhoto" = "Change Photo for %@";
+"UserInfo.ResetCustomPhoto" = "Reset to Original Photo";
+"UserInfo.ResetCustomVideo" = "Reset to Original Video";
+"UserInfo.RemoveCustomPhoto" = "Remove Photo";
+"UserInfo.RemoveCustomVideo" = "Remove Video";
+"UserInfo.CustomPhotoInfo" = "You can replace %@’s photo with another photo that only you will see.";
+
+"UserInfo.SuggestPhotoTitle" = "Do you want to suggest a profile picture for %@?";
+"UserInfo.SetCustomPhotoTitle" = "Do you want to set a custom profile picture for %@?";
+
+"UserInfo.SuggestPhoto.AlertPhotoText" = "Do you want to suggest %@ to set this photo for his/her profile?";
+"UserInfo.SuggestPhoto.AlertVideoText" = "Do you want to suggest %@ to set this video for his/her profile?";
+"UserInfo.SuggestPhoto.AlertSuggest" = "Suggest";
+
+"UserInfo.SetCustomPhoto.AlertPhotoText" = "Do you want to set this photo for %@? Only you will see this photo and it will replace any photo %@ sets for themselves.";
+"UserInfo.SetCustomPhoto.AlertVideoText" = "Do you want to set this video for %@? Only you will see this video and it will replace any photo %@ sets for themselves.";
+"UserInfo.SetCustomPhoto.AlertSet" = "Set";
+"UserInfo.SetCustomPhoto.SuccessPhotoText" = "You will now always see this photo for **%@** account.";
+"UserInfo.SetCustomPhoto.SuccessVideoText" = "You will now always see this video for **%@** account.";
+
+"UserInfo.CustomPhoto" = "photo set by you";
+"UserInfo.CustomVideo" = "video set by you";
+
+"UserInfo.PublicPhoto" = "public photo";
+"UserInfo.PublicVideo" = "public video";
+
+"UserInfo.ResetToOriginalAlertText" = "Are you sure you want to reset to %@ original photo?";
+"UserInfo.ResetToOriginalAlertReset" = "Reset";
+
+"Conversation.SuggestedPhotoTitle" = "Suggested Photo";
+"Conversation.SuggestedPhotoText" = "**%@** suggests you to use this profile photo.";
+"Conversation.SuggestedPhotoTextExpanded" = "%@ suggests you to use this profile photo for your Telegram account.";
+"Conversation.SuggestedPhotoTextYou" = "You suggested **%@** to use this profile photo.";
+"Conversation.SuggestedPhotoView" = "View Photo";
+"Conversation.SuggestedPhotoSuccess" = "Photo updated";
+"Conversation.SuggestedPhotoSuccessText" = "You can change it in [Settings]().";
+
+"Conversation.SuggestedVideoTitle" = "Suggested Video";
+"Conversation.SuggestedVideoText" = "**%@** suggests you to use this profile video.";
+"Conversation.SuggestedVideoTextExpanded" = "%@ suggests you to use this profile video for your Telegram account.";
+"Conversation.SuggestedVideoTextYou" = "You suggested **%@** to use this profile video.";
+"Conversation.SuggestedVideoView" = "View Video";
+"Conversation.SuggestedVideoSuccess" = "Video updated";
+"Conversation.SuggestedVideoSuccessText" = "You can change it in [Settings]().";
+
+"CacheEvictionMenu.CategoryExceptions_1" = "%@ Exception";
+"CacheEvictionMenu.CategoryExceptions_any" = "%@ Exceptions";
+
+"Conversation.Messages_1" = "%@ message";
+"Conversation.Messages_any" = "%@ messages";
+
+"Notification.SuggestedProfilePhoto" = "Suggested Profile Photo";
+"Notification.SuggestedProfileVideo" = "Suggested Profile Video";
+
+"PhotoEditor.SetAsMyPhoto" = "Set as My Photo";
+"PhotoEditor.SetAsMyVideo" = "Set as My Video";
+
+"Notification.BotWriteAllowed" = "You allowed this bot to message you when you added it in the attachment menu.";
+
+"Privacy.ProfilePhoto.SetPublicPhoto" = "Set Public Photo";
+"Privacy.ProfilePhoto.UpdatePublicPhoto" = "Update Public Photo";
+"Privacy.ProfilePhoto.RemovePublicPhoto" = "Remove Public Photo";
+"Privacy.ProfilePhoto.RemovePublicVideo" = "Remove Public Video";
+"Privacy.ProfilePhoto.PublicPhotoInfo" = "You can upload a public photo for those who are restricted from viewing your real profile photo.";
+"Privacy.ProfilePhoto.PublicPhotoSuccess" = "This photo is now set for those who are restricted from viewing your main photo.";
+"Privacy.ProfilePhoto.PublicVideoSuccess" = "This video is now set for those who are restricted from viewing your main photo.";
+
+"Privacy.ProfilePhoto.CustomOverrideInfo" = "You can add users or entire groups which will not see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideAddInfo" = "Add users or entire groups which will still see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideBothInfo" = "You can add users or entire groups as exceptions that will override the settings above.";
+
+"WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
+
+"Common.Paste" = "Paste";
+
+"PhotoEditor.SelectCoverFrameSuggestion" = "Choose a cover for this video";
+
+"GroupInfo.TitleMembers_1" = "%@ Member";
+"GroupInfo.TitleMembers_any" = "%@ Members";
+
+"PeerInfo.HideMembersLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have their member list hidden.";
+"PeerInfo.HideMembersLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have their member list hidden.";
+"PeerInfo.HideMembersLimitedRights" = "You don't have permission to change this setting.";
+
+"Privacy.Exceptions" = "EXCEPTIONS";
+"Privacy.ExceptionsCount_1" = "%@ EXCEPTION";
+"Privacy.ExceptionsCount_any" = "%@ EXCEPTIONS";
+"Privacy.Exceptions.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Privacy.Exceptions.DeleteAll" = "Delete All";
+"Privacy.Exceptions.DeleteAllConfirmation" = "Are you sure you want to delete all exceptions?";
+
+"Attachment.EnableSpoiler" = "Hide With Spoiler";
+"Attachment.DisableSpoiler" = "Disable Spoiler";
+
+"ProfilePhoto.PublicPhoto" = "public photo";
+"ProfilePhoto.PublicVideo" = "public video";
+
+"Paint.Draw" = "Draw";
+"Paint.Sticker" = "Sticker";
+"Paint.Text" = "Text";
+"Paint.ZoomOut" = "Zoom Out";
+
+"Paint.Rectangle" = "Rectangle";
+"Paint.Ellipse" = "Ellipse";
+"Paint.Bubble" = "Bubble";
+"Paint.Star" = "Star";
+"Paint.Arrow" = "Arrow";
+
+"Paint.MoveForward" = "Move Forward";
+
+"StorageManagement.Title" = "Storage Usage";
+"StorageManagement.TitleCleared" = "Storage Cleared";
+
+"StorageManagement.DescriptionCleared" = "All media can be re-downloaded from the Telegram cloud if you need it again.";
+"StorageManagement.DescriptionChatUsage" = "This chat uses %1$@% of your Telegram cache.";
+"StorageManagement.DescriptionAppUsage" = "Telegram uses %1$@% of your free disk space.";
+
+"StorageManagement.ClearAll" = "Clear All Cache";
+"StorageManagement.ClearSelected" = "Clear Selected";
+
+"StorageManagement.SectionPhotos" = "Photos";
+"StorageManagement.SectionVideos" = "Videos";
+"StorageManagement.SectionFiles" = "Files";
+"StorageManagement.SectionMusic" = "Music";
+"StorageManagement.SectionOther" = "Other";
+"StorageManagement.SectionStickers" = "Stickers";
+"StorageManagement.SectionAvatars" = "Avatars";
+"StorageManagement.SectionMiscellaneous" = "Miscellaneous";
+
+"StorageManagement.SectionsDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"StorageManagement.AutoremoveHeader" = "AUTO-REMOVE CACHED MEDIA";
+"StorageManagement.AutoremoveDescription" = "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.";
+
+"StorageManagement.AutoremoveSpaceDescription" = "If your cache size exceeds this limit, the oldest media will be deleted.";
+
+"StorageManagement.TabChats" = "Chats";
+"StorageManagement.TabMedia" = "Media";
+"StorageManagement.TabFiles" = "Files";
+"StorageManagement.TabMusic" = "Music";
+
+"ClearCache.Never" = "Never";
+
+"GroupMembers.HideMembers" = "Hide Members";
+"GroupMembers.MembersHiddenOn" = "Switch this off to show the list of members in this group.";
+"GroupMembers.MembersHiddenOff" = "Switch this on to hide the list of members in this group. Admins will remain visible.";

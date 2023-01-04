@@ -252,7 +252,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 for representation in file.file.previewRepresentations {
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(wallpaper: .slug(file.slug), resource: representation.resource)))
                 }
-                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 
                 let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                 if wallpaper.isPattern {
@@ -262,7 +262,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
                 
-                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.sharedContext.accountManager.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start())
+                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.sharedContext.accountManager.mediaBox, userLocation: .other, userContentType: .other, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start())
                                 
                 let account = strongSelf.context.account
                 let statusSignal = strongSelf.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)

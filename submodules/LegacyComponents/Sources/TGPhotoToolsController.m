@@ -22,9 +22,8 @@
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoEditorHUDView.h"
 #import "TGPhotoEditorSparseView.h"
-#import "TGPhotoEntitiesContainerView.h"
 
-#import "TGPhotoPaintController.h"
+#import "TGPhotoDrawingController.h"
 
 const CGFloat TGPhotoEditorToolsPanelSize = 180.0f;
 const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize + 40.0f;
@@ -48,7 +47,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorCollectionView *_portraitCollectionView;
     TGPhotoEditorCollectionView *_landscapeCollectionView;
     TGPhotoEditorHUDView *_hudView;
-    TGPhotoEntitiesContainerView *_entitiesView;
+    UIView<TGPhotoDrawingEntitiesView> *_entitiesView;
     
     void (^_changeBlock)(PGPhotoTool *, id, bool);
     void (^_interactionBegan)(void);
@@ -71,7 +70,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 @implementation TGPhotoToolsController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView
 {
     self = [super initWithContext:context];
     if (self != nil)

@@ -34,6 +34,7 @@ import TextSelectionNode
 import AudioTranscriptionPendingIndicatorComponent
 import UndoUI
 import TelegramNotices
+import ChatControllerInteraction
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -575,7 +576,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if mediaUpdated {
                     if largestImageRepresentation(arguments.file.previewRepresentations) != nil || arguments.file.immediateThumbnailData != nil {
-                        updateImageSignal = chatMessageImageFile(account: arguments.context.account, fileReference: .message(message: MessageReference(arguments.message), media: arguments.file), thumbnail: true)
+                        updateImageSignal = chatMessageImageFile(account: arguments.context.account, userLocation: .peer(arguments.message.id.peerId), fileReference: .message(message: MessageReference(arguments.message), media: arguments.file), thumbnail: true)
                     }
                     
                     updatedFetchControls = FetchControls(fetch: { [weak self] userInitiated in

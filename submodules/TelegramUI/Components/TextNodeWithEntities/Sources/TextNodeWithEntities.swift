@@ -243,9 +243,10 @@ public final class TextNodeWithEntities {
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
+                        itemLayer.dynamicColor = item.textColor
                     } else {
                         let pointSize = floor(itemSize * 1.3)
-                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize))
+                        itemLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: item.textColor)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         
@@ -407,9 +408,10 @@ public class ImmediateTextNodeWithEntities: TextNode {
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
+                        itemLayer.dynamicColor = item.textColor
                     } else {
                         let pointSize = floor(itemSize * 1.3)
-                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize))
+                        itemLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: item.textColor)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)
                         

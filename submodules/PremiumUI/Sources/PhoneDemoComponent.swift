@@ -165,6 +165,7 @@ private final class PhoneView: UIView {
                 
         let videoContent = NativeVideoContent(
             id: .message(1, MediaId(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
+            userLocation: .other,
             fileReference: .standalone(media: file),
             streamVideo: .conservative,
             loopVideo: true,

@@ -189,7 +189,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             }
                         } else {
                             return Signal { subscriber in
-                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, userLocation: .other, userContentType: .other, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
                                 var didOutputBlurred = false
                                 let data = accountMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                     if data.complete {
@@ -227,7 +227,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             }
                         } else {
                             return Signal { subscriber in
-                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
+                                let fetch = fetchedMediaResource(mediaBox: accountMediaBox, userLocation: .other, userContentType: .other, reference: MediaResourceReference.wallpaper(wallpaper: WallpaperReference.slug(file.slug), resource: file.file.resource)).start()
                                 var didOutputBlurred = false
                                 let data = accountMediaBox.resourceData(file.file.resource).start(next: { data in
                                     if data.complete {

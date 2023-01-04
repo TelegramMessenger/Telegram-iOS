@@ -5,6 +5,8 @@ import TelegramCore
 import NGData
 import NGLogging
 
+public let nicegramUnblockUrl = URL(string: "https://my.nicegram.app")!
+
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
 public func getTgId(_ peer: Peer?) -> Int64 {

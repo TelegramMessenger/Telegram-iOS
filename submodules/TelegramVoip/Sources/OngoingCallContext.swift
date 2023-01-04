@@ -79,6 +79,11 @@ private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnectio
         guard let id = idMapping[reflector.id] else {
             return []
         }
+        #if DEBUG
+        if id != 1 {
+            return []
+        }
+        #endif
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
             result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: reflector.isTcp, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
@@ -88,6 +93,11 @@ private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnectio
         }
         return result
     case let .webRtcReflector(reflector):
+        #if DEBUG
+        if "".isEmpty {
+            return []
+        }
+        #endif
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
             result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, hasTcp: false, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
@@ -1190,6 +1200,31 @@ public final class OngoingCallContext {
             return EmptyDisposable
         }
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
+    }
+    
+    public func video(isIncoming: Bool) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+
+            queue.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.withContext { context in
+                    if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                        let innerDisposable = context.addVideoOutput(withIsIncoming: isIncoming, sink: { videoFrameData in
+                            subscriber.putNext(OngoingGroupCallContext.VideoFrameData(frameData: videoFrameData))
+                        })
+                        disposable.set(ActionDisposable {
+                            innerDisposable.dispose()
+                        })
+                    }
+                }
+            }
+
+            return disposable
+        }
     }
     
     public func makeIncomingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {

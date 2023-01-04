@@ -15,6 +15,7 @@ import ContextUI
 import ChatPresentationInterfaceState
 import UndoUI
 import PremiumUI
+import ChatControllerInteraction
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult

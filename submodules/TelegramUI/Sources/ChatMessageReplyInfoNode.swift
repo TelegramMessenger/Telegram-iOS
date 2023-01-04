@@ -250,15 +250,17 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 mediaUpdated = true
             }
             
+            let hasSpoiler = arguments.message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+            
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             if let updatedMediaReference = updatedMediaReference, mediaUpdated && imageDimensions != nil {
                 if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                    updateImageSignal = chatMessagePhotoThumbnail(account: arguments.context.account, photoReference: imageReference)
+                    updateImageSignal = chatMessagePhotoThumbnail(account: arguments.context.account, userLocation: .peer(arguments.message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
                 } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                     if fileReference.media.isVideo {
-                        updateImageSignal = chatMessageVideoThumbnail(account: arguments.context.account, fileReference: fileReference)
+                        updateImageSignal = chatMessageVideoThumbnail(account: arguments.context.account, userLocation: .peer(arguments.message.id.peerId), fileReference: fileReference, blurred: hasSpoiler)
                     } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                        updateImageSignal = chatWebpageSnippetFile(account: arguments.context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                        updateImageSignal = chatWebpageSnippetFile(account: arguments.context.account, userLocation: .peer(arguments.message.id.peerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                     }
                 }
             }

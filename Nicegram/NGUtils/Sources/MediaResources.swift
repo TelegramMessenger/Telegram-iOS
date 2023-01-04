@@ -4,7 +4,11 @@ import SwiftSignalKit
 import TelegramCore
 import Foundation
 
-public func fetchResource(mediaResourceReference: MediaResourceReference, context: AccountContext) -> Signal<Data?, NoError> {
+public func fetchResource(
+    mediaResourceReference: MediaResourceReference,
+    userLocation: MediaResourceUserLocation,
+    userContentType: MediaResourceUserContentType,
+    context: AccountContext) -> Signal<Data?, NoError> {
     let resource = mediaResourceReference.resource
     let mediaBox = context.account.postbox.mediaBox
     
@@ -29,7 +33,7 @@ public func fetchResource(mediaResourceReference: MediaResourceReference, contex
                 }, completed: {
                     subscriber.putCompletion()
                 })
-                let fetchedDataDisposable = fetchedMediaResource(mediaBox: mediaBox, reference: mediaResourceReference).start()
+                let fetchedDataDisposable = fetchedMediaResource(mediaBox: mediaBox, userLocation: userLocation, userContentType: userContentType, reference: mediaResourceReference).start()
                 return ActionDisposable {
                     resourceDataDisposable.dispose()
                     fetchedDataDisposable.dispose()
@@ -52,5 +56,9 @@ public func fetchAvatarImage(peer: Peer, context: AccountContext) -> Signal<Data
         return .single(nil)
     }
     
-    return fetchResource(mediaResourceReference: .avatar(peer: peerReference, resource: imageRepresentation.resource), context: context)
+    return fetchResource(
+        mediaResourceReference: .avatar(peer: peerReference, resource: imageRepresentation.resource),
+        userLocation: .other,
+        userContentType: .avatar,
+        context: context)
 }

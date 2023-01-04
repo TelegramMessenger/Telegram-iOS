@@ -1,5 +1,8 @@
 // MARK: Nicegram OpenGifsShortcut
 import EntityKeyboard
+import NGAppCache
+import NGRemoteConfig
+import NGStrings
 //
 import Foundation
 import UIKit
@@ -24,6 +27,9 @@ import ChatPresentationInterfaceState
 import ChatInputPanelContainer
 import PremiumUI
 import ChatTitleView
+import ChatInputNode
+import ChatEntityKeyboardInputNode
+import ChatControllerInteraction
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -2351,9 +2357,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             // MARK: Nicegram
+            var showUnblockButton: Bool = false
             if (restrictionText != chatPresentationInterfaceState.strings.Channel_ErrorAccessDenied || restrictionText != chatPresentationInterfaceState.strings.Group_ErrorAccessDenied) {
-                if (isAllowedChat(peer: chatPresentationInterfaceState.renderedPeer?.peer, contentSettings: context.currentContentSettings.with { $0 })) {
+                let peer = chatPresentationInterfaceState.renderedPeer?.peer
+                if (isAllowedChat(peer: peer, contentSettings: context.currentContentSettings.with { $0 })) {
                     restrictionText = nil
+                } else if restrictionText != nil {
+                    showUnblockButton = true
+                    AppCache.lastSeenBlockedChatId = peer?.id.id._internalGetInt64Value()
                 }
             }
             
@@ -2361,6 +2372,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if isNGForceBlocked(chatPresentationInterfaceState.renderedPeer?.peer) {
                     restrictionText = l("NGWeb.Blocked", chatPresentationInterfaceState.strings.baseLanguageCode)
                 }
+            }
+            
+            if hideUnblock {
+                showUnblockButton = false
             }
             //
             if let restrictionText = restrictionText {
@@ -2370,6 +2385,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.restrictedNode = restrictedNode
                 }
                 self.restrictedNode?.setup(title: "", text: processedPeerRestrictionText(restrictionText))
+                // MARK: Nicegram Unblock
+                if showUnblockButton {
+                    let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                    self.restrictedNode?.setupButton(
+                        title: l("NicegramSettings.Unblock.Header", presentationData.strings.baseLanguageCode),
+                        handler: {
+                            UIApplication.shared.open(nicegramUnblockUrl)
+                        }
+                    )
+                } else {
+                    self.restrictedNode?.setupButton(title: nil, handler: nil)
+                }
+                //
                 self.historyNodeContainer.isHidden = true
                 self.navigateButtons.isHidden = true
                 self.loadingNode.isHidden = true

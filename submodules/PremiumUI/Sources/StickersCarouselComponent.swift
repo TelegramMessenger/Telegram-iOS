@@ -115,12 +115,12 @@ private class StickerNode: ASDisplayNode {
             let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
             animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width * 1.6), height: Int(fittedDimensions.height * 1.6), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
             
-            self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: fittedDimensions))
+            self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .other, file: file, small: false, size: fittedDimensions))
             
-            self.disposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file), resource: file.resource).start())
+            self.disposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
             
             if let effect = file.videoThumbnails.first {
-                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file), resource: effect.resource).start())
+                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: effect.resource).start())
                 
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: effect.resource, fitzModifier: nil)
                 

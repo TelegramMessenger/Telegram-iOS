@@ -23,6 +23,8 @@ import TelegramNotices
 import TelegramUIPreferences
 import CheckNode
 import AppBundle
+import ChatControllerInteraction
+import InvisibleInkDustNode
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -43,6 +45,7 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
     
     init(
         context: AccountContext,
+        userLocation: MediaResourceUserLocation,
         file: FileMediaReference
     ) {
         self.context = context
@@ -71,6 +74,8 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
+                userLocation: userLocation,
+                userContentType: .other,
                 fileReference: self.file,
                 automaticallyFetchHeader: true
             )
@@ -772,9 +777,11 @@ private protocol ItemLayer: SparseItemGridLayer {
     var disposable: Disposable? { get set }
 
     var hasContents: Bool { get set }
+    func setSpoilerContents(_ contents: Any?)
     
     func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat)
     func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
+    func updateHasSpoiler(hasSpoiler: Bool)
     
     func bind(item: VisualMediaItem)
     func unbind()
@@ -785,6 +792,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     var durationLayer: DurationLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
+    var dustLayer: MediaDustLayer?
     var disposable: Disposable?
 
     var hasContents: Bool = false
@@ -810,6 +818,12 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     func setContents(_ contents: Any?) {
         if let image = contents as? UIImage {
             self.contents = image.cgImage
+        }
+    }
+    
+    func setSpoilerContents(_ contents: Any?) {
+        if let image = contents as? UIImage {
+            self.dustLayer?.contents = image.cgImage
         }
     }
 
@@ -869,6 +883,24 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             }
         }
     }
+    
+    func updateHasSpoiler(hasSpoiler: Bool) {
+        if hasSpoiler {
+            if let _ = self.dustLayer {
+            } else {
+                let dustLayer = MediaDustLayer()
+                self.dustLayer = dustLayer
+                self.addSublayer(dustLayer)
+                if !self.bounds.isEmpty {
+                    dustLayer.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    dustLayer.updateLayout(size: self.bounds.size)
+                }
+            }
+        } else if let dustLayer = self.dustLayer {
+            self.dustLayer = nil
+            dustLayer.removeFromSuperlayer()
+        }
+    }
 
     func unbind() {
         self.item = nil
@@ -890,6 +922,7 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
     var durationLayer: DurationLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
+    var dustLayer: MediaDustLayer?
     var disposable: Disposable?
 
     var hasContents: Bool = false
@@ -931,6 +964,12 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
             }
         }
     }
+    
+    func setSpoilerContents(_ contents: Any?) {
+        if let image = contents as? UIImage {
+            self.dustLayer?.contents = image.cgImage
+        }
+    }
 
     func bind(item: VisualMediaItem) {
         self.item = item
@@ -982,6 +1021,24 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
             } else {
                 selectionLayer.removeFromSuperlayer()
             }
+        }
+    }
+    
+    func updateHasSpoiler(hasSpoiler: Bool) {
+        if hasSpoiler {
+            if let _ = self.dustLayer {
+            } else {
+                let dustLayer = MediaDustLayer()
+                self.dustLayer = dustLayer
+                self.addSublayer(dustLayer)
+                if !self.bounds.isEmpty {
+                    dustLayer.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    dustLayer.updateLayout(size: self.bounds.size)
+                }
+            }
+        } else if let dustLayer = self.dustLayer {
+            self.dustLayer = nil
+            dustLayer.removeFromSuperlayer()
         }
     }
 
@@ -1190,6 +1247,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     var onBeginFastScrollingImpl: (() -> Void)?
     var getShimmerColorsImpl: (() -> SparseItemGrid.ShimmerColors)?
     var updateShimmerLayersImpl: ((SparseItemGridDisplayItem) -> Void)?
+    
+    var revealedSpoilerMessageIds = Set<MessageId>()
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
@@ -1391,7 +1450,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 }
 
                 let message = item.message
-
+                let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !self.revealedSpoilerMessageIds.contains(message.id)
+                layer.updateHasSpoiler(hasSpoiler: hasSpoiler)
+                
                 var selectedMedia: Media?
                 for media in message.media {
                     if let image = media as? TelegramMediaImage {
@@ -1404,7 +1465,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 }
 
                 if let selectedMedia = selectedMedia {
-                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full) {
+                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler, synchronous: synchronous == .full) {
                         if let image = result.image {
                             layer.setContents(image)
                             switch synchronous {
@@ -1418,6 +1479,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                             default:
                                 layer.hasContents = true
                             }
+                        }
+                        if let image = result.blurredImage {
+                            layer.setSpoilerContents(image)
                         }
                         if let loadSignal = result.loadSignal {
                             layer.disposable?.dispose()
@@ -1490,7 +1554,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 } else {
                     layer.updateSelection(theme: self.checkNodeTheme, isSelected: nil, animated: false)
                 }
-
+                
                 layer.bind(item: item)
             }
         }
@@ -1660,7 +1724,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    
+        
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, contentType: ContentType, captureProtected: Bool) {
         self.context = context
         self.peerId = peerId
@@ -2312,6 +2376,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             if let item = itemLayer.item {
                 if self.itemInteraction.hiddenMedia[item.message.id] != nil {
                     itemLayer.isHidden = true
+                    itemLayer.updateHasSpoiler(hasSpoiler: false)
+                    self.itemGridBinding.revealedSpoilerMessageIds.insert(item.message.id)
                 } else {
                     itemLayer.isHidden = false
                 }

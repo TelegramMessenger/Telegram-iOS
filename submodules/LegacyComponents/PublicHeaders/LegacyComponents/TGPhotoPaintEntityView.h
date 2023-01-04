@@ -2,7 +2,6 @@
 
 @class TGPhotoPaintEntity;
 @class TGPhotoPaintEntitySelectionView;
-@class TGPaintUndoManager;
 
 @interface UIView (PixelColor)
 

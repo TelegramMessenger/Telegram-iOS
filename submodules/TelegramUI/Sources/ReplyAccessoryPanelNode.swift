@@ -205,16 +205,18 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 }
                 strongSelf.previousMediaReference = updatedMediaReference
                 
+                let hasSpoiler = message?.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) ?? false
+                
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 if mediaUpdated {
                     if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                         if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                            updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
+                            updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: (message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, photoReference: imageReference, blurred: hasSpoiler)
                         } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                             if fileReference.media.isVideo {
-                                updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
+                                updateImageSignal = chatMessageVideoThumbnail(account: context.account, userLocation: (message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, fileReference: fileReference, blurred: hasSpoiler)
                             } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                                updateImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: (message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                             }
                         }
                     } else {

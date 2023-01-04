@@ -19,6 +19,7 @@ private struct FetchControls {
 final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, GalleryItemTransitionNode {
     private let context: AccountContext
     let media: InstantPageMedia
+    let userLocation: MediaResourceUserLocation
     private let interactive: Bool
     private let openMedia: (InstantPageMedia) -> Void
     private var fetchControls: FetchControls?
@@ -38,8 +39,9 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         return nil
     }
     
-    init(context: AccountContext, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContext, userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
+        self.userLocation = userLocation
         self.media = media
         self.interactive = interactive
         self.openMedia = openMedia
@@ -55,7 +57,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
             streamVideo = isMediaStreamable(media: file)
         }
         
-        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, streamVideo: streamVideo ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
+        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, streamVideo: streamVideo ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
         self.videoNode.isUserInteractionEnabled = false
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
@@ -65,7 +67,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         self.addSubnode(self.videoNode)
         
         if let file = media.media as? TelegramMediaFile {
-            self.fetchedDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
+            self.fetchedDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .video, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
             
             self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
                 displayLinkDispatcher.dispatch {

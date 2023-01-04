@@ -4,8 +4,11 @@ import TelegramCore
 import TelegramUIPreferences
 import AccountContext
 
-public let maximumNumberOfAccounts = 100
-public let maximumPremiumNumberOfAccounts = 100
+// MARK: Nicegram MaxAccounts
+public let nicegramMaximumNumberOfAccounts = 1000
+public let maximumNumberOfAccounts = nicegramMaximumNumberOfAccounts
+public let maximumPremiumNumberOfAccounts = nicegramMaximumNumberOfAccounts
+//
 
 public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> {
     // MARK: Nicegram DB Changes

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
 
 private struct CommandMenuChatInputContextPanelEntryStableId: Hashable {
     let command: PeerCommand

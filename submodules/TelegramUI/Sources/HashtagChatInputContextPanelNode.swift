@@ -11,6 +11,7 @@ import AccountContext
 import AccountContext
 import ItemListUI
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
 
 private struct HashtagChatInputContextPanelEntryStableId: Hashable {
     let text: String

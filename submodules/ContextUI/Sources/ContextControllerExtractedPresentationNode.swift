@@ -770,6 +770,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let reactionContextNode = self.reactionContextNode {
                 additionalVisibleOffsetY += reactionContextNode.visibleExtensionDistance
             }
+            if case .reference = self.source {
+                if actionsFrame.maxY > layout.size.height {
+                    actionsFrame.origin.y = contentRect.minY - actionsSize.height - contentActionsSpacing
+                }
+            }
             if case .center = actionsHorizontalAlignment {
                 actionsFrame.origin.x = floor(contentParentGlobalFrame.minX + contentRect.midX - actionsFrame.width / 2.0)
                 if actionsFrame.maxX > layout.size.width - actionsEdgeInset {
@@ -808,6 +813,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     actionsFrame.origin.x = actionsEdgeInset
                 }
             }
+            
+            if case let .reference(reference) = self.source, let transitionInfo = reference.transitionInfo(), let customPosition = transitionInfo.customPosition {
+                actionsFrame = actionsFrame.offsetBy(dx: customPosition.x, dy: customPosition.y)
+            }
+            
             transition.updateFrame(node: self.actionsStackNode, frame: actionsFrame.offsetBy(dx: 0.0, dy: additionalVisibleOffsetY), beginWithCurrentState: true)
             
             if let contentNode = contentNode {
@@ -1180,11 +1190,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if case .center = actionsHorizontalAlignment {
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
-            
             if case .reference = self.source {
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
-            
             let actionsPositionDeltaYDistance = -animationInContentYDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
             self.actionsStackNode.layer.animate(
                 from: NSValue(cgPoint: CGPoint()),

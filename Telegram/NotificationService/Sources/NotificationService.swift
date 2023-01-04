@@ -1145,14 +1145,20 @@ private final class NotificationServiceHandler {
 
                                         var fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
                                         if let mediaAttachment = mediaAttachment {
+                                            var contentType: MediaResourceUserContentType = .other
                                             var fetchResource: TelegramMultipartFetchableResource?
                                             if let image = mediaAttachment as? TelegramMediaImage, let representation = largestImageRepresentation(image.representations), let resource = representation.resource as? TelegramMultipartFetchableResource {
                                                 fetchResource = resource
+                                                contentType = .image
                                             } else if let file = mediaAttachment as? TelegramMediaFile {
                                                 if file.isSticker {
                                                     fetchResource = file.resource as? TelegramMultipartFetchableResource
+                                                    contentType = .other
                                                 } else if file.isVideo {
                                                     fetchResource = file.previewRepresentations.first?.resource as? TelegramMultipartFetchableResource
+                                                    contentType = .video
+                                                } else {
+                                                    contentType = .file
                                                 }
                                             }
 
@@ -1172,6 +1178,13 @@ private final class NotificationServiceHandler {
                                                             parameters: MediaResourceFetchParameters(
                                                                 tag: nil,
                                                                 info: resourceFetchInfo(resource: resource),
+                                                                location: messageId.flatMap { messageId in
+                                                                    return MediaResourceStorageLocation(
+                                                                        peerId: peerId,
+                                                                        messageId: messageId
+                                                                    )
+                                                                },
+                                                                contentType: contentType,
                                                                 isRandomAccessAllowed: true
                                                             ),
                                                             encryptionKey: nil,
@@ -1223,6 +1236,8 @@ private final class NotificationServiceHandler {
                                                             parameters: MediaResourceFetchParameters(
                                                                 tag: nil,
                                                                 info: resourceFetchInfo(resource: resource),
+                                                                location: nil,
+                                                                contentType: .other,
                                                                 isRandomAccessAllowed: true
                                                             ),
                                                             encryptionKey: nil,

@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
+import ChatPresentationInterfaceState
 
 final class ChatMediaInputPeerSpecificItem: ListViewItem {
     let context: AccountContext

@@ -1009,12 +1009,12 @@ public final class ChatListNode: ListView {
             guard let strongSelf = self else {
                 return
             }
-            if case .peers = strongSelf.mode {
-                if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                    peerSelected(peer, nil, true, true, nil)
-                }
-                return
-            }
+//            if case .peers = strongSelf.mode {
+//                if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
+//                    peerSelected(peer, nil, true, true, nil)
+//                }
+//                return
+//            }
             var didBeginSelecting = false
             var count = 0
             strongSelf.updateState { [weak self] state in

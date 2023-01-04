@@ -32,8 +32,7 @@
 #import "TGMediaPickerScrubberHeaderView.h"
 
 #import "TGPhotoEditorPreviewView.h"
-#import "TGPhotoEntitiesContainerView.h"
-#import "TGPhotoPaintController.h"
+#import "TGPhotoDrawingController.h"
 
 #import <LegacyComponents/TGModernGalleryVideoView.h>
 #import "TGModernGalleryVideoContentView.h"
@@ -84,7 +83,7 @@
     UIImageView *_paintingImageView;
     UIView *_contentView;
     UIView *_contentWrapperView;
-    TGPhotoEntitiesContainerView *_entitiesContainerView;
+    UIView<TGPhotoDrawingEntitiesView> *_entitiesView;
     
     NSTimer *_positionTimer;
     TGObserverProxy *_didPlayToEndObserver;
@@ -174,12 +173,7 @@
         
         _contentWrapperView = [[UIView alloc] init];
         [_contentView addSubview:_contentWrapperView];
-        
-        _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
-        _entitiesContainerView.hidden = true;
-        _entitiesContainerView.userInteractionEnabled = false;
-        [_contentWrapperView addSubview:_entitiesContainerView];
-        
+                
         _curtainView = [[UIView alloc] init];
         _curtainView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _curtainView.backgroundColor = [UIColor blackColor];
@@ -425,8 +419,14 @@
     
     _scrubberView.allowsTrimming = false;
     _videoDimensions = item.dimensions;
-    _entitiesContainerView.stickersContext = item.stickersContext;
     
+    if (_entitiesView == nil) {
+        _entitiesView = [item.stickersContext drawingEntitiesViewWithSize:item.dimensions];
+        _entitiesView.hidden = true;
+        _entitiesView.userInteractionEnabled = false;
+        [_contentWrapperView addSubview:_entitiesView];
+    }
+        
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
     [_videoDurationVar set:[[[item.durationSignal deliverOn:[SQueue mainQueue]] catch:^SSignal *(__unused id error)
     {
@@ -504,8 +504,8 @@
             if (baseAdjustments.sendAsGif || ([strongSelf itemIsLivePhoto]))
                 [strongSelf setPlayButtonHidden:true animated:false];
             
-            [strongSelf->_entitiesContainerView setupWithPaintingData:adjustments.paintingData];
-            [strongSelf->_entitiesContainerView updateVisibility:strongSelf.isPlaying];
+            [strongSelf->_entitiesView setupWithEntitiesData:adjustments.paintingData.entitiesData];
+            [strongSelf->_entitiesView updateVisibility:strongSelf.isPlaying];
             [strongSelf->_photoEditor importAdjustments:adjustments];
             
             if (!strongSelf.isPlaying) {
@@ -823,24 +823,24 @@
     _contentView.transform = rotationTransform;
     _contentView.frame = _imageView.frame;
     
-    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
+    CGSize fittedContentSize = [TGPhotoDrawingController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
     
     CGFloat contentScale = ratio;
     _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
     
-    CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
-    _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
-    _entitiesContainerView.transform = CGAffineTransformMakeRotation(0.0);
+    CGRect rect = [TGPhotoDrawingController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
+    _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    _entitiesView.transform = CGAffineTransformMakeRotation(0.0);
     
-    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoDrawingController maximumPaintingSize]);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, 0.0);
     __unused CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
 }
 
-- (TGPhotoEntitiesContainerView *)entitiesView {
-    return _entitiesContainerView;
+- (UIView<TGPhotoDrawingEntitiesView> *)entitiesView {
+    return _entitiesView;
 }
 
 - (void)singleTap
@@ -1176,7 +1176,7 @@
         strongSelf->_videoView.userInteractionEnabled = false;
         [strongSelf->_playerContainerView insertSubview:strongSelf->_videoView belowSubview:strongSelf->_paintingImageView];
         
-        strongSelf->_entitiesContainerView.hidden = false;
+        strongSelf->_entitiesView.hidden = false;
         
         [strongSelf->_videoView setNeedsTransitionIn];
         [strongSelf->_videoView performTransitionInIfNeeded];
@@ -1196,7 +1196,7 @@
             [strongSelf->_player play];
         }
         
-        [strongSelf->_entitiesContainerView updateVisibility:strongSelf.isPlaying];
+        [strongSelf->_entitiesView updateVisibility:strongSelf.isPlaying];
         
         strongSelf->_positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(positionTimerEvent) interval:0.25 repeat:true];
         [strongSelf positionTimerEvent];
@@ -1211,11 +1211,11 @@
     {
         if (_player.rate > FLT_EPSILON) {
             [_scrubberView setIsPlaying:true];
-            [_entitiesContainerView updateVisibility:true];
+            [_entitiesView updateVisibility:true];
         }
         else {
             [_scrubberView setIsPlaying:false];
-            [_entitiesContainerView updateVisibility:false];
+            [_entitiesView updateVisibility:false];
         }
     }
 }
@@ -1251,7 +1251,7 @@
         [self positionTimerEvent];
     }
     
-    [_entitiesContainerView updateVisibility:true];
+    [_entitiesView updateVisibility:true];
 }
 
 - (void)playIfAvailable
@@ -1274,7 +1274,7 @@
     [_positionTimer invalidate];
     _positionTimer = nil;
     
-    [_entitiesContainerView updateVisibility:false];
+    [_entitiesView updateVisibility:false];
 }
 
 - (void)togglePlayback

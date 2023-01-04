@@ -384,7 +384,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         thumbnailItem = .animated(EngineMediaResource(item.file.resource), item.file.dimensions ?? PixelDimensions(width: 512, height: 512), item.file.isVideoSticker)
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                     } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                        thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                        thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
                     }
                 }
@@ -407,7 +407,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         updatedImageSignal = chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: resource._asResource(), animated: true)
                     }
                     if let resourceReference = resourceReference {
-                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: resourceReference)
+                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resourceReference)
                         |> mapError { _ -> EngineMediaResource.Fetch.Error in
                             return .generic
                         }
@@ -518,7 +518,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .invitedToVoiceChat(context, peer, text, action):
+            case let .invitedToVoiceChat(context, peer, text, action, duration):
                 self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -536,11 +536,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if let action = action {
                     displayUndo = true
                     undoText = action
-                    self.originalRemainingSeconds = 5
                 } else {
                     displayUndo = false
-                    self.originalRemainingSeconds = 3
                 }
+                self.originalRemainingSeconds = duration
             case let .audioRate(slowdown, text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -668,7 +667,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     thumbnailItem = .animated(EngineMediaResource(file.resource))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)
                 } else if let dimensions = file.dimensions, let resource = chatMessageStickerResource(file: file, small: true) as? TelegramMediaResource {
-                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: resource)
                 }
                 
@@ -690,7 +689,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         updatedImageSignal = chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: resource._asResource(), animated: true)
                     }
                     if let resourceReference = resourceReference {
-                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: resourceReference)
+                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resourceReference)
                         |> mapError { _ -> EngineMediaResource.Fetch.Error in
                             return .generic
                         }
@@ -861,13 +860,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-            case let .image(image, title, text, undo):
+            case let .image(image, title, text, round, undo):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()
                 self.iconNode?.clipsToBounds = true
                 self.iconNode?.contentMode = .scaleAspectFill
                 self.iconNode?.image = image
-                self.iconNode?.cornerRadius = 4.0
+                self.iconNode?.cornerRadius = round ? 16.0 : 4.0
                 self.iconImageSize = CGSize(width: 32.0, height: 32.0)
                 self.iconCheckNode = nil
                 self.animationNode = nil
@@ -1101,7 +1100,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.content = content
         
         switch content {
-            case let .image(image, title, text, _):
+            case let .image(image, title, text, _, _):
                 self.iconNode?.image = image
                 if let title = title {
                     self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)

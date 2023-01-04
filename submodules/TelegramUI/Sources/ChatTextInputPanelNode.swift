@@ -29,6 +29,7 @@ import LottieAnimationComponent
 import ComponentFlow
 import EmojiSuggestionsComponent
 import AudioToolbox
+import ChatControllerInteraction
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -455,68 +456,6 @@ final class ChatTextViewForOverlayContent: UIView, ChatInputPanelViewForOverlayC
         
         self.dismissSuggestions()
         return nil
-    }
-}
-
-final class CustomEmojiContainerView: UIView {
-    private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
-    
-    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
-    
-    init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
-        self.emojiViewProvider = emojiViewProvider
-        
-        super.init(frame: CGRect())
-    }
-    
-    required init(coder: NSCoder) {
-        preconditionFailure()
-    }
-    
-    func update(fontSize: CGFloat, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
-        var nextIndexById: [Int64: Int] = [:]
-        
-        var validKeys = Set<InlineStickerItemLayer.Key>()
-        for (rect, emoji) in emojiRects {
-            let index: Int
-            if let nextIndex = nextIndexById[emoji.fileId] {
-                index = nextIndex
-            } else {
-                index = 0
-            }
-            nextIndexById[emoji.fileId] = index + 1
-            
-            let key = InlineStickerItemLayer.Key(id: emoji.fileId, index: index)
-            
-            let view: UIView
-            if let current = self.emojiLayers[key] {
-                view = current
-            } else if let newView = self.emojiViewProvider(emoji) {
-                view = newView
-                self.addSubview(newView)
-                self.emojiLayers[key] = view
-            } else {
-                continue
-            }
-            
-            let itemSize: CGFloat = floor(24.0 * fontSize / 17.0)
-            let size = CGSize(width: itemSize, height: itemSize)
-            
-            view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0) + 1.0), size: size)
-            
-            validKeys.insert(key)
-        }
-        
-        var removeKeys: [InlineStickerItemLayer.Key] = []
-        for (key, view) in self.emojiLayers {
-            if !validKeys.contains(key) {
-                removeKeys.append(key)
-                view.removeFromSuperview()
-            }
-        }
-        for key in removeKeys {
-            self.emojiLayers.removeValue(forKey: key)
-        }
     }
 }
 
@@ -1045,7 +984,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 
                 let pointSize = floor(24.0 * 1.3)
-                return EmojiTextAttachmentView(context: context, emoji: emoji, file: emoji.file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+                return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
             }
         }
     }
@@ -2401,7 +2340,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(fontSize: fontSize, emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: fontSize, textColor: textColor, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil
@@ -2630,6 +2569,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 transition: .immediate,
                 component: AnyComponent(EmojiSuggestionsComponent(
                     context: context,
+                    userLocation: .other,
                     theme: theme,
                     animationCache: presentationContext.animationCache,
                     animationRenderer: presentationContext.animationRenderer,
@@ -2648,7 +2588,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                             loop: for attribute in file.attributes {
                                 switch attribute {
-                                case let .CustomEmoji(_, displayText, _):
+                                case let .CustomEmoji(_, _, displayText, _):
                                     text = displayText
                                     emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                                     break loop

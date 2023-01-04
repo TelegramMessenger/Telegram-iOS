@@ -17,6 +17,8 @@ import DeleteChatPeerActionSheetItem
 import UndoUI
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ContextUI
+import AnimatedAvatarSetNode
 
 private func totalDiskSpace() -> Int64 {
     do {
@@ -44,8 +46,9 @@ private final class StorageUsageControllerArguments {
     let openPeerMedia: (PeerId) -> Void
     let clearPeerMedia: (PeerId) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
+    let openCategoryMenu: (StorageUsageEntryTag) -> Void
     
-    init(context: AccountContext, updateKeepMediaTimeout: @escaping (Int32) -> Void, updateMaximumCacheSize: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+    init(context: AccountContext, updateKeepMediaTimeout: @escaping (Int32) -> Void, updateMaximumCacheSize: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, openCategoryMenu: @escaping (StorageUsageEntryTag) -> Void) {
         self.context = context
         self.updateKeepMediaTimeout = updateKeepMediaTimeout
         self.updateMaximumCacheSize = updateMaximumCacheSize
@@ -53,6 +56,7 @@ private final class StorageUsageControllerArguments {
         self.openPeerMedia = openPeerMedia
         self.clearPeerMedia = clearPeerMedia
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
+        self.openCategoryMenu = openCategoryMenu
     }
 }
 
@@ -63,8 +67,27 @@ private enum StorageUsageSection: Int32 {
     case peers
 }
 
+private enum StorageUsageEntryTag: Hashable, ItemListItemTag {
+    case privateChats
+    case groups
+    case channels
+    
+    public func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? StorageUsageEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private enum StorageUsageEntry: ItemListNodeEntry {
     case keepMediaHeader(PresentationTheme, String)
+    
+    case keepMediaPrivateChats(title: String, text: String?, value: String)
+    case keepMediaGroups(title: String, text: String?, value: String)
+    case keepMediaChannels(title: String, text: String?, value: String)
+    
     case keepMedia(PresentationTheme, PresentationStrings, Int32)
     case keepMediaInfo(PresentationTheme, String)
     
@@ -82,43 +105,49 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .keepMediaHeader, .keepMedia, .keepMediaInfo:
-                return StorageUsageSection.keepMedia.rawValue
-            case .maximumSizeHeader, .maximumSize, .maximumSizeInfo:
-                return StorageUsageSection.maximumSize.rawValue
-            case .storageHeader, .storageUsage, .collecting, .clearAll:
-                return StorageUsageSection.storage.rawValue
-            case .peersHeader, .peer:
-                return StorageUsageSection.peers.rawValue
+        case .keepMediaHeader, .keepMedia, .keepMediaInfo, .keepMediaPrivateChats, .keepMediaGroups, .keepMediaChannels:
+            return StorageUsageSection.keepMedia.rawValue
+        case .maximumSizeHeader, .maximumSize, .maximumSizeInfo:
+            return StorageUsageSection.maximumSize.rawValue
+        case .storageHeader, .storageUsage, .collecting, .clearAll:
+            return StorageUsageSection.storage.rawValue
+        case .peersHeader, .peer:
+            return StorageUsageSection.peers.rawValue
         }
     }
     
     var stableId: Int32 {
         switch self {
-            case .keepMediaHeader:
-                return 0
-            case .keepMedia:
-                return 1
-            case .keepMediaInfo:
-                return 2
-            case .maximumSizeHeader:
-                return 3
-            case .maximumSize:
-                return 4
-            case .maximumSizeInfo:
-                return 5
-            case .storageHeader:
-                return 6
-            case .storageUsage:
-                return 7
-            case .collecting:
-                return 8
-            case .clearAll:
-                return 9
-            case .peersHeader:
-                return 10
-            case let .peer(index, _, _, _, _, _, _, _, _):
-                return 11 + index
+        case .keepMediaHeader:
+            return 0
+        case .keepMedia:
+            return 1
+        case .keepMediaPrivateChats:
+            return 2
+        case .keepMediaGroups:
+            return 3
+        case .keepMediaChannels:
+            return 4
+        case .keepMediaInfo:
+            return 5
+        case .maximumSizeHeader:
+            return 6
+        case .maximumSize:
+            return 7
+        case .maximumSizeInfo:
+            return 8
+        case .storageHeader:
+            return 9
+        case .storageUsage:
+            return 10
+        case .collecting:
+            return 11
+        case .clearAll:
+            return 12
+        case .peersHeader:
+            return 13
+        case let .peer(index, _, _, _, _, _, _, _, _):
+            return 14 + index
         }
     }
     
@@ -138,6 +167,24 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 }
             case let .keepMediaInfo(lhsTheme, lhsText):
                 if case let .keepMediaInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .keepMediaPrivateChats(title, text, value):
+                if case .keepMediaPrivateChats(title, text, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .keepMediaGroups(title, text, value):
+                if case .keepMediaGroups(title, text, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .keepMediaChannels(title, text, value):
+                if case .keepMediaChannels(title, text, value) = rhs {
                     return true
                 } else {
                     return false
@@ -235,6 +282,18 @@ private enum StorageUsageEntry: ItemListNodeEntry {
         switch self {
             case let .keepMediaHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .keepMediaPrivateChats(title, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/EditProfile")?.precomposed(), title: title, enabled: true, label: value, labelStyle: .text, additionalDetailLabel: text, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
+                    arguments.openCategoryMenu(.privateChats)
+                }, tag: StorageUsageEntryTag.privateChats)
+            case let .keepMediaGroups(title, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/GroupChats")?.precomposed(), title: title, enabled: true, label: value, labelStyle: .text, additionalDetailLabel: text, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
+                    arguments.openCategoryMenu(.groups)
+                }, tag: StorageUsageEntryTag.groups)
+            case let .keepMediaChannels(title, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Channels")?.precomposed(), title: title, enabled: true, label: value, labelStyle: .text, additionalDetailLabel: text, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
+                    arguments.openCategoryMenu(.channels)
+                }, tag: StorageUsageEntryTag.channels)
             case let .keepMedia(theme, strings, value):
                 return KeepMediaDurationPickerItem(theme: theme, strings: strings, value: value, sectionId: self.section, updated: { updatedValue in
                     arguments.updateKeepMediaTimeout(updatedValue)
@@ -279,18 +338,46 @@ private enum StorageUsageEntry: ItemListNodeEntry {
 }
 
 private struct StorageUsageState: Equatable {
-    let peerIdWithRevealedOptions: PeerId?
-
-    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> StorageUsageState {
-        return StorageUsageState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
-    }
+    var peerIdWithRevealedOptions: PeerId?
 }
 
-private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StorageUsageState) -> [StorageUsageEntry] {
+private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, accountSpecificCacheSettings: AccountSpecificCacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StorageUsageState) -> [StorageUsageEntry] {
     var entries: [StorageUsageEntry] = []
     
     entries.append(.keepMediaHeader(presentationData.theme, presentationData.strings.Cache_KeepMedia.uppercased()))
-    entries.append(.keepMedia(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageTimeout))
+    
+    let sections: [StorageUsageEntryTag] = [.privateChats, .groups, .channels]
+    for section in sections {
+        let mappedCategory: CacheStorageSettings.PeerStorageCategory
+        switch section {
+        case .privateChats:
+            mappedCategory = .privateChats
+        case .groups:
+            mappedCategory = .groups
+        case .channels:
+            mappedCategory = .channels
+        }
+        let value = cacheSettings.categoryStorageTimeout[mappedCategory] ?? Int32.max
+        
+        let optionText: String
+        if value == Int32.max {
+            optionText = presentationData.strings.ClearCache_Forever
+        } else {
+            optionText = timeIntervalString(strings: presentationData.strings, value: value)
+        }
+        
+        switch section {
+        case .privateChats:
+            entries.append(.keepMediaPrivateChats(title: presentationData.strings.Notifications_PrivateChats, text: nil, value: optionText))
+        case .groups:
+            entries.append(.keepMediaGroups(title: presentationData.strings.Notifications_GroupChats, text: nil, value: optionText))
+        case .channels:
+            entries.append(.keepMediaChannels(title: presentationData.strings.Notifications_Channels, text: nil, value: optionText))
+        }
+    }
+    
+    //entries.append(.keepMedia(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageTimeout))
+    
     entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_KeepMediaHelp))
     
     entries.append(.maximumSizeHeader(presentationData.theme, presentationData.strings.Cache_MaximumCacheSize.uppercased()))
@@ -420,7 +507,24 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         return cacheSettings
     })
     
+    let accountSpecificCacheSettingsPromise = Promise<AccountSpecificCacheStorageSettings>()
+    let viewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.accountSpecificCacheStorageSettings]))
+    accountSpecificCacheSettingsPromise.set(context.account.postbox.combinedView(keys: [viewKey])
+    |> map { views -> AccountSpecificCacheStorageSettings in
+        let cacheSettings: AccountSpecificCacheStorageSettings
+        if let view = views.views[viewKey] as? PreferencesView, let value = view.values[PreferencesKeys.accountSpecificCacheStorageSettings]?.get(AccountSpecificCacheStorageSettings.self) {
+            cacheSettings = value
+        } else {
+            cacheSettings = AccountSpecificCacheStorageSettings.defaultSettings
+        }
+
+        return cacheSettings
+    })
+    
     var presentControllerImpl: ((ViewController, PresentationContextType, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
+    var findAutoremoveReferenceNode: ((StorageUsageEntryTag) -> ItemListDisclosureItemNode?)?
+    var presentInGlobalOverlay: ((ViewController) -> Void)?
     
     var statsPromise: Promise<CacheUsageStatsResult?>
     if let cacheUsagePromise = cacheUsagePromise {
@@ -441,11 +545,15 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     
     let arguments = StorageUsageControllerArguments(context: context, updateKeepMediaTimeout: { value in
         let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedDefaultCacheStorageTimeout(value)
+            var current = current
+            current.defaultCacheStorageTimeout = value
+            return current
         }).start()
     }, updateMaximumCacheSize: { value in
         let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedDefaultCacheStorageLimitGigabytes(value)
+            var current = current
+            current.defaultCacheStorageLimitGigabytes = value
+            return current
         }).start()
     }, openClearAll: {
         let _ = (statsPromise.get()
@@ -957,28 +1065,200 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         })
         
         updateState { state in
-            return state.withUpdatedPeerIdWithRevealedOptions(nil)
+            var state = state
+            state.peerIdWithRevealedOptions = nil
+            return state
         }
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
-                return state.withUpdatedPeerIdWithRevealedOptions(peerId)
+                var state = state
+                state.peerIdWithRevealedOptions = peerId
+                return state
             } else {
                 return state
             }
         }
+    }, openCategoryMenu: { category in
+        let mappedCategory: CacheStorageSettings.PeerStorageCategory
+        switch category {
+        case .privateChats:
+            mappedCategory = .privateChats
+        case .groups:
+            mappedCategory = .groups
+        case .channels:
+            mappedCategory = .channels
+        }
+        
+        let viewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.accountSpecificCacheStorageSettings]))
+        let accountSpecificSettings: Signal<AccountSpecificCacheStorageSettings, NoError> = context.account.postbox.combinedView(keys: [viewKey])
+        |> map { views -> AccountSpecificCacheStorageSettings in
+            let cacheSettings: AccountSpecificCacheStorageSettings
+            if let view = views.views[viewKey] as? PreferencesView, let value = view.values[PreferencesKeys.accountSpecificCacheStorageSettings]?.get(AccountSpecificCacheStorageSettings.self) {
+                cacheSettings = value
+            } else {
+                cacheSettings = AccountSpecificCacheStorageSettings.defaultSettings
+            }
+
+            return cacheSettings
+        }
+        |> distinctUntilChanged
+        
+        let peerExceptions: Signal<[(peer: FoundPeer, value: Int32)], NoError> = accountSpecificSettings
+        |> mapToSignal { accountSpecificSettings -> Signal<[(peer: FoundPeer, value: Int32)], NoError> in
+            return context.account.postbox.transaction { transaction -> [(peer: FoundPeer, value: Int32)] in
+                var result: [(peer: FoundPeer, value: Int32)] = []
+                
+                for item in accountSpecificSettings.peerStorageTimeoutExceptions {
+                    let peerId = item.key
+                    let value = item.value
+                    
+                    guard let peer = transaction.getPeer(peerId) else {
+                        continue
+                    }
+                    let peerCategory: CacheStorageSettings.PeerStorageCategory
+                    var subscriberCount: Int32?
+                    if peer is TelegramUser {
+                        peerCategory = .privateChats
+                    } else if peer is TelegramGroup {
+                        peerCategory = .groups
+                        
+                        if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData {
+                            subscriberCount = (cachedData.participants?.participants.count).flatMap(Int32.init)
+                        }
+                    } else if let channel = peer as? TelegramChannel {
+                        if case .group = channel.info {
+                            peerCategory = .groups
+                        } else {
+                            peerCategory = .channels
+                        }
+                        if peerCategory == mappedCategory {
+                            if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
+                                subscriberCount = cachedData.participantsSummary.memberCount
+                            }
+                        }
+                    } else {
+                        continue
+                    }
+                        
+                    if peerCategory != mappedCategory {
+                        continue
+                    }
+                    
+                    result.append((peer: FoundPeer(peer: peer, subscribers: subscriberCount), value: value))
+                }
+                
+                return result.sorted(by: { lhs, rhs in
+                    if lhs.value != rhs.value {
+                        return lhs.value < rhs.value
+                    }
+                    return lhs.peer.peer.debugDisplayTitle < rhs.peer.peer.debugDisplayTitle
+                })
+            }
+        }
+        
+        let _ = (combineLatest(
+            cacheSettingsPromise.get() |> take(1),
+            peerExceptions |> take(1)
+        )
+        |> deliverOnMainQueue).start(next: { cacheSettings, peerExceptions in
+            let currentValue: Int32 = cacheSettings.categoryStorageTimeout[mappedCategory] ?? Int32.max
+            
+            let applyValue: (Int32) -> Void = { value in
+                let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { cacheSettings in
+                    var cacheSettings = cacheSettings
+                    cacheSettings.categoryStorageTimeout[mappedCategory] = value
+                    return cacheSettings
+                }).start()
+            }
+            
+            var subItems: [ContextMenuItem] = []
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            var presetValues: [Int32] = [
+                Int32.max,
+                31 * 24 * 60 * 60,
+                7 * 24 * 60 * 60,
+                1 * 24 * 60 * 60
+            ]
+            if currentValue != 0 && !presetValues.contains(currentValue) {
+                presetValues.append(currentValue)
+                presetValues.sort(by: >)
+            }
+            
+            for value in presetValues {
+                let optionText: String
+                if value == Int32.max {
+                    optionText = presentationData.strings.ClearCache_Forever
+                } else {
+                    optionText = timeIntervalString(strings: presentationData.strings, value: value)
+                }
+                subItems.append(.action(ContextMenuActionItem(text: optionText, icon: { theme in
+                    if currentValue == value {
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    } else {
+                        return nil
+                    }
+                }, action: { _, f in
+                    applyValue(value)
+                    f(.default)
+                })))
+            }
+            
+            subItems.append(.separator)
+            
+            if peerExceptions.isEmpty {
+                let exceptionsText = presentationData.strings.GroupInfo_Permissions_AddException
+                subItems.append(.action(ContextMenuActionItem(text: exceptionsText, icon: { theme in
+                    if case .privateChats = category {
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+                    } else {
+                        return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.contextMenu.primaryColor)
+                    }
+                }, action: { _, f in
+                    f(.default)
+                    
+                    pushControllerImpl?(storageUsageExceptionsScreen(context: context, category: mappedCategory))
+                })))
+            } else {
+                subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, action: { c, _ in
+                    c.dismiss(completion: {
+                        
+                    })
+                    pushControllerImpl?(storageUsageExceptionsScreen(context: context, category: mappedCategory))
+                }), false))
+            }
+            
+            if let sourceNode = findAutoremoveReferenceNode?(category) {
+                let items: Signal<ContextController.Items, NoError> = .single(ContextController.Items(content: .list(subItems)))
+                let source: ContextContentSource = .reference(StorageUsageContextReferenceContentSource(sourceView: sourceNode.labelNode.view))
+                
+                let contextController = ContextController(
+                    account: context.account,
+                    presentationData: presentationData,
+                    source: source,
+                    items: items,
+                    gesture: nil
+                )
+                sourceNode.updateHasContextMenu(hasContextMenu: true)
+                contextController.dismissed = { [weak sourceNode] in
+                    sourceNode?.updateHasContextMenu(hasContextMenu: false)
+                }
+                presentInGlobalOverlay?(contextController)
+            }
+        })
     })
     
     var dismissImpl: (() -> Void)?
     
-    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get(), statePromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, cacheSettings, cacheStats, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), accountSpecificCacheSettingsPromise.get(), statsPromise.get(), statePromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, cacheSettings, accountSpecificCacheSettings, cacheStats, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             }) : nil
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Cache_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, accountSpecificCacheSettings: accountSpecificCacheSettings, cacheStats: cacheStats, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -992,6 +1272,34 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     }
     presentControllerImpl = { [weak controller] c, contextType, a in
         controller?.present(c, in: contextType, with: a)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
+    }
+    presentInGlobalOverlay = { [weak controller] c in
+        controller?.presentInGlobalOverlay(c, with: nil)
+    }
+    findAutoremoveReferenceNode = { [weak controller] category in
+        guard let controller else {
+            return nil
+        }
+        
+        let targetTag: StorageUsageEntryTag = category
+        var resultItemNode: ItemListItemNode?
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListItemNode {
+                if let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                    resultItemNode = itemNode
+                    return
+                }
+            }
+        }
+        
+        if let resultItemNode = resultItemNode as? ItemListDisclosureItemNode {
+            return resultItemNode
+        } else {
+            return nil
+        }
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()
@@ -1108,5 +1416,217 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floorToScreenPixels((progressTextFrame.minY - imageSize.height) / 2.0)), size: imageSize)
         self.animationNode.frame = animationFrame
         self.animationNode.updateLayout(size: imageSize)
+    }
+}
+
+private final class StorageUsageContextReferenceContentSource: ContextReferenceContentSource {
+    private let sourceView: UIView
+    
+    init(sourceView: UIView) {
+        self.sourceView = sourceView
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
+    }
+}
+
+final class MultiplePeerAvatarsContextItem: ContextMenuCustomItem {
+    fileprivate let context: AccountContext
+    fileprivate let peers: [EnginePeer]
+    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
+
+    init(context: AccountContext, peers: [EnginePeer], action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+        self.context = context
+        self.peers = peers
+        self.action = action
+    }
+
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+        return MultiplePeerAvatarsContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected)
+    }
+}
+
+private final class MultiplePeerAvatarsContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol {
+    private let item: MultiplePeerAvatarsContextItem
+    private var presentationData: PresentationData
+    private let getController: () -> ContextControllerProtocol?
+    private let actionSelected: (ContextMenuActionResult) -> Void
+
+    private let backgroundNode: ASDisplayNode
+    private let highlightedBackgroundNode: ASDisplayNode
+    private let textNode: ImmediateTextNode
+
+    private let avatarsNode: AnimatedAvatarSetNode
+    private let avatarsContext: AnimatedAvatarSetContext
+
+    private let buttonNode: HighlightTrackingButtonNode
+
+    private var pointerInteraction: PointerInteraction?
+
+    init(presentationData: PresentationData, item: MultiplePeerAvatarsContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+        self.item = item
+        self.presentationData = presentationData
+        self.getController = getController
+        self.actionSelected = actionSelected
+
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isAccessibilityElement = false
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode = ASDisplayNode()
+        self.highlightedBackgroundNode.isAccessibilityElement = false
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+        self.highlightedBackgroundNode.alpha = 0.0
+
+        self.textNode = ImmediateTextNode()
+        self.textNode.isAccessibilityElement = false
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+        self.textNode.maximumNumberOfLines = 1
+
+        self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.isAccessibilityElement = true
+        self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
+
+        self.avatarsNode = AnimatedAvatarSetNode()
+        self.avatarsContext = AnimatedAvatarSetContext()
+
+        super.init()
+
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.highlightedBackgroundNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.avatarsNode)
+        self.addSubnode(self.buttonNode)
+
+        self.buttonNode.highligthedChanged = { [weak self] highligted in
+            guard let strongSelf = self else {
+                return
+            }
+            if highligted {
+                strongSelf.highlightedBackgroundNode.alpha = 1.0
+            } else {
+                strongSelf.highlightedBackgroundNode.alpha = 0.0
+                strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            }
+        }
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.buttonNode.isUserInteractionEnabled = true
+    }
+
+    deinit {
+    }
+
+    override func didLoad() {
+        super.didLoad()
+
+        self.pointerInteraction = PointerInteraction(node: self.buttonNode, style: .hover, willEnter: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.highlightedBackgroundNode.alpha = 0.75
+            }
+        }, willExit: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.highlightedBackgroundNode.alpha = 0.0
+            }
+        })
+    }
+
+    private var validLayout: (calculatedWidth: CGFloat, size: CGSize)?
+
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+        let sideInset: CGFloat = 14.0
+        let verticalInset: CGFloat = 12.0
+
+        let rightTextInset: CGFloat = sideInset + 36.0
+
+        let calculatedWidth = min(constrainedWidth, 250.0)
+
+        let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
+        let text: String = self.presentationData.strings.CacheEvictionMenu_CategoryExceptions(Int32(self.item.peers.count))
+        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+
+        let textSize = self.textNode.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))
+
+        let combinedTextHeight = textSize.height
+        return (CGSize(width: calculatedWidth, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
+            self.validLayout = (calculatedWidth: calculatedWidth, size: size)
+            let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
+            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
+            transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+
+            let avatarsContent: AnimatedAvatarSetContext.Content
+
+            let avatarsPeers: [EnginePeer] = self.item.peers
+            
+            avatarsContent = self.avatarsContext.update(peers: avatarsPeers, animated: false)
+
+            let avatarsSize = self.avatarsNode.update(context: self.item.context, content: avatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
+            self.avatarsNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - 12.0 - avatarsSize.width, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize)
+
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+            transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+            transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+        })
+    }
+
+    func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
+
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+    }
+
+    @objc private func buttonPressed() {
+        self.performAction()
+    }
+
+    private var actionTemporarilyDisabled: Bool = false
+    
+    func canBeHighlighted() -> Bool {
+        return self.isActionEnabled
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+
+    func performAction() {
+        if self.actionTemporarilyDisabled {
+            return
+        }
+        self.actionTemporarilyDisabled = true
+        Queue.mainQueue().async { [weak self] in
+            self?.actionTemporarilyDisabled = false
+        }
+
+        guard let controller = self.getController() else {
+            return
+        }
+        self.item.action(controller, { [weak self] result in
+            self?.actionSelected(result)
+        })
+    }
+
+    var isActionEnabled: Bool {
+        return true
+    }
+
+    func setIsHighlighted(_ value: Bool) {
+        if value {
+            self.highlightedBackgroundNode.alpha = 1.0
+        } else {
+            self.highlightedBackgroundNode.alpha = 0.0
+        }
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
+        return self
     }
 }

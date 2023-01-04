@@ -30,9 +30,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .reactionCustomEmoji(let documentId):
-                return ("reactionCustomEmoji", [("documentId", String(describing: documentId))])
+                return ("reactionCustomEmoji", [("documentId", documentId as Any)])
                 case .reactionEmoji(let emoticon):
-                return ("reactionEmoji", [("emoticon", String(describing: emoticon))])
+                return ("reactionEmoji", [("emoticon", emoticon as Any)])
                 case .reactionEmpty:
                 return ("reactionEmpty", [])
     }
@@ -87,7 +87,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .reactionCount(let flags, let chosenOrder, let reaction, let count):
-                return ("reactionCount", [("flags", String(describing: flags)), ("chosenOrder", String(describing: chosenOrder)), ("reaction", String(describing: reaction)), ("count", String(describing: count))])
+                return ("reactionCount", [("flags", flags as Any), ("chosenOrder", chosenOrder as Any), ("reaction", reaction as Any), ("count", count as Any)])
     }
     }
     
@@ -135,7 +135,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .receivedNotifyMessage(let id, let flags):
-                return ("receivedNotifyMessage", [("id", String(describing: id)), ("flags", String(describing: flags))])
+                return ("receivedNotifyMessage", [("id", id as Any), ("flags", flags as Any)])
     }
     }
     
@@ -206,15 +206,15 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .recentMeUrlChat(let url, let chatId):
-                return ("recentMeUrlChat", [("url", String(describing: url)), ("chatId", String(describing: chatId))])
+                return ("recentMeUrlChat", [("url", url as Any), ("chatId", chatId as Any)])
                 case .recentMeUrlChatInvite(let url, let chatInvite):
-                return ("recentMeUrlChatInvite", [("url", String(describing: url)), ("chatInvite", String(describing: chatInvite))])
+                return ("recentMeUrlChatInvite", [("url", url as Any), ("chatInvite", chatInvite as Any)])
                 case .recentMeUrlStickerSet(let url, let set):
-                return ("recentMeUrlStickerSet", [("url", String(describing: url)), ("set", String(describing: set))])
+                return ("recentMeUrlStickerSet", [("url", url as Any), ("set", set as Any)])
                 case .recentMeUrlUnknown(let url):
-                return ("recentMeUrlUnknown", [("url", String(describing: url))])
+                return ("recentMeUrlUnknown", [("url", url as Any)])
                 case .recentMeUrlUser(let url, let userId):
-                return ("recentMeUrlUser", [("url", String(describing: url)), ("userId", String(describing: userId))])
+                return ("recentMeUrlUser", [("url", url as Any), ("userId", userId as Any)])
     }
     }
     
@@ -342,13 +342,13 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .replyInlineMarkup(let rows):
-                return ("replyInlineMarkup", [("rows", String(describing: rows))])
+                return ("replyInlineMarkup", [("rows", rows as Any)])
                 case .replyKeyboardForceReply(let flags, let placeholder):
-                return ("replyKeyboardForceReply", [("flags", String(describing: flags)), ("placeholder", String(describing: placeholder))])
+                return ("replyKeyboardForceReply", [("flags", flags as Any), ("placeholder", placeholder as Any)])
                 case .replyKeyboardHide(let flags):
-                return ("replyKeyboardHide", [("flags", String(describing: flags))])
+                return ("replyKeyboardHide", [("flags", flags as Any)])
                 case .replyKeyboardMarkup(let flags, let rows, let placeholder):
-                return ("replyKeyboardMarkup", [("flags", String(describing: flags)), ("rows", String(describing: rows)), ("placeholder", String(describing: placeholder))])
+                return ("replyKeyboardMarkup", [("flags", flags as Any), ("rows", rows as Any), ("placeholder", placeholder as Any)])
     }
     }
     
@@ -568,7 +568,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .restrictionReason(let platform, let reason, let text):
-                return ("restrictionReason", [("platform", String(describing: platform)), ("reason", String(describing: reason)), ("text", String(describing: text))])
+                return ("restrictionReason", [("platform", platform as Any), ("reason", reason as Any), ("text", text as Any)])
     }
     }
     
@@ -726,37 +726,37 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .textAnchor(let text, let name):
-                return ("textAnchor", [("text", String(describing: text)), ("name", String(describing: name))])
+                return ("textAnchor", [("text", text as Any), ("name", name as Any)])
                 case .textBold(let text):
-                return ("textBold", [("text", String(describing: text))])
+                return ("textBold", [("text", text as Any)])
                 case .textConcat(let texts):
-                return ("textConcat", [("texts", String(describing: texts))])
+                return ("textConcat", [("texts", texts as Any)])
                 case .textEmail(let text, let email):
-                return ("textEmail", [("text", String(describing: text)), ("email", String(describing: email))])
+                return ("textEmail", [("text", text as Any), ("email", email as Any)])
                 case .textEmpty:
                 return ("textEmpty", [])
                 case .textFixed(let text):
-                return ("textFixed", [("text", String(describing: text))])
+                return ("textFixed", [("text", text as Any)])
                 case .textImage(let documentId, let w, let h):
-                return ("textImage", [("documentId", String(describing: documentId)), ("w", String(describing: w)), ("h", String(describing: h))])
+                return ("textImage", [("documentId", documentId as Any), ("w", w as Any), ("h", h as Any)])
                 case .textItalic(let text):
-                return ("textItalic", [("text", String(describing: text))])
+                return ("textItalic", [("text", text as Any)])
                 case .textMarked(let text):
-                return ("textMarked", [("text", String(describing: text))])
+                return ("textMarked", [("text", text as Any)])
                 case .textPhone(let text, let phone):
-                return ("textPhone", [("text", String(describing: text)), ("phone", String(describing: phone))])
+                return ("textPhone", [("text", text as Any), ("phone", phone as Any)])
                 case .textPlain(let text):
-                return ("textPlain", [("text", String(describing: text))])
+                return ("textPlain", [("text", text as Any)])
                 case .textStrike(let text):
-                return ("textStrike", [("text", String(describing: text))])
+                return ("textStrike", [("text", text as Any)])
                 case .textSubscript(let text):
-                return ("textSubscript", [("text", String(describing: text))])
+                return ("textSubscript", [("text", text as Any)])
                 case .textSuperscript(let text):
-                return ("textSuperscript", [("text", String(describing: text))])
+                return ("textSuperscript", [("text", text as Any)])
                 case .textUnderline(let text):
-                return ("textUnderline", [("text", String(describing: text))])
+                return ("textUnderline", [("text", text as Any)])
                 case .textUrl(let text, let url, let webpageId):
-                return ("textUrl", [("text", String(describing: text)), ("url", String(describing: url)), ("webpageId", String(describing: webpageId))])
+                return ("textUrl", [("text", text as Any), ("url", url as Any), ("webpageId", webpageId as Any)])
     }
     }
     

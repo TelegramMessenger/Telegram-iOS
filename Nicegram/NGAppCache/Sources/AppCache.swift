@@ -29,6 +29,9 @@ public final class AppCache {
     
     @UserDefaultsBacked(key: "wasLotteryShown", storage: .standard, defaultValue: false)
     public static var wasLotteryShown: Bool
+    
+    @UserDefaultsBacked(key: "lastSeenBlockedChatId", storage: .standard, defaultValue: nil)
+    public static var lastSeenBlockedChatId: Int64?
 
     public static var wasLauchedBefore: Bool {
         get {

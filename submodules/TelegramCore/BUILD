@@ -47,6 +47,7 @@ swift_library(
         "//submodules/Reachability:Reachability",
         "//submodules/ManagedFile:ManagedFile",
         "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/Utils/DarwinDirStat",
     ],
     visibility = [
         "//visibility:public",

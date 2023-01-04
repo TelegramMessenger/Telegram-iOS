@@ -17,7 +17,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .sendAsPeer(let flags, let peer):
-                return ("sendAsPeer", [("flags", String(describing: flags)), ("peer", String(describing: peer))])
+                return ("sendAsPeer", [("flags", flags as Any), ("peer", peer as Any)])
     }
     }
     
@@ -185,15 +185,15 @@ public extension Api {
                 case .sendMessageChooseStickerAction:
                 return ("sendMessageChooseStickerAction", [])
                 case .sendMessageEmojiInteraction(let emoticon, let msgId, let interaction):
-                return ("sendMessageEmojiInteraction", [("emoticon", String(describing: emoticon)), ("msgId", String(describing: msgId)), ("interaction", String(describing: interaction))])
+                return ("sendMessageEmojiInteraction", [("emoticon", emoticon as Any), ("msgId", msgId as Any), ("interaction", interaction as Any)])
                 case .sendMessageEmojiInteractionSeen(let emoticon):
-                return ("sendMessageEmojiInteractionSeen", [("emoticon", String(describing: emoticon))])
+                return ("sendMessageEmojiInteractionSeen", [("emoticon", emoticon as Any)])
                 case .sendMessageGamePlayAction:
                 return ("sendMessageGamePlayAction", [])
                 case .sendMessageGeoLocationAction:
                 return ("sendMessageGeoLocationAction", [])
                 case .sendMessageHistoryImportAction(let progress):
-                return ("sendMessageHistoryImportAction", [("progress", String(describing: progress))])
+                return ("sendMessageHistoryImportAction", [("progress", progress as Any)])
                 case .sendMessageRecordAudioAction:
                 return ("sendMessageRecordAudioAction", [])
                 case .sendMessageRecordRoundAction:
@@ -203,15 +203,15 @@ public extension Api {
                 case .sendMessageTypingAction:
                 return ("sendMessageTypingAction", [])
                 case .sendMessageUploadAudioAction(let progress):
-                return ("sendMessageUploadAudioAction", [("progress", String(describing: progress))])
+                return ("sendMessageUploadAudioAction", [("progress", progress as Any)])
                 case .sendMessageUploadDocumentAction(let progress):
-                return ("sendMessageUploadDocumentAction", [("progress", String(describing: progress))])
+                return ("sendMessageUploadDocumentAction", [("progress", progress as Any)])
                 case .sendMessageUploadPhotoAction(let progress):
-                return ("sendMessageUploadPhotoAction", [("progress", String(describing: progress))])
+                return ("sendMessageUploadPhotoAction", [("progress", progress as Any)])
                 case .sendMessageUploadRoundAction(let progress):
-                return ("sendMessageUploadRoundAction", [("progress", String(describing: progress))])
+                return ("sendMessageUploadRoundAction", [("progress", progress as Any)])
                 case .sendMessageUploadVideoAction(let progress):
-                return ("sendMessageUploadVideoAction", [("progress", String(describing: progress))])
+                return ("sendMessageUploadVideoAction", [("progress", progress as Any)])
                 case .speakingInGroupCallAction:
                 return ("speakingInGroupCallAction", [])
     }
@@ -370,7 +370,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .shippingOption(let id, let title, let prices):
-                return ("shippingOption", [("id", String(describing: id)), ("title", String(describing: title)), ("prices", String(describing: prices))])
+                return ("shippingOption", [("id", id as Any), ("title", title as Any), ("prices", prices as Any)])
     }
     }
     
@@ -414,7 +414,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .simpleWebViewResultUrl(let url):
-                return ("simpleWebViewResultUrl", [("url", String(describing: url))])
+                return ("simpleWebViewResultUrl", [("url", url as Any)])
     }
     }
     
@@ -462,7 +462,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
-                return ("sponsoredMessage", [("flags", String(describing: flags)), ("randomId", String(describing: randomId)), ("fromId", String(describing: fromId)), ("chatInvite", String(describing: chatInvite)), ("chatInviteHash", String(describing: chatInviteHash)), ("channelPost", String(describing: channelPost)), ("startParam", String(describing: startParam)), ("message", String(describing: message)), ("entities", String(describing: entities))])
+                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("fromId", fromId as Any), ("chatInvite", chatInvite as Any), ("chatInviteHash", chatInviteHash as Any), ("channelPost", channelPost as Any), ("startParam", startParam as Any), ("message", message as Any), ("entities", entities as Any)])
     }
     }
     
@@ -529,7 +529,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsAbsValueAndPrev(let current, let previous):
-                return ("statsAbsValueAndPrev", [("current", String(describing: current)), ("previous", String(describing: previous))])
+                return ("statsAbsValueAndPrev", [("current", current as Any), ("previous", previous as Any)])
     }
     }
     
@@ -569,7 +569,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsDateRangeDays(let minDate, let maxDate):
-                return ("statsDateRangeDays", [("minDate", String(describing: minDate)), ("maxDate", String(describing: maxDate))])
+                return ("statsDateRangeDays", [("minDate", minDate as Any), ("maxDate", maxDate as Any)])
     }
     }
     
@@ -624,11 +624,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsGraph(let flags, let json, let zoomToken):
-                return ("statsGraph", [("flags", String(describing: flags)), ("json", String(describing: json)), ("zoomToken", String(describing: zoomToken))])
+                return ("statsGraph", [("flags", flags as Any), ("json", json as Any), ("zoomToken", zoomToken as Any)])
                 case .statsGraphAsync(let token):
-                return ("statsGraphAsync", [("token", String(describing: token))])
+                return ("statsGraphAsync", [("token", token as Any)])
                 case .statsGraphError(let error):
-                return ("statsGraphError", [("error", String(describing: error))])
+                return ("statsGraphError", [("error", error as Any)])
     }
     }
     
@@ -697,7 +697,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
-                return ("statsGroupTopAdmin", [("userId", String(describing: userId)), ("deleted", String(describing: deleted)), ("kicked", String(describing: kicked)), ("banned", String(describing: banned))])
+                return ("statsGroupTopAdmin", [("userId", userId as Any), ("deleted", deleted as Any), ("kicked", kicked as Any), ("banned", banned as Any)])
     }
     }
     
@@ -743,7 +743,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsGroupTopInviter(let userId, let invitations):
-                return ("statsGroupTopInviter", [("userId", String(describing: userId)), ("invitations", String(describing: invitations))])
+                return ("statsGroupTopInviter", [("userId", userId as Any), ("invitations", invitations as Any)])
     }
     }
     
@@ -784,7 +784,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsGroupTopPoster(let userId, let messages, let avgChars):
-                return ("statsGroupTopPoster", [("userId", String(describing: userId)), ("messages", String(describing: messages)), ("avgChars", String(describing: avgChars))])
+                return ("statsGroupTopPoster", [("userId", userId as Any), ("messages", messages as Any), ("avgChars", avgChars as Any)])
     }
     }
     
@@ -827,7 +827,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsPercentValue(let part, let total):
-                return ("statsPercentValue", [("part", String(describing: part)), ("total", String(describing: total))])
+                return ("statsPercentValue", [("part", part as Any), ("total", total as Any)])
     }
     }
     
@@ -866,7 +866,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .statsURL(let url):
-                return ("statsURL", [("url", String(describing: url))])
+                return ("statsURL", [("url", url as Any)])
     }
     }
     

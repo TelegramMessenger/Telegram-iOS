@@ -229,9 +229,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     if stickerItem.file.isVideoSticker {
-                        self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                        self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
                     } else {
-                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, userLocation: .other, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
                     }
                     
                     if self.animationNode == nil {
@@ -259,10 +259,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     
                     self.animationNode?.visibility = visibility
                                         
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                     
                     if stickerItem.file.isPremiumSticker, let effect = stickerItem.file.videoThumbnails.first {
-                        self.effectFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: effect.resource).start())
+                        self.effectFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: effect.resource).start())
                     }
                 } else {
                     if let animationNode = self.animationNode {
@@ -270,8 +270,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         self.animationNode = nil
                         animationNode.removeFromSupernode()
                     }
-                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                    self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 }
             } else {
                 if isEmpty {

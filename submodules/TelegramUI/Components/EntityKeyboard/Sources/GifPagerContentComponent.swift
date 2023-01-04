@@ -23,6 +23,7 @@ import ShimmerEffect
 
 private class GifVideoLayer: AVSampleBufferDisplayLayer {
     private let context: AccountContext
+    private let userLocation: MediaResourceUserLocation
     private let file: TelegramMediaFile?
     
     private var frameManager: SoftwareVideoLayerFrameManager?
@@ -59,8 +60,9 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         }
     }
     
-    init(context: AccountContext, file: TelegramMediaFile?, synchronousLoad: Bool) {
+    init(context: AccountContext, userLocation: MediaResourceUserLocation, file: TelegramMediaFile?, synchronousLoad: Bool) {
         self.context = context
+        self.userLocation = userLocation
         self.file = file
         
         super.init()
@@ -69,7 +71,7 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         
         if let file = self.file {
             if let dimensions = file.dimensions {
-                self.thumbnailDisposable = (mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .savedGif(media: file), synchronousLoad: synchronousLoad, nilForEmptyResult: true)
+                self.thumbnailDisposable = (mediaGridMessageVideo(postbox: context.account.postbox, userLocation: userLocation, videoReference: .savedGif(media: file), synchronousLoad: synchronousLoad, nilForEmptyResult: true)
                 |> deliverOnMainQueue).start(next: { [weak self] transform in
                     guard let strongSelf = self else {
                         return
@@ -111,7 +113,7 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         guard let file = self.file else {
             return
         }
-        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
+        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: self.userLocation, userContentType: .other, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
         self.frameManager = frameManager
         frameManager.started = { [weak self] in
             guard let strongSelf = self else {
@@ -352,7 +354,7 @@ public final class GifPagerContentComponent: Component {
                 self.item = item
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
-                super.init(context: context, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
+                super.init(context: context, userLocation: .other, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
                 
                 if item == nil {
                     self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)

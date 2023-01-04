@@ -409,8 +409,8 @@ public extension TelegramEngine {
             return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
         }
                 
-        public func addBotToAttachMenu(botId: PeerId) -> Signal<Bool, AddBotToAttachMenuError> {
-            return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
+        public func addBotToAttachMenu(botId: PeerId, allowWrite: Bool) -> Signal<Bool, AddBotToAttachMenuError> {
+            return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId, allowWrite: allowWrite)
         }
         
         public func removeBotFromAttachMenu(botId: PeerId) -> Signal<Bool, NoError> {

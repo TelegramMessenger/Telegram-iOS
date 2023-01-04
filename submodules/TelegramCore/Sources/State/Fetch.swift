@@ -75,7 +75,13 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
                 return .fail(.generic)
             }
             return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
-            |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: MediaResourceFetchParameters(tag: nil, info: TelegramCloudMediaResourceFetchInfo(reference: .standalone(resource: file.file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), isRandomAccessAllowed: true)))
+            |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: MediaResourceFetchParameters(
+                tag: nil,
+                info: TelegramCloudMediaResourceFetchInfo(reference: .standalone(resource: file.file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false),
+                location: nil,
+                contentType: .other,
+                isRandomAccessAllowed: true
+            )))
         }
     }
     return nil

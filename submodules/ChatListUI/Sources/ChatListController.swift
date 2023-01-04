@@ -2964,55 +2964,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         // Lottery
         
-        let getLotteryDataUseCase = appContext.resolveGetLotteryDataUseCase()
         let loadLotteryDataUseCase = appContext.resolveLoadLotteryDataUseCase()
-        
-        lotteryDataSubscription = getLotteryDataUseCase.lotteryDataPublisher()
-            .compactMap { $0 }
-            .prefix(1)
-            .delay(for: .seconds(3), scheduler: RunLoop.main)
-            .sink { [weak self] lotteryData in
-                guard !AppCache.wasLotteryShown, !hideLottery else { return }
-                self?.showLotteryBanner(jackpot: lotteryData.currentDraw.jackpot)
-            }
         
         if !hideLottery {
             loadLotteryDataUseCase.loadLotteryData(completion: { _ in })
         }
-    }
-    
-    private func showLotteryBanner(jackpot: Money) {
-        if #available(iOS 13.0, *) {
-            AppCache.wasLotteryShown = true
-            showLotteryBannerAsToast(jackpot: jackpot) { [weak self] in
-                self?.showLotterySplash()
-            }
-        }
-    }
-    
-    @available(iOS 13.0, *)
-    private func showLotterySplash() {
-        let parentViewController = UIApplication.topViewController
-        
-        let navigation = makeDefaultNavigationController()
-        
-        let lotteryFlowFactory = LotteryFlowFactoryImpl(appContext: self.appContext)
-        let flow = lotteryFlowFactory.makeFlow(navigationController: navigation)
-        
-        let input = LotteryFlowInput()
-        
-        let handlers = LotteryFlowHandlers(
-            close: { [weak parentViewController] in
-                parentViewController?.dismiss(animated: true)
-            }
-        )
-        
-        let lotteryController = flow.makeStartViewController(input: input, handlers: handlers)
-        
-        navigation.setViewControllers([lotteryController], animated: false)
-        navigation.modalPresentationStyle = .overFullScreen
-        
-        parentViewController?.present(navigation, animated: true)
     }
     
     public func showNicegramAssistant(deeplink: Deeplink?) {

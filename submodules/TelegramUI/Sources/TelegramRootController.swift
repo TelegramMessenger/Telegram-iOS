@@ -18,7 +18,7 @@ import AppBundle
 import DatePickerNode
 import DebugSettingsUI
 import TabBarUI
-import PremiumUI
+import DrawingUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -139,8 +139,9 @@ public final class TelegramRootController: NavigationController {
             }
             strongSelf.pushViewController(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
         }
+        accountSettingsController.parentController = self
         controllers.append(accountSettingsController)
-        
+                
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController
@@ -198,5 +199,17 @@ public final class TelegramRootController: NavigationController {
         }
         controller.view.endEditing(true)
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
+    }
+    
+    public func openSettings() {
+        guard let rootTabController = self.rootTabController else {
+            return
+        }
+        
+        self.popToRoot(animated: false)
+    
+        if let index = rootTabController.controllers.firstIndex(where: { $0 is PeerInfoScreenImpl }) {
+            rootTabController.selectedIndex = index
+        }
     }
 }

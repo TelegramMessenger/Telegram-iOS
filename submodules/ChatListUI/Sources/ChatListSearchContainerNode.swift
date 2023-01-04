@@ -930,7 +930,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         items.append(.action(ContextMenuActionItem(text: "Save Video", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
-                            let _ = (saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: mediaReference)
+                            let _ = (saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: .other, mediaReference: mediaReference)
                                      |> deliverOnMainQueue).start(completed: {
                                 Queue.mainQueue().after(0.2) {
                                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -1242,7 +1242,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 }
                             }
                             
-                            let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources(resourceIds, force: true, notify: true)
+                            let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources(Array(resourceIds), force: true, notify: true)
                             |> deliverOnMainQueue).start(completed: {
                                 guard let strongSelf = self else {
                                     return
@@ -1327,7 +1327,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             
             self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
             
-            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
+            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true, selectForumThreads: true))
             peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return

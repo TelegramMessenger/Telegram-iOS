@@ -18,6 +18,7 @@ import GalleryData
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
+import ChatControllerInteraction
 
 private let buttonFont = Font.semibold(13.0)
 
@@ -618,7 +619,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         inlineImageDimensions = dimensions.cgSize
                         
                         if image != currentImage {
-                            updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
+                            updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
                         }
                     }
                 } else if let image = media as? TelegramMediaWebFile {

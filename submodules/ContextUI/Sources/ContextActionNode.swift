@@ -89,7 +89,7 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         case .small:
             titleFont = smallTextFont
             titleBoldFont = smallBoldTextFont
-        case let .custom(customFont):
+        case let .custom(customFont, _, _):
             titleFont = customFont
             titleBoldFont = customFont
         }
@@ -340,7 +340,7 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             titleFont = textFont
         case .small:
             titleFont = smallTextFont
-        case let .custom(customFont):
+        case let .custom(customFont, _, _):
             titleFont = customFont
         }
         
@@ -387,7 +387,7 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             titleFont = textFont
         case .small:
             titleFont = smallTextFont
-        case let .custom(customFont):
+        case let .custom(customFont, _, _):
             titleFont = customFont
         }
 

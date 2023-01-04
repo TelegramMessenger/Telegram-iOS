@@ -19,11 +19,16 @@ private final class MultiScaleTextStateNode: ASDisplayNode {
 }
 
 final class MultiScaleTextState {
-    let attributedText: NSAttributedString
+    struct Attributes {
+        var font: UIFont
+        var color: UIColor
+    }
+    
+    let attributes: Attributes
     let constrainedSize: CGSize
     
-    init(attributedText: NSAttributedString, constrainedSize: CGSize) {
-        self.attributedText = attributedText
+    init(attributes: Attributes, constrainedSize: CGSize) {
+        self.attributes = attributes
         self.constrainedSize = constrainedSize
     }
 }
@@ -49,7 +54,7 @@ final class MultiScaleTextNode: ASDisplayNode {
         return self.stateNodes[key]?.textNode
     }
     
-    func updateLayout(states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
+    func updateLayout(text: String, states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
         assert(Set(states.keys) == Set(self.stateNodes.keys))
         assert(states[mainState] != nil)
         
@@ -57,7 +62,7 @@ final class MultiScaleTextNode: ASDisplayNode {
         var mainLayout: MultiScaleTextLayout?
         for (key, state) in states {
             if let node = self.stateNodes[key] {
-                node.textNode.attributedText = state.attributedText
+                node.textNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
                 let nodeSize = node.textNode.updateLayout(state.constrainedSize)
                 let nodeLayout = MultiScaleTextLayout(size: nodeSize)
                 if key == mainState {

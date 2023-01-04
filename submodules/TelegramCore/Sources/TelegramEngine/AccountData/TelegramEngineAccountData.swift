@@ -44,7 +44,7 @@ public extension TelegramEngine {
         }
 
         public func updateAccountPhoto(resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fallback: false, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
         }
 
         public func updatePeerPhotoExisting(reference: TelegramMediaImageReference) -> Signal<TelegramMediaImage?, NoError> {
@@ -52,7 +52,15 @@ public extension TelegramEngine {
         }
 
         public func removeAccountPhoto(reference: TelegramMediaImageReference?) -> Signal<Void, NoError> {
-            return _internal_removeAccountPhoto(network: self.account.network, reference: reference)
+            return _internal_removeAccountPhoto(account: self.account, reference: reference, fallback: false)
+        }
+        
+        public func updateFallbackPhoto(resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fallback: true, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+        }
+
+        public func removeFallbackPhoto(reference: TelegramMediaImageReference?) -> Signal<Void, NoError> {
+            return _internal_removeAccountPhoto(account: self.account, reference: reference, fallback: true)
         }
         
         public func setEmojiStatus(file: TelegramMediaFile?, expirationDate: Int32?) -> Signal<Never, NoError> {

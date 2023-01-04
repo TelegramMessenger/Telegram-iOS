@@ -1,0 +1,45 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "ChatEntityKeyboardInputNode",
+    module_name = "ChatEntityKeyboardInputNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/TelegramUI/Components/ChatInputNode:ChatInputNode",
+        "//submodules/Components/PagerComponent:PagerComponent",
+        "//submodules/PremiumUI:PremiumUI",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/GalleryUI:GalleryUI",
+        "//submodules/AttachmentTextInputPanelNode:AttachmentTextInputPanelNode",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/StickerPeekUI:StickerPeekUI",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/TelegramUI/Components/MultiplexedVideoNode:MultiplexedVideoNode",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteraction",
+        "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

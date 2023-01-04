@@ -106,6 +106,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private let scrubberNode: MediaPlayerScrubbingNode
     private let leftDurationLabel: MediaPlayerTimeTextNode
     private let rightDurationLabel: MediaPlayerTimeTextNode
+    private let infoNode: ASTextNode
     
     private let backwardButton: IconButtonNode
     private let forwardButton: IconButtonNode
@@ -149,6 +150,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private var scrubbingDisposable: Disposable?
     private var leftDurationLabelPushed = false
     private var rightDurationLabelPushed = false
+    private var infoNodePushed = false
     
     private var currentDuration: Double = 0.0
     private var currentPosition: Double = 0.0
@@ -196,6 +198,11 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.rightDurationLabel.alignment = .right
         self.rightDurationLabel.keepPreviousValueOnEmptyState = true
         
+        self.infoNode = ASTextNode()
+        self.infoNode.maximumNumberOfLines = 1
+        self.infoNode.isUserInteractionEnabled = false
+        self.infoNode.displaysAsynchronously = false
+        
         self.rateButton = HighlightableButtonNode()
         self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
         self.rateButton.displaysAsynchronously = false
@@ -238,6 +245,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.addSubnode(self.leftDurationLabel)
         self.addSubnode(self.rightDurationLabel)
+        self.addSubnode(self.infoNode)
         self.addSubnode(self.rateButton)
         self.addSubnode(self.scrubberNode)
         
@@ -283,16 +291,20 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
             let leftDurationLabelPushed: Bool
             let rightDurationLabelPushed: Bool
+            let infoNodePushed: Bool
             if let value = value {
                 leftDurationLabelPushed = value < 0.16
                 rightDurationLabelPushed = value > (strongSelf.rateButton.isHidden ? 0.84 : 0.74)
+                infoNodePushed = value >= 0.16 && value <= 0.84
             } else {
                 leftDurationLabelPushed = false
                 rightDurationLabelPushed = false
+                infoNodePushed = false
             }
-            if leftDurationLabelPushed != strongSelf.leftDurationLabelPushed || rightDurationLabelPushed != strongSelf.rightDurationLabelPushed {
+            if leftDurationLabelPushed != strongSelf.leftDurationLabelPushed || rightDurationLabelPushed != strongSelf.rightDurationLabelPushed || infoNodePushed != strongSelf.infoNodePushed {
                 strongSelf.leftDurationLabelPushed = leftDurationLabelPushed
                 strongSelf.rightDurationLabelPushed = rightDurationLabelPushed
+                strongSelf.infoNodePushed = infoNodePushed
                 
                 if let layout = strongSelf.validLayout {
                     let _ = strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .animated(duration: 0.35, curve: .spring))
@@ -777,6 +789,13 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let rightLabelVerticalOffset: CGFloat = self.rightDurationLabelPushed ? 6.0 : 0.0
         transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 14.0 + rightLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
+        
+        let infoLabelVerticalOffset: CGFloat = self.infoNodePushed ? 6.0 : 0.0
+                
+        let infoSize = self.infoNode.measure(CGSize(width: width - 60.0 * 2.0 - 100.0, height: 100.0))
+        self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
+        transition.updatePosition(node: self.infoNode, position: CGPoint(x: width / 2.0, y: scrubberVerticalOrigin + 14.0 + infoLabelVerticalOffset + infoSize.height / 2.0))
+        
         
         let rateRightOffset = timestampLabelWidthForDuration(self.currentDuration)
         transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - rateRightOffset - 28.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset), size: CGSize(width: 24.0, height: 24.0)))

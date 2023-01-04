@@ -55,11 +55,13 @@ import TooltipUI
 import StatisticsUI
 import NGWebUtils
 // MARK: Nicegram Imports
+import NGAppCache
 import NGStrings
 import NGUI
 import NGWebUtils
 import NGTranslate
 import NGStats
+import class StoreKit.SKStoreReviewController
 //
 import MediaResources
 import GalleryData
@@ -94,6 +96,9 @@ import EmojiStatusComponent
 import ChatTimerScreen
 import MediaPasteboardUI
 import ChatListHeaderComponent
+import ChatControllerInteraction
+import FeaturedStickersScreen
+import ChatEntityKeyboardInputNode
 
 #if DEBUG
 import os.signpost
@@ -837,6 +842,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
                             strongSelf.push(controller)
                             return true
+                        case let .suggestedProfilePhoto(image):
+                            strongSelf.chatDisplayNode.dismissInput()
+                            if let image = image {
+                                if message.effectivelyIncoming(strongSelf.context.account.peerId) {
+                                    var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+                                    strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                                        if let itemNode = itemNode as? ChatMessageItemView {
+                                            if let result = itemNode.transitionNode(id: message.id, media: image) {
+                                                selectedNode = result
+                                            }
+                                        }
+                                    }
+                                    let transitionView = selectedNode?.0.view
+                                    
+                                    let senderName: String?
+                                    if let peer = message.peers[message.id.peerId] {
+                                        senderName = EnginePeer(peer).compactDisplayTitle
+                                    } else {
+                                        senderName = nil
+                                    }
+                                    
+                                    legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, senderName: senderName, present: { [weak self] c, a in
+                                        self?.present(c, in: .window(.root), with: a)
+                                    }, imageCompletion: { [weak self] image in
+                                        if let strongSelf = self {
+                                            if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                settingsController.updateProfilePhoto(image, mode: .accept)
+                                            }
+                                        }
+                                    }, videoCompletion: { [weak self] image, url, adjustments in
+                                        if let strongSelf = self {
+                                            if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                            }
+                                        }
+                                    })
+                                } else {
+                                    openMessageByAction = true
+                                }
+                            }
                         default:
                             break
                     }
@@ -986,17 +1031,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                         legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                             transitionCompletion()
-                        }, presentStickers: { [weak self] completion in
-                            if let strongSelf = self {
-                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                                    return true
-                                })
-                                strongSelf.present(controller, in: .window(.root))
-                                return controller
-                            } else {
-                                return nil
-                            }
                         }, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView()
                         }, sendMessagesWithSignals: { [weak self] signals, _, _ in
@@ -1192,7 +1226,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     var existingIds = Set<Int64>()
                                     for (_, file) in files {
                                         loop: for attribute in file.attributes {
-                                            if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                            if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                                                 if case let .id(id, _) = packReference, !existingIds.contains(id) {
                                                     packReferences.append(packReference)
                                                     existingIds.insert(id)
@@ -1466,7 +1500,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var existingIds = Set<Int64>()
                 for (_, file) in customEmoji {
                     loop: for attribute in file.attributes {
-                        if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                        if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                             if case let .id(id, _) = packReference, !existingIds.contains(id) {
                                 packReferences.append(packReference)
                                 existingIds.insert(id)
@@ -1628,6 +1662,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if !canAddMessageReactions(message: message) {
+                        itemNode.openMessageContextMenu()
+                        return
+                    }
+                    
+                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
                         itemNode.openMessageContextMenu()
                         return
                     }
@@ -3779,18 +3818,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(string: message.text), snapshots: [], transitionCompletion: nil, presentStickers: { [weak self] completion in
-                            if let strongSelf = self {
-                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                                    return true
-                                })
-                                strongSelf.present(controller, in: .window(.root))
-                                return controller
-                            } else {
-                                return nil
-                            }
-                        }, getCaptionPanelView: { [weak self] in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(string: message.text), snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView()
                         }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
@@ -9627,7 +9655,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let hapticFeedback = HapticFeedback()
                     hapticFeedback.impact()
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action), elevatedLayout: false, action: { [weak self] action in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action, duration: 3), elevatedLayout: false, action: { [weak self] action in
                         guard let strongSelf = self else {
                             return true
                         }
@@ -10254,6 +10282,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         //
         
+        // MARK: Nicegram Unblock
+        if let peer = self.presentationInterfaceState.renderedPeer?.peer {
+            let isLastSeenBlockedChat = (peer.id.id._internalGetInt64Value() == AppCache.lastSeenBlockedChatId)
+            if isLastSeenBlockedChat,
+               isAllowedChat(peer: peer, contentSettings: context.currentContentSettings.with { $0 }) {
+                AppCache.lastSeenBlockedChatId = nil
+                if #available(iOS 14.0, *) {
+                    if let windowScene = self.view.window?.windowScene {
+                        SKStoreReviewController.requestReview(in: windowScene)
+                    }
+                } else {
+                    SKStoreReviewController.requestReview()
+                }
+            }
+        }
+        //
+        
         self.didAppear = true
         
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
@@ -10447,7 +10492,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         for i in 0 ..< min(1, result.count) {
                             if let video = result[i].videoRepresentations.first {
                                 let duration: Double = (video.representation.startTimestamp ?? 0.0) + (i == 0 ? 4.0 : 2.0)
-                                signals.append(preloadVideoResource(postbox: context.account.postbox, resourceReference: video.reference, duration: duration))
+                                signals.append(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: video.reference, duration: duration))
                             }
                         }
                         return combineLatest(signals) |> mapToSignal { _ in
@@ -12042,17 +12087,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         done(time)
                     })
                 }
-            }, presentStickers: { [weak self] completion in
-                if let strongSelf = self {
-                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                        return true
-                    })
-                    strongSelf.present(controller, in: .window(.root))
-                    return controller
-                } else {
-                    return nil
-                }
             }, getCaptionPanelView: { [weak self] in
                 return self?.getCaptionPanelView()
             }, dismissedWithResult: { [weak self] in
@@ -12191,8 +12225,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
                         |> deliverOnMainQueue).start(next: { bot in
                             let peer = EnginePeer(bot.peer)
-                            let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
-                                let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
+                                                        
+                            let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, requestWriteAccess: bot.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                                let _ = (context.engine.messages.addBotToAttachMenu(botId: botId, allowWrite: allowWrite)
                                 |> deliverOnMainQueue).start(error: { _ in
                                     
                                 }, completed: {
@@ -12404,10 +12439,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         |> take(1)
                                         |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
                                             var stableId: String?
-                                            let queryPhoneNumber = formatPhoneNumber(phoneNumber)
+                                            let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
                                             outer: for (id, data) in basicData {
                                                 for phoneNumber in data.phoneNumbers {
-                                                    if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
+                                                    if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
                                                         stableId = id
                                                         break outer
                                                     }
@@ -12683,17 +12718,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 done(time)
                             })
                         }
-                    }, presentStickers: { [weak self] completion in
-                        if let strongSelf = self {
-                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                                return true
-                            })
-                            strongSelf.present(controller, in: .window(.root))
-                            return controller
-                        } else {
-                            return nil
-                        }
                     }, getCaptionPanelView: { [weak self] in
                         return self?.getCaptionPanelView()
                     })
@@ -12780,17 +12804,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return .text
                         })
                     })
-                }
-            }, presentStickers: { [weak self] completion in
-                if let strongSelf = self {
-                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                        return true
-                    })
-                    strongSelf.present(controller, in: .window(.root))
-                    return controller
-                } else {
-                    return nil
                 }
             }, getCaptionPanelView: { [weak self] in
                 return self?.getCaptionPanelView()
@@ -12900,7 +12913,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
                                     var previewRepresentations: [TelegramMediaImageRepresentation] = []
                                     if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
-                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                                     }
                                     var attributes: [TelegramMediaFileAttribute] = []
                                     attributes.append(.FileName(fileName: item.fileName))
@@ -12993,18 +13006,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
         }
-        controller.presentStickers = { [weak self] completion in
-            if let strongSelf = self {
-                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                    return true
-                })
-                strongSelf.present(controller, in: .window(.root))
-                return controller
-            } else {
-                return nil
-            }
-        }
         controller.presentSchedulePicker = { [weak self] media, done in
             if let strongSelf = self {
                 strongSelf.presentScheduleTimePicker(style: media ? .media : .default, completion: { [weak self] time in
@@ -13090,18 +13091,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 })
                             }))
-                            controller.presentStickers = { [weak self] completion in
-                                if let strongSelf = self {
-                                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                                        return true
-                                    })
-                                    strongSelf.present(controller, in: .window(.root))
-                                    return controller
-                                } else {
-                                    return nil
-                                }
-                            }
                             controller.getCaptionPanelView = { [weak self] in
                                 return self?.getCaptionPanelView()
                             }
@@ -13136,17 +13125,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentTimerPicker(style: .media, completion: { time in
                                 done(time)
                             })
-                        }
-                    }, presentStickers: { [weak self] completion in
-                        if let strongSelf = self {
-                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                                return true
-                            })
-                            strongSelf.present(controller, in: .window(.root))
-                            return controller
-                        } else {
-                            return nil
                         }
                     }, getCaptionPanelView: { [weak self] in
                         return self?.getCaptionPanelView()
@@ -13194,18 +13172,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                 }))
-                controller.presentStickers = { [weak self] completion in
-                    if let strongSelf = self {
-                        let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                            return true
-                        })
-                        strongSelf.present(controller, in: .window(.root))
-                        return controller
-                    } else {
-                        return nil
-                    }
-                }
                 controller.getCaptionPanelView = { [weak self] in
                     return self?.getCaptionPanelView()
                 }
@@ -13314,10 +13280,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> take(1)
                             |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
                                 var stableId: String?
-                                let queryPhoneNumber = formatPhoneNumber(phoneNumber)
+                                let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
                                 outer: for (id, data) in basicData {
                                     for phoneNumber in data.phoneNumbers {
-                                        if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
+                                        if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
                                             stableId = id
                                             break outer
                                         }
@@ -13824,7 +13790,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         var stickerPackReference: StickerPackReference?
         for attribute in file.attributes {
-            if case let .CustomEmoji(_, _, packReference) = attribute {
+            if case let .CustomEmoji(_, _, _, packReference) = attribute {
                 stickerPackReference = packReference
                 break
             }
@@ -14103,8 +14069,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                strongSelf.chatDisplayNode.dismissInput()
-                
+                strongSelf.chatDisplayNode.dismissInput()                
                 let controller = mediaPasteboardScreen(
                     context: strongSelf.context,
                     updatedPresentationData: strongSelf.updatedPresentationData,
@@ -15510,7 +15475,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var attemptSelectionImpl: ((Peer) -> Void)?
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, attemptSelection: { peer, _ in
                 attemptSelectionImpl?(peer)
-            }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }))
+            }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }, selectForumThreads: true))
             let context = self.context
             attemptSelectionImpl = { [weak self, weak controller] peer in
                 guard let strongSelf = self, let controller = controller else {
@@ -15898,7 +15863,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             break
                         case let .chat(textInputState, _, _):
                             if let textInputState = textInputState {
-                                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData))
+                                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, selectForumThreads: true))
                                 controller.peerSelected = { [weak self, weak controller] peer, threadId in
                                     let peerId = peer.id
                                     
@@ -16398,58 +16363,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
-            if self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback {
-                if url.hasSuffix(".m3u8") {
-                    let navigationController = self.navigationController as? NavigationController
-                    
-                    let webPage = TelegramMediaWebpage(
-                        webpageId: MediaId(namespace: 0, id: 0),
-                        content: .Loaded(TelegramMediaWebpageLoadedContent(
-                            url: url,
-                            displayUrl: url,
-                            hash: 0,
-                            type: "video",
-                            websiteName: nil,
-                            title: nil,
-                            text: nil,
-                            embedUrl: url,
-                            embedType: "video",
-                            embedSize: nil,
-                            duration: nil,
-                            author: nil,
-                            image: nil,
-                            file: nil,
-                            attributes: [],
-                            instantPage: nil
-                        ))
-                    )
-                    let entry = InstantPageGalleryEntry(
-                        index: 0,
-                        pageId: webPage.webpageId,
-                        media: InstantPageMedia(
-                            index: 0,
-                            media: webPage,
-                            url: nil,
-                            caption: nil,
-                            credit: nil
-                        ),
-                        caption: nil,
-                        credit: nil,
-                        location: nil
-                    )
-                    
-                    let gallery = InstantPageGalleryController(context: self.context, webPage: webPage, entries: [entry], centralIndex: 0, replaceRootController: { [weak navigationController] controller, ready in
-                        if let navigationController = navigationController {
-                            navigationController.replaceTopController(controller, animated: false, ready: ready)
-                        }
-                    }, baseNavigationController: navigationController)
-                    self.present(gallery, in: .window(.root), with: InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
-                        return nil
-                    }))
-                    return;
-                }
-            }
-            
             openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in

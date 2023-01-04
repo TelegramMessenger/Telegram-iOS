@@ -39,32 +39,6 @@ public func printOpenFiles() {
     }
 }
 
-/*
- +(void) lsof
- {
-     int flags;
-     int fd;
-     char buf[MAXPATHLEN+1] ;
-     int n = 1 ;
-
-     for (fd = 0; fd < (int) FD_SETSIZE; fd++) {
-         errno = 0;
-         flags = fcntl(fd, F_GETFD, 0);
-         if (flags == -1 && errno) {
-             if (errno != EBADF) {
-                 return ;
-             }
-             else
-                 continue;
-         }
-         fcntl(fd , F_GETPATH, buf ) ;
-         NSLog( @"File Descriptor %d number %d in use for: %s",fd,n , buf ) ;
-         ++n ;
-     }
- }
- 
- */
-
 private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: inout [InodeInfo]) -> ScanFilesResult {
     var result = ScanFilesResult()
     
@@ -113,7 +87,7 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: i
     return result
 }
 
-private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UInt64) {
+private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UInt64, mainStoragePath: String, storageBox: StorageBox) {
     var removedSize: UInt64 = 0
     
     inodes.sort(by: { lhs, rhs in
@@ -139,7 +113,10 @@ private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UI
         free(pathBuffer)
     }
     
+    var unlinkedResourceIds: [Data] = []
+    
     for path in paths {
+        let isMainPath = path == mainStoragePath
         if let dp = opendir(path) {
             while true {
                 guard let dirp = readdir(dp) else {
@@ -162,6 +139,17 @@ private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UI
                 var value = stat()
                 if stat(pathBuffer, &value) == 0 {
                     if inodesToDelete.contains(value.st_ino) {
+                        if isMainPath {
+                            let nameLength = strnlen(&dirp.pointee.d_name.0, 1024)
+                            let nameData = Data(bytesNoCopy: &dirp.pointee.d_name.0, count: Int(nameLength), deallocator: .none)
+                            withExtendedLifetime(nameData, {
+                                if let fileName = String(data: nameData, encoding: .utf8) {
+                                    if let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
+                                        unlinkedResourceIds.append(idData)
+                                    }
+                                }
+                            })
+                        }
                         unlink(pathBuffer)
                     }
                 }
@@ -169,11 +157,17 @@ private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UI
             closedir(dp)
         }
     }
+    
+    if !unlinkedResourceIds.isEmpty {
+        storageBox.remove(ids: unlinkedResourceIds)
+    }
 }
 
 private final class TimeBasedCleanupImpl {
     private let queue: Queue
+    private let storageBox: StorageBox
     private let generalPaths: [String]
+    private let totalSizeBasedPath: String
     private let shortLivedPaths: [String]
     
     private var scheduledTouches: [String] = []
@@ -197,9 +191,11 @@ private final class TimeBasedCleanupImpl {
         }
     }
     
-    init(queue: Queue, generalPaths: [String], shortLivedPaths: [String]) {
+    init(queue: Queue, storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
         self.queue = queue
+        self.storageBox = storageBox
         self.generalPaths = generalPaths
+        self.totalSizeBasedPath = totalSizeBasedPath
         self.shortLivedPaths = shortLivedPaths
     }
     
@@ -220,7 +216,9 @@ private final class TimeBasedCleanupImpl {
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
         let generalPaths = self.generalPaths
+        let totalSizeBasedPath = self.totalSizeBasedPath
         let shortLivedPaths = self.shortLivedPaths
+        let storageBox = self.storageBox
         let scanOnce = Signal<Never, NoError> { subscriber in
             DispatchQueue.global(qos: .background).async {
                 var removedShortLivedCount: Int = 0
@@ -233,7 +231,12 @@ private final class TimeBasedCleanupImpl {
                 var paths: [String] = []
                 
                 let timestamp = Int32(Date().timeIntervalSince1970)
+                
+                /*#if DEBUG
+                let bytesLimit: UInt64 = 10 * 1024 * 1024
+                #else*/
                 let bytesLimit = UInt64(gigabytesLimit) * 1024 * 1024 * 1024
+                //#endif
                 
                 let oldestShortLivedTimestamp = timestamp - shortLived
                 let oldestGeneralTimestamp = timestamp - general
@@ -255,14 +258,18 @@ private final class TimeBasedCleanupImpl {
                     removedGeneralCount += scanResult.unlinkedCount
                     totalLimitSize += scanResult.totalSize
                 }
-                
-                if totalLimitSize > bytesLimit {
-                    mapFiles(paths: paths, inodes: &inodes, removeSize: totalLimitSize - bytesLimit)
+                do {
+                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, inodes: &inodes)
+                    if !paths.contains(totalSizeBasedPath) {
+                        paths.append(totalSizeBasedPath)
+                    }
+                    removedGeneralCount += scanResult.unlinkedCount
+                    totalLimitSize += scanResult.totalSize
                 }
                 
-                #if DEBUG
-                //printOpenFiles()
-                #endif
+                if totalLimitSize > bytesLimit {
+                    mapFiles(paths: paths, inodes: &inodes, removeSize: totalLimitSize - bytesLimit, mainStoragePath: totalSizeBasedPath, storageBox: storageBox)
+                }
                 
                 if removedShortLivedCount != 0 || removedGeneralCount != 0 || removedGeneralLimitCount != 0 {
                     postboxLog("[TimeBasedCleanup] \(CFAbsoluteTimeGetCurrent() - startTime) s removed \(removedShortLivedCount) short-lived files, \(removedGeneralCount) general files, \(removedGeneralLimitCount) limit files")
@@ -318,10 +325,10 @@ final class TimeBasedCleanup {
     private let queue = Queue()
     private let impl: QueueLocalObject<TimeBasedCleanupImpl>
     
-    init(generalPaths: [String], shortLivedPaths: [String]) {
+    init(storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: self.queue, generate: {
-            return TimeBasedCleanupImpl(queue: queue, generalPaths: generalPaths, shortLivedPaths: shortLivedPaths)
+            return TimeBasedCleanupImpl(queue: queue, storageBox: storageBox, generalPaths: generalPaths, totalSizeBasedPath: totalSizeBasedPath, shortLivedPaths: shortLivedPaths)
         })
     }
     

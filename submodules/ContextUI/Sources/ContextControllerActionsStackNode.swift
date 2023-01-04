@@ -12,6 +12,7 @@ import Markdown
 import EntityKeyboard
 import AnimationCache
 import MultiAnimationRenderer
+import AnimationUI
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     var wantsFullWidth: Bool { get }
@@ -66,6 +67,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let badgeNode: ASImageNode
     private let labelNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private var animationNode: AnimationNode?
     
     private var iconDisposable: Disposable?
     
@@ -104,7 +106,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.iconNode = ASImageNode()
         self.iconNode.isAccessibilityElement = false
         self.iconNode.isUserInteractionEnabled = false
-        
+                
         super.init()
         
         self.isAccessibilityElement = true
@@ -135,6 +137,12 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     
     deinit {
         self.iconDisposable?.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.isExclusiveTouch = true
     }
     
     @objc private func pressed() {
@@ -206,12 +214,16 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             self.titleLabelNode.lineSpacing = 0.1
         }
         
+        var forcedHeight: CGFloat?
+        var titleVerticalOffset: CGFloat?
         let titleFont: UIFont
         let titleBoldFont: UIFont
         switch self.item.textFont {
-        case let .custom(font):
+        case let .custom(font, height, verticalOffset):
             titleFont = font
             titleBoldFont = font
+            forcedHeight = height
+            titleVerticalOffset = verticalOffset
         case .small:
             let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
             titleFont = smallTextFont
@@ -301,6 +313,14 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             }
         } else if let image = self.iconNode.image {
             iconSize = image.size
+        } else if let animationName = self.item.animationName {
+            if self.animationNode == nil {
+                let animationNode = AnimationNode(animation: animationName, colors: ["__allcolors__": titleColor], scale: 1.0)
+                animationNode.loop(count: 3)
+                self.addSubnode(animationNode)
+                self.animationNode = animationNode
+            }
+            iconSize = CGSize(width: 24.0, height: 24.0)
         } else {
             let iconImage = self.item.icon(presentationData.theme)
             self.iconNode.image = iconImage
@@ -335,15 +355,22 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         } else {
             minSize.width += sideInset
         }
-        minSize.height += verticalInset * 2.0
-        minSize.height += titleSize.height
-        if subtitle != nil {
-            minSize.height += titleSubtitleSpacing
-            minSize.height += subtitleSize.height
+        if let forcedHeight {
+            minSize.height = forcedHeight
+        } else {
+            minSize.height += verticalInset * 2.0
+            minSize.height += titleSize.height
+            if subtitle != nil {
+                minSize.height += titleSubtitleSpacing
+                minSize.height += subtitleSize.height
+            }
         }
         
         return (minSize: minSize, apply: { size, transition in
-            let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleSize)
+            var titleFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleSize)
+            if let titleVerticalOffset {
+                titleFrame = titleFrame.offsetBy(dx: 0.0, dy: titleVerticalOffset)
+            }
             let subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
             let badgeFrame = CGRect(origin: CGPoint(
                 x: titleFrame.maxX + (badgeSize.width / 2),
@@ -365,6 +392,9 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 let iconWidth = max(standardIconWidth, iconSize.width)
                 let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
                 transition.updateFrame(node: self.iconNode, frame: iconFrame, beginWithCurrentState: true)
+                if let animationNode = self.animationNode {
+                    transition.updateFrame(node: animationNode, frame: iconFrame, beginWithCurrentState: true)
+                }
             }
         })
     }

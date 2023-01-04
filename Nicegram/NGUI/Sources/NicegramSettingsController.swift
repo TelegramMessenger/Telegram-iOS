@@ -580,10 +580,9 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
         entries.append(.secretMenu("Secret Menu"))
     }
     
-    if !hideUnblock,
-       let url = URL(string: "https://my.nicegram.app") {
+    if !hideUnblock {
         entries.append(.unblockHeader(l("NicegramSettings.Unblock.Header", locale).uppercased()))
-        entries.append(.unblock(l("NicegramSettings.Unblock.Button", locale), url))
+        entries.append(.unblock(l("NicegramSettings.Unblock.Button", locale), nicegramUnblockUrl))
     }
 
     entries.append(.TabsHeader(l("NicegramSettings.Tabs",

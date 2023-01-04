@@ -29,7 +29,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let autoNightModeTriggered: Bool
     private var dateTimeFormat: PresentationDateTimeFormat
     private var theme: InstantPageTheme?
-    private let sourcePeerType: MediaAutoDownloadPeerType
+    private let sourceLocation: InstantPageSourceLocation
     private var manualThemeOverride: InstantPageThemeType?
     private let getNavigationController: () -> NavigationController?
     private let present: (ViewController, Any?) -> Void
@@ -92,7 +92,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(controller: InstantPageController, context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (EnginePeer) -> Void, navigateBack: @escaping () -> Void) {
+    init(controller: InstantPageController, context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourceLocation: InstantPageSourceLocation, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (EnginePeer) -> Void, navigateBack: @escaping () -> Void) {
         self.controller = controller
         self.context = context
         self.presentationTheme = presentationTheme
@@ -106,7 +106,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.theme = settings.flatMap { settings in
             return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate, forceDarkTheme: autoNightModeTriggered).0, settings: settings)
         }
-        self.sourcePeerType = sourcePeerType
+        self.sourceLocation = sourceLocation
         self.statusBar = statusBar
         self.getNavigationController = getNavigationController
         self.present = present
@@ -445,7 +445,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights)
+        let currentLayout = instantPageLayoutForWebPage(webPage, userLocation: self.sourceLocation.userLocation, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights)
         
         for (_, tileNode) in self.visibleTiles {
             tileNode.removeFromSupernode()
@@ -593,7 +593,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let itemIndex = itemIndex
                     let embedIndex = embedIndex
                     let detailsIndex = detailsIndex
-                    if let newNode = item.node(context: self.context, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, theme: theme, sourcePeerType: self.sourcePeerType, openMedia: { [weak self] media in
+                    if let newNode = item.node(context: self.context, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, theme: theme, sourceLocation: self.sourceLocation, openMedia: { [weak self] media in
                         self?.openMedia(media)
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
@@ -1000,12 +1000,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
-                let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
+                let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_LinkDialogSave, accessibilityLabel: self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
-                let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
+                let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
@@ -1211,7 +1211,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let controller = InstantPageReferenceController(context: self.context, sourcePeerType: self.sourcePeerType, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
+        let controller = InstantPageReferenceController(context: self.context, sourceLocation: self.sourceLocation, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
             self?.openUrl(url)
         }, openUrlIn: { [weak self] url in
             self?.openUrlIn(url)
@@ -1310,7 +1310,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                         case let .result(webpage):
                                             if let webpage = webpage, case .Loaded = webpage.content {
                                                 strongSelf.loadProgress.set(1.0)
-                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: strongSelf.sourcePeerType, anchor: anchor))
+                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: strongSelf.sourceLocation, anchor: anchor))
                                             }
                                             break
                                         case let .progress(progress):
@@ -1457,7 +1457,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let centralIndex = centralIndex {
-            let controller = InstantPageGalleryController(context: self.context, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, replaceRootController: { _, _ in
+            let controller = InstantPageGalleryController(context: self.context, userLocation: self.sourceLocation.userLocation, webPage: webPage, entries: entries, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, replaceRootController: { _, _ in
             }, baseNavigationController: self.getNavigationController())
             self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
                 if let strongSelf = self {

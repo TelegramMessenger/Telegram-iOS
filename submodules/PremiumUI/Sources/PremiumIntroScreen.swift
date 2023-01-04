@@ -1281,9 +1281,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     for item in view.items {
                         if let mediaItem = item.contents.get(RecentMediaItem.self) {
                             let file = mediaItem.media
-                            strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .standalone(media: file), resource: file.resource).start())
+                            strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
                             if let effect = file.videoThumbnails.first {
-                                strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .standalone(media: file), resource: effect.resource).start())
+                                strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: effect.resource).start())
                             }
                         }
                     }
@@ -1612,7 +1612,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             let isPremium = state?.isPremium == true
                             
                             var dismissImpl: (() -> Void)?
-                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "–").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
                             controller.action = { [weak state] in
                                 dismissImpl?()
                                 if state?.isPremium == false {
@@ -1627,23 +1627,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 controller?.dismiss(animated: true, completion: nil)
                             }
                             updateIsFocused(true)
-                            
-//                            let controller = PremiumDemoScreen(
-//                                context: accountContext,
-//                                subject: demoSubject,
-//                                source: .intro(state?.price),
-//                                order: state?.configuration.perks,
-//                                action: {
-//                                    if state?.isPremium == false {
-//                                        buy()
-//                                    }
-//                                }
-//                            )
-//                            controller.disposed = {
-//                                updateIsFocused(false)
-//                            }
-//                            present(controller)
-//                            updateIsFocused(true)
                             
                             addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
                         }
@@ -2046,7 +2029,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         strongSelf.selectedProductId = strongSelf.products?.last?.id
                         
                         for (_, video) in promoConfiguration.videos {
-                            strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
+                            strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
                         }
                     }
                     
@@ -2323,7 +2306,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     var packReference: StickerPackReference?
                     if let file = file {
                         for attribute in file.attributes {
-                            if case let .CustomEmoji(_, _, reference) = attribute {
+                            if case let .CustomEmoji(_, _, _, reference) = attribute {
                                 packReference = reference
                             }
                         }
@@ -2395,7 +2378,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     tapAction: { [weak state, weak environment] _, _ in
                         if let emojiFile = state?.emojiFile, let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             for attribute in emojiFile.attributes {
-                                if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                                     let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedEmojiPack.flatMap { [$0] } ?? [], parentNavigationController: navigationController, sendSticker: { _, _, _ in
                                         return false
                                     })

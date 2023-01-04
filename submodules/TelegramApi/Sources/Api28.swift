@@ -20,7 +20,7 @@ public extension Api.updates {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .state(let pts, let qts, let date, let seq, let unreadCount):
-                return ("state", [("pts", String(describing: pts)), ("qts", String(describing: qts)), ("date", String(describing: date)), ("seq", String(describing: seq)), ("unreadCount", String(describing: unreadCount))])
+                return ("state", [("pts", pts as Any), ("qts", qts as Any), ("date", date as Any), ("seq", seq as Any), ("unreadCount", unreadCount as Any)])
     }
     }
     
@@ -75,9 +75,9 @@ public extension Api.upload {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .cdnFile(let bytes):
-                return ("cdnFile", [("bytes", String(describing: bytes))])
+                return ("cdnFile", [("bytes", bytes as Any)])
                 case .cdnFileReuploadNeeded(let requestToken):
-                return ("cdnFileReuploadNeeded", [("requestToken", String(describing: requestToken))])
+                return ("cdnFileReuploadNeeded", [("requestToken", requestToken as Any)])
     }
     }
     
@@ -141,9 +141,9 @@ public extension Api.upload {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .file(let type, let mtime, let bytes):
-                return ("file", [("type", String(describing: type)), ("mtime", String(describing: mtime)), ("bytes", String(describing: bytes))])
+                return ("file", [("type", type as Any), ("mtime", mtime as Any), ("bytes", bytes as Any)])
                 case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv, let fileHashes):
-                return ("fileCdnRedirect", [("dcId", String(describing: dcId)), ("fileToken", String(describing: fileToken)), ("encryptionKey", String(describing: encryptionKey)), ("encryptionIv", String(describing: encryptionIv)), ("fileHashes", String(describing: fileHashes))])
+                return ("fileCdnRedirect", [("dcId", dcId as Any), ("fileToken", fileToken as Any), ("encryptionKey", encryptionKey as Any), ("encryptionIv", encryptionIv as Any), ("fileHashes", fileHashes as Any)])
     }
     }
     
@@ -216,7 +216,7 @@ public extension Api.upload {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
-                return ("webFile", [("size", String(describing: size)), ("mimeType", String(describing: mimeType)), ("fileType", String(describing: fileType)), ("mtime", String(describing: mtime)), ("bytes", String(describing: bytes))])
+                return ("webFile", [("size", size as Any), ("mimeType", mimeType as Any), ("fileType", fileType as Any), ("mtime", mtime as Any), ("bytes", bytes as Any)])
     }
     }
     
@@ -276,7 +276,7 @@ public extension Api.users {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .userFull(let fullUser, let chats, let users):
-                return ("userFull", [("fullUser", String(describing: fullUser)), ("chats", String(describing: chats)), ("users", String(describing: users))])
+                return ("userFull", [("fullUser", fullUser as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     

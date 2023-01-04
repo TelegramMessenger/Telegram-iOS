@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ChatPresentationInterfaceState
 
 enum ChatMediaInputMetaSectionItemType: Equatable {
     case savedStickers
@@ -250,7 +251,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                         
-                        self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+                        self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
                     } else {
                         self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(43.0), textColor: .black)
                         let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))

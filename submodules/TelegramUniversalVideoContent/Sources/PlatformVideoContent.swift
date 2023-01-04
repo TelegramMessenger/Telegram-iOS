@@ -71,6 +71,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
     
     public let id: AnyHashable
     let nativeId: PlatformVideoContentId
+    let userLocation: MediaResourceUserLocation
     let content: Content
     public let dimensions: CGSize
     public let duration: Int32
@@ -80,8 +81,9 @@ public final class PlatformVideoContent: UniversalVideoContent {
     let baseRate: Double
     let fetchAutomatically: Bool
     
-    public init(id: PlatformVideoContentId, content: Content, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
+    public init(id: PlatformVideoContentId, userLocation: MediaResourceUserLocation, content: Content, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
         self.id = id
+        self.userLocation = userLocation
         self.nativeId = id
         self.content = content
         self.dimensions = self.content.dimensions?.cgSize ?? CGSize(width: 480, height: 320)
@@ -94,7 +96,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
     }
     
     public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return PlatformVideoContentNode(postbox: postbox, audioSessionManager: audioSession, content: self.content, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
+        return PlatformVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, content: self.content, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {
@@ -115,6 +117,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
 
 private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     private let postbox: Postbox
+    private let userLocation: MediaResourceUserLocation
     private let content: PlatformVideoContent.Content
     private let approximateDuration: Double
     private let intrinsicDimensions: CGSize
@@ -169,11 +172,12 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, content: PlatformVideoContent.Content, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, content: PlatformVideoContent.Content, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
         self.postbox = postbox
         self.content = content
         self.approximateDuration = Double(content.duration ?? 1)
         self.audioSessionManager = audioSessionManager
+        self.userLocation = userLocation
         
         self.imageNode = TransformImageNode()
         
@@ -193,7 +197,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         switch content {
         case let .file(file):
-            self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: file) |> map { [weak self] getSize, getData in
+            self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: file) |> map { [weak self] getSize, getData in
                 Queue.mainQueue().async {
                     if let strongSelf = self, strongSelf.dimensions == nil {
                         if let dimensions = getSize() {

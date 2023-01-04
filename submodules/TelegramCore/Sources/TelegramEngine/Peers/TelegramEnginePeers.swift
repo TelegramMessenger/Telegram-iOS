@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 
 public enum AddressNameValidationStatus: Equatable {
     case checking
@@ -980,6 +981,37 @@ public extension TelegramEngine {
         
         public func exportContactToken() -> Signal<ExportedContactToken?, NoError> {
             return _internal_exportContactToken(account: self.account)
+        }
+        
+        public func updateChannelMembersHidden(peerId: EnginePeer.Id, value: Bool) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Api.InputChannel? in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    if let current = current as? CachedChannelData {
+                        return current.withUpdatedMembersHidden(.known(PeerMembersHidden(value: value)))
+                    } else {
+                        return current
+                    }
+                })
+                
+                return transaction.getPeer(peerId).flatMap(apiInputChannel)
+            }
+            |> mapToSignal { inputChannel -> Signal<Never, NoError> in
+                guard let inputChannel = inputChannel else {
+                    return .complete()
+                }
+                
+                return self.account.network.request(Api.functions.channels.toggleParticipantsHidden(channel: inputChannel, enabled: value ? .boolTrue : .boolFalse))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                    return .single(nil)
+                }
+                |> beforeNext { updates in
+                    if let updates = updates {
+                        self.account.stateManager.addUpdates(updates)
+                    }
+                }
+                |> ignoreValues
+            }
         }
     }
 }
