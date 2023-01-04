@@ -217,8 +217,13 @@ public final class AccountContextImpl: AccountContext {
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
         self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
+        let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
         self.animationCache = AnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
+        }, updateStorageStats: { path, size in
+            if let pathData = path.data(using: .utf8) {
+                cacheStorageBox.update(id: pathData, size: size)
+            }
         })
         self.animationRenderer = MultiAnimationRendererImpl()
         

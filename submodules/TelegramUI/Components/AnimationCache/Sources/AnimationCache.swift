@@ -14,6 +14,26 @@ private func alignUp(size: Int, align: Int) -> Int {
     return (size + alignmentMask) & ~alignmentMask
 }
 
+private func fileSize(_ path: String, useTotalFileAllocatedSize: Bool = false) -> Int64? {
+    if useTotalFileAllocatedSize {
+        let url = URL(fileURLWithPath: path)
+        if let values = (try? url.resourceValues(forKeys: Set([.isRegularFileKey, .totalFileAllocatedSizeKey]))) {
+            if values.isRegularFile ?? false {
+                if let fileSize = values.totalFileAllocatedSize {
+                    return Int64(fileSize)
+                }
+            }
+        }
+    }
+    
+    var value = stat()
+    if stat(path, &value) == 0 {
+        return value.st_size
+    } else {
+        return nil
+    }
+}
+
 public final class AnimationCacheItemFrame {
     public enum RequestedFormat {
         case rgba
@@ -1246,7 +1266,7 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
     })
 }
 
-private func adaptItemFromHigherResolution(currentQueue: Queue, itemPath: String, width: Int, height: Int, itemDirectoryPath: String, higherResolutionPath: String, allocateTempFile: @escaping () -> String) -> AnimationCacheItem? {
+private func adaptItemFromHigherResolution(currentQueue: Queue, itemPath: String, width: Int, height: Int, itemDirectoryPath: String, higherResolutionPath: String, allocateTempFile: @escaping () -> String, updateStorageStats: @escaping (String, Int64) -> Void) -> AnimationCacheItem? {
     guard let higherResolutionItem = try? loadItem(path: higherResolutionPath) else {
         return nil
     }
@@ -1286,6 +1306,10 @@ private func adaptItemFromHigherResolution(currentQueue: Queue, itemPath: String
         guard let _ = try? FileManager.default.moveItem(atPath: result.animationPath, toPath: itemPath) else {
             return nil
         }
+        if let size = fileSize(itemPath) {
+            updateStorageStats(itemPath, size)
+        }
+        
         guard let item = try? loadItem(path: itemPath) else {
             return nil
         }
@@ -1295,7 +1319,7 @@ private func adaptItemFromHigherResolution(currentQueue: Queue, itemPath: String
     }
 }
 
-private func generateFirstFrameFromItem(currentQueue: Queue, itemPath: String, animationItemPath: String, allocateTempFile: @escaping () -> String) -> Bool {
+private func generateFirstFrameFromItem(currentQueue: Queue, itemPath: String, animationItemPath: String, allocateTempFile: @escaping () -> String, updateStorageStats: @escaping (String, Int64) -> Void) -> Bool {
     guard let animationItem = try? loadItem(path: animationItemPath) else {
         return false
     }
@@ -1336,6 +1360,9 @@ private func generateFirstFrameFromItem(currentQueue: Queue, itemPath: String, a
         let _ = try? FileManager.default.removeItem(atPath: itemPath)
         guard let _ = try? FileManager.default.moveItem(atPath: result.animationPath, toPath: itemPath) else {
             return false
+        }
+        if let size = fileSize(itemPath) {
+            updateStorageStats(itemPath, size)
         }
         return true
     } catch {
@@ -1408,13 +1435,14 @@ public final class AnimationCacheImpl: AnimationCache {
         private let queue: Queue
         private let basePath: String
         private let allocateTempFile: () -> String
+        private let updateStorageStats: (String, Int64) -> Void
         
         private let fetchQueues: [Queue]
         private var nextFetchQueueIndex: Int = 0
         
         private var itemContexts: [ItemKey: ItemContext] = [:]
         
-        init(queue: Queue, basePath: String, allocateTempFile: @escaping () -> String) {
+        init(queue: Queue, basePath: String, allocateTempFile: @escaping () -> String, updateStorageStats: @escaping (String, Int64) -> Void) {
             self.queue = queue
             
             let fetchQueueCount: Int
@@ -1427,6 +1455,7 @@ public final class AnimationCacheImpl: AnimationCache {
             self.fetchQueues = (0 ..< fetchQueueCount).map { i in Queue(name: "AnimationCacheImpl-Fetch\(i)", qos: .default) }
             self.basePath = basePath
             self.allocateTempFile = allocateTempFile
+            self.updateStorageStats = updateStorageStats
         }
         
         deinit {
@@ -1464,6 +1493,7 @@ public final class AnimationCacheImpl: AnimationCache {
                 let fetchQueueIndex = self.nextFetchQueueIndex
                 self.nextFetchQueueIndex += 1
                 let allocateTempFile = self.allocateTempFile
+                let updateStorageStats = self.updateStorageStats
                 guard let writer = AnimationCacheItemWriterImpl(queue: self.fetchQueues[fetchQueueIndex % self.fetchQueues.count], allocateTempFile: self.allocateTempFile, completion: { [weak self, weak itemContext] result in
                     queue.async {
                         guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[key] else {
@@ -1482,8 +1512,11 @@ public final class AnimationCacheImpl: AnimationCache {
                         guard let _ = try? FileManager.default.moveItem(atPath: result.animationPath, toPath: itemPath) else {
                             return
                         }
+                        if let size = fileSize(itemPath) {
+                            updateStorageStats(itemPath, size)
+                        }
                         
-                        let _ = generateFirstFrameFromItem(currentQueue: queue, itemPath: itemFirstFramePath, animationItemPath: itemPath, allocateTempFile: allocateTempFile)
+                        let _ = generateFirstFrameFromItem(currentQueue: queue, itemPath: itemFirstFramePath, animationItemPath: itemPath, allocateTempFile: allocateTempFile, updateStorageStats: updateStorageStats)
                         
                         for f in itemContext.subscribers.copyItems() {
                             guard let item = try? loadItem(path: itemPath) else {
@@ -1522,7 +1555,7 @@ public final class AnimationCacheImpl: AnimationCache {
             }
         }
         
-        static func getFirstFrameSynchronously(basePath: String, sourceId: String, size: CGSize, allocateTempFile: @escaping () -> String) -> AnimationCacheItem? {
+        static func getFirstFrameSynchronously(basePath: String, sourceId: String, size: CGSize, allocateTempFile: @escaping () -> String, updateStorageStats: @escaping (String, Int64) -> Void) -> AnimationCacheItem? {
             let hashString = md5Hash(sourceId)
             let sourceIdPath = itemSubpath(hashString: hashString, width: Int(size.width), height: Int(size.height))
             let itemDirectoryPath = "\(basePath)/\(sourceIdPath.directory)"
@@ -1535,7 +1568,7 @@ public final class AnimationCacheImpl: AnimationCache {
             }
             
             if let adaptationItemPath = findHigherResolutionFileForAdaptation(itemDirectoryPath: itemDirectoryPath, baseName: "\(hashString)_", baseSuffix: "-f", width: Int(size.width), height: Int(size.height)) {
-                if let adaptedItem = adaptItemFromHigherResolution(currentQueue: .mainQueue(), itemPath: itemFirstFramePath, width: Int(size.width), height: Int(size.height), itemDirectoryPath: itemDirectoryPath, higherResolutionPath: adaptationItemPath, allocateTempFile: allocateTempFile) {
+                if let adaptedItem = adaptItemFromHigherResolution(currentQueue: .mainQueue(), itemPath: itemFirstFramePath, width: Int(size.width), height: Int(size.height), itemDirectoryPath: itemDirectoryPath, higherResolutionPath: adaptationItemPath, allocateTempFile: allocateTempFile, updateStorageStats: updateStorageStats) {
                     return adaptedItem
                 }
             }
@@ -1543,7 +1576,7 @@ public final class AnimationCacheImpl: AnimationCache {
             return nil
         }
         
-        static func getFirstFrame(queue: Queue, basePath: String, sourceId: String, size: CGSize, allocateTempFile: @escaping () -> String, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (AnimationCacheItemResult) -> Void) -> Disposable {
+        static func getFirstFrame(queue: Queue, basePath: String, sourceId: String, size: CGSize, allocateTempFile: @escaping () -> String, updateStorageStats: @escaping (String, Int64) -> Void, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (AnimationCacheItemResult) -> Void) -> Disposable {
             let hashString = md5Hash(sourceId)
             let sourceIdPath = itemSubpath(hashString: hashString, width: Int(size.width), height: Int(size.height))
             let itemDirectoryPath = "\(basePath)/\(sourceIdPath.directory)"
@@ -1555,7 +1588,7 @@ public final class AnimationCacheImpl: AnimationCache {
             }
             
             if let adaptationItemPath = findHigherResolutionFileForAdaptation(itemDirectoryPath: itemDirectoryPath, baseName: "\(hashString)_", baseSuffix: "-f", width: Int(size.width), height: Int(size.height)) {
-                if let adaptedItem = adaptItemFromHigherResolution(currentQueue: .mainQueue(), itemPath: itemFirstFramePath, width: Int(size.width), height: Int(size.height), itemDirectoryPath: itemDirectoryPath, higherResolutionPath: adaptationItemPath, allocateTempFile: allocateTempFile) {
+                if let adaptedItem = adaptItemFromHigherResolution(currentQueue: .mainQueue(), itemPath: itemFirstFramePath, width: Int(size.width), height: Int(size.height), itemDirectoryPath: itemDirectoryPath, higherResolutionPath: adaptationItemPath, allocateTempFile: allocateTempFile, updateStorageStats: updateStorageStats) {
                     completion(AnimationCacheItemResult(item: adaptedItem, isFinal: true))
                     return EmptyDisposable
                 }
@@ -1578,6 +1611,9 @@ public final class AnimationCacheImpl: AnimationCache {
                         guard let _ = try? FileManager.default.moveItem(atPath: result.animationPath, toPath: itemFirstFramePath) else {
                             completion(AnimationCacheItemResult(item: nil, isFinal: true))
                             return
+                        }
+                        if let size = fileSize(itemFirstFramePath) {
+                            updateStorageStats(itemFirstFramePath, size)
                         }
                         guard let item = try? loadItem(path: itemFirstFramePath) else {
                             completion(AnimationCacheItemResult(item: nil, isFinal: true))
@@ -1604,14 +1640,16 @@ public final class AnimationCacheImpl: AnimationCache {
     private let basePath: String
     private let impl: QueueLocalObject<Impl>
     private let allocateTempFile: () -> String
+    private let updateStorageStats: (String, Int64) -> Void
     
-    public init(basePath: String, allocateTempFile: @escaping () -> String) {
+    public init(basePath: String, allocateTempFile: @escaping () -> String, updateStorageStats: @escaping (String, Int64) -> Void) {
         let queue = Queue()
         self.queue = queue
         self.basePath = basePath
         self.allocateTempFile = allocateTempFile
+        self.updateStorageStats = updateStorageStats
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, basePath: basePath, allocateTempFile: allocateTempFile)
+            return Impl(queue: queue, basePath: basePath, allocateTempFile: allocateTempFile, updateStorageStats: updateStorageStats)
         })
     }
     
@@ -1634,7 +1672,7 @@ public final class AnimationCacheImpl: AnimationCache {
     }
     
     public func getFirstFrameSynchronously(sourceId: String, size: CGSize) -> AnimationCacheItem? {
-        return Impl.getFirstFrameSynchronously(basePath: self.basePath, sourceId: sourceId, size: size, allocateTempFile: self.allocateTempFile)
+        return Impl.getFirstFrameSynchronously(basePath: self.basePath, sourceId: sourceId, size: size, allocateTempFile: self.allocateTempFile, updateStorageStats: self.updateStorageStats)
     }
     
     public func getFirstFrame(queue: Queue, sourceId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (AnimationCacheItemResult) -> Void) -> Disposable {
@@ -1642,8 +1680,9 @@ public final class AnimationCacheImpl: AnimationCache {
         
         let basePath = self.basePath
         let allocateTempFile = self.allocateTempFile
+        let updateStorageStats = self.updateStorageStats
         queue.async {
-            disposable.set(Impl.getFirstFrame(queue: queue, basePath: basePath, sourceId: sourceId, size: size, allocateTempFile: allocateTempFile, fetch: fetch, completion: completion))
+            disposable.set(Impl.getFirstFrame(queue: queue, basePath: basePath, sourceId: sourceId, size: size, allocateTempFile: allocateTempFile, updateStorageStats: updateStorageStats, fetch: fetch, completion: completion))
         }
         
         return disposable

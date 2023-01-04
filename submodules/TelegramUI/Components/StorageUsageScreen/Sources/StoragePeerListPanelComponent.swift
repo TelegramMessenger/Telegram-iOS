@@ -289,7 +289,11 @@ private final class PeerListItemComponent: Component {
                 } else {
                     clipStyle = .round
                 }
-                self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                if peer.id == component.context.account.peerId {
+                    self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, overrideImage: .savedMessagesIcon, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                } else {
+                    self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                }
             }
             
             let labelSize = self.label.update(
@@ -582,13 +586,20 @@ final class StoragePeerListPanelComponent: Component {
                         itemSelectionState = .none
                     }
                     
+                    let itemTitle: String
+                    if item.peer.id == component.context.account.peerId {
+                        itemTitle = environment.strings.DialogList_SavedMessages
+                    } else {
+                        itemTitle = item.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                    }
+                    
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(PeerListItemComponent(
                             context: component.context,
                             theme: environment.theme,
                             sideInset: environment.containerInsets.left,
-                            title: item.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
+                            title: itemTitle,
                             peer: item.peer,
                             label: dataSizeString(item.size, formatting: dataSizeFormatting),
                             selectionState: itemSelectionState,

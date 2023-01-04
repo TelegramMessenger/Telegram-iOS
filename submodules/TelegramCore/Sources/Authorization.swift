@@ -72,11 +72,27 @@ private func ~=<T: RegularExpressionMatchable>(pattern: Regex, matchable: T) -> 
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
+    var cloudValue: [Data] = []
+    if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
+        cloudValue = list.compactMap { string -> Data? in
+            guard let stringData = string.data(using: .utf8) else {
+                return nil
+            }
+            return Data(base64Encoded: stringData)
+        }
+    }
     return accountManager.transaction { transaction -> [Data] in
         return transaction.getStoredLoginTokens()
     }
     |> castError(AuthorizationCodeRequestError.self)
-    |> mapToSignal { authTokens -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
+    |> mapToSignal { localAuthTokens -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
+        var authTokens = localAuthTokens
+        for data in cloudValue {
+            if !authTokens.contains(data) {
+                authTokens.insert(data, at: 0)
+            }
+        }
+        
         var flags: Int32 = 0
         flags |= 1 << 5 //allowMissedCall
         flags |= 1 << 6 //tokens

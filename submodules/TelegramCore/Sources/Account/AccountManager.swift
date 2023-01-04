@@ -449,9 +449,26 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                             break
                         }
                         
+                        var cloudValue: [Data] = []
+                        if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
+                            cloudValue = list.compactMap { string -> Data? in
+                                guard let stringData = string.data(using: .utf8) else {
+                                    return nil
+                                }
+                                return Data(base64Encoded: stringData)
+                            }
+                        }
+                        for data in cloudValue {
+                            if !tokens.contains(data) {
+                                tokens.insert(data, at: 0)
+                            }
+                        }
                         if tokens.count > 20 {
                             tokens.removeLast(tokens.count - 20)
                         }
+                        
+                        NSUbiquitousKeyValueStore.default.set(tokens.map { $0.base64EncodedString() }, forKey: "T_SLTokens")
+                        NSUbiquitousKeyValueStore.default.synchronize()
                         
                         transaction.setStoredLoginTokens(tokens)
                     }).start()

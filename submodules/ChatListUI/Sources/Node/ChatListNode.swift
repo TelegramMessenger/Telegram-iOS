@@ -1341,12 +1341,20 @@ public final class ChatListNode: ListView {
         }
         
         let storageInfo: Signal<Double?, NoError>
-        if "".isEmpty, case .chatList(groupId: .root) = location, chatListFilter == nil {
-            let storageBox = context.account.postbox.mediaBox.storageBox
-            storageInfo = storageBox.totalSize()
+        if "".isEmpty && case .chatList(groupId: .root) = location, chatListFilter == nil {
+            let totalSizeSignal = combineLatest(context.account.postbox.mediaBox.storageBox.totalSize(), context.account.postbox.mediaBox.cacheStorageBox.totalSize())
+            |> map { a, b -> Int64 in
+                return a + b
+            }
+            
+            storageInfo = totalSizeSignal
             |> take(1)
             |> mapToSignal { initialSize -> Signal<Double?, NoError> in
+                #if DEBUG
+                let fractionLimit: Double = 0.0001
+                #else
                 let fractionLimit: Double = 0.3
+                #endif
                 
                 let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
                 let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
@@ -1375,7 +1383,7 @@ public final class ChatListNode: ListView {
                 
                 let state = Atomic(value: ReportState(lastSize: initialSize))
                 let updatedReportSize: Signal<Double?, NoError> = Signal { subscriber in
-                    let disposable = storageBox.totalSize().start(next: { size in
+                    let disposable = totalSizeSignal.start(next: { size in
                         let updatedSize = state.with { state -> Int64 in
                             if abs(initialSize - size) > 50 * 1024 * 1024 {
                                 state.lastSize = size
