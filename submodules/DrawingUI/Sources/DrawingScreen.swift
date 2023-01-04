@@ -2077,6 +2077,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                     self._entitiesView = externalEntitiesView
                 } else {
                     self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.size)
+                    //self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.originalSize)
                 }
                 self._drawingView?.entitiesView = self._entitiesView
                 self._entitiesView?.drawingView = self._drawingView
@@ -2942,7 +2943,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         super.displayNodeDidLoad()
         
         let dropInteraction = UIDropInteraction(delegate: self)
-        self.view.addInteraction(dropInteraction)
+        self.drawingView.addInteraction(dropInteraction)
     }
     
     public func generateResultData() -> TGPaintingData? {

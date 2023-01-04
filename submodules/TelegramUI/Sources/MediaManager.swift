@@ -248,7 +248,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     var artwork: SharedMediaPlaybackAlbumArt?
                     
                     switch displayData {
-                        case let .music(title, performer, artworkValue, _):
+                        case let .music(title, performer, artworkValue, _, _):
                             artwork = artworkValue
                             
                             let titleText: String = title ?? presentationData.strings.MediaPlayer_UnknownTrack

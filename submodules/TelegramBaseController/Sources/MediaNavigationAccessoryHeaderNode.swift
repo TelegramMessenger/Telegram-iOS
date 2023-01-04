@@ -41,7 +41,7 @@ private class MediaHeaderItemNode: ASDisplayNode {
         var subtitleString: NSAttributedString?
         if let playbackItem = playbackItem, let displayData = playbackItem.displayData {
             switch displayData {
-                case let .music(title, performer, _, long):
+                case let .music(title, performer, _, long, _):
                     rateButtonHidden = !long
                     let titleText: String = title ?? strings.MediaPlayer_UnknownTrack
                     let subtitleText: String = performer ?? strings.MediaPlayer_UnknownArtist
