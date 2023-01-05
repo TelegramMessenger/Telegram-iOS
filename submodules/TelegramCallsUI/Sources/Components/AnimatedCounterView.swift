@@ -21,7 +21,7 @@ public final class AnimatedCountView: UIView {
         super.init(frame: frame)
         
         self.foregroundGradientLayer.type = .radial
-        self.foregroundGradientLayer.colors = [pink.cgColor, purple.cgColor, purple.cgColor]
+//        self.foregroundGradientLayer.colors = [pink.cgColor, purple.cgColor, purple.cgColor]
         self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
@@ -46,18 +46,34 @@ public final class AnimatedCountView: UIView {
         self.foregroundView.frame = CGRect(origin: CGPoint.zero, size: bounds.size)// .insetBy(dx: -40, dy: -40)
         self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
         self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
-        countLabel.frame = CGRect(origin: .zero, size: bounds.size)
-        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 12, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
+        
+        let subtitleHeight: CGFloat = subtitleLabel.intrinsicContentSize.height// 18
+//        let counterInset: CGFloat = 8
+//        let counterBottomOffset: CGFloat = subtitleHeight + counterInset
+        
+        countLabel.frame = CGRect(origin: .zero, size: CGSize(width: bounds.width, height: bounds.height))
+        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - subtitleHeight / 2 : bounds.height - subtitleHeight, width: subtitleLabel.intrinsicContentSize.width + 20, height: subtitleHeight)
+//        backgroundColor = .white.withAlphaComponent(0.3)
+//        countLabel.backgroundColor = .red.withAlphaComponent(0.2)
+//        subtitleLabel.backgroundColor = .blue.withAlphaComponent(0.2)
     }
     
-    func update(countString: String, subtitle: String, fontSize: CGFloat = 48.0) {
+    func update(countString: String, subtitle: String, fontSize: CGFloat = 48.0, gradientColors: [CGColor] = [pink.cgColor, purple.cgColor, purple.cgColor]) {
         self.setupGradientAnimations()
+        
+        let backgroundGradientColors: [CGColor]
+        if gradientColors.count == 1 {
+            backgroundGradientColors = [gradientColors[0], gradientColors[0]]
+        } else {
+            backgroundGradientColors = gradientColors
+        }
+        self.foregroundGradientLayer.colors = backgroundGradientColors
         
         let text: String = countString
         self.countLabel.fontSize = fontSize
         self.countLabel.attributedText = NSAttributedString(string: text, font: Font.with(size: fontSize, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
         
-        self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, attributes: [.font: UIFont.systemFont(ofSize: max(floor(fontSize / 3), 12), weight: .semibold)])
+        self.subtitleLabel.attributedText = NSAttributedString(string: subtitle, attributes: [.font: UIFont.systemFont(ofSize: max(floor((fontSize + 4.0) / 3.0), 12.0), weight: .semibold)])
         self.subtitleLabel.isHidden = subtitle.isEmpty
     }
     
@@ -152,7 +168,7 @@ class AnimatedCountLabel: UILabel {
     private let containerView = UIView()
     
     var itemWidth: CGFloat { 36 * fontSize / 60 }
-    var commaWidthForSpacing: CGFloat { 8 * fontSize / 60 }
+    var commaWidthForSpacing: CGFloat { 12 * fontSize / 60 }
     var commaFrameWidth: CGFloat { 36 * fontSize / 60 }
     var interItemSpacing: CGFloat { 0 * fontSize / 60 }
     var didBegin = false
@@ -180,9 +196,9 @@ class AnimatedCountLabel: UILabel {
             }
             if characters.count > index && characters[index].string == "," {
                 if index > 0, ["1", "7"].contains(characters[index - 1].string) {
-                    offset -= commaWidthForSpacing * 0.7
+                    offset -= commaWidthForSpacing * 0.5
                 } else {
-                    offset -= commaWidthForSpacing / 3
+                    offset -= commaWidthForSpacing / 6// 3
                 }
             }
             return offset
@@ -199,6 +215,7 @@ class AnimatedCountLabel: UILabel {
             let offset = offsetForChar(at: index)
             char.frame.origin.x = offset
             char.frame.origin.y = 0
+            char.frame.size.height = containerView.bounds.height
         }
     }
     

@@ -168,7 +168,7 @@ final class StreamSheetComponent: CombinedComponent {
             let background = background.update(
                 component: SheetBackgroundComponent(
                     color: context.component.backgroundColor,
-                    radius: context.component.isFullyExtended ? context.component.deviceCornerRadius : 16,
+                    radius: context.component.isFullyExtended ? context.component.deviceCornerRadius : 10.0,
                     offset: backgroundExtraOffset
                 ),
                 availableSize: CGSize(width: size.width, height: context.component.sheetHeight),
@@ -184,7 +184,7 @@ final class StreamSheetComponent: CombinedComponent {
             }
             
             let viewerCounter = viewerCounter.update(
-                component: ParticipantsComponent(count: context.component.participantsCount),
+                component: ParticipantsComponent(count: context.component.participantsCount, fontSize: 44.0),
                 availableSize: CGSize(width: context.availableSize.width, height: 70),
                 transition: context.transition
             )
@@ -208,17 +208,18 @@ final class StreamSheetComponent: CombinedComponent {
             
             if let topItem = topItem {
                 context.add(topItem
-                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 32)))
+                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 28)))
                 )
                 (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
             }
             let videoHeight = context.component.videoHeight
             let sheetHeight = context.component.sheetHeight
-            let animatedParticipantsVisible = context.component.participantsCount != -1
+            let animatedParticipantsVisible = !isFullscreen// context.component.participantsCount != -1
             if true {
                 context.add(viewerCounter
-                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + (sheetHeight - 69 - videoHeight - 50 - context.component.bottomPadding) / 2 - 12))
+                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + (sheetHeight - 69 - videoHeight - 50 - context.component.bottomPadding) / 2 - 10))
                     .opacity(animatedParticipantsVisible ? 1 : 0)
+//                    .animation(key: "position")
                 )
             }
             
@@ -259,18 +260,24 @@ final class SheetBackgroundComponent: Component {
             let extraBottom: CGFloat = 500
             
             if backgroundView.backgroundColor != color && backgroundView.backgroundColor != nil {
-                UIView.animate(withDuration: 0.4) { [self] in
-                    backgroundView.backgroundColor = color
-                    // TODO: determine if animation is needed (with logic, not color)
-                    backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
+                if transition.animation.isImmediate {
+                    UIView.animate(withDuration: 0.4) { [self] in
+                        backgroundView.backgroundColor = color
+                        // TODO: determine if animation is needed (with logic, not color)
+                        backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
+                    }
+                    
+                    let anim = CABasicAnimation(keyPath: "cornerRadius")
+                    anim.fromValue = backgroundView.layer.cornerRadius
+                    backgroundView.layer.cornerRadius = cornerRadius
+                    anim.toValue = cornerRadius
+                    anim.duration = 0.4
+                    backgroundView.layer.add(anim, forKey: "cornerRadius")
+                } else {
+                    transition.setBackgroundColor(view: backgroundView, color: color)
+                    transition.setFrame(view: backgroundView, frame: CGRect(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom)))
+                    transition.setCornerRadius(layer: backgroundView.layer, cornerRadius: cornerRadius)
                 }
-                
-                let anim = CABasicAnimation(keyPath: "cornerRadius")
-                anim.fromValue = backgroundView.layer.cornerRadius
-                backgroundView.layer.cornerRadius = cornerRadius
-                anim.toValue = cornerRadius
-                anim.duration = 0.4
-                backgroundView.layer.add(anim, forKey: "cornerRadius")
             } else {
                 backgroundView.backgroundColor = color
                 backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
@@ -325,7 +332,8 @@ final class ParticipantsComponent: Component {
         view.counter.update(
             countString: self.count > 0 ? presentationStringsFormattedNumber(Int32(count), ",") : "",
             subtitle: self.showsSubtitle ? (self.count > 0 ? "watching" : "no viewers") : "",
-            fontSize: self.fontSize
+            fontSize: self.fontSize,
+            gradientColors: self.gradientColors
         )// environment.strings.LiveStream_NoViewers)
         return availableSize
     }
@@ -333,11 +341,13 @@ final class ParticipantsComponent: Component {
     private let count: Int
     private let showsSubtitle: Bool
     private let fontSize: CGFloat
+    private let gradientColors: [CGColor]
     
-    init(count: Int, showsSubtitle: Bool = true, fontSize: CGFloat = 48) {
+    init(count: Int, showsSubtitle: Bool = true, fontSize: CGFloat = 48.0, gradientColors: [CGColor] = [pink.cgColor, purple.cgColor, purple.cgColor]) {
         self.count = count
         self.showsSubtitle = showsSubtitle
         self.fontSize = fontSize
+        self.gradientColors = gradientColors
     }
     
     final class View: UIView {

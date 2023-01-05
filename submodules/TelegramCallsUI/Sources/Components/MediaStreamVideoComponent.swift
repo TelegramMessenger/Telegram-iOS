@@ -131,7 +131,7 @@ final class MediaStreamVideoComponent: Component {
         private var videoStalled = false {
             didSet {
                 if videoStalled != oldValue {
-                    self.updateVideoStalled(isStalled: self.videoStalled)
+                    self.updateVideoStalled(isStalled: self.videoStalled, transition: nil)
 //                    state?.updated()
                 }
             }
@@ -181,14 +181,17 @@ final class MediaStreamVideoComponent: Component {
             return false
         }
         
+        var didPassExpandFromPiP = false
+        
         func expandFromPictureInPicture() {
+            didPassExpandFromPiP = true
             if let pictureInPictureController = self.pictureInPictureController, pictureInPictureController.isPictureInPictureActive {
                 self.requestedExpansion = true
                 self.pictureInPictureController?.stopPictureInPicture()
             }
         }
         private var isAnimating = false
-        private func updateVideoStalled(isStalled: Bool) {
+        private func updateVideoStalled(isStalled: Bool, transition: Transition?) {
             if isStalled {
                 guard let component = self.component else { return }
                 
@@ -229,14 +232,30 @@ final class MediaStreamVideoComponent: Component {
                 shimmerBorderLayer.cornerRadius = cornerRadius
                 shimmerBorderLayer.masksToBounds = true
                 shimmerBorderLayer.compositingFilter = "softLightBlendMode"
-                shimmerBorderLayer.frame = loadingBlurView.bounds
+                
+                
+                
                 let borderMask = CAShapeLayer()
-                borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                
+                shimmerBorderLayer.mask = borderMask
+                
+                if let transition, shimmerBorderLayer.mask != nil {
+                    let initialPath = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                    borderMask.path = initialPath
+                    transition.setFrame(layer: shimmerBorderLayer, frame: loadingBlurView.bounds)
+                    
+                    let borderMaskPath = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                    transition.setShapeLayerPath(layer: borderMask, path: borderMaskPath)
+                } else {
+                    shimmerBorderLayer.frame = loadingBlurView.bounds
+                    let borderMaskPath = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                    borderMask.path = borderMaskPath
+                }
+                
                 borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
                 borderMask.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
                 borderMask.lineWidth = 3
                 borderMask.compositingFilter = "softLightBlendMode"
-                shimmerBorderLayer.mask = borderMask
                 
                 borderShimmer = StandaloneShimmerEffect()
                 borderShimmer.layer = shimmerBorderLayer
@@ -281,9 +300,9 @@ final class MediaStreamVideoComponent: Component {
             }
             
             if !component.hasVideo || component.videoLoading || self.videoStalled {
-                updateVideoStalled(isStalled: true)
+                updateVideoStalled(isStalled: true, transition: transition)
             } else {
-                updateVideoStalled(isStalled: false)
+                updateVideoStalled(isStalled: false, transition: transition)
             }
             
             if component.hasVideo, self.videoView == nil {
@@ -543,7 +562,14 @@ final class MediaStreamVideoComponent: Component {
             }
             
             let loadingBlurViewFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
-            videoFrameUpdateTransition.setFrame(view: loadingBlurView, frame: loadingBlurViewFrame)
+//            UIView.animate(withDuration: 0.5) {
+//                self.loadingBlurView.frame = loadingBlurViewFrame
+//            }
+            if loadingBlurView.frame == .zero {
+                loadingBlurView.frame = loadingBlurViewFrame
+            } else {
+                transition.setFrame(view: loadingBlurView, frame: loadingBlurViewFrame)
+            }
 //            loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
             
             videoFrameUpdateTransition.setCornerRadius(layer: loadingBlurView.layer, cornerRadius: videoCornerRadius)
@@ -559,17 +585,28 @@ final class MediaStreamVideoComponent: Component {
 //                $0.frame = placeholderView.bounds
             }
             
+            let initialShimmerBounds = shimmerBorderLayer.bounds
             videoFrameUpdateTransition.setFrame(layer: shimmerBorderLayer, frame: loadingBlurView.bounds)
 //            shimmerBorderLayer.frame = loadingBlurView.bounds
             
             let borderMask = CAShapeLayer()
-            borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil)
+            let initialPath = CGPath(roundedRect: .init(x: 0, y: 0, width: initialShimmerBounds.width, height: initialShimmerBounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil)
+            borderMask.path = initialPath
+//            borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil)
+            videoFrameUpdateTransition.setShapeLayerPath(layer: borderMask, path: CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil))
+            
             borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
             borderMask.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
             borderMask.lineWidth = 3
             shimmerBorderLayer.mask = borderMask
             shimmerBorderLayer.cornerRadius = videoCornerRadius
             
+//            if component.isAdmin {
+//                shimmerBorderLayer.isHidden = true
+//            } else {
+//                shimmerBorderLayer.isHidden = false
+//            }
+//            
             if !self.hadVideo {
                 
                 if self.noSignalTimer == nil {
@@ -623,7 +660,7 @@ final class MediaStreamVideoComponent: Component {
                 guard let strongSelf = self, let pictureInPictureController = strongSelf.pictureInPictureController else {
                     return
                 }
-                
+                print("[pip] started")
                 pictureInPictureController.startPictureInPicture()
                 
                 completion(Void())
@@ -701,25 +738,27 @@ final class MediaStreamVideoComponent: Component {
                 completionHandler(false)
                 return
             }
-
+            didRequestBringBack = true
             component.bringBackControllerForPictureInPictureDeactivation {
                 completionHandler(true)
             }
         }
-        
+        var didRequestBringBack = false
         func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+            self.didRequestBringBack = false
             self.state?.updated(transition: .immediate)
         }
         
         func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
             if self.requestedExpansion {
                 self.requestedExpansion = false
-            } else {
+            } else if !didRequestBringBack {
                 self.component?.pictureInPictureClosed()
             }
+            didRequestBringBack = false
             // TODO: extract precise animation timing or observe window changes
             // Handle minimized case separatelly (can we detect minimized?)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 self.videoView?.alpha = 1
             }
             UIView.animate(withDuration: 0.3) { [self] in
