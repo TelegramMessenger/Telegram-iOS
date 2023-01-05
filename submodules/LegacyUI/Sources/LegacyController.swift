@@ -109,6 +109,26 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
         }
     }
     
+    
+    public func lockPortrait() {
+        if let controller = self.controller as? LegacyController {
+            controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        }
+    }
+    
+    public func unlockPortrait() {
+        if let controller = self.controller as? LegacyController {
+            controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+        }
+    }
+    
+    public func disableInteractiveKeyboardGesture() {
+        if let controller = self.controller as? LegacyController {
+            controller.view.disablesInteractiveModalDismiss = true
+            controller.view.disablesInteractiveKeyboardGestureRecognizer = true
+        }
+    }
+
     public func keyCommandController() -> TGKeyCommandController! {
         return nil
     }

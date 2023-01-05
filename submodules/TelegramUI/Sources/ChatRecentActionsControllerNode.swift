@@ -26,6 +26,8 @@ import WallpaperBackgroundNode
 import BotPaymentsUI
 import ContextUI
 import Pasteboard
+import ChatControllerInteraction
+import ChatPresentationInterfaceState
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -1013,7 +1015,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }), in: .current)*/
                         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     case let .instantView(webpage, anchor):
-                        strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
+                        strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(strongSelf.peer.id), peerType: .channel), anchor: anchor))
                     case let .join(link):
                         strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peer, peekData in
                             if let strongSelf = self {

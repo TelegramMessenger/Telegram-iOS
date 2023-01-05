@@ -21,6 +21,8 @@ import MoreButtonNode
 import BotPaymentsUI
 import PromptUI
 import PhoneNumberFormat
+import QrCodeUI
+import InstantPageUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -306,7 +308,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 if let fileReference = fileReference {
-                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: fileReference).start()
+                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, userLocation: .other, fileReference: fileReference).start()
                 }
                 strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
                 |> deliverOnMainQueue).start(next: { [weak self] transform in
@@ -591,6 +593,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
              
         private let hapticFeedback = HapticFeedback()
         
+        private weak var currentQrCodeScannerScreen: QrCodeScanScreen?
+        
         private var delayedScriptMessage: WKScriptMessage?
         private func handleScriptMessage(_ message: WKScriptMessage) {
             guard let controller = self.controller else {
@@ -680,10 +684,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_open_link":
                     if let json = json, let url = json["url"] as? String {
+                        let tryInstantView = json["try_instant_view"] as? Bool ?? false
                         let currentTimestamp = CACurrentMediaTime()
                         if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
                             self.webView?.lastTouchTimestamp = nil
-                            self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                            if tryInstantView {
+                                let _ = (resolveInstantViewUrl(account: self.context.account, url: url)
+                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    switch result {
+                                    case let .instantView(webPage, anchor):
+                                        let controller = InstantPageController(context: strongSelf.context, webPage: webPage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .otherPrivate), anchor: anchor)
+                                        strongSelf.controller?.getNavigationController()?.pushViewController(controller)
+                                    default:
+                                        strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                                    }
+                                })
+                            } else {
+                                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                            }
                         }
                     }
                 case "web_app_setup_back_button":
@@ -799,8 +820,38 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let json = json, let needConfirmation = json["need_confirmation"] as? Bool {
                         self.needDismissConfirmation = needConfirmation
                     }
-                case "web_app_request_phone":
-                    break
+                case "web_app_open_scan_qr_popup":
+                    var info: String = ""
+                    if let json = json, let text = json["text"] as? String {
+                        info = text
+                    }
+                    let controller = QrCodeScanScreen(context: self.context, subject: .custom(info: info))
+                    controller.completion = { [weak self] result in
+                        if let strongSelf = self {
+                            if let result = result {
+                                strongSelf.sendQrCodeScannedEvent(data: result)
+                            } else {
+                                strongSelf.sendQrCodeScannerClosedEvent()
+                            }
+                        }
+                    }
+                    self.currentQrCodeScannerScreen = controller
+                    self.controller?.present(controller, in: .window(.root))
+                case "web_app_close_scan_qr_popup":
+                    if let controller = self.currentQrCodeScannerScreen {
+                        self.currentQrCodeScannerScreen = nil
+                        controller.dismissAnimated()
+                    }
+                case "web_app_read_text_from_clipboard":
+                    if let json = json, let requestId = json["req_id"] as? String {
+                        let currentTimestamp = CACurrentMediaTime()
+                        var fillData = false
+                        if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0, self.controller?.url == nil {
+                            self.webView?.lastTouchTimestamp = nil
+                            fillData = true
+                        }
+                        self.sendClipboardTextEvent(requestId: requestId, fillData: fillData)
+                    }
                 default:
                     break
             }
@@ -929,6 +980,26 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 paramsString = "{phone_number: \"\(phone)\"}"
             }
             self.webView?.sendEvent(name: "phone_requested", data: paramsString)
+        }
+        
+        fileprivate func sendQrCodeScannedEvent(data: String?) {
+            let paramsString = data.flatMap { "{data: \"\($0)\"}" } ?? "{}"
+            self.webView?.sendEvent(name: "qr_text_received", data: paramsString)
+        }
+        
+        fileprivate func sendQrCodeScannerClosedEvent() {
+            self.webView?.sendEvent(name: "scan_qr_popup_closed", data: nil)
+        }
+        
+        fileprivate func sendClipboardTextEvent(requestId: String, fillData: Bool) {
+            var paramsString: String
+            if fillData {
+                let data = UIPasteboard.general.string ?? ""
+                paramsString = "{req_id: \"\(requestId)\", data: \"\(data)\"}"
+            } else {
+                paramsString = "{req_id: \"\(requestId)\"}"
+            }
+            self.webView?.sendEvent(name: "clipboard_text_received", data: paramsString)
         }
     }
     
@@ -1067,7 +1138,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId})
             
-            if self?.url == nil, let attachMenuBot = attachMenuBot, attachMenuBot.hasSettings {
+            if self?.url == nil, let attachMenuBot = attachMenuBot, attachMenuBot.flags.contains(.hasSettings) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in

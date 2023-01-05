@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import WallpaperBackgroundNode
+import ChatControllerInteraction
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 

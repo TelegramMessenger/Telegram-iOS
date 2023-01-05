@@ -1,7 +1,8 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-
+import MtProtoKit
+import DarwinDirStat
 
 public enum PeerCacheUsageCategory: Int32 {
     case image = 0
@@ -52,8 +53,742 @@ private final class CacheUsageStatsState {
     var upperBound: MessageIndex?
 }
 
+public final class StorageUsageStats {
+    public enum CategoryKey: Hashable {
+        case photos
+        case videos
+        case files
+        case music
+        case stickers
+        case avatars
+        case misc
+    }
+    
+    public struct CategoryData {
+        public var size: Int64
+        public var messages: [EngineMessage.Id: Int64]
+        
+        public init(size: Int64, messages: [EngineMessage.Id: Int64]) {
+            self.size = size
+            self.messages = messages
+        }
+    }
+    
+    public fileprivate(set) var categories: [CategoryKey: CategoryData]
+    
+    public init(categories: [CategoryKey: CategoryData]) {
+        self.categories = categories
+    }
+}
+
+public final class AllStorageUsageStats {
+    public final class PeerStats {
+        public let peer: EnginePeer
+        public let stats: StorageUsageStats
+        
+        public init(peer: EnginePeer, stats: StorageUsageStats) {
+            self.peer = peer
+            self.stats = stats
+        }
+    }
+    
+    public var deviceAvailableSpace: Int64
+    public var deviceFreeSpace: Int64
+    public fileprivate(set) var totalStats: StorageUsageStats
+    public fileprivate(set) var peers: [EnginePeer.Id: PeerStats]
+    
+    public init(deviceAvailableSpace: Int64, deviceFreeSpace: Int64, totalStats: StorageUsageStats, peers: [EnginePeer.Id: PeerStats]) {
+        self.deviceAvailableSpace = deviceAvailableSpace
+        self.deviceFreeSpace = deviceFreeSpace
+        self.totalStats = totalStats
+        self.peers = peers
+    }
+}
+
+private extension StorageUsageStats {
+    convenience init(_ stats: StorageBox.Stats) {
+        var mappedCategories: [StorageUsageStats.CategoryKey: StorageUsageStats.CategoryData] = [:]
+        for (key, value) in stats.contentTypes {
+            let mappedCategory: StorageUsageStats.CategoryKey
+            switch key {
+            case MediaResourceUserContentType.image.rawValue:
+                mappedCategory = .photos
+            case MediaResourceUserContentType.video.rawValue:
+                mappedCategory = .videos
+            case MediaResourceUserContentType.file.rawValue:
+                mappedCategory = .files
+            case MediaResourceUserContentType.audio.rawValue:
+                mappedCategory = .music
+            case MediaResourceUserContentType.avatar.rawValue:
+                mappedCategory = .avatars
+            case MediaResourceUserContentType.sticker.rawValue:
+                mappedCategory = .stickers
+            default:
+                mappedCategory = .misc
+            }
+            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+        }
+        
+        self.init(categories: mappedCategories)
+    }
+}
+
+func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
+    let additionalStats = Signal<Int64, NoError> { subscriber in
+        DispatchQueue.global().async {
+            var totalSize: Int64 = 0
+            
+            let additionalPaths: [String] = [
+                "cache",
+                "animation-cache",
+                "short-cache",
+            ]
+            
+            func statForDirectory(path: String) -> Int64 {
+                var s = darwin_dirstat()
+                var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
+                if result != -1 {
+                    return Int64(s.total_size)
+                } else {
+                    result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+                    if result != -1 {
+                        return Int64(s.total_size)
+                    } else {
+                        return 0
+                    }
+                }
+            }
+            
+            var delayedDirs: [String] = []
+            
+            for path in additionalPaths {
+                let fullPath: String
+                if path.isEmpty {
+                    fullPath = account.postbox.mediaBox.basePath
+                } else {
+                    fullPath = account.postbox.mediaBox.basePath + "/\(path)"
+                }
+                
+                if path == "animation-cache" {
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: fullPath), includingPropertiesForKeys: [.isDirectoryKey], options: .skipsSubdirectoryDescendants) {
+                        for url in enumerator {
+                            guard let url = url as? URL else {
+                                continue
+                            }
+                            delayedDirs.append(fullPath + "/" + url.lastPathComponent)
+                        }
+                    }
+                } else {
+                    totalSize += statForDirectory(path: fullPath)
+                }
+            }
+            
+            if !delayedDirs.isEmpty {
+                let concurrentSize = Atomic<[Int64]>(value: [])
+                
+                DispatchQueue.concurrentPerform(iterations: delayedDirs.count, execute: { index in
+                    let directorySize = statForDirectory(path: delayedDirs[index])
+                    let result = concurrentSize.modify { current in
+                        return current + [directorySize]
+                    }
+                    if result.count == delayedDirs.count {
+                        var aggregatedCount: Int64 = 0
+                        for item in result {
+                            aggregatedCount += item
+                        }
+                        subscriber.putNext(totalSize + aggregatedCount)
+                        subscriber.putCompletion()
+                    }
+                })
+            } else {
+                subscriber.putNext(totalSize)
+                subscriber.putCompletion()
+            }
+        }
+        
+        return EmptyDisposable
+    }
+    
+    return combineLatest(
+        additionalStats,
+        account.postbox.mediaBox.storageBox.getAllStats()
+    )
+    |> deliverOnMainQueue
+    |> mapToSignal { additionalStats, allStats -> Signal<AllStorageUsageStats, NoError> in
+        return account.postbox.transaction { transaction -> AllStorageUsageStats in
+            let total = StorageUsageStats(allStats.total)
+            if additionalStats != 0 {
+                if total.categories[.misc] == nil {
+                    total.categories[.misc] = StorageUsageStats.CategoryData(size: 0, messages: [:])
+                }
+                total.categories[.misc]?.size += additionalStats
+            }
+            
+            var peers: [EnginePeer.Id: AllStorageUsageStats.PeerStats] = [:]
+            
+            for (peerId, peerStats) in allStats.peers {
+                if peerId.id._internalGetInt64Value() == 0 {
+                    continue
+                }
+                
+                var peerSize: Int64 = 0
+                for (_, contentValue) in peerStats.contentTypes {
+                    peerSize += contentValue.size
+                }
+                if peerSize == 0 {
+                    continue
+                }
+                
+                if let peer = transaction.getPeer(peerId), transaction.getPeerChatListIndex(peerId) != nil {
+                    peers[peerId] = AllStorageUsageStats.PeerStats(
+                        peer: EnginePeer(peer),
+                        stats: StorageUsageStats(peerStats)
+                    )
+                }
+            }
+            
+            let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
+            let deviceAvailableSpace = (systemAttributes?[FileAttributeKey.systemSize] as? NSNumber)?.int64Value ?? 0
+            let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+            
+            return AllStorageUsageStats(
+                deviceAvailableSpace: deviceAvailableSpace,
+                deviceFreeSpace: deviceFreeSpace,
+                totalStats: total,
+                peers: peers
+            )
+        }
+    }
+}
+
+func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
+    return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
+        var result: [EngineMessage.Id: Message] = [:]
+        for (category, value) in stats.categories {
+            if !categories.contains(category) {
+                continue
+            }
+            
+            for (id, _) in value.messages.sorted(by: { $0.value >= $1.value }).prefix(1000) {
+                if result[id] == nil {
+                    if let message = existingMessages[id] {
+                        result[id] = message
+                    } else if let message = transaction.getMessage(id) {
+                        result[id] = message
+                    }
+                }
+            }
+        }
+        
+        return result
+    }
+}
+
+func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
+    let mediaBox = account.postbox.mediaBox
+    return Signal { subscriber in
+        mediaBox.storageBox.remove(peerId: peerId, contentTypes: categories.map { item -> UInt8 in
+            let mappedItem: MediaResourceUserContentType
+            switch item {
+            case .photos:
+                mappedItem = .image
+            case .videos:
+                mappedItem = .video
+            case .files:
+                mappedItem = .file
+            case .music:
+                mappedItem = .audio
+            case .stickers:
+                mappedItem = .sticker
+            case .avatars:
+                mappedItem = .avatar
+            case .misc:
+                mappedItem = .other
+            }
+            return mappedItem.rawValue
+        }, completion: { ids in
+            var resourceIds: [MediaResourceId] = []
+            for id in ids {
+                if let value = String(data: id, encoding: .utf8) {
+                    resourceIds.append(MediaResourceId(value))
+                }
+            }
+            let _ = mediaBox.removeCachedResources(resourceIds).start(completed: {
+                if peerId == nil && categories.contains(.misc) {
+                    let additionalPaths: [String] = [
+                        "cache",
+                        "animation-cache",
+                        "short-cache",
+                    ]
+                    
+                    for item in additionalPaths {
+                        let fullPath = mediaBox.basePath + "/\(item)"
+                        if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: fullPath), includingPropertiesForKeys: [.isDirectoryKey], options: .skipsSubdirectoryDescendants) {
+                            for url in enumerator {
+                                guard let url = url as? URL else {
+                                    continue
+                                }
+                                let _ = try? FileManager.default.removeItem(at: url)
+                            }
+                        }
+                    }
+                    
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putCompletion()
+                }
+            })
+        })
+        
+        return ActionDisposable {
+        }
+    }
+}
+
+func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
+    let mediaBox = account.postbox.mediaBox
+    return Signal { subscriber in
+        mediaBox.storageBox.remove(peerIds: peerIds, completion: { ids in
+            var resourceIds: [MediaResourceId] = []
+            for id in ids {
+                if let value = String(data: id, encoding: .utf8) {
+                    resourceIds.append(MediaResourceId(value))
+                }
+            }
+            let _ = mediaBox.removeCachedResources(resourceIds).start(completed: {
+                subscriber.putCompletion()
+            })
+        })
+        
+        return ActionDisposable {
+        }
+    }
+}
+
+func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Never, NoError> {
+    let mediaBox = account.postbox.mediaBox
+    
+    return Signal { subscriber in
+        DispatchQueue.global().async {
+            var resourceIds = Set<MediaResourceId>()
+            for message in messages {
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
+                        for representation in image.representations {
+                            resourceIds.insert(representation.resource.id)
+                        }
+                    } else if let file = media as? TelegramMediaFile {
+                        for representation in file.previewRepresentations {
+                            resourceIds.insert(representation.resource.id)
+                        }
+                        resourceIds.insert(file.resource.id)
+                    } else if let webpage = media as? TelegramMediaWebpage {
+                        if case let .Loaded(content) = webpage.content {
+                            if let image = content.image {
+                                for representation in image.representations {
+                                    resourceIds.insert(representation.resource.id)
+                                }
+                            }
+                            if let file = content.file {
+                                for representation in file.previewRepresentations {
+                                    resourceIds.insert(representation.resource.id)
+                                }
+                                resourceIds.insert(file.resource.id)
+                            }
+                        }
+                    } else if let game = media as? TelegramMediaGame {
+                        if let image = game.image {
+                            for representation in image.representations {
+                                resourceIds.insert(representation.resource.id)
+                            }
+                        }
+                        if let file = game.file {
+                            for representation in file.previewRepresentations {
+                                resourceIds.insert(representation.resource.id)
+                            }
+                            resourceIds.insert(file.resource.id)
+                        }
+                    }
+                }
+            }
+            
+            var removeIds: [Data] = []
+            for resourceId in resourceIds {
+                if let id = resourceId.stringRepresentation.data(using: .utf8) {
+                    removeIds.append(id)
+                }
+            }
+            
+            mediaBox.storageBox.remove(ids: removeIds)
+            let _ = mediaBox.removeCachedResources(Array(resourceIds)).start(completed: {
+                subscriber.putCompletion()
+            })
+        }
+        
+        return ActionDisposable {
+        }
+    }
+}
+
+func _internal_reindexCacheInBackground(account: Account, lowImpact: Bool) -> Signal<Never, NoError> {
+    let postbox = account.postbox
+    
+    let queue = Queue(name: "ReindexCacheInBackground")
+    return Signal { subscriber in
+        let isCancelled = Atomic<Bool>(value: false)
+        
+        func process(lowerBound: MessageIndex?) {
+            if isCancelled.with({ $0 }) {
+                return
+            }
+            
+            let _ = (postbox.transaction { transaction -> (messagesByMediaId: [MediaId: [MessageId]], mediaMap: [MediaId: Media], nextLowerBound: MessageIndex?) in
+                return transaction.enumerateMediaMessages(lowerBound: lowerBound, upperBound: nil, limit: 1000)
+            }
+            |> deliverOn(queue)).start(next: { result in
+                Logger.shared.log("ReindexCacheInBackground", "process batch of \(result.mediaMap.count) media")
+                
+                var storageItems: [(reference: StorageBox.Reference, id: Data, contentType: UInt8, size: Int64)] = []
+                
+                let mediaBox = postbox.mediaBox
+                
+                let processResource: ([MessageId], MediaResource, MediaResourceUserContentType) -> Void = { messageIds, resource, contentType in
+                    let size = mediaBox.fileSizeForId(resource.id)
+                    if size != 0 {
+                        if let itemId = resource.id.stringRepresentation.data(using: .utf8) {
+                            for messageId in messageIds {
+                                storageItems.append((reference: StorageBox.Reference(peerId: messageId.peerId.toInt64(), messageNamespace: UInt8(clamping: messageId.namespace), messageId: messageId.id), id: itemId, contentType: contentType.rawValue, size: size))
+                            }
+                        }
+                    }
+                }
+                
+                for (_, media) in result.mediaMap {
+                    guard let mediaId = media.id else {
+                        continue
+                    }
+                    guard let mediaMessages = result.messagesByMediaId[mediaId] else {
+                        continue
+                    }
+                    
+                    if let image = media as? TelegramMediaImage {
+                        for representation in image.representations {
+                            processResource(mediaMessages, representation.resource, .image)
+                        }
+                    } else if let file = media as? TelegramMediaFile {
+                        for representation in file.previewRepresentations {
+                            processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
+                        }
+                        processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
+                    } else if let webpage = media as? TelegramMediaWebpage {
+                        if case let .Loaded(content) = webpage.content {
+                            if let image = content.image {
+                                for representation in image.representations {
+                                    processResource(mediaMessages, representation.resource, .image)
+                                }
+                            }
+                            if let file = content.file {
+                                for representation in file.previewRepresentations {
+                                    processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
+                                }
+                                processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
+                            }
+                        }
+                    } else if let game = media as? TelegramMediaGame {
+                        if let image = game.image {
+                            for representation in image.representations {
+                                processResource(mediaMessages, representation.resource, .image)
+                            }
+                        }
+                        if let file = game.file {
+                            for representation in file.previewRepresentations {
+                                processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
+                            }
+                            processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
+                        }
+                    }
+                }
+                
+                if !storageItems.isEmpty {
+                    mediaBox.storageBox.batchAdd(items: storageItems)
+                }
+                
+                if let nextLowerBound = result.nextLowerBound {
+                    if lowImpact {
+                        queue.after(0.4, {
+                            process(lowerBound: nextLowerBound)
+                        })
+                    } else {
+                        process(lowerBound: nextLowerBound)
+                    }
+                } else {
+                    subscriber.putCompletion()
+                }
+            })
+        }
+        
+        process(lowerBound: nil)
+        
+        return ActionDisposable {
+            let _ = isCancelled.swap(true)
+        }
+    }
+    |> runOn(queue)
+}
+
 func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
-    let initialState = CacheUsageStatsState()
+    return account.postbox.mediaBox.storageBox.all()
+    |> mapToSignal { entries -> Signal<CacheUsageStatsResult, NoError> in
+        final class IncrementalState {
+            var startIndex: Int = 0
+            
+            var media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]] = [:]
+            var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
+            var totalSize: Int64 = 0
+            var mediaSize: Int64 = 0
+            
+            var processedResourceIds = Set<String>()
+            
+            var otherSize: Int64 = 0
+            var otherPaths: [String] = []
+            
+            var peers: [PeerId: Peer] = [:]
+        }
+        
+        let mediaBox = account.postbox.mediaBox
+        
+        let queue = Queue()
+        return Signal<CacheUsageStatsResult, NoError> { subscriber in
+            var isCancelled: Bool = false
+            
+            let state = Atomic<IncrementalState>(value: IncrementalState())
+            
+            var processNextBatchPtr: (() -> Void)?
+            let processNextBatch: () -> Void = {
+                if isCancelled {
+                    return
+                }
+                
+                let _ = (account.postbox.transaction { transaction -> Void in
+                    state.with { state in
+                        if state.startIndex >= entries.count {
+                            return
+                        }
+                        
+                        let batchCount = 5000
+                        let endIndex = min(state.startIndex + batchCount, entries.count)
+                        for i in state.startIndex ..< endIndex {
+                            let entry = entries[i]
+                            
+                            guard let resourceIdString = String(data: entry.id, encoding: .utf8) else {
+                                continue
+                            }
+                            let resourceId = MediaResourceId(resourceIdString)
+                            if state.processedResourceIds.contains(resourceId.stringRepresentation) {
+                                continue
+                            }
+                            
+                            let resourceSize = mediaBox.resourceUsage(id: resourceId)
+                            if resourceSize != 0 {
+                                state.totalSize += resourceSize
+                                
+                                for reference in entry.references {
+                                    if reference.peerId == 0 {
+                                        state.otherSize += resourceSize
+                                        
+                                        let storePaths = mediaBox.storePathsForId(resourceId)
+                                        state.otherPaths.append(storePaths.complete)
+                                        state.otherPaths.append(storePaths.partial)
+                                        
+                                        continue
+                                    }
+                                    if let message = transaction.getMessage(MessageId(peerId: PeerId(reference.peerId), namespace: MessageId.Namespace(reference.messageNamespace), id: reference.messageId)) {
+                                        for mediaItem in message.media {
+                                            guard let mediaId = mediaItem.id else {
+                                                continue
+                                            }
+                                            var category: PeerCacheUsageCategory?
+                                            if let _ = mediaItem as? TelegramMediaImage {
+                                                category = .image
+                                            } else if let mediaItem = mediaItem as? TelegramMediaFile {
+                                                if mediaItem.isMusic || mediaItem.isVoice {
+                                                    category = .audio
+                                                } else if mediaItem.isVideo {
+                                                    category = .video
+                                                } else {
+                                                    category = .file
+                                                }
+                                            }
+                                            if let category = category {
+                                                state.mediaSize += resourceSize
+                                                state.processedResourceIds.insert(resourceId.stringRepresentation)
+                                                
+                                                state.media[PeerId(reference.peerId), default: [:]][category, default: [:]][mediaId, default: 0] += resourceSize
+                                                if let index = state.mediaResourceIds.index(forKey: mediaId) {
+                                                    if !state.mediaResourceIds[index].value.contains(resourceId) {
+                                                        state.mediaResourceIds[mediaId]?.append(resourceId)
+                                                    }
+                                                } else {
+                                                    state.mediaResourceIds[mediaId] = [resourceId]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state.startIndex = endIndex
+                    }
+                }).start(completed: {
+                    if isCancelled {
+                        return
+                    }
+                    let isFinished = state.with { state -> Bool in
+                        return state.startIndex >= entries.count
+                    }
+                    if !isFinished {
+                        queue.async {
+                            processNextBatchPtr?()
+                        }
+                    } else {
+                        let _ = (account.postbox.transaction { transaction -> Void in
+                            state.with { state in
+                                for peerId in state.media.keys {
+                                    if let peer = transaction.getPeer(peerId) {
+                                        state.peers[peer.id] = peer
+                                    }
+                                }
+                            }
+                        }).start(completed: {
+                            queue.async {
+                                let state = state.with { $0 }
+                                var tempPaths: [String] = []
+                                var tempSize: Int64 = 0
+                                #if os(iOS)
+                                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: NSTemporaryDirectory()), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey]) {
+                                    for url in enumerator {
+                                        if let url = url as? URL {
+                                            if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
+                                                tempPaths.append(url.path)
+                                            } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
+                                                tempPaths.append(url.path)
+                                                
+                                                if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                                                } else {
+                                                    tempSize += Int64(fileSizeValue)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                #endif
+                                
+                                var immutableSize: Int64 = 0
+                                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: account.basePath + "/postbox/db"), includingPropertiesForKeys: [URLResourceKey.fileSizeKey], options: []) {
+                                    for url in files {
+                                        if let fileSize = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
+                                            immutableSize += Int64(fileSize)
+                                        }
+                                    }
+                                }
+                                if let logFilesPath = logFilesPath, let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: logFilesPath), includingPropertiesForKeys: [URLResourceKey.fileSizeKey], options: []) {
+                                    for url in files {
+                                        if let fileSize = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
+                                            immutableSize += Int64(fileSize)
+                                        }
+                                    }
+                                }
+                                
+                                for additionalPath in additionalCachePaths {
+                                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: additionalPath), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey]) {
+                                        for url in enumerator {
+                                            if let url = url as? URL {
+                                                if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
+                                                } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
+                                                    tempPaths.append(url.path)
+
+                                                    if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                                                    } else {
+                                                        tempSize += Int64(fileSizeValue)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                var cacheSize: Int64 = 0
+                                let basePath = account.postbox.mediaBox.basePath
+                                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: basePath + "/cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                                    loop: for url in enumerator {
+                                        if let url = url as? URL {
+                                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                                state.otherPaths.append("cache/" + url.lastPathComponent)
+                                                cacheSize += Int64(value)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                func processRecursive(directoryPath: String, subdirectoryPath: String) {
+                                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: directoryPath), includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                                        loop: for url in enumerator {
+                                            if let url = url as? URL {
+                                                if let isDirectory = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectory {
+                                                    processRecursive(directoryPath: url.path, subdirectoryPath: subdirectoryPath + "/\(url.lastPathComponent)")
+                                                } else if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                                    state.otherPaths.append("\(subdirectoryPath)/" + url.lastPathComponent)
+                                                    cacheSize += Int64(value)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                processRecursive(directoryPath: basePath + "/animation-cache", subdirectoryPath: "animation-cache")
+                                
+                                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: basePath + "/short-cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                                    loop: for url in enumerator {
+                                        if let url = url as? URL {
+                                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                                state.otherPaths.append("short-cache/" + url.lastPathComponent)
+                                                cacheSize += Int64(value)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                subscriber.putNext(.result(CacheUsageStats(
+                                    media: state.media,
+                                    mediaResourceIds: state.mediaResourceIds,
+                                    peers: state.peers,
+                                    otherSize: state.otherSize,
+                                    otherPaths: state.otherPaths,
+                                    cacheSize: cacheSize,
+                                    tempPaths: tempPaths,
+                                    tempSize: tempSize,
+                                    immutableSize: immutableSize
+                                )))
+                                subscriber.putCompletion()
+                            }
+                        })
+                    }
+                })
+            }
+            processNextBatchPtr = {
+                processNextBatch()
+            }
+            
+            processNextBatch()
+            
+            return ActionDisposable {
+                isCancelled = true
+            }
+        }
+        |> runOn(queue)
+    }
+    
+    /*let initialState = CacheUsageStatsState()
     if let peerId = peerId {
         initialState.lowerBound = MessageIndex.lowerBound(peerId: peerId)
         initialState.upperBound = MessageIndex.upperBound(peerId: peerId)
@@ -277,7 +1012,8 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
         
         let signal = (fetch |> mapToSignal { mediaByPeer, mediaRefs, updatedLowerBound -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
             return process(mediaByPeer, mediaRefs, updatedLowerBound)
-        }) |> restart
+        })
+        |> restart
         
         return signal |> `catch` { error in
             switch error {
@@ -287,9 +1023,9 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                     return .complete()
             }
         }
-    }
+    }*/
 }
 
 func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
-    return account.postbox.mediaBox.removeCachedResources(mediaResourceIds)
+    return account.postbox.mediaBox.removeCachedResources(Array(mediaResourceIds))
 }

@@ -83,6 +83,15 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
         memcpy(self.memory + offset, &varValue, 2)
     }
     
+    public func getData(_ offset: Int, length: Int) -> Data {
+        assert(offset >= 0 && offset + length <= self.length)
+        var value = Data(count: length)
+        let _ = value.withUnsafeMutableBytes { bytes in
+            memcpy(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), self.memory + offset, length)
+        }
+        return value
+    }
+    
     public func getInt32(_ offset: Int) -> Int32 {
         assert(offset >= 0 && offset + 4 <= self.length)
         var value: Int32 = 0

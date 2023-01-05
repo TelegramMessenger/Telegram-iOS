@@ -539,7 +539,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         
                         return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
                         |> then(
-                            requestContextResults(context: context, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
+                            requestContextResults(engine: context.engine, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }

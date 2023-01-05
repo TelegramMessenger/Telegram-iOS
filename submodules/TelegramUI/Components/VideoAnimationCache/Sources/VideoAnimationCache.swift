@@ -18,7 +18,7 @@ private func roundUp(_ numToRound: Int, multiple: Int) -> Int {
     return numToRound + multiple - remainder
 }
 
-public func cacheVideoAnimation(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter, firstFrameOnly: Bool) {
+public func cacheVideoAnimation(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter, firstFrameOnly: Bool, customColor: UIColor?) {
     let work: () -> Void = {
         guard let frameSource = makeVideoStickerDirectFrameSource(queue: writer.queue, path: path, width: roundUp(width, multiple: 16), height: roundUp(height, multiple: 16), cachePathPrefix: nil, unpremultiplyAlpha: false) else {
             return

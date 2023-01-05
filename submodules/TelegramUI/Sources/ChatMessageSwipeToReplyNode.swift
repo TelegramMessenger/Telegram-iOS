@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import AppBundle
 import WallpaperBackgroundNode
+import ChatControllerInteraction
 
 private let size = CGSize(width: 33.0, height: 33.0)
 

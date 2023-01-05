@@ -240,6 +240,8 @@ private func installRemoteStickerPacks(network: Network, infos: [StickerPackColl
                                 archivedIds.insert(StickerPackCollectionInfo(apiSet: set, namespace: info.id.namespace).id)
                             case let .stickerSetFullCovered(set, _, _, _):
                                 archivedIds.insert(StickerPackCollectionInfo(apiSet: set, namespace: info.id.namespace).id)
+                                case let .stickerSetNoCovered(set):
+                                    archivedIds.insert(StickerPackCollectionInfo(apiSet: set, namespace: info.id.namespace).id)
                             }
                         }
                         return archivedIds

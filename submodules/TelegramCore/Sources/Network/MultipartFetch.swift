@@ -532,18 +532,62 @@ private final class MultipartFetchManager {
         self.reportCompleteSize = reportCompleteSize
         self.finishWithError = finishWithError
         
-        self.rangesDisposable = (intervals
-        |> deliverOn(self.queue)).start(next: { [weak self] intervals in
-            if let strongSelf = self {
-                if let _ = strongSelf.currentIntervals {
-                    strongSelf.currentIntervals = intervals
-                    strongSelf.checkState()
-                } else {
-                    strongSelf.currentIntervals = intervals
-                    strongSelf.checkState()
+        /*if resource.id.stringRepresentation == "telegram-cloud-document-1-4922941873166746479" {
+            let tempRanges = Promise<[(Range<Int64>, MediaBoxFetchPriority)]>()
+            
+            tempRanges.set(.single([(0 ..< Int64.max, .default)]))
+            Thread(block: {
+                for i in 0 ..< 10 {
+                    Thread.sleep(forTimeInterval: 0.1)
+                    
+                    var randomSet = RangeSet<Int64>()
+                    if i % 2 == 0 {
+                        for _ in 0 ..< 10 {
+                            let lower: Int64 = Int64.random(in: 0 ..< 4980736 + 131072)
+                            let upper: Int64 = Int64.random(in: lower ..< (lower + 1234))
+                            randomSet.insert(contentsOf: lower ..< upper)
+                            var ranges: [(Range<Int64>, MediaBoxFetchPriority)] = []
+                            for range in randomSet.ranges {
+                                ranges.append((range, .default))
+                            }
+                            tempRanges.set(.single(ranges))
+                        }
+                    }
                 }
-            }
-        })
+                
+                Thread.sleep(forTimeInterval: 0.1)
+                tempRanges.set(.single([]))
+                
+                Thread.sleep(forTimeInterval: 5.0)
+                tempRanges.set(.single([(0 ..< Int64.max, .default)]))
+            }).start()
+            
+            self.rangesDisposable = (tempRanges.get()
+            |> deliverOn(self.queue)).start(next: { [weak self] intervals in
+                if let strongSelf = self {
+                    if let _ = strongSelf.currentIntervals {
+                        strongSelf.currentIntervals = intervals
+                        strongSelf.checkState()
+                    } else {
+                        strongSelf.currentIntervals = intervals
+                        strongSelf.checkState()
+                    }
+                }
+            })
+        } else {*/
+            self.rangesDisposable = (intervals
+            |> deliverOn(self.queue)).start(next: { [weak self] intervals in
+                if let strongSelf = self {
+                    if let _ = strongSelf.currentIntervals {
+                        strongSelf.currentIntervals = intervals
+                        strongSelf.checkState()
+                    } else {
+                        strongSelf.currentIntervals = intervals
+                        strongSelf.checkState()
+                    }
+                }
+            })
+        //}
         
         /*self.markSpeedRecord()
         self.speedTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
@@ -825,7 +869,20 @@ public func resourceFetchInfo(resource: TelegramMediaResource) -> MediaResourceF
     )
 }
 
-func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?, resource: TelegramMediaResource, datacenterId: Int, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int64? = nil, continueInBackground: Bool = false, useMainConnection: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+func multipartFetch(
+    postbox: Postbox,
+    network: Network,
+    mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
+    resource: TelegramMediaResource,
+    datacenterId: Int,
+    size: Int64?,
+    intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>,
+    parameters: MediaResourceFetchParameters?,
+    encryptionKey: SecretFileEncryptionKey? = nil,
+    decryptedSize: Int64? = nil,
+    continueInBackground: Bool = false,
+    useMainConnection: Bool = false
+) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let location: MultipartFetchMasterLocation
         if let resource = resource as? MediaResourceWithWebFileReference {
@@ -887,7 +944,7 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
             subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< Int64(data.count), complete: false))
         }, reportCompleteSize: { size in
             subscriber.putNext(.resourceSizeUpdated(size))
-            subscriber.putCompletion()
+            //subscriber.putCompletion()
         }, finishWithError: { error in
             subscriber.putError(error)
         }, useMainConnection: useMainConnection)

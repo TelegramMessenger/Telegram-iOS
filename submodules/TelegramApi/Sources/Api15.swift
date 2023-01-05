@@ -29,9 +29,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageListOrderedItemBlocks(let num, let blocks):
-                return ("pageListOrderedItemBlocks", [("num", String(describing: num)), ("blocks", String(describing: blocks))])
+                return ("pageListOrderedItemBlocks", [("num", num as Any), ("blocks", blocks as Any)])
                 case .pageListOrderedItemText(let num, let text):
-                return ("pageListOrderedItemText", [("num", String(describing: num)), ("text", String(describing: text))])
+                return ("pageListOrderedItemText", [("num", num as Any), ("text", text as Any)])
     }
     }
     
@@ -95,7 +95,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageRelatedArticle(let flags, let url, let webpageId, let title, let description, let photoId, let author, let publishedDate):
-                return ("pageRelatedArticle", [("flags", String(describing: flags)), ("url", String(describing: url)), ("webpageId", String(describing: webpageId)), ("title", String(describing: title)), ("description", String(describing: description)), ("photoId", String(describing: photoId)), ("author", String(describing: author)), ("publishedDate", String(describing: publishedDate))])
+                return ("pageRelatedArticle", [("flags", flags as Any), ("url", url as Any), ("webpageId", webpageId as Any), ("title", title as Any), ("description", description as Any), ("photoId", photoId as Any), ("author", author as Any), ("publishedDate", publishedDate as Any)])
     }
     }
     
@@ -155,7 +155,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageTableCell(let flags, let text, let colspan, let rowspan):
-                return ("pageTableCell", [("flags", String(describing: flags)), ("text", String(describing: text)), ("colspan", String(describing: colspan)), ("rowspan", String(describing: rowspan))])
+                return ("pageTableCell", [("flags", flags as Any), ("text", text as Any), ("colspan", colspan as Any), ("rowspan", rowspan as Any)])
     }
     }
     
@@ -206,7 +206,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageTableRow(let cells):
-                return ("pageTableRow", [("cells", String(describing: cells))])
+                return ("pageTableRow", [("cells", cells as Any)])
     }
     }
     
@@ -254,7 +254,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(let salt1, let salt2, let g, let p):
-                return ("passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow", [("salt1", String(describing: salt1)), ("salt2", String(describing: salt2)), ("g", String(describing: g)), ("p", String(describing: p))])
+                return ("passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow", [("salt1", salt1 as Any), ("salt2", salt2 as Any), ("g", g as Any), ("p", p as Any)])
                 case .passwordKdfAlgoUnknown:
                 return ("passwordKdfAlgoUnknown", [])
     }
@@ -305,7 +305,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .paymentCharge(let id, let providerChargeId):
-                return ("paymentCharge", [("id", String(describing: id)), ("providerChargeId", String(describing: providerChargeId))])
+                return ("paymentCharge", [("id", id as Any), ("providerChargeId", providerChargeId as Any)])
     }
     }
     
@@ -345,7 +345,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .paymentFormMethod(let url, let title):
-                return ("paymentFormMethod", [("url", String(describing: url)), ("title", String(describing: title))])
+                return ("paymentFormMethod", [("url", url as Any), ("title", title as Any)])
     }
     }
     
@@ -388,7 +388,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .paymentRequestedInfo(let flags, let name, let phone, let email, let shippingAddress):
-                return ("paymentRequestedInfo", [("flags", String(describing: flags)), ("name", String(describing: name)), ("phone", String(describing: phone)), ("email", String(describing: email)), ("shippingAddress", String(describing: shippingAddress))])
+                return ("paymentRequestedInfo", [("flags", flags as Any), ("name", name as Any), ("phone", phone as Any), ("email", email as Any), ("shippingAddress", shippingAddress as Any)])
     }
     }
     
@@ -439,7 +439,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .paymentSavedCredentialsCard(let id, let title):
-                return ("paymentSavedCredentialsCard", [("id", String(describing: id)), ("title", String(describing: title))])
+                return ("paymentSavedCredentialsCard", [("id", id as Any), ("title", title as Any)])
     }
     }
     
@@ -492,11 +492,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .peerChannel(let channelId):
-                return ("peerChannel", [("channelId", String(describing: channelId))])
+                return ("peerChannel", [("channelId", channelId as Any)])
                 case .peerChat(let chatId):
-                return ("peerChat", [("chatId", String(describing: chatId))])
+                return ("peerChat", [("chatId", chatId as Any)])
                 case .peerUser(let userId):
-                return ("peerUser", [("userId", String(describing: userId))])
+                return ("peerUser", [("userId", userId as Any)])
     }
     }
     
@@ -555,7 +555,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .peerBlocked(let peerId, let date):
-                return ("peerBlocked", [("peerId", String(describing: peerId)), ("date", String(describing: date))])
+                return ("peerBlocked", [("peerId", peerId as Any), ("date", date as Any)])
     }
     }
     
@@ -605,9 +605,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .peerLocated(let peer, let expires, let distance):
-                return ("peerLocated", [("peer", String(describing: peer)), ("expires", String(describing: expires)), ("distance", String(describing: distance))])
+                return ("peerLocated", [("peer", peer as Any), ("expires", expires as Any), ("distance", distance as Any)])
                 case .peerSelfLocated(let expires):
-                return ("peerSelfLocated", [("expires", String(describing: expires))])
+                return ("peerSelfLocated", [("expires", expires as Any)])
     }
     }
     
@@ -668,7 +668,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let iosSound, let androidSound, let otherSound):
-                return ("peerNotifySettings", [("flags", String(describing: flags)), ("showPreviews", String(describing: showPreviews)), ("silent", String(describing: silent)), ("muteUntil", String(describing: muteUntil)), ("iosSound", String(describing: iosSound)), ("androidSound", String(describing: androidSound)), ("otherSound", String(describing: otherSound))])
+                return ("peerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("iosSound", iosSound as Any), ("androidSound", androidSound as Any), ("otherSound", otherSound as Any)])
     }
     }
     
@@ -735,7 +735,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate):
-                return ("peerSettings", [("flags", String(describing: flags)), ("geoDistance", String(describing: geoDistance)), ("requestChatTitle", String(describing: requestChatTitle)), ("requestChatDate", String(describing: requestChatDate))])
+                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any)])
     }
     }
     
@@ -853,17 +853,17 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .phoneCall(let flags, let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint, let `protocol`, let connections, let startDate):
-                return ("phoneCall", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId)), ("gAOrB", String(describing: gAOrB)), ("keyFingerprint", String(describing: keyFingerprint)), ("`protocol`", String(describing: `protocol`)), ("connections", String(describing: connections)), ("startDate", String(describing: startDate))])
+                return ("phoneCall", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any), ("gAOrB", gAOrB as Any), ("keyFingerprint", keyFingerprint as Any), ("`protocol`", `protocol` as Any), ("connections", connections as Any), ("startDate", startDate as Any)])
                 case .phoneCallAccepted(let flags, let id, let accessHash, let date, let adminId, let participantId, let gB, let `protocol`):
-                return ("phoneCallAccepted", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId)), ("gB", String(describing: gB)), ("`protocol`", String(describing: `protocol`))])
+                return ("phoneCallAccepted", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any), ("gB", gB as Any), ("`protocol`", `protocol` as Any)])
                 case .phoneCallDiscarded(let flags, let id, let reason, let duration):
-                return ("phoneCallDiscarded", [("flags", String(describing: flags)), ("id", String(describing: id)), ("reason", String(describing: reason)), ("duration", String(describing: duration))])
+                return ("phoneCallDiscarded", [("flags", flags as Any), ("id", id as Any), ("reason", reason as Any), ("duration", duration as Any)])
                 case .phoneCallEmpty(let id):
-                return ("phoneCallEmpty", [("id", String(describing: id))])
+                return ("phoneCallEmpty", [("id", id as Any)])
                 case .phoneCallRequested(let flags, let id, let accessHash, let date, let adminId, let participantId, let gAHash, let `protocol`):
-                return ("phoneCallRequested", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId)), ("gAHash", String(describing: gAHash)), ("`protocol`", String(describing: `protocol`))])
+                return ("phoneCallRequested", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any), ("gAHash", gAHash as Any), ("`protocol`", `protocol` as Any)])
                 case .phoneCallWaiting(let flags, let id, let accessHash, let date, let adminId, let participantId, let `protocol`, let receiveDate):
-                return ("phoneCallWaiting", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId)), ("`protocol`", String(describing: `protocol`)), ("receiveDate", String(describing: receiveDate))])
+                return ("phoneCallWaiting", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any), ("`protocol`", `protocol` as Any), ("receiveDate", receiveDate as Any)])
     }
     }
     
@@ -1139,7 +1139,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .phoneCallProtocol(let flags, let minLayer, let maxLayer, let libraryVersions):
-                return ("phoneCallProtocol", [("flags", String(describing: flags)), ("minLayer", String(describing: minLayer)), ("maxLayer", String(describing: maxLayer)), ("libraryVersions", String(describing: libraryVersions))])
+                return ("phoneCallProtocol", [("flags", flags as Any), ("minLayer", minLayer as Any), ("maxLayer", maxLayer as Any), ("libraryVersions", libraryVersions as Any)])
     }
     }
     
@@ -1204,9 +1204,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .phoneConnection(let flags, let id, let ip, let ipv6, let port, let peerTag):
-                return ("phoneConnection", [("flags", String(describing: flags)), ("id", String(describing: id)), ("ip", String(describing: ip)), ("ipv6", String(describing: ipv6)), ("port", String(describing: port)), ("peerTag", String(describing: peerTag))])
+                return ("phoneConnection", [("flags", flags as Any), ("id", id as Any), ("ip", ip as Any), ("ipv6", ipv6 as Any), ("port", port as Any), ("peerTag", peerTag as Any)])
                 case .phoneConnectionWebrtc(let flags, let id, let ip, let ipv6, let port, let username, let password):
-                return ("phoneConnectionWebrtc", [("flags", String(describing: flags)), ("id", String(describing: id)), ("ip", String(describing: ip)), ("ipv6", String(describing: ipv6)), ("port", String(describing: port)), ("username", String(describing: username)), ("password", String(describing: password))])
+                return ("phoneConnectionWebrtc", [("flags", flags as Any), ("id", id as Any), ("ip", ip as Any), ("ipv6", ipv6 as Any), ("port", port as Any), ("username", username as Any), ("password", password as Any)])
     }
     }
     

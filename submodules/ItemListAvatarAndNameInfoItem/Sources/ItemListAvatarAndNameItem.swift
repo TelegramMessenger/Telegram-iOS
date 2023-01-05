@@ -60,7 +60,7 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
         }
     }
     
-    public func composedDisplayTitle(strings: PresentationStrings) -> String {
+    public func composedDisplayTitle(context: AccountContext, strings: PresentationStrings) -> String {
         switch self {
         case let .personName(firstName, lastName, phone):
             if !firstName.isEmpty {
@@ -72,7 +72,7 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
             } else if !lastName.isEmpty {
                 return lastName
             } else if !phone.isEmpty {
-                return formatPhoneNumber("+\(phone)")
+                return formatPhoneNumber(context: context, number: "+\(phone)")
             } else {
                 return strings.User_DeletedAccount
             }
@@ -395,7 +395,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                 nameMaximumNumberOfLines = 2
             }
             
-            let (nameNodeLayout, nameNodeApply) = layoutNameNode(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayTitle.composedDisplayTitle(strings: item.presentationData.strings), font: nameFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: nameMaximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: baseWidth - 20 - 94.0 - (item.call != nil ? 36.0 : 0.0) - additionalTitleInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (nameNodeLayout, nameNodeApply) = layoutNameNode(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayTitle.composedDisplayTitle(context: item.accountContext, strings: item.presentationData.strings), font: nameFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: nameMaximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: baseWidth - 20 - 94.0 - (item.call != nil ? 36.0 : 0.0) - additionalTitleInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var statusText: String = ""
             let statusColor: UIColor
@@ -404,7 +404,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                 switch item.mode {
                     case .settings:
                         if let phone = peer.phone, !phone.isEmpty {
-                            statusText += formatPhoneNumber(phone)
+                            statusText += formatPhoneNumber(context: item.accountContext, number: phone)
                         }
                         if let username = peer.addressName, !username.isEmpty {
                             if !statusText.isEmpty {

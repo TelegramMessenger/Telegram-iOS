@@ -88,9 +88,9 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager<Tele
                 }
             } else {
                 let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
-                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[smallestIndex].reference)
+                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: representations[smallestIndex].reference)
                 
-                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: representations[largestIndex].reference)
+                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: representations[largestIndex].reference)
                 
                 let thumbnailData: Signal<Data?, NoError>
 
@@ -395,7 +395,7 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single((loadedData, true))
             } else {
-                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: targetRepresentation.reference)
+                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: targetRepresentation.reference)
 
                 let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                     let fetchedFullSizeDisposable = fetchedFullSize.start()
@@ -907,7 +907,7 @@ public func telegramThemeData(account: Account, accountManager: AccountManager<T
         } else {
             let data = account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
             return Signal { subscriber in
-                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: reference).start()
                 let disposable = (data
                 |> map { data -> Data? in
                     return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
@@ -1117,7 +1117,7 @@ public func themeImage(account: Account, accountManager: AccountManager<Telegram
                     let previewRepresentation = fileReference.media.previewRepresentations.first
                     let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
                     if let previewRepresentation = previewRepresentation {
-                        fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(previewRepresentation.resource))
+                        fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: fileReference.resourceReference(previewRepresentation.resource))
                     } else {
                         fetchedThumbnail = .complete()
                     }
@@ -1148,7 +1148,7 @@ public func themeImage(account: Account, accountManager: AccountManager<Telegram
                     let fullSizeData: Signal<Data?, NoError>
                     if isSupportedTheme {
                         fullSizeData = Signal { subscriber in
-                            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: reference).start()
                             let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
                                 |> map { data -> Data? in
                                     return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
@@ -1194,7 +1194,7 @@ public func themeImage(account: Account, accountManager: AccountManager<Telegram
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, WallpaperImage?, Data?), NoError> in
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                         return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                         |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationTheme?, WallpaperImage?, Data?), NoError> in
                             guard complete, let fullSizeData = fullSizeData else {
@@ -1448,7 +1448,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                             }
                             
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                             return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                             |> mapToSignal { thumbnailData, fullSizeData, complete -> Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError> in
                                 guard complete, let fullSizeData = fullSizeData else {
@@ -1775,7 +1775,7 @@ public func wallpaperThumbnail(account: Account, accountManager: AccountManager<
                     }
                 }
             })
-            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(thumbnail.resource)).start()
+            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: fileReference.resourceReference(thumbnail.resource)).start()
 
             return ActionDisposable {
                 data.dispose()

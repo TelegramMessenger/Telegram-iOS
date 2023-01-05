@@ -1022,16 +1022,16 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         switch iconImage {
                             case let .imageRepresentation(media, representation):
                                 if let file = media as? TelegramMediaFile {
-                                    updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, mediaReference: FileMediaReference.message(message: MessageReference(message), media: file).abstract, representation: representation)
+                                    updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, userLocation: .peer(message.id.peerId), mediaReference: FileMediaReference.message(message: MessageReference(message), media: file).abstract, representation: representation)
                                 } else if let image = media as? TelegramMediaImage {
-                                    updateIconImageSignal = mediaGridMessagePhoto(account: item.context.account, photoReference: ImageMediaReference.message(message: MessageReference(message), media: image))
+                                    updateIconImageSignal = mediaGridMessagePhoto(account: item.context.account, userLocation: .peer(message.id.peerId), photoReference: ImageMediaReference.message(message: MessageReference(message), media: image))
                                 } else {
                                     updateIconImageSignal = .complete()
                                 }
                             case let .albumArt(file, albumArt):
                                 updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, engine: item.context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.presentationData.theme.theme.list.itemAccentColor)
                             case let .roundVideo(file):
-                                updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3))
+                                updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3))
                             case let .immediateThumbnail(file):
                                 // if file is pdf and it is downloaded, will use good-quality thumb generated from document, otherwise immediateThumbnailData is used
                                 updateIconImageSignal = chatMessageImageFile(account: item.context.account, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), thumbnail: true)

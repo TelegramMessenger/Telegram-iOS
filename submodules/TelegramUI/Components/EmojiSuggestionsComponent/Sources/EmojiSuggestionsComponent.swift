@@ -59,7 +59,7 @@ public final class EmojiSuggestionsComponent: Component {
                 }
                 for attribute in item.file.attributes {
                     switch attribute {
-                    case let .CustomEmoji(_, alt, _):
+                    case let .CustomEmoji(_, _, alt, _):
                         if alt == query || (!normalizedQuery.isEmpty && alt == normalizedQuery) {
                             if !item.file.isPremiumEmoji || hasPremium {
                                 if !existingIds.contains(item.file.fileId) {
@@ -78,7 +78,7 @@ public final class EmojiSuggestionsComponent: Component {
                 for item in featuredPack.topItems {
                     for attribute in item.file.attributes {
                         switch attribute {
-                        case let .CustomEmoji(_, alt, _):
+                        case let .CustomEmoji(_, _, alt, _):
                             if alt == query || (!normalizedQuery.isEmpty && alt == normalizedQuery) {
                                 if !item.file.isPremiumEmoji || hasPremium {
                                     if !existingIds.contains(item.file.fileId) {
@@ -107,6 +107,7 @@ public final class EmojiSuggestionsComponent: Component {
     
     public init(
         context: AccountContext,
+        userLocation: MediaResourceUserLocation,
         theme: PresentationTheme,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
@@ -283,6 +284,7 @@ public final class EmojiSuggestionsComponent: Component {
                     } else {
                         itemLayer = InlineStickerItemLayer(
                             context: component.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: synchronousLoad,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: item.fileId.id, file: item),
                             file: item,

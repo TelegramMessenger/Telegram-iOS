@@ -69,7 +69,7 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                             arc4random_buf(&randomId, 8)
                             let thumbnailResource = thumbnail.resource
                             let imageDimensions = thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128)
-                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                             return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: tmpImage), replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
                         } else {
                             return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
@@ -85,7 +85,7 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                             if thumbnail.mimeType.hasPrefix("video/") {
                                 videoThumbnails.append(TelegramMediaFile.VideoThumbnail(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource))
                             } else {
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                             }
                         }
                         var fileName = "file"

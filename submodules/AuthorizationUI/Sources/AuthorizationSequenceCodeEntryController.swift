@@ -109,6 +109,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.navigationItem.rightBarButtonItem?.isEnabled = value
         }
         
+        self.controllerNode.present = { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }
+        
         if let (number, email, codeType, nextType, timeout) = self.data {
             var appleSignInAllowed = false
             if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
@@ -236,7 +240,7 @@ func addTemporaryKeyboardSnapshotView(navigationController: NavigationController
                         keyboardWindow.addSubview(snapshotView)
                     }
                     
-                    Queue.mainQueue().after(0.45, {
+                    Queue.mainQueue().after(0.5, {
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                             snapshotView?.removeFromSuperview()
                         })

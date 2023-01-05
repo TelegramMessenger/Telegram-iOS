@@ -27,6 +27,8 @@ swift_library(
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/AvatarNode",
+        "//submodules/TelegramCore",
     ],
     visibility = [
         "//visibility:public",

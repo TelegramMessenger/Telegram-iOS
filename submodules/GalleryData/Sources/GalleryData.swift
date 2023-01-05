@@ -100,7 +100,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
     if message.media.isEmpty, let entities = message.textEntitiesAttribute?.entities, entities.count == 1, let firstEntity = entities.first, case let .CustomEmoji(_, fileId) = firstEntity.type, let file = message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
         for attribute in file.attributes {
-            if case let .CustomEmoji(_, _, reference) = attribute {
+            if case let .CustomEmoji(_, _, _, reference) = attribute {
                 if let reference = reference {
                     return .stickerPack(reference)
                 }
@@ -114,10 +114,21 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
             galleryMedia = fullMedia
         } else if let action = media as? TelegramMediaAction {
             switch action.action {
-            case let .photoUpdated(image):
+            case let .photoUpdated(image), let .suggestedProfilePhoto(image):
                 if let peer = messageMainPeer(EngineMessage(message)), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
-                    let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), sourceCorners: .roundRect(15.5), remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
+                    var isSuggested = false
+                    if case .suggestedProfilePhoto = action.action {
+                        isSuggested = true
+                    }
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action", false)])
+                    
+                    let sourceCorners: AvatarGalleryController.SourceCorners
+                    if case .photoUpdated = action.action {
+                        sourceCorners = .roundRect(15.5)
+                    } else {
+                        sourceCorners = .round
+                    }
+                    let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), sourceCorners: sourceCorners, remoteEntries: promise, isSuggested: isSuggested, skipInitial: true, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)
@@ -185,7 +196,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
             }
         }
         
-        let gallery = InstantPageGalleryController(context: context, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, replaceRootController: { [weak navigationController] controller, ready in
+        let gallery = InstantPageGalleryController(context: context, userLocation: chatLocation?.peerId.flatMap(MediaResourceUserLocation.peer) ?? .other, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, replaceRootController: { [weak navigationController] controller, ready in
             if let navigationController = navigationController {
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }

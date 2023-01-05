@@ -143,6 +143,7 @@ public final class ReactionIconView: PortalSourceView {
         
         let animationLayer = InlineStickerItemLayer(
             context: context,
+            userLocation: .other,
             attemptSynchronousLoad: false,
             emoji: ChatTextInputTextCustomEmojiAttribute(
                 interactivelySelectedFromPackId: nil,

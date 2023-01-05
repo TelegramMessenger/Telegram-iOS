@@ -37,9 +37,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings, let draft):
-                return ("forumTopic", [("flags", String(describing: flags)), ("id", String(describing: id)), ("date", String(describing: date)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("fromId", String(describing: fromId)), ("notifySettings", String(describing: notifySettings)), ("draft", String(describing: draft))])
+                return ("forumTopic", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("title", title as Any), ("iconColor", iconColor as Any), ("iconEmojiId", iconEmojiId as Any), ("topMessage", topMessage as Any), ("readInboxMaxId", readInboxMaxId as Any), ("readOutboxMaxId", readOutboxMaxId as Any), ("unreadCount", unreadCount as Any), ("unreadMentionsCount", unreadMentionsCount as Any), ("unreadReactionsCount", unreadReactionsCount as Any), ("fromId", fromId as Any), ("notifySettings", notifySettings as Any), ("draft", draft as Any)])
                 case .forumTopicDeleted(let id):
-                return ("forumTopicDeleted", [("id", String(describing: id))])
+                return ("forumTopicDeleted", [("id", id as Any)])
     }
     }
     
@@ -141,7 +141,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .game(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document):
-                return ("game", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("shortName", String(describing: shortName)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("document", String(describing: document))])
+                return ("game", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("shortName", shortName as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("document", document as Any)])
     }
     }
     
@@ -213,7 +213,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .geoPoint(let flags, let long, let lat, let accessHash, let accuracyRadius):
-                return ("geoPoint", [("flags", String(describing: flags)), ("long", String(describing: long)), ("lat", String(describing: lat)), ("accessHash", String(describing: accessHash)), ("accuracyRadius", String(describing: accuracyRadius))])
+                return ("geoPoint", [("flags", flags as Any), ("long", long as Any), ("lat", lat as Any), ("accessHash", accessHash as Any), ("accuracyRadius", accuracyRadius as Any)])
                 case .geoPointEmpty:
                 return ("geoPointEmpty", [])
     }
@@ -267,7 +267,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .globalPrivacySettings(let flags, let archiveAndMuteNewNoncontactPeers):
-                return ("globalPrivacySettings", [("flags", String(describing: flags)), ("archiveAndMuteNewNoncontactPeers", String(describing: archiveAndMuteNewNoncontactPeers))])
+                return ("globalPrivacySettings", [("flags", flags as Any), ("archiveAndMuteNewNoncontactPeers", archiveAndMuteNewNoncontactPeers as Any)])
     }
     }
     
@@ -327,9 +327,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .groupCall(let flags, let id, let accessHash, let participantsCount, let title, let streamDcId, let recordStartDate, let scheduleDate, let unmutedVideoCount, let unmutedVideoLimit, let version):
-                return ("groupCall", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("participantsCount", String(describing: participantsCount)), ("title", String(describing: title)), ("streamDcId", String(describing: streamDcId)), ("recordStartDate", String(describing: recordStartDate)), ("scheduleDate", String(describing: scheduleDate)), ("unmutedVideoCount", String(describing: unmutedVideoCount)), ("unmutedVideoLimit", String(describing: unmutedVideoLimit)), ("version", String(describing: version))])
+                return ("groupCall", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("participantsCount", participantsCount as Any), ("title", title as Any), ("streamDcId", streamDcId as Any), ("recordStartDate", recordStartDate as Any), ("scheduleDate", scheduleDate as Any), ("unmutedVideoCount", unmutedVideoCount as Any), ("unmutedVideoLimit", unmutedVideoLimit as Any), ("version", version as Any)])
                 case .groupCallDiscarded(let id, let accessHash, let duration):
-                return ("groupCallDiscarded", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("duration", String(describing: duration))])
+                return ("groupCallDiscarded", [("id", id as Any), ("accessHash", accessHash as Any), ("duration", duration as Any)])
     }
     }
     
@@ -421,7 +421,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .groupCallParticipant(let flags, let peer, let date, let activeDate, let source, let volume, let about, let raiseHandRating, let video, let presentation):
-                return ("groupCallParticipant", [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("date", String(describing: date)), ("activeDate", String(describing: activeDate)), ("source", String(describing: source)), ("volume", String(describing: volume)), ("about", String(describing: about)), ("raiseHandRating", String(describing: raiseHandRating)), ("video", String(describing: video)), ("presentation", String(describing: presentation))])
+                return ("groupCallParticipant", [("flags", flags as Any), ("peer", peer as Any), ("date", date as Any), ("activeDate", activeDate as Any), ("source", source as Any), ("volume", volume as Any), ("about", about as Any), ("raiseHandRating", raiseHandRating as Any), ("video", video as Any), ("presentation", presentation as Any)])
     }
     }
     
@@ -497,7 +497,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .groupCallParticipantVideo(let flags, let endpoint, let sourceGroups, let audioSource):
-                return ("groupCallParticipantVideo", [("flags", String(describing: flags)), ("endpoint", String(describing: endpoint)), ("sourceGroups", String(describing: sourceGroups)), ("audioSource", String(describing: audioSource))])
+                return ("groupCallParticipantVideo", [("flags", flags as Any), ("endpoint", endpoint as Any), ("sourceGroups", sourceGroups as Any), ("audioSource", audioSource as Any)])
     }
     }
     
@@ -549,7 +549,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .groupCallParticipantVideoSourceGroup(let semantics, let sources):
-                return ("groupCallParticipantVideoSourceGroup", [("semantics", String(describing: semantics)), ("sources", String(describing: sources))])
+                return ("groupCallParticipantVideoSourceGroup", [("semantics", semantics as Any), ("sources", sources as Any)])
     }
     }
     
@@ -592,7 +592,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
-                return ("groupCallStreamChannel", [("channel", String(describing: channel)), ("scale", String(describing: scale)), ("lastTimestampMs", String(describing: lastTimestampMs))])
+                return ("groupCallStreamChannel", [("channel", channel as Any), ("scale", scale as Any), ("lastTimestampMs", lastTimestampMs as Any)])
     }
     }
     
@@ -636,7 +636,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .highScore(let pos, let userId, let score):
-                return ("highScore", [("pos", String(describing: pos)), ("userId", String(describing: userId)), ("score", String(describing: score))])
+                return ("highScore", [("pos", pos as Any), ("userId", userId as Any), ("score", score as Any)])
     }
     }
     
@@ -679,7 +679,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .importedContact(let userId, let clientId):
-                return ("importedContact", [("userId", String(describing: userId)), ("clientId", String(describing: clientId))])
+                return ("importedContact", [("userId", userId as Any), ("clientId", clientId as Any)])
     }
     }
     
@@ -719,7 +719,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inlineBotSwitchPM(let text, let startParam):
-                return ("inlineBotSwitchPM", [("text", String(describing: text)), ("startParam", String(describing: startParam))])
+                return ("inlineBotSwitchPM", [("text", text as Any), ("startParam", startParam as Any)])
     }
     }
     
@@ -837,7 +837,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputAppEvent(let time, let type, let peer, let data):
-                return ("inputAppEvent", [("time", String(describing: time)), ("type", String(describing: type)), ("peer", String(describing: peer)), ("data", String(describing: data))])
+                return ("inputAppEvent", [("time", time as Any), ("type", type as Any), ("peer", peer as Any), ("data", data as Any)])
     }
     }
     
@@ -966,19 +966,19 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputBotInlineMessageGame(let flags, let replyMarkup):
-                return ("inputBotInlineMessageGame", [("flags", String(describing: flags)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageGame", [("flags", flags as Any), ("replyMarkup", replyMarkup as Any)])
                 case .inputBotInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
-                return ("inputBotInlineMessageMediaAuto", [("flags", String(describing: flags)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageMediaAuto", [("flags", flags as Any), ("message", message as Any), ("entities", entities as Any), ("replyMarkup", replyMarkup as Any)])
                 case .inputBotInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
-                return ("inputBotInlineMessageMediaContact", [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("vcard", String(describing: vcard)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageMediaContact", [("flags", flags as Any), ("phoneNumber", phoneNumber as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("vcard", vcard as Any), ("replyMarkup", replyMarkup as Any)])
                 case .inputBotInlineMessageMediaGeo(let flags, let geoPoint, let heading, let period, let proximityNotificationRadius, let replyMarkup):
-                return ("inputBotInlineMessageMediaGeo", [("flags", String(describing: flags)), ("geoPoint", String(describing: geoPoint)), ("heading", String(describing: heading)), ("period", String(describing: period)), ("proximityNotificationRadius", String(describing: proximityNotificationRadius)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageMediaGeo", [("flags", flags as Any), ("geoPoint", geoPoint as Any), ("heading", heading as Any), ("period", period as Any), ("proximityNotificationRadius", proximityNotificationRadius as Any), ("replyMarkup", replyMarkup as Any)])
                 case .inputBotInlineMessageMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let replyMarkup):
-                return ("inputBotInlineMessageMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("invoice", String(describing: invoice)), ("payload", String(describing: payload)), ("provider", String(describing: provider)), ("providerData", String(describing: providerData)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("payload", payload as Any), ("provider", provider as Any), ("providerData", providerData as Any), ("replyMarkup", replyMarkup as Any)])
                 case .inputBotInlineMessageMediaVenue(let flags, let geoPoint, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
-                return ("inputBotInlineMessageMediaVenue", [("flags", String(describing: flags)), ("geoPoint", String(describing: geoPoint)), ("title", String(describing: title)), ("address", String(describing: address)), ("provider", String(describing: provider)), ("venueId", String(describing: venueId)), ("venueType", String(describing: venueType)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageMediaVenue", [("flags", flags as Any), ("geoPoint", geoPoint as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any), ("replyMarkup", replyMarkup as Any)])
                 case .inputBotInlineMessageText(let flags, let message, let entities, let replyMarkup):
-                return ("inputBotInlineMessageText", [("flags", String(describing: flags)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("inputBotInlineMessageText", [("flags", flags as Any), ("message", message as Any), ("entities", entities as Any), ("replyMarkup", replyMarkup as Any)])
     }
     }
     
@@ -1216,9 +1216,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputBotInlineMessageID(let dcId, let id, let accessHash):
-                return ("inputBotInlineMessageID", [("dcId", String(describing: dcId)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputBotInlineMessageID", [("dcId", dcId as Any), ("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputBotInlineMessageID64(let dcId, let ownerId, let id, let accessHash):
-                return ("inputBotInlineMessageID64", [("dcId", String(describing: dcId)), ("ownerId", String(describing: ownerId)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputBotInlineMessageID64", [("dcId", dcId as Any), ("ownerId", ownerId as Any), ("id", id as Any), ("accessHash", accessHash as Any)])
     }
     }
     
@@ -1320,13 +1320,13 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputBotInlineResult(let flags, let id, let type, let title, let description, let url, let thumb, let content, let sendMessage):
-                return ("inputBotInlineResult", [("flags", String(describing: flags)), ("id", String(describing: id)), ("type", String(describing: type)), ("title", String(describing: title)), ("description", String(describing: description)), ("url", String(describing: url)), ("thumb", String(describing: thumb)), ("content", String(describing: content)), ("sendMessage", String(describing: sendMessage))])
+                return ("inputBotInlineResult", [("flags", flags as Any), ("id", id as Any), ("type", type as Any), ("title", title as Any), ("description", description as Any), ("url", url as Any), ("thumb", thumb as Any), ("content", content as Any), ("sendMessage", sendMessage as Any)])
                 case .inputBotInlineResultDocument(let flags, let id, let type, let title, let description, let document, let sendMessage):
-                return ("inputBotInlineResultDocument", [("flags", String(describing: flags)), ("id", String(describing: id)), ("type", String(describing: type)), ("title", String(describing: title)), ("description", String(describing: description)), ("document", String(describing: document)), ("sendMessage", String(describing: sendMessage))])
+                return ("inputBotInlineResultDocument", [("flags", flags as Any), ("id", id as Any), ("type", type as Any), ("title", title as Any), ("description", description as Any), ("document", document as Any), ("sendMessage", sendMessage as Any)])
                 case .inputBotInlineResultGame(let id, let shortName, let sendMessage):
-                return ("inputBotInlineResultGame", [("id", String(describing: id)), ("shortName", String(describing: shortName)), ("sendMessage", String(describing: sendMessage))])
+                return ("inputBotInlineResultGame", [("id", id as Any), ("shortName", shortName as Any), ("sendMessage", sendMessage as Any)])
                 case .inputBotInlineResultPhoto(let id, let type, let photo, let sendMessage):
-                return ("inputBotInlineResultPhoto", [("id", String(describing: id)), ("type", String(describing: type)), ("photo", String(describing: photo)), ("sendMessage", String(describing: sendMessage))])
+                return ("inputBotInlineResultPhoto", [("id", id as Any), ("type", type as Any), ("photo", photo as Any), ("sendMessage", sendMessage as Any)])
     }
     }
     

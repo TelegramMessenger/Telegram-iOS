@@ -192,11 +192,19 @@ public final class ChatTextInputTextUrlAttribute: NSObject {
     }
 }
 
-public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
+public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case interactivelySelectedFromPackId
+        case fileId
+        case file
+        case topicId
+        case topicInfo
+    }
+    
     public let interactivelySelectedFromPackId: ItemCollectionId?
     public let fileId: Int64
-    public let topicInfo: (Int64, EngineMessageHistoryThread.Info)?
     public let file: TelegramMediaFile?
+    public let topicInfo: (Int64, EngineMessageHistoryThread.Info)?
     
     public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, topicInfo: (Int64, EngineMessageHistoryThread.Info)? = nil) {
         self.interactivelySelectedFromPackId = interactivelySelectedFromPackId
@@ -205,6 +213,29 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
         self.topicInfo = topicInfo
         
         super.init()
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.interactivelySelectedFromPackId = try container.decodeIfPresent(ItemCollectionId.self, forKey: .interactivelySelectedFromPackId)
+        self.fileId = try container.decode(Int64.self, forKey: .fileId)
+        self.file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file)
+        if let topicId = try container.decodeIfPresent(Int64.self, forKey: .topicId), let topicInfo = try container.decodeIfPresent(EngineMessageHistoryThread.Info.self, forKey: .topicInfo) {
+            self.topicInfo = (topicId, topicInfo)
+        } else {
+            self.topicInfo = nil
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(self.interactivelySelectedFromPackId, forKey: .interactivelySelectedFromPackId)
+        try container.encode(self.fileId, forKey: .fileId)
+        try container.encodeIfPresent(self.file, forKey: .file)
+        if let (topicId, topicInfo) = self.topicInfo {
+            try container.encode(topicId, forKey: .topicId)
+            try container.encode(topicInfo, forKey: .topicInfo)
+        }
     }
     
     override public func isEqual(_ object: Any?) -> Bool {

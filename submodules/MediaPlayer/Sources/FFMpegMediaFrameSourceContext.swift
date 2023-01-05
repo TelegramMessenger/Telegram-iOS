@@ -196,7 +196,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let postbox = context.postbox, let resourceReference = context.resourceReference, let streamable = context.streamable, let statsCategory = context.statsCategory else {
+    guard let postbox = context.postbox, let resourceReference = context.resourceReference, let streamable = context.streamable, let userLocation = context.userLocation, let userContentType = context.userContentType, let statsCategory = context.statsCategory else {
         return 0
     }
     
@@ -250,12 +250,12 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 if streamable {
                     if context.tempFilePath == nil {
                         let fetchRange: Range<Int64> = context.readingOffset ..< Int64.max
-                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (fetchRange, .elevated), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: userContentType, reference: resourceReference, range: (fetchRange, .elevated), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                     }
                 } else if !context.requestedCompleteFetch && context.fetchAutomatically {
                     context.requestedCompleteFetch = true
                     if context.tempFilePath == nil {
-                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                        context.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: userContentType, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                     }
                 }
             }
@@ -276,6 +276,8 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     var closed = false
     
     fileprivate var postbox: Postbox?
+    fileprivate var userLocation: MediaResourceUserLocation?
+    fileprivate var userContentType: MediaResourceUserContentType?
     fileprivate var resourceReference: MediaResourceReference?
     fileprivate var tempFilePath: String?
     fileprivate var streamable: Bool?
@@ -320,7 +322,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.keepDataDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
+    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -332,6 +334,8 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.tempFilePath = tempFilePath
         self.streamable = streamable
         self.statsCategory = video ? .video : .audio
+        self.userLocation = userLocation
+        self.userContentType = video ? .video : .audio
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
         self.maximumFetchSize = maximumFetchSize
@@ -342,12 +346,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         if streamable {
             if self.tempFilePath == nil {
-                self.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (0 ..< Int64.max, .elevated), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: self.userLocation ?? .other, userContentType: self.userContentType ?? .other, reference: resourceReference, range: (0 ..< Int64.max, .elevated), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
         } else if !self.requestedCompleteFetch && self.fetchAutomatically {
             self.requestedCompleteFetch = true
             if self.tempFilePath == nil {
-                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: self.userLocation ?? .other, userContentType: self.userContentType ?? .other, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
         }
         
@@ -449,7 +453,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         if streamable {
             if self.tempFilePath == nil {
-                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, range: (0 ..< Int64.max, .default), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+                self.fetchedFullDataDisposable.set(fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: self.userLocation ?? .other, userContentType: self.userContentType ?? .other, reference: resourceReference, range: (0 ..< Int64.max, .default), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
             }
             self.requestedCompleteFetch = true
         }

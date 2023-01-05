@@ -10,6 +10,7 @@ import PhotoResources
 import AppBundle
 import ContextUI
 import SoftwareVideo
+import MultiplexedVideoNode
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account
@@ -171,7 +172,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 imageDimensions = externalReference.content?.dimensions?.cgSize
                 if let content = externalReference.content, externalReference.type == "gif", let thumbnailResource = imageResource
                     , let dimensions = content.dimensions {
-                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
+                    videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
                     imageResource = nil
                 }
             case let .internalReference(internalReference):
@@ -233,9 +234,9 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         
         if updatedImageResource {
             if let imageResource = imageResource {
-                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: Int32(fittedImageDimensions.width * 2.0), height: Int32(fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
+                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: Int32(fittedImageDimensions.width * 2.0), height: Int32(fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                updateImageSignal = chatMessagePhoto(postbox: self.account.postbox, photoReference: .standalone(media: tmpImage))
+                updateImageSignal = chatMessagePhoto(postbox: self.account.postbox, userLocation: .other, photoReference: .standalone(media: tmpImage))
             } else {
                 updateImageSignal = .complete()
             }
@@ -267,7 +268,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 self.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: videoFileReference, layerHolder: layerHolder)
+                let manager = SoftwareVideoLayerFrameManager(account: self.account, userLocation: .other, userContentType: .other, fileReference: videoFileReference, layerHolder: layerHolder)
                 self.videoLayer = (thumbnailLayer, manager, layerHolder)
                 thumbnailLayer.ready = { [weak self, weak thumbnailLayer, weak manager] in
                     if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {

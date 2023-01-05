@@ -10,6 +10,8 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import UndoUI
+import ItemListPeerActionItem
+import AvatarNode
 
 enum SelectivePrivacySettingsKind {
     case presence
@@ -54,7 +56,10 @@ private final class SelectivePrivacySettingsControllerArguments {
     let updatePhoneDiscovery: ((Bool) -> Void)?
     let copyPhoneLink: ((String) -> Void)?
     
-    init(context: AccountContext, updateType: @escaping (SelectivePrivacySettingType) -> Void, openSelective: @escaping (SelectivePrivacySettingsPeerTarget, Bool) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?, updatePhoneDiscovery: ((Bool) -> Void)?, copyPhoneLink: ((String) -> Void)?) {
+    let setPublicPhoto: (() -> Void)?
+    let removePublicPhoto: (() -> Void)?
+    
+    init(context: AccountContext, updateType: @escaping (SelectivePrivacySettingType) -> Void, openSelective: @escaping (SelectivePrivacySettingsPeerTarget, Bool) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?, updatePhoneDiscovery: ((Bool) -> Void)?, copyPhoneLink: ((String) -> Void)?, setPublicPhoto: (() -> Void)?, removePublicPhoto: (() -> Void)?) {
         self.context = context
         self.updateType = updateType
         self.openSelective = openSelective
@@ -63,6 +68,9 @@ private final class SelectivePrivacySettingsControllerArguments {
         self.updateCallIntegrationEnabled = updateCallIntegrationEnabled
         self.updatePhoneDiscovery = updatePhoneDiscovery
         self.copyPhoneLink = copyPhoneLink
+        
+        self.setPublicPhoto = setPublicPhoto
+        self.removePublicPhoto = removePublicPhoto
     }
 }
 
@@ -74,6 +82,7 @@ private enum SelectivePrivacySettingsSection: Int32 {
     case callsP2PPeers
     case callsIntegrationEnabled
     case phoneDiscovery
+    case photo
 }
 
 private func stringForUserCount(_ peers: [PeerId: SelectivePrivacyPeer], strings: PresentationStrings) -> String {
@@ -114,6 +123,9 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case phoneDiscoveryEverybody(PresentationTheme, String, Bool)
     case phoneDiscoveryMyContacts(PresentationTheme, String, Bool)
     case phoneDiscoveryInfo(PresentationTheme, String, String)
+    case setPublicPhoto(PresentationTheme, String)
+    case removePublicPhoto(PresentationTheme, String, EnginePeer, TelegramMediaImage?, UIImage?)
+    case publicPhotoInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -131,6 +143,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return SelectivePrivacySettingsSection.callsIntegrationEnabled.rawValue
             case .phoneDiscoveryHeader, .phoneDiscoveryEverybody, .phoneDiscoveryMyContacts, .phoneDiscoveryInfo:
                 return SelectivePrivacySettingsSection.phoneDiscovery.rawValue
+            case .setPublicPhoto, .removePublicPhoto, .publicPhotoInfo:
+                return SelectivePrivacySettingsSection.photo.rawValue
         }
     }
     
@@ -186,6 +200,12 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return 23
             case .callsIntegrationInfo:
                 return 24
+            case .setPublicPhoto:
+                return 24
+            case .removePublicPhoto:
+                return 25
+            case .publicPhotoInfo:
+                return 26
         }
     }
     
@@ -222,7 +242,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                     return false
                 }
             case let .nobody(lhsTheme, lhsText, lhsValue):
-                if case let nobody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                if case let .nobody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -341,6 +361,24 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .setPublicPhoto(lhsTheme, lhsText):
+                if case let .setPublicPhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .removePublicPhoto(lhsTheme, lhsText, lhsPeer, lhsRep, lhsImage):
+                if case let .removePublicPhoto(rhsTheme, rhsText, rhsPeer, rhsRep, rhsImage) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsPeer == rhsPeer, lhsRep == rhsRep, lhsImage === rhsImage {
+                    return true
+                } else {
+                    return false
+                }
+            case let .publicPhotoInfo(lhsTheme, lhsText):
+                if case let .publicPhotoInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -431,6 +469,17 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.copyPhoneLink?(link)
                 })
+            case let .setPublicPhoto(theme, text):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPhotoIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+                    arguments.setPublicPhoto?()
+                })
+            case let .removePublicPhoto(_, text, peer, image, completeImage):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: completeImage, iconSignal: completeImage == nil ? peerAvatarCompleteImage(account: arguments.context.account, peer: peer, forceProvidedRepresentation: true, representation: image?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28)), size: CGSize(width: 28.0, height: 28.0)) : nil, title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
+                    arguments.removePublicPhoto?()
+                })
+            case let .publicPhotoInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                })
         }
     }
 }
@@ -449,8 +498,10 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     let callIntegrationAvailable: Bool?
     let callIntegrationEnabled: Bool?
     let phoneDiscoveryEnabled: Bool?
+        
+    let uploadedPhoto: UIImage?
     
-    init(setting: SelectivePrivacySettingType, enableFor: [PeerId: SelectivePrivacyPeer], disableFor: [PeerId: SelectivePrivacyPeer], saving: Bool, callDataSaving: VoiceCallDataSaving?, callP2PMode: SelectivePrivacySettingType?, callP2PEnableFor: [PeerId: SelectivePrivacyPeer]?, callP2PDisableFor: [PeerId: SelectivePrivacyPeer]?, callIntegrationAvailable: Bool?, callIntegrationEnabled: Bool?, phoneDiscoveryEnabled: Bool?) {
+    init(setting: SelectivePrivacySettingType, enableFor: [PeerId: SelectivePrivacyPeer], disableFor: [PeerId: SelectivePrivacyPeer], saving: Bool, callDataSaving: VoiceCallDataSaving?, callP2PMode: SelectivePrivacySettingType?, callP2PEnableFor: [PeerId: SelectivePrivacyPeer]?, callP2PDisableFor: [PeerId: SelectivePrivacyPeer]?, callIntegrationAvailable: Bool?, callIntegrationEnabled: Bool?, phoneDiscoveryEnabled: Bool?, uploadedPhoto: UIImage?) {
         self.setting = setting
         self.enableFor = enableFor
         self.disableFor = disableFor
@@ -462,6 +513,7 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
         self.callIntegrationAvailable = callIntegrationAvailable
         self.callIntegrationEnabled = callIntegrationEnabled
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
+        self.uploadedPhoto = uploadedPhoto
     }
     
     static func ==(lhs: SelectivePrivacySettingsControllerState, rhs: SelectivePrivacySettingsControllerState) -> Bool {
@@ -498,48 +550,55 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
         if lhs.phoneDiscoveryEnabled != rhs.phoneDiscoveryEnabled {
             return false
         }
+        if lhs.uploadedPhoto !== rhs.uploadedPhoto {
+            return false
+        }
         
         return true
     }
     
     func withUpdatedSetting(_ setting: SelectivePrivacySettingType) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedEnableFor(_ enableFor: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedDisableFor(_ disableFor: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedSaving(_ saving: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallP2PMode(_ mode: SelectivePrivacySettingType) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: mode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: mode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallP2PEnableFor(_ enableFor: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: enableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: enableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallP2PDisableFor(_ disableFor: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: disableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: disableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallsIntegrationEnabled(_ enabled: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: enabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: enabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedPhoneDiscoveryEnabled(_ phoneDiscoveryEnabled: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: phoneDiscoveryEnabled)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+    }
+    
+    func withUpdatedUploadedPhoto(_ uploadedPhoto: UIImage?) -> SelectivePrivacySettingsControllerState {
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: uploadedPhoto)
     }
 }
 
-private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String, phoneNumber: String) -> [SelectivePrivacySettingsEntry] {
+private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String, phoneNumber: String, peer: EnginePeer?, publicPhoto: TelegramMediaImage?) -> [SelectivePrivacySettingsEntry] {
     var entries: [SelectivePrivacySettingsEntry] = []
     
     let settingTitle: String
@@ -611,9 +670,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
-        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages:
+        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages, .profilePhoto:
             entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations, .profilePhoto:
+        case .groupInvitations:
             break
     }
     let phoneLink = "https://t.me/+\(phoneNumber)"
@@ -627,7 +686,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
         entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
     }
-    
+        
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
     
     switch state.setting {
@@ -639,7 +698,20 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         case .nobody:
             entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor, strings: presentationData.strings)))
     }
-    entries.append(.peersInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp))
+    let exceptionsInfo: String
+    if case .profilePhoto = kind {
+        switch state.setting {
+        case .nobody:
+            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideAddInfo
+        case .contacts:
+            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideBothInfo
+        case .everybody:
+            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideInfo
+        }
+    } else {
+        exceptionsInfo = presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp
+    }
+    entries.append(.peersInfo(presentationData.theme, exceptionsInfo))
     
     if case .voiceCalls = kind, let p2pMode = state.callP2PMode, let integrationAvailable = state.callIntegrationAvailable, let integrationEnabled = state.callIntegrationEnabled  {
         entries.append(.callsP2PHeader(presentationData.theme, presentationData.strings.Privacy_Calls_P2P.uppercased()))
@@ -668,10 +740,31 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         }
     }
     
+    if case .profilePhoto = kind, let peer = peer, state.setting != .everybody || !state.disableFor.isEmpty {
+        if let publicPhoto = publicPhoto {
+            entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_UpdatePublicPhoto))
+            entries.append(.removePublicPhoto(presentationData.theme, !publicPhoto.videoRepresentations.isEmpty ? presentationData.strings.Privacy_ProfilePhoto_RemovePublicVideo : presentationData.strings.Privacy_ProfilePhoto_RemovePublicPhoto, peer, publicPhoto, state.uploadedPhoto))
+        } else {
+            entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_SetPublicPhoto))
+        }
+        entries.append(.publicPhotoInfo(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_PublicPhotoInfo))
+    }
+    
     return entries
 }
 
-func selectivePrivacySettingsController(context: AccountContext, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: (SelectivePrivacySettings, VoiceCallSettings)? = nil, phoneDiscoveryEnabled: Bool? = nil, voipConfiguration: VoipConfiguration? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, (SelectivePrivacySettings, VoiceCallSettings)?, Bool?) -> Void) -> ViewController {
+func selectivePrivacySettingsController(
+    context: AccountContext,
+    kind: SelectivePrivacySettingsKind,
+    current: SelectivePrivacySettings,
+    callSettings: (SelectivePrivacySettings, VoiceCallSettings)? = nil,
+    phoneDiscoveryEnabled: Bool? = nil,
+    voipConfiguration: VoipConfiguration? = nil,
+    callIntegrationAvailable: Bool? = nil,
+    requestPublicPhotoSetup: ((@escaping (UIImage?) -> Void) -> Void)? = nil,
+    requestPublicPhotoRemove: ((@escaping () -> Void) -> Void)? = nil,
+    updated: @escaping (SelectivePrivacySettings, (SelectivePrivacySettings, VoiceCallSettings)?, Bool?) -> Void
+) -> ViewController {
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     var initialEnableFor: [PeerId: SelectivePrivacyPeer] = [:]
@@ -701,7 +794,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }
     }
     
-    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled)
+    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled, uploadedPhoto: nil)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -865,43 +958,6 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                             }
                         }
                     }
-                    
-                    let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: updatedPeerIds, updated: { updatedPeerIds in
-                        updateState { state in
-                            if enable {
-                                switch target {
-                                    case .main:
-                                        var disableFor = state.disableFor
-                                        for (key, _) in updatedPeerIds {
-                                            disableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedEnableFor(updatedPeerIds).withUpdatedDisableFor(disableFor)
-                                    case .callP2P:
-                                        var callP2PDisableFor = state.callP2PDisableFor ?? [:]
-                                        for (key, _) in updatedPeerIds {
-                                            callP2PDisableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedCallP2PEnableFor(updatedPeerIds).withUpdatedCallP2PDisableFor(callP2PDisableFor)
-                                }
-                            } else {
-                                switch target {
-                                    case .main:
-                                        var enableFor = state.enableFor
-                                        for (key, _) in updatedPeerIds {
-                                            enableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedDisableFor(updatedPeerIds).withUpdatedEnableFor(enableFor)
-                                    case .callP2P:
-                                        var callP2PEnableFor = state.callP2PEnableFor ?? [:]
-                                        for (key, _) in updatedPeerIds {
-                                            callP2PEnableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedCallP2PDisableFor(updatedPeerIds).withUpdatedCallP2PEnableFor(callP2PEnableFor)
-                                }
-                            }
-                        }
-                    })
-                    pushControllerImpl?(controller, false)
                 })
             }))
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -965,12 +1021,48 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+    }, setPublicPhoto: {
+        requestPublicPhotoSetup?({ result in
+            var result = result
+            if let image = result {
+                result = generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.addPath(CGPath(ellipseIn: CGRect(origin: .zero, size: size), transform: nil))
+                    context.clip()
+                    if let cgImage = image.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                    }
+                }, opaque: false)
+            }
+            updateState { state in
+                return state.withUpdatedUploadedPhoto(result)
+            }
+        })
+    }, removePublicPhoto: {
+        requestPublicPhotoRemove?({
+            updateState { state in
+                return state.withUpdatedUploadedPhoto(nil)
+            }
+        })
     })
     
-    let peer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+    let peer = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+    let publicPhoto = context.account.postbox.peerView(id: context.account.peerId)
+    |> map { view -> TelegramMediaImage? in
+        if let cachedUserData = view.cachedData as? CachedUserData, case let .known(photo) = cachedUserData.fallbackPhoto {
+            return photo
+        } else {
+            return nil
+        }
+    }
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peer) |> deliverOnMainQueue
-    |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(
+        context.sharedContext.presentationData,
+        statePromise.get(),
+        peer,
+        publicPhoto
+    ) |> deliverOnMainQueue
+    |> map { presentationData, state, peer, publicPhoto -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peerName = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         var phoneNumber = ""
         if case let .user(user) = peer {
@@ -995,7 +1087,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = presentationData.strings.Privacy_VoiceMessages
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? "", phoneNumber: phoneNumber), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? "", phoneNumber: phoneNumber, peer: peer, publicPhoto: publicPhoto), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

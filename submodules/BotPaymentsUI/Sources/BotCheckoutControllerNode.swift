@@ -23,14 +23,16 @@ import Markdown
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account
+    fileprivate let source: BotPaymentInvoiceSource
     fileprivate let openInfo: (BotCheckoutInfoControllerFocus) -> Void
     fileprivate let openPaymentMethod: () -> Void
     fileprivate let openShippingMethod: () -> Void
     fileprivate let updateTip: (Int64) -> Void
     fileprivate let ensureTipInputVisible: () -> Void
     
-    fileprivate init(account: Account, openInfo: @escaping (BotCheckoutInfoControllerFocus) -> Void, openPaymentMethod: @escaping () -> Void, openShippingMethod: @escaping () -> Void, updateTip: @escaping (Int64) -> Void, ensureTipInputVisible: @escaping () -> Void) {
+    fileprivate init(account: Account, source: BotPaymentInvoiceSource, openInfo: @escaping (BotCheckoutInfoControllerFocus) -> Void, openPaymentMethod: @escaping () -> Void, openShippingMethod: @escaping () -> Void, updateTip: @escaping (Int64) -> Void, ensureTipInputVisible: @escaping () -> Void) {
         self.account = account
+        self.source = source
         self.openInfo = openInfo
         self.openPaymentMethod = openPaymentMethod
         self.openShippingMethod = openShippingMethod
@@ -245,7 +247,7 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         let arguments = arguments as! BotCheckoutControllerArguments
         switch self {
             case let .header(theme, invoice, botName):
-                return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
+                return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, source: arguments.source, botName: botName, sectionId: self.section)
             case let .price(_, theme, text, value, isFinal, hasSeparator, shimmeringIndex):
                 return BotCheckoutPriceItem(theme: theme, title: text, label: value, isFinal: isFinal, hasSeparator: hasSeparator, shimmeringIndex: shimmeringIndex, sectionId: self.section)
             case let .tip(_, _, text, currency, value, numericValue, maxValue, variants):
@@ -712,7 +714,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         var openShippingMethodImpl: (() -> Void)?
         var ensureTipInputVisibleImpl: (() -> Void)?
         
-        let arguments = BotCheckoutControllerArguments(account: context.account, openInfo: { item in
+        let arguments = BotCheckoutControllerArguments(account: context.account, source: source, openInfo: { item in
             openInfoImpl?(item)
         }, openPaymentMethod: {
             openPaymentMethodImpl?()

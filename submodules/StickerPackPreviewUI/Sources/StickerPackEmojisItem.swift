@@ -203,7 +203,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                 loop: for attribute in file.attributes {
                     switch attribute {
-                    case let .CustomEmoji(_, displayText, _):
+                    case let .CustomEmoji(_, _, displayText, _):
                         text = displayText
                         emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                         break loop
@@ -229,7 +229,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                     var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                     loop: for attribute in file.attributes {
                         switch attribute {
-                        case let .CustomEmoji(_, displayText, _):
+                        case let .CustomEmoji(_, _, displayText, _):
                             text = displayText
                             emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                             break loop
@@ -354,7 +354,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
             } else {
                 updateItemLayerPlaceholder = true
                 itemTransition = .immediate
-                                
+                
                 let animationData = EntityKeyboardAnimationData(file: item.file)
                 itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
@@ -363,7 +363,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: animationData.isTemplate ? .primary : .none
                     ),
                     context: context,
                     attemptSynchronousLoad: attemptSynchronousLoads,
@@ -423,6 +423,15 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 )
                 self.containerNode.layer.addSublayer(itemLayer)
                 self.visibleItemLayers[itemId] = itemLayer
+            }
+            
+            switch itemLayer.item.tintMode {
+            case .none:
+                break
+            case .accent:
+                itemLayer.layerTintColor = theme.list.itemAccentColor.cgColor
+            case .primary:
+                itemLayer.layerTintColor = theme.list.itemPrimaryTextColor.cgColor
             }
             
             var itemFrame = itemLayout.frame(itemIndex: index)

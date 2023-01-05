@@ -169,6 +169,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func addPhotoIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddPhotoIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/SetAvatar"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func itemListClearInputIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListClearInputIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.list.inputClearButtonColor)

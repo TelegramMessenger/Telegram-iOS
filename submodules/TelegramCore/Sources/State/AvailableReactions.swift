@@ -313,7 +313,7 @@ func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) ->
                         
                         for resource in resources {
                             signals.append(
-                                fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .standalone(resource: resource))
+                                fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: .other, userContentType: .other, reference: .standalone(resource: resource))
                                 |> ignoreValues
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()

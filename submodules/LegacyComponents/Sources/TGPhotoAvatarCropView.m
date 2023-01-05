@@ -9,7 +9,6 @@
 #import "TGPhotoEditorInterfaceAssets.h"
 
 #import "PGPhotoEditorView.h"
-#import "TGPhotoEntitiesContainerView.h"
 
 const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 const CGFloat TGPhotoAvatarCropViewCurtainSize = 300;
@@ -46,13 +45,13 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     
     __weak PGPhotoEditorView *_fullPreviewView;
     __weak UIImageView *_fullPaintingView;
-    __weak TGPhotoEntitiesContainerView *_fullEntitiesView;
+    __weak UIView<TGPhotoDrawingEntitiesView> *_fullEntitiesView;
 }
 @end
 
 @implementation TGPhotoAvatarCropView
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView fullEntitiesView:(TGPhotoEntitiesContainerView *)fullEntitiesView square:(bool)square
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView fullEntitiesView:(UIView<TGPhotoDrawingEntitiesView> *)fullEntitiesView square:(bool)square
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)

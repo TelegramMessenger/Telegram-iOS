@@ -209,8 +209,64 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     )
 }
 
+private final class AnimationSupportContext {
+    private let window: UIWindow
+    private let testView: UIView
+    private var animationCount: Int = 0
+    private var displayLink: CADisplayLink?
+    
+    init(window: UIWindow) {
+        self.window = window
+        self.testView = UIView()
+        window.addSubview(self.testView)
+        self.testView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0))
+        self.testView.backgroundColor = .black
+    }
+    
+    func add() {
+        self.animationCount += 1
+        self.update()
+    }
+    
+    func remove() {
+        self.animationCount -= 1
+        if self.animationCount < 0 {
+            self.animationCount = 0
+            assertionFailure()
+        }
+        self.update()
+    }
+    
+    @objc func displayEvent() {
+        self.testView.frame = CGRect(origin: CGPoint(x: self.testView.frame.minX == 0.0 ? 1.0 : 0.0, y: 0.0), size: self.testView.bounds.size)
+    }
+    
+    private func update() {
+        if self.animationCount != 0 {
+            if self.displayLink == nil {
+                let displayLink = CADisplayLink(target: self, selector: #selector(self.displayEvent))
+                
+                if #available(iOS 15.0, *) {
+                    let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
+                    if maxFps > 61.0 {
+                        displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: maxFps, preferred: maxFps)
+                    }
+                }
+                
+                self.displayLink = displayLink
+                displayLink.add(to: .main, forMode: .common)
+                displayLink.isPaused = false
+            }
+        } else if let displayLink = self.displayLink {
+            self.displayLink = nil
+            displayLink.invalidate()
+        }
+    }
+}
+
 @objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate {
     @objc var window: UIWindow?
+    private var animationSupportContext: AnimationSupportContext?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
     private var dataImportSplash: LegacyDataImportSplash?
@@ -305,6 +361,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.window = window
         self.nativeWindow = window
+        
+        //self.animationSupportContext = AnimationSupportContext(window: window)
+        //self.animationSupportContext?.add()
         
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {
@@ -1311,6 +1370,55 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             ])
         }
         #endif
+        
+        if #available(iOS 13.0, *) {
+            let taskId = "\(baseAppBundleId).cleanup"
+            
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: DispatchQueue.main) { task in
+                Logger.shared.log("App \(self.episodeId)", "Executing cleanup task")
+                
+                let disposable = MetaDisposable()
+                
+                let _ = (self.sharedContextPromise.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                    let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { activeAccounts in
+                        var signals: Signal<Never, NoError> = .complete()
+                        
+                        for (_, context, _) in activeAccounts.accounts {
+                            signals = signals |> then(context.account.cleanupTasks(lowImpact: false))
+                        }
+                        
+                        disposable.set(signals.start(completed: {
+                            task.setTaskCompleted(success: true)
+                        }))
+                    })
+                })
+                
+                task.expirationHandler = {
+                    disposable.dispose()
+                    task.setTaskCompleted(success: false)
+                }
+            }
+            
+            BGTaskScheduler.shared.getPendingTaskRequests(completionHandler: { tasks in
+                if tasks.contains(where: { $0.identifier == taskId }) {
+                    Logger.shared.log("App \(self.episodeId)", "Already have a cleanup task pending")
+                    return
+                }
+                let request = BGProcessingTaskRequest(identifier: taskId)
+                request.requiresExternalPower = true
+                request.requiresNetworkConnectivity = false
+                
+                do {
+                    try BGTaskScheduler.shared.submit(request)
+                } catch let e {
+                    Logger.shared.log("App \(self.episodeId)", "Error submitting background task request: \(e)")
+                }
+            })
+        }
         
         return true
     }

@@ -40,6 +40,7 @@ swift_library(
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
+        "//submodules/TelegramNotices:TelegramNotices",
     ],
     visibility = [
         "//visibility:public",

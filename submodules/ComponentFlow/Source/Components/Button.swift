@@ -6,11 +6,13 @@ public final class Button: Component {
     public let minSize: CGSize?
     public let tag: AnyObject?
     public let automaticHighlight: Bool
+    public let isEnabled: Bool
     public let action: () -> Void
     public let holdAction: (() -> Void)?
 
     convenience public init(
         content: AnyComponent<Empty>,
+        isEnabled: Bool = true,
         action: @escaping () -> Void
     ) {
         self.init(
@@ -18,6 +20,7 @@ public final class Button: Component {
             minSize: nil,
             tag: nil,
             automaticHighlight: true,
+            isEnabled: isEnabled,
             action: action,
             holdAction: nil
         )
@@ -28,6 +31,7 @@ public final class Button: Component {
         minSize: CGSize? = nil,
         tag: AnyObject? = nil,
         automaticHighlight: Bool = true,
+        isEnabled: Bool = true,
         action: @escaping () -> Void,
         holdAction: (() -> Void)?
     ) {
@@ -35,6 +39,7 @@ public final class Button: Component {
         self.minSize = minSize
         self.tag = tag
         self.automaticHighlight = automaticHighlight
+        self.isEnabled = isEnabled
         self.action = action
         self.holdAction = holdAction
     }
@@ -45,6 +50,7 @@ public final class Button: Component {
             minSize: minSize,
             tag: self.tag,
             automaticHighlight: self.automaticHighlight,
+            isEnabled: self.isEnabled,
             action: self.action,
             holdAction: self.holdAction
         )
@@ -56,6 +62,7 @@ public final class Button: Component {
             minSize: self.minSize,
             tag: self.tag,
             automaticHighlight: self.automaticHighlight,
+            isEnabled: self.isEnabled,
             action: self.action,
             holdAction: holdAction
         )
@@ -67,6 +74,7 @@ public final class Button: Component {
             minSize: self.minSize,
             tag: tag,
             automaticHighlight: self.automaticHighlight,
+            isEnabled: self.isEnabled,
             action: self.action,
             holdAction: self.holdAction
         )
@@ -85,6 +93,9 @@ public final class Button: Component {
         if lhs.automaticHighlight != rhs.automaticHighlight {
             return false
         }
+        if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
         return true
     }
     
@@ -98,9 +109,26 @@ public final class Button: Component {
                     return
                 }
                 if self.currentIsHighlighted != oldValue {
-                    self.contentView.alpha = self.currentIsHighlighted ? 0.6 : 1.0
+                    self.updateAlpha(transition: .immediate)
                 }
             }
+        }
+        
+        private func updateAlpha(transition: Transition) {
+            guard let component = self.component else {
+                return
+            }
+            let alpha: CGFloat
+            if component.isEnabled {
+                if component.automaticHighlight {
+                    alpha = self.currentIsHighlighted ? 0.6 : 1.0
+                } else {
+                    alpha = 1.0
+                }
+            } else {
+                alpha = 0.4
+            }
+            transition.setAlpha(view: self.contentView, alpha: alpha)
         }
         
         private var holdActionTriggerred: Bool = false
@@ -217,6 +245,9 @@ public final class Button: Component {
             }
             
             self.component = component
+            
+            self.updateAlpha(transition: transition)
+            self.isEnabled = component.isEnabled
             
             transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize), completion: nil)
             

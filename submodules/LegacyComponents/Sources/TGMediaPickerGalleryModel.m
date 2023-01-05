@@ -21,8 +21,6 @@
 
 #import <LegacyComponents/TGSecretTimerMenu.h>
 
-#import "TGPhotoEntitiesContainerView.h"
-
 @interface TGMediaPickerGalleryModel ()
 {
     TGMediaPickerGalleryInterfaceView *_interfaceView;
@@ -363,7 +361,7 @@
     UIView *referenceParentView = nil;
     UIImage *image = nil;
     
-    TGPhotoEntitiesContainerView *entitiesView = nil;
+    UIView<TGPhotoDrawingEntitiesView> *entitiesView = nil;
     
     id<TGMediaEditableItem> editableMediaItem = item.editableMediaItem;
     
@@ -373,7 +371,7 @@
         screenImage = [(UIImageView *)editorReferenceView image];
         referenceView = editorReferenceView;
         
-        if ([editorReferenceView.subviews.firstObject.subviews.firstObject.subviews.firstObject isKindOfClass:[TGPhotoEntitiesContainerView class]]) {
+        if ([editorReferenceView.subviews.firstObject.subviews.firstObject.subviews.firstObject conformsToProtocol:@protocol(TGPhotoDrawingEntitiesView)]) {
             entitiesView = editorReferenceView.subviews.firstObject.subviews.firstObject.subviews.firstObject;
         }
     }
@@ -417,7 +415,7 @@
     };
     
     void (^didFinishEditingItem)(id<TGMediaEditableItem>item, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage) = self.didFinishEditingItem;
-    controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges)
+    controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void))
     {
         __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil) {
@@ -442,6 +440,8 @@
             [videoItemView setScrubbingPanelApperanceLocked:false];
             [videoItemView presentScrubbingPanelAfterReload:hasChanges];
         }
+        
+        commit();
     };
     
     controller.didFinishRenderingFullSizeImage = ^(UIImage *image)

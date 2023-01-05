@@ -1103,7 +1103,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         let messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaValue, expirationTimer, nonPremium) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                        let (mediaValue, expirationTimer, nonPremium, hasSpoiler) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                         if let mediaValue = mediaValue {
                             medias.append(mediaValue)
                         }
@@ -1113,6 +1113,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         
                         if let nonPremium = nonPremium, nonPremium {
                             attributes.append(NonPremiumMessageAttribute())
+                        }
+                        
+                        if let hasSpoiler = hasSpoiler, hasSpoiler {
+                            attributes.append(MediaSpoilerMessageAttribute())
                         }
                         
                         if type.hasPrefix("auth") {
@@ -1297,14 +1301,6 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
                     if let user = peer as? TelegramUser {
                         return user.withUpdatedUsernames(usernames.map { TelegramPeerUsername(apiUsername: $0) })
-                    } else {
-                        return peer
-                    }
-                })
-            case let .updateUserPhoto(userId, _, photo, _):
-                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
-                    if let user = peer as? TelegramUser {
-                        return user.withUpdatedPhoto(parsedTelegramProfilePhoto(photo))
                     } else {
                         return peer
                     }
@@ -3457,7 +3453,7 @@ func replayFinalState(
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                 })
                 if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                 }
                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
@@ -3474,7 +3470,7 @@ func replayFinalState(
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                 })
                 if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                 }
             case let .UpdatePeerChatInclusion(peerId, groupId, changedGroup):
                 let currentInclusion = transaction.getPeerChatListInclusion(peerId)
@@ -4250,7 +4246,7 @@ func replayFinalState(
                             }
                             updatedExtendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
                         case let .messageExtendedMedia(apiMedia):
-                            let (media, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
+                            let (media, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                             if let media = media {
                                 updatedExtendedMedia = .full(media: media)
                             } else {

@@ -355,12 +355,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
         if let firstMessage = item.messages.first, let updatedMedia = updatedMedia, imageDimensions != nil {
             if let image = updatedMedia as? TelegramMediaImage {
-                updateImageSignal = mediaGridMessagePhoto(account: item.context.account, photoReference: .message(message: MessageReference(firstMessage), media: image))
+                updateImageSignal = mediaGridMessagePhoto(account: item.context.account, userLocation: .peer(firstMessage.id.peerId), photoReference: .message(message: MessageReference(firstMessage), media: image))
             } else if let file = updatedMedia as? TelegramMediaFile {
                 if file.isSticker {
-                    updateImageSignal = chatMessageSticker(account: item.context.account, file: file, small: true, fetched: true)
+                    updateImageSignal = chatMessageSticker(account: item.context.account, userLocation: .peer(firstMessage.id.peerId), file: file, small: true, fetched: true)
                 } else if file.isVideo {
-                    updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: .message(message: MessageReference(firstMessage), media: file), autoFetchFullSizeThumbnail: true)
+                    updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, userLocation: .peer(firstMessage.id.peerId), videoReference: .message(message: MessageReference(firstMessage), media: file), autoFetchFullSizeThumbnail: true)
                 }
             }
         }

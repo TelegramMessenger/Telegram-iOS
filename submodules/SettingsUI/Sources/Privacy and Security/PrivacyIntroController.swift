@@ -44,14 +44,14 @@ public enum PrivacyIntroControllerMode {
         }
     }
     
-    func title(strings: PresentationStrings) -> String {
+    func title(context: AccountContext, strings: PresentationStrings) -> String {
         switch self {
             case .passcode:
                 return strings.PasscodeSettings_Title
             case .twoStepVerification:
                 return strings.TwoStepAuth_AdditionalPassword
             case let .changePhoneNumber(phoneNumber):
-                return formatPhoneNumber(phoneNumber)
+                return formatPhoneNumber(context: context, number: phoneNumber)
         }
     }
     

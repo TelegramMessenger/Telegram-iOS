@@ -35,10 +35,24 @@ public extension Transition.AppearWithGuide {
 }
 
 public extension Transition.Disappear {
-    static let `default` = Transition.Disappear { view, transition, completion in
-        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-            completion()
-        })
+    static func `default`(scale: Bool = false, alpha: Bool = true) -> Transition.Disappear {
+        return Transition.Disappear { view, transition, completion in
+            if scale {
+                transition.setScale(view: view, scale: 0.01, completion: { _ in
+                    if !alpha {
+                        completion()
+                    }
+                })
+            }
+            if alpha {
+                transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                    completion()
+                })
+            }
+            if !alpha && !scale {
+                completion()
+            }
+        }
     }
 }
 

@@ -10,51 +10,6 @@ import TelegramPresentationData
 import AccountContext
 import AttachmentUI
 
-public func requestContextResults(context: AccountContext, botId: EnginePeer.Id, query: String, peerId: EnginePeer.Id, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
-    return context.engine.messages.requestChatContextResults(botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
-    |> `catch` { error -> Signal<RequestChatContextResultsResult?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { resultsStruct -> Signal<RequestChatContextResultsResult?, NoError> in
-        let results = resultsStruct?.results
-        
-        var collection = existingResults
-        var updated: Bool = false
-        if let existingResults = existingResults, let results = results {
-            var newResults: [ChatContextResult] = []
-            var existingIds = Set<String>()
-            for result in existingResults.results {
-                newResults.append(result)
-                existingIds.insert(result.id)
-            }
-            for result in results.results {
-                if !existingIds.contains(result.id) {
-                    newResults.append(result)
-                    existingIds.insert(result.id)
-                    updated = true
-                }
-            }
-            collection = ChatContextResultCollection(botId: existingResults.botId, peerId: existingResults.peerId, query: existingResults.query, geoPoint: existingResults.geoPoint, queryId: results.queryId, nextOffset: results.nextOffset, presentation: existingResults.presentation, switchPeer: existingResults.switchPeer, results: newResults, cacheTimeout: existingResults.cacheTimeout)
-        } else {
-            collection = results
-            updated = true
-        }
-        if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset, updated {
-            let nextResults = requestContextResults(context: context, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
-            if collection.results.count > 10 {
-                return .single(RequestChatContextResultsResult(results: collection, isStale: resultsStruct?.isStale ?? false))
-                |> then(nextResults)
-            } else {
-                return nextResults
-            }
-        } else if let collection = collection {
-            return .single(RequestChatContextResultsResult(results: collection, isStale: resultsStruct?.isStale ?? false))
-        } else {
-            return .single(nil)
-        }
-    }
-}
-
 public enum WebSearchMode {
     case media
     case avatar
@@ -151,12 +106,6 @@ public final class WebSearchController: ViewController {
     private var selectionDisposable: Disposable?
     
     private var navigationContentNode: WebSearchNavigationContentNode?
-    
-    public var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)? {
-        didSet {
-            self.controllerNode.presentStickers = self.presentStickers
-        }
-    }
     
     public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil } {
         didSet {
@@ -497,7 +446,7 @@ public final class WebSearchController: ViewController {
         }
         |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
             if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                let results = requestContextResults(context: context, botId: user.id, query: query, peerId: peerId, limit: 64)
+                let results = requestContextResults(engine: context.engine, botId: user.id, query: query, peerId: peerId, limit: 64)
                 |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     return { _ in
                         return .contextRequestResult(.user(user), results?.results)

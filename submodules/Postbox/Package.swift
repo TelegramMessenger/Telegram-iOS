@@ -22,6 +22,7 @@ let package = Package(
         .package(name: "ManagedFile", path: "../ManagedFile"),
         .package(name: "RangeSet", path: "../Utils/RangeSet"),
         .package(name: "SSignalKit", path: "../SSignalKit"),
+        .package(name: "CryptoUtils", path: "../CryptoUtils")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -34,6 +35,7 @@ let package = Package(
                            .product(name: "RangeSet", package: "RangeSet", condition: nil),
                            .product(name: "sqlcipher", package: "sqlcipher", condition: nil),
                            .product(name: "StringTransliteration", package: "StringTransliteration", condition: nil),
+                           .product(name: "CryptoUtils", package: "CryptoUtils", condition: nil),
                            .product(name: "Crc32", package: "Crc32", condition: nil)],
             path: "Sources"),
     ]

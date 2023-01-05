@@ -1213,7 +1213,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 }
                             }
                             
-                            let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources(resourceIds, force: true, notify: true)
+                            let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources(Array(resourceIds), force: true, notify: true)
                             |> deliverOnMainQueue).start(completed: {
                                 guard let strongSelf = self else {
                                     return
@@ -1298,7 +1298,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             
             self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
             
-            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
+            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true, selectForumThreads: true))
             peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return

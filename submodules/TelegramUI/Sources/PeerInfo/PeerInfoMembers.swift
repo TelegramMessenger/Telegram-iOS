@@ -131,6 +131,7 @@ private final class PeerInfoMembersContextImpl {
     private var members: [PeerInfoMember] = []
     private var dataState: PeerInfoMembersDataState = .loading(isInitial: true)
     private var removingMemberIds: [PeerId: Disposable] = [:]
+    private var membersHidden: Bool?
     
     private let stateValue = Promise<PeerInfoMembersState>()
     var state: Signal<PeerInfoMembersState, NoError> {
@@ -148,7 +149,7 @@ private final class PeerInfoMembersContextImpl {
         self.pushState()
         
         if peerId.namespace == Namespaces.Peer.CloudChannel {
-            let (disposable, control) = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { [weak self] state in
+            let (disposable, control) = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, requestUpdate: true, updated: { [weak self] state in
                 queue.async {
                     guard let strongSelf = self else {
                         return
@@ -178,6 +179,7 @@ private final class PeerInfoMembersContextImpl {
                 guard let strongSelf = self else {
                     return
                 }
+                
                 if let channel = peerViewMainPeer(view) as? TelegramChannel {
                     var canAddMembers = false
                     switch channel.info {
@@ -190,6 +192,20 @@ private final class PeerInfoMembersContextImpl {
                     }
                     strongSelf.canAddMembers = canAddMembers
                     strongSelf.pushState()
+                }
+                
+                var membersHidden: Bool?
+                if let cachedData = view.cachedData as? CachedChannelData, case let .known(value) = cachedData.membersHidden {
+                    membersHidden = value.value
+                }
+                
+                if strongSelf.membersHidden != membersHidden {
+                    let shouldResetList = strongSelf.membersHidden != nil
+                    strongSelf.membersHidden = membersHidden
+                    
+                    if shouldResetList, let control = strongSelf.channelMembersControl {
+                        context.peerChannelMemberCategoriesContextsManager.reset(peerId: peerId, control: control)
+                    }
                 }
             }))
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {

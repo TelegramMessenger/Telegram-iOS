@@ -383,7 +383,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             for representation in file.file.previewRepresentations {
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message, slug: file.slug)))
                             }
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: reference(for: file.file.resource, media: file.file, message: message, slug: file.slug)))
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: reference(for: file.file.resource, media: file.file, message: message, slug: file.slug)))
                             
                             if wallpaper.isPattern {
                                 var patternColors: [UIColor] = []
@@ -422,7 +422,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 }
                                 signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             }
-                            fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
+                            fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
                             let account = self.context.account
                             statusSignal = self.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
                             |> take(1)
@@ -452,7 +452,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                                 
                                 if let largestIndex = convertedRepresentations.firstIndex(where: { $0.representation == largestSize }) {
-                                    fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: convertedRepresentations[largestIndex].reference)
+                                    fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: convertedRepresentations[largestIndex].reference)
                                 } else {
                                     fetchSignal = .complete()
                                 }
@@ -541,13 +541,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         
                         var representations: [TelegramMediaImageRepresentation] = []
                         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                         }
-                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                         
-                        signal = chatMessagePhoto(postbox: context.account.postbox, photoReference: .standalone(media: tmpImage))
-                        fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
+                        signal = chatMessagePhoto(postbox: context.account.postbox, userLocation: .other, photoReference: .standalone(media: tmpImage))
+                        fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
                         statusSignal = context.account.postbox.mediaBox.resourceStatus(imageResource)
                     } else {
                         displaySize = CGSize(width: 1.0, height: 1.0)
