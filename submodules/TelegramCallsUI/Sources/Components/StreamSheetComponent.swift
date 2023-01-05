@@ -20,6 +20,10 @@ final class StreamSheetComponent: CombinedComponent {
     let deviceCornerRadius: CGFloat
     let videoHeight: CGFloat
     
+    let isFullscreen: Bool
+    let fullscreenTopComponent: AnyComponent<Empty>
+    let fullscreenBottomComponent: AnyComponent<Empty>
+    
     init(
         topComponent: AnyComponent<Empty>,
         bottomButtonsRow: AnyComponent<Empty>,
@@ -30,10 +34,13 @@ final class StreamSheetComponent: CombinedComponent {
         participantsCount: Int,
         isFullyExtended: Bool,
         deviceCornerRadius: CGFloat,
-        videoHeight: CGFloat
+        videoHeight: CGFloat,
+        isFullscreen: Bool,
+        fullscreenTopComponent: AnyComponent<Empty>,
+        fullscreenBottomComponent: AnyComponent<Empty>
     ) {
-        self.topComponent = topComponent
-        self.bottomButtonsRow = bottomButtonsRow
+        self.topComponent = nil // topComponent
+        self.bottomButtonsRow = nil // bottomButtonsRow
         self.topOffset = topOffset
         self.sheetHeight = sheetHeight
         self.backgroundColor = backgroundColor
@@ -42,6 +49,10 @@ final class StreamSheetComponent: CombinedComponent {
         self.isFullyExtended = isFullyExtended
         self.deviceCornerRadius = deviceCornerRadius
         self.videoHeight = videoHeight
+        
+        self.isFullscreen = isFullscreen
+        self.fullscreenTopComponent = fullscreenTopComponent
+        self.fullscreenBottomComponent = fullscreenBottomComponent
     }
     
     static func ==(lhs: StreamSheetComponent, rhs: StreamSheetComponent) -> Bool {
@@ -75,6 +86,19 @@ final class StreamSheetComponent: CombinedComponent {
         if lhs.videoHeight != rhs.videoHeight {
             return false
         }
+        
+        if lhs.isFullscreen != rhs.isFullscreen {
+            return false
+        }
+        
+        if lhs.fullscreenTopComponent != rhs.fullscreenTopComponent {
+            return false
+        }
+        
+        if lhs.fullscreenBottomComponent != rhs.fullscreenBottomComponent {
+            return false
+        }
+        
         return true
     }
     
@@ -173,7 +197,7 @@ final class StreamSheetComponent: CombinedComponent {
                 )
             }
             // TODO: replace
-            let isFullscreen = context.component.participantsCount == -1
+            let isFullscreen = context.component.isFullscreen // context.component.participantsCount == -1
             
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: topOffset + context.component.sheetHeight / 2))

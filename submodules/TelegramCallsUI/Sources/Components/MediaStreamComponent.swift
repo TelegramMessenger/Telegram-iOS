@@ -283,7 +283,11 @@ public final class MediaStreamComponent: CombinedComponent {
         let dismissTapComponent = Child(Rectangle.self)
         let video = Child(MediaStreamVideoComponent.self)
         let sheet = Child(StreamSheetComponent.self)
-        let fullscreenOverlay = Child(StreamSheetComponent.self)
+//        let fullscreenOverlay = Child(StreamSheetComponent.self)
+        let topItem = Child(environment: Empty.self)
+//        let viewerCounter = Child(ParticipantsComponent.self)
+        let fullscreenBottomItem = Child(environment: Empty.self)
+        let buttonsRow = Child(environment: Empty.self)
         
         let activatePictureInPicture = StoredActionSlot(Action<Void>.self)
         let deactivatePictureInPicture = StoredActionSlot(Void.self)
@@ -346,7 +350,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 ? (context.availableSize.width - videoInset * 2) / 16 * 9
             : context.state.videoSize?.height ?? (min(context.availableSize.width, context.availableSize.height) - videoInset * 2) / 16 * 9
             let bottomPadding = 40 + environment.safeInsets.bottom
-            let sheetHeight: CGFloat = isFullscreen
+            let requiredSheetHeight: CGFloat = isFullscreen
                 ? context.availableSize.height
                 : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding)
             
@@ -357,14 +361,14 @@ public final class MediaStreamComponent: CombinedComponent {
                 safeAreaTopInView = context.view.safeAreaInsets.top
             }
             
-            let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset - safeAreaTopInView < 30
+            let isFullyDragged = context.availableSize.height - requiredSheetHeight + state.dismissOffset - safeAreaTopInView < 30
             
             var dragOffset = context.state.dismissOffset
             if isFullyDragged {
-                dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + safeAreaTopInView)
+                dragOffset = max(context.state.dismissOffset, requiredSheetHeight - context.availableSize.height + safeAreaTopInView)
             }
             
-            let dismissTapAreaHeight = isFullscreen ? 0 : (context.availableSize.height - sheetHeight + dragOffset)
+            let dismissTapAreaHeight = isFullscreen ? 0 : (context.availableSize.height - requiredSheetHeight + dragOffset)
             let dismissTapComponent = dismissTapComponent.update(
                 component: Rectangle(color: .red.withAlphaComponent(0)),
                 availableSize: CGSize(width: context.availableSize.width, height: dismissTapAreaHeight),
@@ -742,23 +746,31 @@ public final class MediaStreamComponent: CombinedComponent {
                         } else {
                             if isFullyDragged || state.initialOffset != 0 {
                                 state.updateDismissOffset(value: 0.0, interactive: false)
+                                state.updateDismissOffset(value: 0.0, interactive: false)
                             } else {
-                                activatePictureInPicture.invoke(Action {
+                                if state.isPictureInPictureSupported {
+                                    activatePictureInPicture.invoke(Action {
+                                        guard let controller = controller() as? MediaStreamComponentController else {
+                                            return
+                                        }
+                                        controller.dismiss(closing: false, manual: true)
+                                    })
+                                } else {
                                     guard let controller = controller() as? MediaStreamComponentController else {
                                         return
                                     }
                                     controller.dismiss(closing: false, manual: true)
-                                })
+                                }
 //                                let _ = call.leave(terminateIfPossible: false)
                             }
                         }
                     } else {
                         if isFullyDragged {
-                            state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                            state.updateDismissOffset(value: requiredSheetHeight - availableSize.height + safeAreaTop, interactive: false)
                         } else {
                             if velocity.y < -200 {
                                 // Expand
-                                state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                                state.updateDismissOffset(value: requiredSheetHeight - availableSize.height + safeAreaTop, interactive: false)
                             } else {
                                 state.updateDismissOffset(value: 0.0, interactive: false)
                             }
@@ -792,7 +804,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 .gesture(.pan(onPanGesture))
             )
             
-            if !isFullscreen {
+            if !isFullscreen || state.isFullscreen {
                 let imageRenderScale = UIScreen.main.scale
                 let bottomComponent = AnyComponent(ButtonsRowComponent(
                     bottomInset: environment.safeInsets.bottom,
@@ -872,10 +884,10 @@ public final class MediaStreamComponent: CombinedComponent {
                         )),
                         action: { [weak state] in
                             guard let state = state else { return }
-                            guard state.videoIsPlayable else {
-                                state.isFullscreen = false
-                                return
-                            }
+//                            guard state.videoIsPlayable else {
+//                                state.isFullscreen = false
+//                                return
+//                            }
                             if let controller = controller() as? MediaStreamComponentController {
 //                                guard let _ = state.videoSize else { return }
                                 state.isFullscreen.toggle()
@@ -907,25 +919,33 @@ public final class MediaStreamComponent: CombinedComponent {
                     ).minSize(CGSize(width: 44.0, height: 44.0)))
                 ))
                 
+                let sheetHeight: CGFloat = max(requiredSheetHeight - dragOffset, requiredSheetHeight)
+                let topOffset: CGFloat = isFullscreen
+                    ? max(context.state.dismissOffset, 0)
+                    : (context.availableSize.height - requiredSheetHeight + dragOffset)
+                
                 let sheet = sheet.update(
                     component: StreamSheetComponent(
                         topComponent: AnyComponent(navigationComponent),
                         bottomButtonsRow: bottomComponent,
-                        topOffset: context.availableSize.height - sheetHeight + dragOffset,
-                        sheetHeight: max(sheetHeight - dragOffset, sheetHeight),
+                        topOffset: topOffset,
+                        sheetHeight: sheetHeight,
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
                         bottomPadding: bottomPadding,
                         participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
                         isFullyExtended: isFullyDragged,
                         deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
-                        videoHeight: videoHeight
+                        videoHeight: videoHeight,
+                        isFullscreen: isFullscreen,
+                        fullscreenTopComponent: AnyComponent(navigationComponent),
+                        fullscreenBottomComponent: bottomComponent
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
                 
-                let sheetOffset: CGFloat = context.availableSize.height - sheetHeight + dragOffset
-                let sheetPosition = sheetOffset + sheetHeight / 2
+                let sheetOffset: CGFloat = context.availableSize.height - requiredSheetHeight + dragOffset
+                let sheetPosition = sheetOffset + requiredSheetHeight / 2
                 // Sheet underneath the video when in modal sheet
                 context.add(sheet
                     .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
@@ -935,18 +955,26 @@ public final class MediaStreamComponent: CombinedComponent {
                 if isFullscreen {
                     videoPos = context.availableSize.height / 2 + dragOffset
                 } else {
-                    videoPos = sheetPosition - sheetHeight / 2 + videoHeight / 2 + 50 + 12
+                    videoPos = sheetPosition - requiredSheetHeight / 2 + videoHeight / 2 + 50 + 12
                 }
                 context.add(video
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos))
                 )
-            } else {
-                context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2 + dragOffset)
-                ))
-            }
-            
-            if isFullscreen {
+                
+                //
+                //
+                //
+                var availableWidth: CGFloat { context.availableSize.width }
+                var contentHeight: CGFloat { 44.0 }
+//                print(topItem)
+                // let size = context.availableSize
+                
+                let topItem = topItem.update(
+                    component: AnyComponent(navigationComponent),
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    transition: context.transition
+                )
+                
                 let fullScreenToolbarComponent = AnyComponent(ToolbarComponent(
                     bottomInset: environment.safeInsets.bottom,
                     sideInset: environment.safeInsets.left,
@@ -981,26 +1009,102 @@ public final class MediaStreamComponent: CombinedComponent {
                     ).minSize(CGSize(width: 64.0, height: 80)))/* : nil*/,
                     centerItem: infoItem
                 ))
-                let fullScreenOverlayComponent = fullscreenOverlay.update(
+                
+                let buttonsRow = buttonsRow.update(
+                    component: bottomComponent,
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    transition: context.transition
+                )
+                
+                let fullscreenBottomItem = fullscreenBottomItem.update(
+                    component: fullScreenToolbarComponent,
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    transition: context.transition
+                )
+                
+                context.add(topItem
+                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 32)))
+                    .opacity((!isFullscreen || state.displayUI) ? 1 : 0)
+//                    .animation(key: "position")
+                )
+                
+                context.add(buttonsRow
+                    .opacity(isFullscreen ? 0 : 1)
+//                    .animation(key: "opacity")
+                    .position(CGPoint(x: buttonsRow.size.width / 2, y: sheetHeight - 50 / 2 + topOffset - bottomPadding))
+                )
+                
+                context.add(fullscreenBottomItem
+                    .opacity((isFullscreen && state.displayUI) ? 1 : 0)
+//                    .animation(key: "opacity")
+                    .position(CGPoint(x: fullscreenBottomItem.size.width / 2, y: context.availableSize.height - fullscreenBottomItem.size.height / 2 + topOffset - 0.0))
+                )
+                //
+                //
+                //
+            } else {
+                let fullScreenToolbarComponent = AnyComponent(ToolbarComponent(
+                    bottomInset: environment.safeInsets.bottom,
+                    sideInset: environment.safeInsets.left,
+                    leftItem: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Input/Accessory Panels/MessageSelectionForward",
+                            tintColor: .white
+                        )),
+                        action: {
+                            guard let controller = controller() as? MediaStreamComponentController else {
+                                return
+                            }
+                            controller.presentShare()
+                        }
+                    ).minSize(CGSize(width: 64.0, height: 80))),
+                    rightItem: /*state.hasVideo ?*/ AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: isFullscreen ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
+                            tintColor: .white
+                        )),
+                        action: {
+                            state.isFullscreen = false
+                            state.prevFullscreenOrientation = UIDevice.current.orientation
+                            if let controller = controller() as? MediaStreamComponentController {
+                                if canEnforceOrientation {
+                                    controller.updateOrientation(orientation: .portrait)
+                                } else {
+                                    state.updated(transition: .easeInOut(duration: 0.25)) // updated(.easeInOut(duration: 0.3))
+                                }
+                            }
+                        }
+                    ).minSize(CGSize(width: 64.0, height: 80)))/* : nil*/,
+                    centerItem: infoItem
+                ))
+                let fullScreenOverlayComponent = sheet.update(
                     component: StreamSheetComponent(
                         topComponent: AnyComponent(navigationComponent),
                         bottomButtonsRow: fullScreenToolbarComponent,
                         topOffset: /*context.availableSize.height - sheetHeight +*/ max(context.state.dismissOffset, 0),
                         sheetHeight: context.availableSize.height,// max(sheetHeight - context.state.dismissOffset, sheetHeight),
-                        backgroundColor: /*isFullscreen ? .clear : */ (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
+                        backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
                         bottomPadding: 0,
                         participantsCount: -1,
                         isFullyExtended: isFullyDragged,
                         deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
-                        videoHeight: videoHeight
+                        videoHeight: videoHeight,
+                        isFullscreen: isFullscreen,
+                        fullscreenTopComponent: AnyComponent(navigationComponent),
+                        fullscreenBottomComponent: fullScreenToolbarComponent
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
+                
                 context.add(fullScreenOverlayComponent
                     .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
                     .opacity(state.displayUI ? 1 : 0)
                 )
+                
+                context.add(video
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2 + dragOffset)
+                ))
             }
             
             return context.availableSize
@@ -1446,11 +1550,21 @@ final class StreamTitleComponent: Component {
         
         func update(component: StreamTitleComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             let liveIndicatorWidth: CGFloat = 40
-            self.titleLabel.text = component.text
+            let currentText = self.titleLabel.text
+            if currentText != component.text {
+                if currentText?.isEmpty == false {
+                    UIView.transition(with: self.titleLabel, duration: 0.2) {
+                        self.titleLabel.text = component.text
+                        self.titleLabel.invalidateIntrinsicContentSize()
+                    }
+                } else {
+                    self.titleLabel.text = component.text
+                    self.titleLabel.invalidateIntrinsicContentSize()
+                }
+            }
             self.titleLabel.font = Font.semibold(17.0)
             self.titleLabel.textColor = .white
             self.titleLabel.numberOfLines = 1
-            self.titleLabel.invalidateIntrinsicContentSize()
             
             let textSize = CGSize(width: min(availableSize.width - 4 - liveIndicatorWidth, self.titleLabel.intrinsicContentSize.width), height: availableSize.height)
             
@@ -1483,7 +1597,13 @@ final class StreamTitleComponent: Component {
             let size = CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height)
             let textFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
 //            self.textView.frame = textFrame
-            self.updateTitleFadeLayer(textFrame: textFrame)
+            if currentText?.isEmpty == false {
+                UIView.transition(with: self.titleLabel, duration: 0.2) {
+                    self.updateTitleFadeLayer(textFrame: textFrame)
+                }
+            } else {
+                self.updateTitleFadeLayer(textFrame: textFrame)
+            }
             
             liveIndicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: /*floorToScreenPixels((size.height - textSize.height) / 2.0 - 2) + 1.0*/textFrame.midY - 22 / 2), size: .init(width: 40, height: 22))
             self.liveIndicatorView.toggle(isLive: component.isActive)
@@ -1563,7 +1683,11 @@ private final class NavigationBarComponent: CombinedComponent {
             let contentHeight: CGFloat = 44.0
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
             
-            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: context.component.backgroundVisible ? 0.5 : 0)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
+            let background = background.update(
+                component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5/*context.component.backgroundVisible ? 0.5 : 0*/)),
+                availableSize: CGSize(width: size.width, height: size.height),
+                transition: context.transition
+            )
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
@@ -1600,6 +1724,8 @@ private final class NavigationBarComponent: CombinedComponent {
             
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+                .opacity(context.component.backgroundVisible ? 1 : 0)
+                .animation(key: "opacity")
             )
             
             var centerLeftInset = sideInset
@@ -1660,7 +1786,7 @@ private final class OriginInfoComponent: CombinedComponent {
                     component: ParticipantsComponent(
                         count: context.component.participantsCount,
                         showsSubtitle: true,
-                        fontSize: 24
+                        fontSize: 18.0
                     ),
                     availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                     transition: context.transition
@@ -1671,7 +1797,7 @@ private final class OriginInfoComponent: CombinedComponent {
                 size.height = min(size.height, context.availableSize.height)
                 
                 context.add(viewerCounter
-                    .position(CGPoint(x: size.width / 2.0, y: viewerCounter.size.height / 2.0))
+                    .position(CGPoint(x: size.width / 2.0, y: (context.availableSize.height - viewerCounter.size.height) / 2.0))
                 )
                 
                 return size
