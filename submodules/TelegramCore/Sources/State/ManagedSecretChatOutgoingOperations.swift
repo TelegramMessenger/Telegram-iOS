@@ -1830,7 +1830,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                                 }
                                             }
                                         }
-                                        let updatedImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: encryptedFile.id), representations: [TelegramMediaImageRepresentation(dimensions: largestRepresentation.dimensions, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)], immediateThumbnailData: updatedImmediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                                        let updatedImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: encryptedFile.id), representations: [TelegramMediaImageRepresentation(dimensions: largestRepresentation.dimensions, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], immediateThumbnailData: updatedImmediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                                         toMedia = updatedImage
                                         updatedMedia = [updatedImage]
                                     }

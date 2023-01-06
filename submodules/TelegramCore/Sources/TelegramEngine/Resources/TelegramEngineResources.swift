@@ -223,8 +223,8 @@ public extension TelegramEngine {
             return _internal_collectCacheUsageStats(account: self.account, peerId: peerId, additionalCachePaths: additionalCachePaths, logFilesPath: logFilesPath)
         }
         
-        public func collectStorageUsageStats() -> Signal<AllStorageUsageStats, NoError> {
-            return _internal_collectStorageUsageStats(account: self.account)
+        public func collectStorageUsageStats(excludePeerIds: Signal<Set<PeerId>, NoError>) -> Signal<AllStorageUsageStats, NoError> {
+            return _internal_collectStorageUsageStats(account: self.account, excludePeerIds: excludePeerIds)
         }
 
         public func renderStorageUsageStatsMessages(stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {

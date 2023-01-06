@@ -133,7 +133,7 @@ private extension StorageUsageStats {
     }
 }
 
-func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
+func _internal_collectStorageUsageStats(account: Account, excludePeerIds: Signal<Set<PeerId>, NoError>) -> Signal<AllStorageUsageStats, NoError> {
     let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {
             var totalSize: Int64 = 0
@@ -211,7 +211,11 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
     
     return combineLatest(
         additionalStats,
-        account.postbox.mediaBox.storageBox.getAllStats()
+        excludePeerIds
+        |> take(1)
+        |> mapToSignal { excludePeerIds in
+            return account.postbox.mediaBox.storageBox.getAllStats(excludePeerIds: excludePeerIds)
+        }
     )
     |> deliverOnMainQueue
     |> mapToSignal { additionalStats, allStats -> Signal<AllStorageUsageStats, NoError> in

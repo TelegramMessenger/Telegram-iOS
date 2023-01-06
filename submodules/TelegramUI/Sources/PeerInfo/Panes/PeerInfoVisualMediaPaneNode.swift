@@ -1469,7 +1469,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     
                     // previewRepresentations for videos in secret chats will be empty, so using immediateThumbnailData or generated good-quality thumbnail if video is downloaded
                     if result == nil, let file = selectedMedia as? TelegramMediaFile, file.isVideo, !file.isInstantVideo, let _ = file.immediateThumbnailData, let dimensions = dimensionsForFileAttributes(file.attributes) {
-                        let loadSignal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), synchronousLoad: synchronous == .full, nilForEmptyResult: true)
+                        let loadSignal = mediaGridMessageVideo(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: FileMediaReference.message(message: MessageReference(message), media: file), synchronousLoad: synchronous == .full, nilForEmptyResult: true)
                         |> map { transform in
                             let boundingSize = CGSize(width: imageWidthSpec, height: imageWidthSpec)
                             let imageSize = dimensions.cgSize.aspectFilled(boundingSize)

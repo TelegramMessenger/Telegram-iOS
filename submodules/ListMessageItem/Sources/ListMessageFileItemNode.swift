@@ -1034,7 +1034,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3))
                             case let .immediateThumbnail(file):
                                 // if file is pdf and it is downloaded, will use good-quality thumb generated from document, otherwise immediateThumbnailData is used
-                                updateIconImageSignal = chatMessageImageFile(account: item.context.account, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), thumbnail: true)
+                                updateIconImageSignal = chatMessageImageFile(account: item.context.account, userLocation: .peer(message.id.peerId), fileReference: FileMediaReference.message(message: MessageReference(message), media: file), thumbnail: true)
                         }
                     } else {
                         updateIconImageSignal = .complete()

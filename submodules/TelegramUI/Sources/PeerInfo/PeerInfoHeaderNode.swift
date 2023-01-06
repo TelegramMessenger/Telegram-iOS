@@ -2678,15 +2678,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var panelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
         var nextPanelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
         let usernameString: (text: String, attributes: MultiScaleTextState.Attributes)
-        
-        var smallIdString = (text: String, attributes: MultiScaleTextState.Attributes)
-        var idString = (text: String, attributes: MultiScaleTextState.Attributes)
-        
         if let peer = peer {
             isPremium = peer.isPremium
             isVerified = peer.isVerified
             isFake = peer.isFake || peer.isScam
         }
+        
+        var idStringText = ""
         
         if let peer = peer {
             var title: String
@@ -2726,9 +2724,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 
                 if showPeerId {
-                    let id = "\(presentationData.strings.Profile_Id): \(String(user.id.id._internalGetInt64Value()))"
-                    smallIdString = NSAttributedString(string: id, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
-                    idString = NSAttributedString(string: id, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                    idStringText = "\(presentationData.strings.Profile_Id): \(String(user.id.id._internalGetInt64Value()))"
                 }
             } else if let _ = threadData {
                 let subtitleColor: UIColor
@@ -2821,11 +2817,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleStringText
         
-        let idNodeLayout = self.idNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: idString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallIdString, constrainedSize: titleConstrainedSize)
+        let idNodeLayout = self.idNode.updateLayout(text: idStringText, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.idNode.accessibilityLabel = idString.string
+        self.idNode.accessibilityLabel = idStringText
         
         if subtitleIsButton {
             let subtitleBackgroundNode: ASDisplayNode

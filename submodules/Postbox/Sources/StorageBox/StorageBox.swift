@@ -689,7 +689,7 @@ public final class StorageBox {
             return result
         }
         
-        func getAllStats() -> AllStats {
+        func getAllStats(excludePeerIds: Set<PeerId>) -> AllStats {
             self.valueBox.begin()
             
             let allStats = AllStats(total: StorageBox.Stats(contentTypes: [:]), peers: [:])
@@ -708,6 +708,12 @@ public final class StorageBox {
                 
                 let peerId = key.getInt64(0)
                 let contentType = key.getUInt8(8)
+                
+                if excludePeerIds.contains(PeerId(peerId)) {
+                    allStats.total.contentTypes[contentType]?.size -= size
+                    return true
+                }
+                
                 if allStats.peers[PeerId(peerId)] == nil {
                     allStats.peers[PeerId(peerId)] = StorageBox.Stats(contentTypes: [:])
                 }
@@ -722,6 +728,10 @@ public final class StorageBox {
             self.valueBox.scan(self.peerIdToIdTable, keys: { key in
                 let peerId = key.getInt64(0)
                 if peerId == 0 {
+                    return true
+                }
+                
+                if excludePeerIds.contains(PeerId(peerId)) {
                     return true
                 }
                 
@@ -922,9 +932,9 @@ public final class StorageBox {
         }
     }
     
-    public func getAllStats() -> Signal<AllStats, NoError> {
+    public func getAllStats(excludePeerIds: Set<PeerId>) -> Signal<AllStats, NoError> {
         return self.impl.signalWith { impl, subscriber in
-            subscriber.putNext(impl.getAllStats())
+            subscriber.putNext(impl.getAllStats(excludePeerIds: excludePeerIds))
             subscriber.putCompletion()
             
             return EmptyDisposable

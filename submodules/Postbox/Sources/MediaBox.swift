@@ -1270,7 +1270,6 @@ public final class MediaBox {
                     } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
                         result[wrappedId] = Int64(size)
                     }
-                    // size of .meta file is not considered?
                 }
                 subscriber.putNext(result)
                 subscriber.putCompletion()
