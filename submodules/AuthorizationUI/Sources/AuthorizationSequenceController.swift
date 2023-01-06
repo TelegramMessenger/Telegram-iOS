@@ -167,10 +167,20 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             controller.loginWithNumber = { [weak self, weak controller] number, syncContacts in
                 if let strongSelf = self {
                     controller?.inProgress = true
-                    strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, syncContacts: syncContacts) |> deliverOnMainQueue).start(next: { [weak self] account in
+                    strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, syncContacts: syncContacts, forcedPasswordSetupNotice: { value in
+                        guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
+                            return nil
+                        }
+                        return (ApplicationSpecificNotice.forcedPasswordSetupKey(), entry)
+                    }) |> deliverOnMainQueue).start(next: { [weak self] result in
                         if let strongSelf = self {
-                            controller?.inProgress = false
-                            strongSelf.account = account
+                            switch result {
+                            case let .sentCode(account):
+                                controller?.inProgress = false
+                                strongSelf.account = account
+                            case .loggedIn:
+                                break
+                            }
                         }
                     }, error: { error in
                         if let strongSelf = self, let controller = controller {

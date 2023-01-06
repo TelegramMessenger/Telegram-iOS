@@ -240,12 +240,14 @@ public struct NetworkUsageStats: Equatable {
     public let audio: NetworkUsageStatsConnectionsEntry
     public let file: NetworkUsageStatsConnectionsEntry
     public let call: NetworkUsageStatsConnectionsEntry
+    public let sticker: NetworkUsageStatsConnectionsEntry
+    public let voiceMessage: NetworkUsageStatsConnectionsEntry
     
     public let resetWifiTimestamp: Int32
     public let resetCellularTimestamp: Int32
     
     public static func ==(lhs: NetworkUsageStats, rhs: NetworkUsageStats) -> Bool {
-        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.call == rhs.call && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp
+        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.call == rhs.call && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp && lhs.sticker == rhs.sticker && lhs.voiceMessage == rhs.voiceMessage
     }
 }
 
@@ -386,6 +388,20 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
                     wifi: NetworkUsageStatsDirectionsEntry(
                         incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call).key]!,
                         outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call).key]!)),
+                sticker: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: 0,
+                        outgoing: 0),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: 0,
+                        outgoing: 0)),
+                voiceMessage: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: 0,
+                        outgoing: 0),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: 0,
+                        outgoing: 0)),
                 resetWifiTimestamp: Int32(dict[UsageCalculationResetKey.wifi.rawValue]!),
                 resetCellularTimestamp: Int32(dict[UsageCalculationResetKey.cellular.rawValue]!)
             ))

@@ -5766,7 +5766,7 @@ public final class EmojiPagerContentComponent: Component {
             self.component = component
             self.state = state
             
-            component.inputInteractionHolder.inputInteraction?.peekBehavior?.setGestureRecognizerEnabled(view: self, isEnabled: component.itemLayoutType == .detailed, itemAtPoint: { [weak self] point in
+            component.inputInteractionHolder.inputInteraction?.peekBehavior?.setGestureRecognizerEnabled(view: self, isEnabled: true, itemAtPoint: { [weak self] point in
                 guard let strongSelf = self else {
                     return nil
                 }

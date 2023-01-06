@@ -305,6 +305,27 @@ final class StorageUsageScreenComponent: Component {
                 return strings.StorageManagement_SectionMiscellaneous
             }
         }
+        
+        var particle: String? {
+            switch self {
+            case .photos:
+                return "Settings/Storage/ParticlePhotos"
+            case .videos:
+                return "Settings/Storage/ParticleVideos"
+            case .files:
+                return "Settings/Storage/ParticleDocuments"
+            case .music:
+                return "Settings/Storage/ParticleMusic"
+            case .other:
+                return "Settings/Storage/ParticleOther"
+            case .stickers:
+                return "Settings/Storage/ParticleStickers"
+            case .avatars:
+                return "Settings/Storage/ParticleAvatars"
+            case .misc:
+                return "Settings/Storage/ParticleOther"
+            }
+        }
     }
     
     private final class AggregatedData {
@@ -1306,7 +1327,7 @@ final class StorageUsageScreenComponent: Component {
                 if let aggregatedData = self.aggregatedData, !aggregatedData.selectedCategories.isEmpty && !aggregatedData.selectedCategories.contains(listCategory.key) {
                     categoryChartFraction = 0.0
                 }
-                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0))
+                chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, particle: listCategory.key.particle, title: listCategory.key.title(strings: environment.strings), mergeable: false, mergeFactor: 1.0))
             }
             
             var totalOtherSize: Int64 = 0
@@ -1339,7 +1360,7 @@ final class StorageUsageScreenComponent: Component {
                     categoryChartFraction = 0.0
                 }
                 
-                var chartItem = PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, mergeable: false, mergeFactor: 1.0)
+                var chartItem = PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, particle: listCategory.key.particle, title: listCategory.key.title(strings: environment.strings), mergeable: false, mergeFactor: 1.0)
                 
                 if chartItem.value > 0.00001 {
                     chartItem.value = max(chartItem.value, 0.01)
@@ -1355,7 +1376,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             if !listCategories.isEmpty {
-                chartItems.append(PieChartComponent.ChartData.Item(id: .other, displayValue: otherRealSum, displaySize: totalOtherSize, value: self.isOtherCategoryExpanded ? 0.0 : otherSum, color: Category.misc.color, mergeable: false, mergeFactor: 1.0))
+                chartItems.append(PieChartComponent.ChartData.Item(id: AnyHashable(Category.other), displayValue: otherRealSum, displaySize: totalOtherSize, value: self.isOtherCategoryExpanded ? 0.0 : otherSum, color: Category.misc.color, particle: Category.misc.particle, title: Category.misc.title(strings: environment.strings), mergeable: false, mergeFactor: 1.0))
             }
             
             let chartData = PieChartComponent.ChartData(items: chartItems)

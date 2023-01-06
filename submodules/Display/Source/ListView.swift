@@ -4395,7 +4395,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     if let index = strongSelf.itemIndexAtPoint(strongSelf.touchesPosition) {
                         var canBeSelectedOrLongTapped = false
                         for itemNode in strongSelf.itemNodes {
-                            if itemNode.index == index && (strongSelf.items[index].selectable && itemNode.canBeSelected) || itemNode.canBeLongTapped {
+                            var canBeSelected = itemNode.canBeSelected
+                            if canBeSelected {
+                                if !itemNode.isLayerBacked {
+                                    if !itemNode.visibleForSelection(at: strongSelf.view.convert(strongSelf.touchesPosition, to: itemNode.view)) {
+                                        canBeSelected = false
+                                    }
+                                }
+                            }
+                            if itemNode.index == index && (strongSelf.items[index].selectable && canBeSelected) || itemNode.canBeLongTapped {
                                 canBeSelectedOrLongTapped = true
                             }
                         }
@@ -4403,7 +4411,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if canBeSelectedOrLongTapped {
                             strongSelf.highlightedItemIndex = index
                             for itemNode in strongSelf.itemNodes {
-                                if itemNode.index == index && itemNode.canBeSelected {
+                                let itemNodeFrame = itemNode.frame
+                                let itemNodeBounds = itemNode.bounds
+                                let itemPoint = strongSelf.touchesPosition.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY)
+                                
+                                var canBeSelected = itemNode.canBeSelected
+                                if canBeSelected {
+                                    if !itemNode.isLayerBacked {
+                                        if !itemNode.visibleForSelection(at: itemPoint) {
+                                            canBeSelected = false
+                                        }
+                                    }
+                                }
+                                
+                                if itemNode.index == index && canBeSelected {
                                     if true {
                                         if !itemNode.isLayerBacked {
                                             strongSelf.reorderItemNodeToFront(itemNode)
@@ -4411,10 +4432,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                                 strongSelf.reorderHeaderNodeToFront(headerNode)
                                             }
                                         }
-                                        let itemNodeFrame = itemNode.frame
-                                        let itemNodeBounds = itemNode.bounds
                                         if strongSelf.items[index].selectable {
-                                            itemNode.setHighlighted(true, at: strongSelf.touchesPosition.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY), animated: false)
+                                            itemNode.setHighlighted(true, at: itemPoint, animated: false)
                                         }
                                         
                                         if itemNode.canBeLongTapped {

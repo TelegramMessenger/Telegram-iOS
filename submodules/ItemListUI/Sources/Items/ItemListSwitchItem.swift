@@ -87,7 +87,7 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     }
 }
 
-private protocol ItemListSwitchNodeImpl {
+protocol ItemListSwitchNodeImpl {
     var frameColor: UIColor { get set }
     var contentColor: UIColor { get set }
     var handleColor: UIColor { get set }

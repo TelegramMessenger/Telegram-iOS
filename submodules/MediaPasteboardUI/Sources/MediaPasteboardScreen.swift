@@ -14,12 +14,12 @@ public func mediaPasteboardScreen(
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     peer: EnginePeer,
     subjects: [MediaPickerScreen.Subject.Media],
-    presentMediaPicker: @escaping (_ subject: MediaPickerScreen.Subject, _ saveEditedPhotos: Bool, _ bannedSendMedia: (Int32, Bool)?, _ present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void) -> Void,
+    presentMediaPicker: @escaping (_ subject: MediaPickerScreen.Subject, _ saveEditedPhotos: Bool, _ bannedSendPhotos: (Int32, Bool)?, _ bannedSendVideos: (Int32, Bool)?, _ present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void) -> Void,
     getSourceRect: (() -> CGRect?)? = nil
 ) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: peer.id), buttons: [.standalone], initialButton: .standalone)
     controller.requestController = { _, present in
-        presentMediaPicker(.media(subjects), false, nil, { mediaPicker, mediaPickerContext in
+        presentMediaPicker(.media(subjects), false, nil, nil, { mediaPicker, mediaPickerContext in
             present(mediaPicker, mediaPickerContext)
         })
     }

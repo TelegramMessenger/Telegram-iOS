@@ -438,40 +438,14 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<Void, NoError> in
-                    let _ = (accountManager.transaction { transaction -> Void in
-                        var tokens = transaction.getStoredLoginTokens()
-                        switch result {
-                        case let .loggedOut(_, futureAuthToken):
-                            if let futureAuthToken = futureAuthToken {
-                                tokens.insert(futureAuthToken.makeData(), at: 0)
-                            }
-                        default:
-                            break
+                    switch result {
+                    case let .loggedOut(_, futureAuthToken):
+                        if let futureAuthToken = futureAuthToken {
+                            storeFutureLoginToken(accountManager: accountManager, token: futureAuthToken.makeData())
                         }
-                        
-                        var cloudValue: [Data] = []
-                        if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
-                            cloudValue = list.compactMap { string -> Data? in
-                                guard let stringData = string.data(using: .utf8) else {
-                                    return nil
-                                }
-                                return Data(base64Encoded: stringData)
-                            }
-                        }
-                        for data in cloudValue {
-                            if !tokens.contains(data) {
-                                tokens.insert(data, at: 0)
-                            }
-                        }
-                        if tokens.count > 20 {
-                            tokens.removeLast(tokens.count - 20)
-                        }
-                        
-                        NSUbiquitousKeyValueStore.default.set(tokens.map { $0.base64EncodedString() }, forKey: "T_SLTokens")
-                        NSUbiquitousKeyValueStore.default.synchronize()
-                        
-                        transaction.setStoredLoginTokens(tokens)
-                    }).start()
+                    default:
+                        break
+                    }
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                     return accountManager.transaction { transaction -> Void in
                         transaction.updateRecord(id, { _ in

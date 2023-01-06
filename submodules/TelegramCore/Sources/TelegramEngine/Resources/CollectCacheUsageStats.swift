@@ -142,6 +142,38 @@ private extension StorageUsageStats {
     }
 }
 
+private func statForDirectory(path: String) -> Int64 {
+    var s = darwin_dirstat()
+    var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
+    if result != -1 {
+        return Int64(s.total_size)
+    } else {
+        result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+        if result != -1 {
+            return Int64(s.total_size)
+        } else {
+            return 0
+        }
+    }
+}
+
+public func collectRawStorageUsageReport(containerPath: String) -> String {
+    var log = ""
+    
+    let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+    let documentsSize = statForDirectory(path: documentsPath)
+    log.append("Documents (\(documentsPath)): \(documentsSize)\n")
+    
+    let systemCachePath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
+    let systemCacheSize = statForDirectory(path: systemCachePath)
+    log.append("System Cache (\(systemCachePath)): \(systemCacheSize)\n")
+    
+    let containerSize = statForDirectory(path: containerPath)
+    log.append("Container (\(containerPath)): \(containerSize)\n")
+    
+    return log
+}
+
 func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
     /*let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {

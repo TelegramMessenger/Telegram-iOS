@@ -59,6 +59,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendOneLog(PresentationTheme)
     case sendShareLogs
     case sendGroupCallLogs
+    case sendStorageStats
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
     case sendAllLogs
@@ -106,7 +107,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         switch self {
         case .testStickerImport:
             return DebugControllerSection.sticker.rawValue
-        case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendNotificationLogs, .sendCriticalLogs, .sendAllLogs:
+        case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendStorageStats, .sendNotificationLogs, .sendCriticalLogs, .sendAllLogs:
             return DebugControllerSection.logs.rawValue
         case .accounts:
             return DebugControllerSection.logs.rawValue
@@ -143,76 +144,78 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 6
         case .sendAllLogs:
             return 7
-        case .accounts:
+        case .sendStorageStats:
             return 8
-        case .logToFile:
+        case .accounts:
             return 9
-        case .logToConsole:
+        case .logToFile:
             return 10
-        case .redactSensitiveData:
+        case .logToConsole:
             return 11
-        case .enableRaiseToSpeak:
+        case .redactSensitiveData:
             return 12
-        case .keepChatNavigationStack:
+        case .enableRaiseToSpeak:
             return 13
-        case .skipReadHistory:
+        case .keepChatNavigationStack:
             return 14
-        case .crashOnSlowQueries:
+        case .skipReadHistory:
             return 15
-        case .clearTips:
+        case .crashOnSlowQueries:
             return 16
-        case .crash:
+        case .clearTips:
             return 17
-        case .resetData:
+        case .crash:
             return 18
-        case .resetDatabase:
+        case .resetData:
             return 19
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 20
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 21
-        case .reindexUnread:
+        case .resetHoles:
             return 22
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 23
-        case .reindexCache:
+        case .resetCacheIndex:
             return 24
-        case .resetBiometricsData:
+        case .reindexCache:
             return 25
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 26
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 27
-        case .photoPreview:
+        case .optimizeDatabase:
             return 28
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 29
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 30
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 31
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 32
-        case .experimentalBackground:
+        case .acceleratedStickers:
             return 33
-        case .inlineForums:
+        case .experimentalBackground:
             return 34
-        case .localTranscription:
+        case .inlineForums:
             return 35
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 36
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 37
-        case .playerEmbedding:
+        case .restorePurchases:
             return 38
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 39
-        case .enableQuickReactionSwitch:
+        case .playlistPlayback:
             return 40
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 41
+        case .voiceConference:
+            return 42
         case let .preferredVideoCodec(index, _, _, _):
-            return 42 + index
+            return 43 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -814,6 +817,61 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     arguments.presentController(actionSheet, nil)
                 })
             })
+        case .sendStorageStats:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Storage Stats", label: "", sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context, context.sharedContext.applicationBindings.isMainApp else {
+                    return
+                }
+                
+                let allStats: Signal<Data, NoError> = Signal { subscriber in
+                    DispatchQueue.global().async {
+                        let log = collectRawStorageUsageReport(containerPath: context.sharedContext.applicationBindings.containerPath)
+                        subscriber.putNext(log.data(using: .utf8) ?? Data())
+                    }
+                    
+                    return EmptyDisposable
+                }
+                
+                let _ = (allStats
+                |> deliverOnMainQueue).start(next: { allStatsData in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+
+                    var items: [ActionSheetButtonItem] = []
+
+                    if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
+                        items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+
+                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                            controller.peerSelected = { [weak controller] peer, _ in
+                                let peerId = peer.id
+
+                                if let strongController = controller {
+                                    strongController.dismiss()
+
+                                    let id = Int64.random(in: Int64.min ... Int64.max)
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: Int64(allStatsData.count), isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: allStatsData)
+
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(allStatsData.count), attributes: [.FileName(fileName: "StorageReport.txt")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                                }
+                            }
+                            arguments.pushController(controller)
+                        }))
+                    }
+
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
+            })
         case .accounts:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1251,6 +1309,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.sendCriticalLogs(presentationData.theme))
     entries.append(.sendAllLogs)
+    entries.append(.sendStorageStats)
     if isMainApp {
         entries.append(.accounts(presentationData.theme))
     }
