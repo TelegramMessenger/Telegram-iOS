@@ -106,6 +106,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             
             placeholder = placeholderValue
             let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
+            chatListNode.passthroughPeerSelection = true
             chatListNode.disabledPeerSelected = { peer, _ in
                 attemptDisabledItemSelection?(peer)
             }
@@ -133,7 +134,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
         }
         
-        self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder)
+        self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder)
         
         super.init()
         

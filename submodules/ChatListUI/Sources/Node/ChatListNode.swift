@@ -975,6 +975,8 @@ public final class ChatListNode: ListView {
     private var visibleTopInset: CGFloat?
     private var originalTopInset: CGFloat?
     
+    public var passthroughPeerSelection = false
+    
     let hideArhiveIntro = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
@@ -1020,12 +1022,12 @@ public final class ChatListNode: ListView {
             guard let strongSelf = self else {
                 return
             }
-//            if case .peers = strongSelf.mode {
-//                if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-//                    peerSelected(peer, nil, true, true, nil)
-//                }
-//                return
-//            }
+            if case .peers = strongSelf.mode, strongSelf.passthroughPeerSelection {
+                if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
+                    peerSelected(peer, nil, true, true, nil)
+                }
+                return
+            }
             var didBeginSelecting = false
             var count = 0
             strongSelf.updateState { [weak self] state in

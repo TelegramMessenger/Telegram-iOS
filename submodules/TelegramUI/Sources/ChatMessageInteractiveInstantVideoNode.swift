@@ -1486,7 +1486,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func transcribe() {
-        guard let item = self.item, self.statusNode == nil else {
+        guard let item = self.item, item.message.id.namespace == Namespaces.Message.Cloud else {
             return
         }
                 
