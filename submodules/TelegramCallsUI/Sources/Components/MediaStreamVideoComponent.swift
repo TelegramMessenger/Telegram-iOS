@@ -477,7 +477,7 @@ final class MediaStreamVideoComponent: Component {
                     if aspect <= 0.01 {
                         aspect = 16.0 / 9
                     }
-                } else if !self.hadVideo && !component.isFullscreen {
+                } else if !self.hadVideo {
                     aspect = 16.0 / 9
                 }
                 
