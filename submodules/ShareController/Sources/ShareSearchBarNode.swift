@@ -53,6 +53,8 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
         self.textInputNode.textField.returnKeyType = .search
         self.textInputNode.textField.accessibilityTraits = .searchField
+        self.textInputNode.textField.spellCheckingType = .no
+        self.textInputNode.textField.autocorrectionType = .no
         
         super.init()
         

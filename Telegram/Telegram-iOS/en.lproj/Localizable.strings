@@ -8622,3 +8622,5 @@ Sorry for the inconvenience.";
 "StorageManagement.OpenPhoto" = "Open Photo";
 "StorageManagement.OpenVideo" = "Open Video";
 "StorageManagement.OpenFile" = "Open File";
+
+"ChatListFilter.AddChatsSearchPlaceholder" = "Search Chats";
