@@ -3641,10 +3641,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .failure:
                 break
             case .success(let dateTime):
-                strongSelf.requestedDateTime = stringForDate(date: dateTime.datetime, timeZone: TimeZone.current, strings: strongSelf.presentationData.strings)//dateTime.datetime.description(with: .current)
-//                if let data = strongSelf.data {
-//                    strongSelf.updateData(data)
-//                }
+                strongSelf.requestedDateTime = stringForDate(
+                    date: dateTime.datetime,
+                    timeZone: TimeZone.current,
+                    strings: strongSelf.presentationData.strings)
+                if let data = strongSelf.data {
+                    strongSelf.updateData(data)
+                }
             }
         }
 

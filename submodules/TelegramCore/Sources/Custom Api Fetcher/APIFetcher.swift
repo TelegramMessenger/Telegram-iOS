@@ -26,7 +26,8 @@ open class APIFetcher {
                     city: city,
                     region: region)
             )
-            disposable = network.request(endpoint: endpoint)
+            disposable = (network.request(endpoint: endpoint)
+                          |> deliverOnMainQueue)
                 .start(next: { result in
                     switch result {
                     case .failure(let error):
