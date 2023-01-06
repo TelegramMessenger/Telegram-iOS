@@ -50,6 +50,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
         let peerId: EnginePeer.Id
         
         private(set) var credentials: GroupCallStreamCredentials?
+        var isDelayingLoadingIndication: Bool = true
         
         private var credentialsDisposable: Disposable?
         private let activeActionDisposable = MetaDisposable()
@@ -99,6 +100,13 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 guard let strongSelf = self, let baseController = baseController else {
                     return
                 }
+                
+                strongSelf.isDelayingLoadingIndication = true
+                Timer(timeout: 0.3, repeat: false, completion: { [weak strongSelf] in
+                    guard let strongSelf else { return }
+                    strongSelf.isDelayingLoadingIndication = false
+                    strongSelf.updated(transition: .easeInOut(duration: 0.3))
+                }, queue: .mainQueue()).start()
                 
                 var cancelImpl: (() -> Void)?
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -397,7 +405,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 context.add(credentialsCopyKeyButton
                     .position(CGPoint(x: credentialsFrame.maxX - 12.0 - credentialsCopyKeyButton.size.width / 2.0, y: credentialsFrame.minY + credentialsItemHeight + credentialsItemHeight / 2.0))
                 )
-            } else {
+            } else if !context.state.isDelayingLoadingIndication {
                 let activityIndicator = activityIndicator.update(
                     component: ActivityIndicatorComponent(color: environment.theme.list.controlSecondaryColor),
                     availableSize: CGSize(width: 100.0, height: 100.0),

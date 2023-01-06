@@ -760,7 +760,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         } else {
                             if isFullyDragged || state.initialOffset != 0 {
                                 state.updateDismissOffset(value: 0.0, interactive: false)
-                                state.updateDismissOffset(value: 0.0, interactive: false)
+//                                state.updateDismissOffset(value: 0.0, interactive: false)
                             } else {
                                 if state.isPictureInPictureSupported {
                                     activatePictureInPicture.invoke(Action {

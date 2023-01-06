@@ -104,7 +104,6 @@ final class MediaStreamVideoComponent: Component {
         private let blurTintView: UIView
         private var videoBlurView: VideoRenderingView?
         private var videoView: VideoRenderingView?
-        private var loadingView: ComponentHostView<Empty>?
         
         private var videoPlaceholderView: UIView?
         private var noSignalView: ComponentHostView<Empty>?
@@ -232,8 +231,6 @@ final class MediaStreamVideoComponent: Component {
                 shimmerBorderLayer.cornerRadius = cornerRadius
                 shimmerBorderLayer.masksToBounds = true
                 shimmerBorderLayer.compositingFilter = "softLightBlendMode"
-                
-                
                 
                 let borderMask = CAShapeLayer()
                 
@@ -437,11 +434,11 @@ final class MediaStreamVideoComponent: Component {
             } else if component.isFullscreen {
                 if fullScreenBackgroundPlaceholder.superview == nil {
                     insertSubview(fullScreenBackgroundPlaceholder, at: 0)
-                    transition.animateAlpha(view: fullScreenBackgroundPlaceholder, from: 0, to: 1)
+                    transition.setAlpha(view: self.fullScreenBackgroundPlaceholder, alpha: 1)
                 }
                 fullScreenBackgroundPlaceholder.backgroundColor = UIColor.black.withAlphaComponent(0.5)
             } else {
-                transition.animateAlpha(view: fullScreenBackgroundPlaceholder, from: 1, to: 0, completion: { didComplete in
+                transition.setAlpha(view: self.fullScreenBackgroundPlaceholder, alpha: 0, completion: { didComplete in
                     if didComplete {
                         self.fullScreenBackgroundPlaceholder.removeFromSuperview()
                     }
@@ -480,9 +477,7 @@ final class MediaStreamVideoComponent: Component {
                     if aspect <= 0.01 {
                         aspect = 16.0 / 9
                     }
-                } else if self.hadVideo {
-                    // aspect = aspect
-                } else {
+                } else if !self.hadVideo && !component.isFullscreen {
                     aspect = 16.0 / 9
                 }
                 
@@ -568,7 +563,18 @@ final class MediaStreamVideoComponent: Component {
             if loadingBlurView.frame == .zero {
                 loadingBlurView.frame = loadingBlurViewFrame
             } else {
-                transition.setFrame(view: loadingBlurView, frame: loadingBlurViewFrame)
+                // Using Transition.setFrame UIVisualEffectView causes instant update of subviews
+                switch videoFrameUpdateTransition.animation {
+                case let .curve(duration, curve):
+                    UIView.animate(withDuration: duration, delay: 0, options: curve.containedViewLayoutTransitionCurve.viewAnimationOptions, animations: { [self] in
+                        loadingBlurView.frame = loadingBlurViewFrame
+                    })
+                    
+                default:
+                    loadingBlurView.frame = loadingBlurViewFrame
+                                    
+                }
+//                transition.setFrame(view: loadingBlurView, frame: loadingBlurViewFrame)
             }
 //            loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
             

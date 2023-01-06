@@ -2,8 +2,8 @@ import Foundation
 import UIKit
 import Display
 
-private let purple = UIColor(rgb: 0x3252ef)
-private let pink = UIColor(rgb: 0xe4436c)
+private let purple = UIColor(rgb: 0xdf44b8) // 0x3252ef)
+private let pink = UIColor(rgb: 0x3851eb) // 0xe4436c)
 
 private let latePurple = UIColor(rgb: 0x974aa9)
 private let latePink = UIColor(rgb: 0xf0436c)
