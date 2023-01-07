@@ -924,10 +924,12 @@ public final class StorageBox {
         }
     }
     
+    private static let sharedQueue = Queue(name: "StorageBox-Shared")
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    public init(queue: Queue = Queue(name: "StorageBox"), logger: StorageBox.Logger, basePath: String) {
+    public init(logger: StorageBox.Logger, basePath: String) {
+        let queue = StorageBox.sharedQueue
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, logger: logger, basePath: basePath)
