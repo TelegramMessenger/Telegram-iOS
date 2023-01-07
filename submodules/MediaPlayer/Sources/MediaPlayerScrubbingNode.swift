@@ -722,7 +722,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         self.updateProgressAnimations()
     }
     
+    private var isCollapsed = false
     public func setCollapsed(_ collapsed: Bool, animated: Bool) {
+        self.isCollapsed = collapsed
+        
         let alpha: CGFloat = collapsed ? 0.0 : 1.0
         let backgroundScale: CGFloat = collapsed ? 0.4 : 1.0
         let handleScale: CGFloat = collapsed ? 0.2 : 1.0
@@ -956,10 +959,12 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         
                         if let handleNodeContainer = node.handleNodeContainer {
                             handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)
-                            if handleNodeContainer.alpha.isZero {
-                                handleNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            if !self.isCollapsed {
+                                if handleNodeContainer.alpha.isZero {
+                                    handleNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                                handleNodeContainer.alpha = 1.0
                             }
-                            handleNodeContainer.alpha = 1.0
                         }
                     } else if let statusValue = self.statusValue {
                         var actualTimestamp: Double
@@ -987,10 +992,12 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         
                         if let handleNodeContainer = node.handleNodeContainer {
                             handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)
-                            if handleNodeContainer.alpha.isZero {
-                                handleNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            if !self.isCollapsed {
+                                if handleNodeContainer.alpha.isZero {
+                                    handleNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                                handleNodeContainer.alpha = 1.0
                             }
-                            handleNodeContainer.alpha = 1.0
                         }
                     } else {
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
