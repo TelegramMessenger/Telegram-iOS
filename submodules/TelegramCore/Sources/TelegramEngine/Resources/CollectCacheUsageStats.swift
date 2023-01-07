@@ -157,12 +157,35 @@ private func statForDirectory(path: String) -> Int64 {
     }
 }
 
+private func collectDirectoryUsageReportRecursive(path: String, indent: String, log: inout String) {
+    guard let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey], options: .skipsSubdirectoryDescendants) else {
+        return
+    }
+    for url in enumerator {
+        guard let url = url as? URL else {
+            continue
+        }
+        if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
+            let subdirectorySize = statForDirectory(path: url.path)
+            log.append("\(indent)+ \(url.lastPathComponent): \(subdirectorySize)\n")
+            collectDirectoryUsageReportRecursive(path: url.path, indent: indent + "  ", log: &log)
+        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
+            if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                log.append("\(indent)\(url.lastPathComponent): SYMLINK\n")
+            } else {
+                log.append("\(indent)\(url.lastPathComponent): \(fileSizeValue)\n")
+            }
+        }
+    }
+}
+
 public func collectRawStorageUsageReport(containerPath: String) -> String {
     var log = ""
     
     let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
     let documentsSize = statForDirectory(path: documentsPath)
     log.append("Documents (\(documentsPath)): \(documentsSize)\n")
+    collectDirectoryUsageReportRecursive(path: documentsPath, indent: "  ", log: &log)
     
     let systemCachePath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
     let systemCacheSize = statForDirectory(path: systemCachePath)
@@ -170,6 +193,7 @@ public func collectRawStorageUsageReport(containerPath: String) -> String {
     
     let containerSize = statForDirectory(path: containerPath)
     log.append("Container (\(containerPath)): \(containerSize)\n")
+    collectDirectoryUsageReportRecursive(path: containerPath, indent: "  ", log: &log)
     
     return log
 }
