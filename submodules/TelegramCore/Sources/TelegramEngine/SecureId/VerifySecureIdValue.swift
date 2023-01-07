@@ -26,10 +26,12 @@ public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPh
         }
         return .generic
     }
-    |> map { sentCode -> SecureIdPreparePhoneVerificationPayload in
+    |> mapToSignal { sentCode -> Signal<SecureIdPreparePhoneVerificationPayload, SecureIdPreparePhoneVerificationError> in
         switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                return SecureIdPreparePhoneVerificationPayload(type: SentAuthorizationCodeType(apiType: type), nextType: nextType.flatMap(AuthorizationCodeNextType.init), timeout: timeout, phone: value.phone, phoneCodeHash: phoneCodeHash)
+        case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+            return .single(SecureIdPreparePhoneVerificationPayload(type: SentAuthorizationCodeType(apiType: type), nextType: nextType.flatMap(AuthorizationCodeNextType.init), timeout: timeout, phone: value.phone, phoneCodeHash: phoneCodeHash))
+        case .sentCodeSuccess:
+            return .never()
         }
     }
 }

@@ -210,20 +210,24 @@ private final class ChartLabel: UIView {
 final class PieChartComponent: Component {
     struct ChartData: Equatable {
         struct Item: Equatable {
-            var id: StorageUsageScreenComponent.Category
+            var id: AnyHashable
             var displayValue: Double
             var displaySize: Int64
             var value: Double
             var color: UIColor
+            var particle: String?
+            var title: String
             var mergeable: Bool
             var mergeFactor: CGFloat
             
-            init(id: StorageUsageScreenComponent.Category, displayValue: Double, displaySize: Int64, value: Double, color: UIColor, mergeable: Bool, mergeFactor: CGFloat) {
+            init(id: AnyHashable, displayValue: Double, displaySize: Int64, value: Double, color: UIColor, particle: String?, title: String, mergeable: Bool, mergeFactor: CGFloat) {
                 self.id = id
                 self.displayValue = displayValue
                 self.displaySize = displaySize
                 self.value = value
                 self.color = color
+                self.particle = particle
+                self.title = title
                 self.mergeable = mergeable
                 self.mergeFactor = mergeFactor
             }
@@ -296,8 +300,10 @@ final class PieChartComponent: Component {
     }
     
     private struct CalculatedSection {
-        var id: StorageUsageScreenComponent.Category
+        var id: AnyHashable
         var color: UIColor
+        var particle: String?
+        var title: String
         var innerAngle: Range<CGFloat>
         var outerAngle: Range<CGFloat>
         var innerRadius: CGFloat
@@ -305,8 +311,10 @@ final class PieChartComponent: Component {
         var label: CalculatedLabel?
         
         init(
-            id: StorageUsageScreenComponent.Category,
+            id: AnyHashable,
             color: UIColor,
+            particle: String?,
+            title: String,
             innerAngle: Range<CGFloat>,
             outerAngle: Range<CGFloat>,
             innerRadius: CGFloat,
@@ -315,6 +323,8 @@ final class PieChartComponent: Component {
         ) {
             self.id = id
             self.color = color
+            self.particle = particle
+            self.title = title
             self.innerAngle = innerAngle
             self.outerAngle = outerAngle
             self.innerRadius = innerRadius
@@ -361,6 +371,8 @@ final class PieChartComponent: Component {
                     self.sections.append(CalculatedSection(
                         id: right.id,
                         color: left.color.interpolateTo(right.color, fraction: progress) ?? right.color,
+                        particle: right.particle,
+                        title: right.title,
                         innerAngle: innerAngle,
                         outerAngle: outerAngle,
                         innerRadius: left.innerRadius.interpolate(to: right.innerRadius, amount: progress),
@@ -440,6 +452,8 @@ final class PieChartComponent: Component {
                 self.sections.append(CalculatedSection(
                     id: item.id,
                     color: itemColor,
+                    particle: item.particle,
+                    title: item.title,
                     innerAngle: arcInnerStartAngle ..< arcInnerEndAngle,
                     outerAngle: arcOuterStartAngle ..< arcOuterEndAngle,
                     innerRadius: innerDiameter * 0.5,
@@ -782,7 +796,7 @@ final class PieChartComponent: Component {
         private var particleImage: UIImage?
         private var particleLayers: [SimpleLayer] = []
         
-        init(category: StorageUsageScreenComponent.Category) {
+        init(particle: String?) {
             self.maskLayer = SimpleShapeLayer()
             self.maskLayer.fillColor = UIColor.white.cgColor
             
@@ -799,23 +813,8 @@ final class PieChartComponent: Component {
             self.addSublayer(self.gradientLayer)
             self.addSublayer(self.labelLayer)
             
-            switch category {
-            case .photos:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticlePhotos")?.precomposed()
-            case .videos:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleVideos")?.precomposed()
-            case .files:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleDocuments")?.precomposed()
-            case .music:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleMusic")?.precomposed()
-            case .other:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleOther")?.precomposed()
-            case .stickers:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleStickers")?.precomposed()
-            case .avatars:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleAvatars")?.precomposed()
-            case .misc:
-                self.particleImage = UIImage(bundleImageName: "Settings/Storage/ParticleOther")?.precomposed()
+            if let particle {
+                self.particleImage = UIImage(bundleImageName: particle)?.precomposed()
             }
         }
         
@@ -1069,9 +1068,9 @@ final class PieChartComponent: Component {
             return nil
         }
         
-        func tooltipLocation(forKey key: StorageUsageScreenComponent.Category) -> CGPoint? {
+        func tooltipLocation(forKey key: AnyHashable) -> CGPoint? {
             for (id, itemLayer) in self.sectionLayers {
-                if id == AnyHashable(key) {
+                if id == key {
                     return itemLayer.tooltipLocation()
                 }
             }
@@ -1117,7 +1116,7 @@ final class PieChartComponent: Component {
                     if data.items.isEmpty {
                         self.currentLayout = CalculatedLayout(
                             size: CGSize(width: 200.0, height: 200.0),
-                            items: [.init(id: .other, displayValue: 0.0, displaySize: 0, value: 1.0, color: .green, mergeable: false, mergeFactor: 1.0)],
+                            items: [.init(id: AnyHashable(StorageUsageScreenComponent.Category.other), displayValue: 0.0, displaySize: 0, value: 1.0, color: .green, particle: "Settings/Storage/ParticleOther", title: "", mergeable: false, mergeFactor: 1.0)],
                             selectedKey: self.selectedKey,
                             isEmpty: true
                         )
@@ -1217,7 +1216,7 @@ final class PieChartComponent: Component {
                     if let current = self.sectionLayers[section.id] {
                         sectionLayer = current
                     } else {
-                        sectionLayer = SectionLayer(category: section.id)
+                        sectionLayer = SectionLayer(particle: section.particle)
                         self.sectionLayers[section.id] = sectionLayer
                         self.layer.addSublayer(sectionLayer)
                     }
@@ -1296,7 +1295,7 @@ final class PieChartComponent: Component {
             transition.setFrame(view: self.dataView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - 200.0) / 2.0), y: 0.0), size: CGSize(width: 200.0, height: 200.0)))
             self.dataView.setItems(theme: component.theme, data: component.chartData, selectedKey: self.selectedKey, animated: !transition.animation.isImmediate)
             
-            if let selectedKey = self.selectedKey?.base as? StorageUsageScreenComponent.Category, let item = component.chartData.items.first(where: { $0.id == selectedKey }) {
+            if let selectedKey = self.selectedKey, let item = component.chartData.items.first(where: { $0.id == selectedKey }) {
                 let tooltip: ComponentView<Empty>
                 var tooltipTransition = transition
                 var animateIn = false
@@ -1334,7 +1333,7 @@ final class PieChartComponent: Component {
                     component: AnyComponent(ChartSelectionTooltip(
                         theme: component.theme,
                         fractionText: fractionString,
-                        title: selectedKey.title(strings: component.strings),
+                        title: item.title,
                         sizeText: dataSizeString(Int(item.displaySize), formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
                     )),
                     environment: {},

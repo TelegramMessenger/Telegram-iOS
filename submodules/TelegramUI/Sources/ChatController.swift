@@ -913,7 +913,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
                 return self?.controllerInteraction?.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, []) ?? false
             } : nil, sendEmoji: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { text, attribute in
-                self?.controllerInteraction?.sendEmoji(text, attribute)
+                self?.controllerInteraction?.sendEmoji(text, attribute, false)
             } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 if let strongSelf = self {
                     strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
@@ -2034,28 +2034,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendMessages(transformedMessages)
             }
             return true
-        }, sendEmoji: { [weak self] text, attribute in
+        }, sendEmoji: { [weak self] text, attribute, immediately in
             if let strongSelf = self {
-                strongSelf.interfaceInteraction?.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: attribute]))
-                strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
-                    return state.updatedInputMode({ _ in
-                        return .text
-                    })
-                })
-                
-                let _ = (ApplicationSpecificNotice.getEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager)
-                |> deliverOnMainQueue).start(next: { count in
-                    guard let strongSelf = self else {
-                        return
+                if immediately {
+                    if let file = attribute.file {
+                        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                        for attribute in file.attributes {
+                            if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                                if case let .id(id, _) = packReference {
+                                    bubbleUpEmojiOrStickersets.append(ItemCollectionId(namespace: Namespaces.ItemCollection.CloudEmojiPacks, id: id))
+                                }
+                            }
+                        }
+                        
+                        strongSelf.sendMessages([.message(text: text, attributes: [TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< (text as NSString).length, type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id))])], inlineStickers: [file.fileId : file], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)], commit: false)
                     }
-                    if count < 2 {
-                        let _ = ApplicationSpecificNotice.incrementEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager).start()
-
-                        Queue.mainQueue().after(0.5, {
-                            strongSelf.displayEmojiTooltip()
+                } else {
+                    strongSelf.interfaceInteraction?.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: attribute]))
+                    strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                        return state.updatedInputMode({ _ in
+                            return .text
                         })
-                    }
-                })
+                    })
+                    
+                    let _ = (ApplicationSpecificNotice.getEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager)
+                             |> deliverOnMainQueue).start(next: { count in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if count < 2 {
+                            let _ = ApplicationSpecificNotice.incrementEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                            
+                            Queue.mainQueue().after(0.5, {
+                                strongSelf.displayEmojiTooltip()
+                            })
+                        }
+                    })
+                }
             }
         }, sendGif: { [weak self] fileReference, sourceView, sourceRect, silentPosting, schedule in
             if let strongSelf = self {
@@ -10270,11 +10285,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if self.presentationInterfaceState.interfaceState.mediaRecordingMode == .audio {
                     var canSendMedia = false
                     if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                        if channel.hasBannedPermission(.banSendMedia) == nil {
+                        if channel.hasBannedPermission(.banSendMedia) == nil && channel.hasBannedPermission(.banSendVoice) == nil {
                             canSendMedia = true
                         }
                     } else if let group = self.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-                        if !group.hasBannedPermission(.banSendMedia) {
+                        if !group.hasBannedPermission(.banSendMedia) && !group.hasBannedPermission(.banSendVoice) {
                             canSendMedia = true
                         }
                     } else {
@@ -11941,22 +11956,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.dismissInput()
                 
-        var bannedSendMedia: (Int32, Bool)?
+        var bannedSendPhotos: (Int32, Bool)?
+        var bannedSendVideos: (Int32, Bool)?
+        var bannedSendFiles: (Int32, Bool)?
+        
         var canSendPolls = true
         if let peer = peer as? TelegramUser, peer.botInfo == nil {
             canSendPolls = false
         } else if peer is TelegramSecretChat {
             canSendPolls = false
         } else if let channel = peer as? TelegramChannel {
-            if let value = channel.hasBannedPermission(.banSendMedia) {
-                bannedSendMedia = value
+            if let value = channel.hasBannedPermission(.banSendPhotos) {
+                bannedSendPhotos = value
+            }
+            if let value = channel.hasBannedPermission(.banSendVideos) {
+                bannedSendVideos = value
+            }
+            if let value = channel.hasBannedPermission(.banSendFiles) {
+                bannedSendFiles = value
             }
             if channel.hasBannedPermission(.banSendPolls) != nil {
                 canSendPolls = false
             }
         } else if let group = peer as? TelegramGroup {
-            if group.hasBannedPermission(.banSendMedia) {
-                bannedSendMedia = (Int32.max, false)
+            if group.hasBannedPermission(.banSendPhotos) {
+                bannedSendPhotos = (Int32.max, false)
+            }
+            if group.hasBannedPermission(.banSendVideos) {
+                bannedSendVideos = (Int32.max, false)
+            }
+            if group.hasBannedPermission(.banSendFiles) {
+                bannedSendFiles = (Int32.max, false)
             }
             if group.hasBannedPermission(.banSendPolls) {
                 canSendPolls = false
@@ -12106,7 +12136,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         controller.prepareForReuse()
                         return
                     }
-                    strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos, bannedSendMedia: bannedSendMedia, present: { controller, mediaPickerContext in
+                    strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: { controller, mediaPickerContext in
                         let _ = currentMediaController.swap(controller)
                         if !inputText.string.isEmpty {
                             mediaPickerContext?.setCaption(inputText)
@@ -12128,7 +12158,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         controller.prepareForReuse()
                         return
                     }
-                    let controller = attachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bannedSendMedia: bannedSendMedia, presentGallery: { [weak self, weak attachmentController] in
+                    let controller = attachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentFileGallery()
                     }, presentFiles: { [weak self, weak attachmentController] in
@@ -12805,11 +12835,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil), saveEditedPhotos: Bool, bannedSendMedia: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    private func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
-        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), threadTitle: self.threadInfo?.title, chatLocation: self.chatLocation, bannedSendMedia: bannedSendMedia, subject: subject, saveEditedPhotos: saveEditedPhotos)
+        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), threadTitle: self.threadInfo?.title, chatLocation: self.chatLocation, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self] cameraView in
             self?.openCamera(cameraView: cameraView)
@@ -13625,7 +13655,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if let stickerPackReference = stickerPackReference {
-            let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
+            self.presentEmojiList(references: [stickerPackReference])
+            
+            /*let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
             |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
                 if let strongSelf = self, case let .result(info, _, _) = stickerPack {
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Stickers_EmojiPackInfoText(info.title).string, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView, customAction: nil), elevatedLayout: false, action: { [weak self] action in
@@ -13635,7 +13667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }), in: .current)
                 }
-            })
+            })*/
         }
     }
     
@@ -13903,9 +13935,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     updatedPresentationData: strongSelf.updatedPresentationData,
                     peer: EnginePeer(peer),
                     subjects: subjects,
-                    presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendMedia, present in
+                    presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendPhotos, bannedSendVideos, present in
                         if let strongSelf = self {
-                            strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendMedia: bannedSendMedia, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                            strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
                                 self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             })
                         }
@@ -17399,7 +17431,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let presentationData = self.presentationData
         let controller = StickerPackScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(references), parentNavigationController: self.effectiveNavigationController, sendEmoji: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] text, attribute in
             if let strongSelf = self {
-                strongSelf.controllerInteraction?.sendEmoji(text, attribute)
+                strongSelf.controllerInteraction?.sendEmoji(text, attribute, false)
             }
         } : nil, actionPerformed: { [weak self] actions in
             guard let strongSelf = self else {

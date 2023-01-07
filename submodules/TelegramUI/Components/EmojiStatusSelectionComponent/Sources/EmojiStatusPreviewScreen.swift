@@ -672,6 +672,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
                     }
                 ))))
             }
+            //TODO:localize
             menuItems.append(AnyComponentWithIdentity(id: "Other", component: AnyComponent(ContextMenuActionItem(
                 title: component.strings.EmojiStatusSetup_TimerOther,
                 action: { [weak self] in

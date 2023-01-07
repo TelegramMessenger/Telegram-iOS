@@ -123,7 +123,13 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.animationNode = animationNode
             
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
+            let fitSize: CGSize
+            if item.file.isCustomEmoji {
+                fitSize = CGSize(width: 200.0, height: 200.0)
+            } else {
+                fitSize = CGSize(width: 400.0, height: 400.0)
+            }
+            let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
             
             animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: isPremiumSticker ? .once : .loop, mode: .direct(cachePathPrefix: nil))
             animationNode.visibility = true
@@ -197,7 +203,9 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let boundingSize: CGSize
-        if let _ = self.additionalAnimationNode {
+        if self.item.file.isCustomEmoji {
+            boundingSize = CGSize(width: 120.0, height: 120.0)
+        } else if let _ = self.additionalAnimationNode {
             boundingSize = CGSize(width: 240.0, height: 240.0).fitted(size)
         } else {
             boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
@@ -239,7 +247,11 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)
             
-            return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
+            if self.item.file.isCustomEmoji {
+                return CGSize(width: size.width, height: imageFrame.height)
+            } else {
+                return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
+            }
         } else {
             return CGSize(width: size.width, height: 10.0)
         }
