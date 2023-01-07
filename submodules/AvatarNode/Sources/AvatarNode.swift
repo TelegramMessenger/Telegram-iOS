@@ -751,12 +751,20 @@ public enum AvatarBackgroundColor {
     case violet
 }
 
-public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat = 1.0, color: AvatarBackgroundColor) -> UIImage? {
+public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat = 1.0, cornerRadius: CGFloat? = nil, circleCorners: Bool = false, color: AvatarBackgroundColor) -> UIImage? {
     return generateImage(size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.beginPath()
-        context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height:
-            size.height))
+        if let cornerRadius {
+            if circleCorners {
+                let roundedRect = CGPath(roundedRect: CGRect(origin: .zero, size: size), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                context.addPath(roundedRect)
+            } else {
+                let roundedRect = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: cornerRadius)
+                context.addPath(roundedRect.cgPath)
+            }
+        } else {
+            context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        }
         context.clip()
         
         let colorIndex: Int

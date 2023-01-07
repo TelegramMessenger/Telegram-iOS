@@ -3059,6 +3059,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return UIMenu(children: actions)
     }
     
+    private var currentSpeechHolder: SpeechSynthesizerHolder?
     @objc func _accessibilitySpeak(_ sender: Any) {
         var text = ""
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
@@ -3066,9 +3067,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return (current, inputMode)
         }
         if let context = self.context {
-            let _ = speakText(context: context, text: text)
+            if let speechHolder = speakText(context: context, text: text) {
+                speechHolder.completion = { [weak self, weak speechHolder] in
+                    if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
+                        strongSelf.currentSpeechHolder = nil
+                    }
+                }
+                self.currentSpeechHolder = speechHolder
+            }
         }
-        
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()
         } else {

@@ -127,7 +127,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         var chatListCategories: [ChatListNodeAdditionalCategory] = []
         
         if let _ = createNewGroup {
-            chatListCategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), title: self.presentationData.strings.PeerSelection_ImportIntoNewGroup, appearance: .action))
+            chatListCategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), smallIcon: nil, title: self.presentationData.strings.PeerSelection_ImportIntoNewGroup, appearance: .action))
         }
         
         let chatListLocation: ChatListControllerLocation

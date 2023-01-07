@@ -65,7 +65,7 @@ public enum ShareControllerSubject {
     case image([ImageRepresentationWithReference])
     case media(AnyMediaReference)
     case mapMedia(TelegramMediaMap)
-    case fromExternal(([PeerId], String, Account, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
+    case fromExternal(([PeerId], [PeerId: Int64], String, Account, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
 }
 
 private enum ExternalShareItem {
@@ -695,7 +695,7 @@ public final class ShareController: ViewController {
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue))
                 }
             case let .fromExternal(f):
-                return f(peerIds, text, strongSelf.currentAccount, silently)
+                return f(peerIds, topicIds, text, strongSelf.currentAccount, silently)
                 |> map { state -> ShareState in
                     switch state {
                         case let .preparing(long):
