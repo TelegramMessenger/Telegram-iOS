@@ -261,7 +261,7 @@ final class MediaStreamVideoComponent: Component {
             } else {
                 if hadVideo && !isAnimating && loadingBlurView.layer.opacity == 1 {
                     let anim = CABasicAnimation(keyPath: "opacity")
-                    anim.duration = 0.35
+                    anim.duration = 0.4
                     anim.fromValue = 1.0
                     anim.toValue = 0.0
                     self.loadingBlurView.layer.opacity = 0
@@ -572,9 +572,7 @@ final class MediaStreamVideoComponent: Component {
                     
                 default:
                     loadingBlurView.frame = loadingBlurViewFrame
-                                    
                 }
-//                transition.setFrame(view: loadingBlurView, frame: loadingBlurViewFrame)
             }
 //            loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
             

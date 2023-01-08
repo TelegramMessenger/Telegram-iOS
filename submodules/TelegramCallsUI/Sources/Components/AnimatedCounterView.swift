@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import ComponentFlow
 
 private let purple = UIColor(rgb: 0xdf44b8) // 0x3252ef)
 private let pink = UIColor(rgb: 0x3851eb) // 0xe4436c)
@@ -43,19 +44,33 @@ public final class AnimatedCountView: UIView {
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        self.foregroundView.frame = CGRect(origin: CGPoint.zero, size: bounds.size)// .insetBy(dx: -40, dy: -40)
-        self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
-        self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
-        
-        let subtitleHeight: CGFloat = subtitleLabel.intrinsicContentSize.height// 18
-//        let counterInset: CGFloat = 8
-//        let counterBottomOffset: CGFloat = subtitleHeight + counterInset
-        
-        countLabel.frame = CGRect(origin: .zero, size: CGSize(width: bounds.width, height: bounds.height))
-        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - subtitleHeight / 2 : bounds.height - subtitleHeight, width: subtitleLabel.intrinsicContentSize.width + 20, height: subtitleHeight)
-//        backgroundColor = .white.withAlphaComponent(0.3)
-//        countLabel.backgroundColor = .red.withAlphaComponent(0.2)
-//        subtitleLabel.backgroundColor = .blue.withAlphaComponent(0.2)
+        self.updateFrames()
+    }
+    
+    func updateFrames(transition: ComponentFlow.Transition? = nil) {
+        let subtitleHeight: CGFloat = subtitleLabel.intrinsicContentSize.height
+        let subtitleFrame = CGRect(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - subtitleHeight / 2 : bounds.height - subtitleHeight, width: subtitleLabel.intrinsicContentSize.width + 20, height: subtitleHeight)
+        if let transition {
+            transition.setFrame(view: self.foregroundView, frame: CGRect(origin: CGPoint.zero, size: bounds.size))
+            transition.setFrame(layer: self.foregroundGradientLayer, frame: CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60))
+            transition.setFrame(view: self.maskingView, frame: CGRect(origin: CGPoint.zero, size: bounds.size))
+            transition.setFrame(view: self.countLabel, frame: CGRect(origin: CGPoint.zero, size: bounds.size))
+            transition.setFrame(view: self.subtitleLabel, frame: subtitleFrame)
+        } else {
+            self.foregroundView.frame = CGRect(origin: CGPoint.zero, size: bounds.size)// .insetBy(dx: -40, dy: -40)
+            self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
+            self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
+            // 18
+            //        let counterInset: CGFloat = 8
+            //        let counterBottomOffset: CGFloat = subtitleHeight + counterInset
+            
+            countLabel.frame = CGRect(origin: .zero, size: CGSize(width: bounds.width, height: bounds.height))
+            subtitleLabel.frame = subtitleFrame
+            //        backgroundColor = .white.withAlphaComponent(0.3)
+            //        countLabel.backgroundColor = .red.withAlphaComponent(0.2)
+            //        subtitleLabel.backgroundColor = .blue.withAlphaComponent(0.2)
+        }
+            
     }
     
     func update(countString: String, subtitle: String, fontSize: CGFloat = 48.0, gradientColors: [CGColor] = [pink.cgColor, purple.cgColor, purple.cgColor]) {

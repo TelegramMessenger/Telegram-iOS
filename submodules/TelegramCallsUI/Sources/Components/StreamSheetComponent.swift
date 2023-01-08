@@ -215,13 +215,12 @@ final class StreamSheetComponent: CombinedComponent {
             let videoHeight = context.component.videoHeight
             let sheetHeight = context.component.sheetHeight
             let animatedParticipantsVisible = !isFullscreen// context.component.participantsCount != -1
-            if true {
-                context.add(viewerCounter
-                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + (sheetHeight - 69 - videoHeight - 50 - context.component.bottomPadding) / 2 - 10))
-                    .opacity(animatedParticipantsVisible ? 1 : 0)
-//                    .animation(key: "position")
-                )
-            }
+            
+            context.add(viewerCounter
+                .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + (sheetHeight - 69 - videoHeight - 50 - context.component.bottomPadding) / 2 - 10))
+                .opacity(animatedParticipantsVisible ? 1 : 0)
+                        //                    .animation(key: "position")
+            )
             
             if let bottomButtonsRow = bottomButtonsRow {
                 context.add(bottomButtonsRow
@@ -321,7 +320,16 @@ final class SheetBackgroundComponent: Component {
 
 final class ParticipantsComponent: Component {
     static func == (lhs: ParticipantsComponent, rhs: ParticipantsComponent) -> Bool {
-        lhs.count == rhs.count
+        if lhs.count != rhs.count {
+            return false
+        }
+        if lhs.showsSubtitle != rhs.showsSubtitle {
+            return false
+        }
+        if lhs.fontSize != rhs.fontSize {
+            return false
+        }
+        return true
     }
     
     func makeView() -> View {
@@ -335,6 +343,21 @@ final class ParticipantsComponent: Component {
             fontSize: self.fontSize,
             gradientColors: self.gradientColors
         )// environment.strings.LiveStream_NoViewers)
+        switch transition.animation {
+        case let .curve(duration, curve):
+            UIView.animate(withDuration: duration, delay: 0, options: curve.containedViewLayoutTransitionCurve.viewAnimationOptions, animations: {
+                view.bounds.size = availableSize
+                view.counter.frame.size = availableSize
+                view.counter.updateFrames(transition: transition)
+//                view.counter.setNeedsLayout()
+//                view.counter.setNeedsDisplay()
+            })
+            
+        default:
+            view.bounds.size = availableSize
+            view.counter.frame.size = availableSize
+            view.counter.updateFrames()
+        }
         return availableSize
     }
     
@@ -356,12 +379,11 @@ final class ParticipantsComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             self.addSubview(counter)
-            counter.clipsToBounds = false
         }
         
         override func layoutSubviews() {
             super.layoutSubviews()
-            self.counter.frame = self.bounds
+//            self.counter.frame = self.bounds
         }
         
         required init?(coder: NSCoder) {

@@ -79,6 +79,7 @@ public final class MediaStreamComponent: CombinedComponent {
         var videoIsPlayable: Bool {
             !videoStalled && hasVideo
         }
+        var wantsPiP: Bool = false
         
         let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
         
@@ -170,9 +171,9 @@ public final class MediaStreamComponent: CombinedComponent {
                 
                 var updated = false
 //                 TODO: remove debug timer
-                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+//                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
                 var shouldReplaceNoViewersWithOne: Bool { true }
-                let membersCount = Int.random(in: 0..<10000000) // members.totalCount
+                let membersCount = members.totalCount // Int.random(in: 0..<10000000) //
                 strongSelf.infoThrottler.publish(shouldReplaceNoViewersWithOne ? max(membersCount, 1) : membersCount) { [weak strongSelf] latestCount in
                         let _ = members.totalCount
                         guard let strongSelf = strongSelf else { return }
@@ -186,7 +187,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             strongSelf.updated(transition: .immediate)
                         }
                     }
-                }.fire()
+//                }.fire()
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
                     updated = true
@@ -427,6 +428,17 @@ public final class MediaStreamComponent: CombinedComponent {
             var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
             
 //            let videoIsPlayable = context.state.videoIsPlayable
+//            if state.wantsPiP && state.hasVideo {
+//                state.wantsPiP = false
+//                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+//                    activatePictureInPicture.invoke(Action {
+//                        guard let controller = controller() as? MediaStreamComponentController else {
+//                            return
+//                        }
+//                        controller.dismiss(closing: false, manual: true)
+//                    })
+//                }
+//            }
             
             if context.state.isPictureInPictureSupported /*, context.state.videoIsPlayable*/ {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
@@ -442,7 +454,14 @@ public final class MediaStreamComponent: CombinedComponent {
                         ]
                     )),
                     action: { [weak state] in
-                        guard let state, state.videoIsPlayable else { return }
+                        guard let state, state.hasVideo else {
+                            guard let controller = controller() as? MediaStreamComponentController else {
+                                return
+                            }
+                            state?.wantsPiP = true
+                            controller.dismiss(closing: false, manual: true)
+                            return
+                        }
                         
                         activatePictureInPicture.invoke(Action {
                             guard let controller = controller() as? MediaStreamComponentController else {
@@ -569,7 +588,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                     })*/
                                 })])
                                 controller.present(alertController, in: .window(.root))
-                                // TODO: спросить про dismissWithoutContent и default
+                                
                                 dismissWithResult(.dismissWithoutContent)
                             }), false))
                         } else {
@@ -763,15 +782,20 @@ public final class MediaStreamComponent: CombinedComponent {
 //                                state.updateDismissOffset(value: 0.0, interactive: false)
                             } else {
                                 if state.isPictureInPictureSupported {
-                                    activatePictureInPicture.invoke(Action {
-                                        guard let controller = controller() as? MediaStreamComponentController else {
-                                            return
-                                        }
+                                    guard let controller = controller() as? MediaStreamComponentController else {
+                                        return
+                                    }
+                                    if state.hasVideo {
+                                        activatePictureInPicture.invoke(Action {
+                                            controller.dismiss(closing: false, manual: true)
+                                            if state.displayUI {
+                                                state.toggleDisplayUI()
+                                            }
+                                        })
+                                    } else {
+                                        state.wantsPiP = true
                                         controller.dismiss(closing: false, manual: true)
-                                        if state.displayUI {
-                                            state.toggleDisplayUI()
-                                        }
-                                    })
+                                    }
                                 } else {
                                     guard let controller = controller() as? MediaStreamComponentController else {
                                         return
@@ -1499,14 +1523,14 @@ final class StreamTitleComponent: Component {
         let liveIndicatorView = LiveIndicatorView()
         let titleLabel = UILabel()
         
-        private let titleFadeLayer = CALayer()
+        private var titleFadeLayer = CALayer()
         
         private let trackingLayer: HierarchyTrackingLayer
         
         private func updateTitleFadeLayer(textFrame: CGRect) {
             // titleLabel.backgroundColor = .red
-            guard let string = titleLabel.attributedText,
-                  string.boundingRect(with: .init(width: .max, height: .max), context: nil).width > textFrame.width
+            guard let textBounds = titleLabel.attributedText.flatMap({ $0.boundingRect(with: CGSize(width: .max, height: .max), context: nil) }),
+                textBounds.width > textFrame.width
             else {
                 titleLabel.layer.mask = nil
                 titleLabel.frame = textFrame
@@ -1530,31 +1554,38 @@ final class StreamTitleComponent: Component {
             let gradientRadius: CGFloat = 50
             
             let solidPartLayer = CALayer()
-            solidPartLayer.backgroundColor = UIColor.black.cgColor
+            solidPartLayer.backgroundColor = UIColor.blue.cgColor
             
-            let containerWidth: CGFloat = textFrame.width
+//            let containerWidth: CGFloat = textFrame.width
             let availableWidth: CGFloat = textFrame.width - gradientRadius
-            
             let extraSpace: CGFloat = 100
             if isRTL {
-                let adjustForRTL: CGFloat = 12
+//                let adjustForRTL: CGFloat = 12
                 
-                let safeSolidWidth: CGFloat = containerWidth + adjustForRTL
+//                let safeSolidWidth: CGFloat = containerWidth + adjustForRTL
+//                let widthDiff = min(textFrame.width - containerWidth)
+                
                 solidPartLayer.frame = CGRect(
-                    origin: CGPoint(x: max(containerWidth - availableWidth, gradientRadius), y: 0),
-                    size: CGSize(width: safeSolidWidth, height: textFrame.height))
+                    origin: CGPoint(x: textFrame.width + extraSpace - availableWidth, y: 0),
+                    size: CGSize(width: availableWidth, height: textFrame.height))
+                
+                self.titleLabel.textAlignment = .right
+                
                 titleLabel.frame = CGRect(x: textFrame.minX - extraSpace, y: textFrame.minY, width: textFrame.width + extraSpace, height: textFrame.height)
             } else {
+                self.titleLabel.textAlignment = .left
                 solidPartLayer.frame = CGRect(
                     origin: .zero,
                     size: CGSize(width: availableWidth, height: textFrame.height))
                 titleLabel.frame = CGRect(origin: textFrame.origin, size: CGSize(width: textFrame.width + extraSpace, height: textFrame.height))
             }
-            self.titleLabel.textAlignment = .natural
+            titleFadeLayer.removeFromSuperlayer()
+            
+            titleFadeLayer = CALayer()
             titleFadeLayer.addSublayer(solidPartLayer)
             
             let gradientLayer = CAGradientLayer()
-            gradientLayer.colors = [UIColor.black.cgColor, UIColor.clear.cgColor]
+            gradientLayer.colors = [UIColor.red.cgColor, UIColor.clear.cgColor]
             if isRTL {
                 gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
                 gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
@@ -1568,7 +1599,12 @@ final class StreamTitleComponent: Component {
             titleFadeLayer.masksToBounds = false
             
             titleFadeLayer.frame = titleLabel.bounds
+            
+//            titleLabel.layer.addSublayer(titleFadeLayer)
+//            titleFadeLayer.opacity = 0.4
+            
             titleLabel.layer.mask = titleFadeLayer
+//            titleLabel.backgroundColor = .green
         }
         
         override init(frame: CGRect) {
