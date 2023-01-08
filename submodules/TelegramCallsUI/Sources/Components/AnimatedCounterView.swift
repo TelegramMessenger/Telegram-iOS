@@ -22,7 +22,6 @@ public final class AnimatedCountView: UIView {
         super.init(frame: frame)
         
         self.foregroundGradientLayer.type = .radial
-//        self.foregroundGradientLayer.colors = [pink.cgColor, purple.cgColor, purple.cgColor]
         self.foregroundGradientLayer.locations = [0.0, 0.85, 1.0]
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
@@ -49,7 +48,7 @@ public final class AnimatedCountView: UIView {
     
     func updateFrames(transition: ComponentFlow.Transition? = nil) {
         let subtitleHeight: CGFloat = subtitleLabel.intrinsicContentSize.height
-        let subtitleFrame = CGRect(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - subtitleHeight / 2 : bounds.height - subtitleHeight, width: subtitleLabel.intrinsicContentSize.width + 20, height: subtitleHeight)
+        let subtitleFrame = CGRect(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: self.countLabel.attributedText?.length == 0 ? bounds.midY - subtitleHeight / 2 : bounds.height - subtitleHeight, width: subtitleLabel.intrinsicContentSize.width + 20, height: subtitleHeight)
         if let transition {
             transition.setFrame(view: self.foregroundView, frame: CGRect(origin: CGPoint.zero, size: bounds.size))
             transition.setFrame(layer: self.foregroundGradientLayer, frame: CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60))

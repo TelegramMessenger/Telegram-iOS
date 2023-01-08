@@ -58,10 +58,8 @@ public final class MediaStreamComponent: CombinedComponent {
         var isFullscreen: Bool = false
         var videoSize: CGSize?
         var prevFullscreenOrientation: UIDeviceOrientation?
-        var didAutoDismissForPiP: Bool = false
         
         private(set) var canManageCall: Bool = false
-        // TODO: also handle pictureInPicturePossible
         let isPictureInPictureSupported: Bool
         
         private(set) var callTitle: String?
@@ -79,7 +77,7 @@ public final class MediaStreamComponent: CombinedComponent {
         var videoIsPlayable: Bool {
             !videoStalled && hasVideo
         }
-        var wantsPiP: Bool = false
+//        var wantsPiP: Bool = false
         
         let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
         
@@ -112,53 +110,6 @@ public final class MediaStreamComponent: CombinedComponent {
                 }
                 strongSelf.hasVideo = true
                 strongSelf.updated(transition: .immediate)
-                
-                /*let engine = strongSelf.call.accountContext.engine
-                guard let info = strongSelf.call.initialCall else {
-                    return
-                }
-                let _ = (engine.calls.getAudioBroadcastDataSource(callId: info.id, accessHash: info.accessHash)
-                |> mapToSignal { source -> Signal<Data?, NoError> in
-                    guard let source else {
-                        return .single(nil)
-                    }
-                    
-                    let time = engine.calls.requestStreamState(dataSource: source, callId: info.id, accessHash: info.accessHash)
-                    |> map { state -> Int64? in
-                        guard let state else {
-                            return nil
-                        }
-                        return state.channels.first?.latestTimestamp
-                    }
-                    
-                    return time
-                    |> mapToSignal { latestTimestamp -> Signal<Data?, NoError> in
-                        guard let latestTimestamp else {
-                            return .single(nil)
-                        }
-                        
-                        let durationMilliseconds: Int64 = 32000
-                        let bufferOffset: Int64 = 1 * durationMilliseconds
-                        let timestampId = latestTimestamp - bufferOffset
-                        
-                        return engine.calls.getVideoBroadcastPart(dataSource: source, callId: info.id, accessHash: info.accessHash, timestampIdMilliseconds: timestampId, durationMilliseconds: durationMilliseconds, channelId: 2, quality: 0)
-                        |> mapToSignal { result -> Signal<Data?, NoError> in
-                            switch result.status {
-                            case let .data(data):
-                                return .single(data)
-                            case .notReady, .resyncNeeded, .rejoinNeeded:
-                                return .single(nil)
-                            }
-                        }
-                    }
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] data in
-                    guard let self, let data else {
-                        return
-                    }
-                    let _ = self
-                    let _ = data
-                })*/
             })
             
             let callPeer = call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: call.peerId))
@@ -282,14 +233,12 @@ public final class MediaStreamComponent: CombinedComponent {
         return State(call: self.call)
     }
     
-    public static var body: Body {
+    class Local {
         let background = Child(Rectangle.self)
         let dismissTapComponent = Child(Rectangle.self)
         let video = Child(MediaStreamVideoComponent.self)
         let sheet = Child(StreamSheetComponent.self)
-//        let fullscreenOverlay = Child(StreamSheetComponent.self)
         let topItem = Child(environment: Empty.self)
-//        let viewerCounter = Child(ParticipantsComponent.self)
         let fullscreenBottomItem = Child(environment: Empty.self)
         let buttonsRow = Child(environment: Empty.self)
         
@@ -297,8 +246,31 @@ public final class MediaStreamComponent: CombinedComponent {
         let deactivatePictureInPicture = StoredActionSlot(Void.self)
         let moreButtonTag = GenericComponentViewTag()
         let moreAnimationTag = GenericComponentViewTag()
+    }
+    
+    public static var body: Body {
+        let local = Local()
         
         return { context in
+            _body(context, local) // { context in
+        }
+    }
+    
+    private static func _body(_ context: CombinedComponentContext<MediaStreamComponent>, _ local: Local) -> CGSize {
+        let background = local.background
+        let dismissTapComponent = local.dismissTapComponent
+        let video = local.video
+        let sheet = local.sheet
+        let topItem = local.topItem
+        let fullscreenBottomItem = local.fullscreenBottomItem
+        let buttonsRow = local.buttonsRow
+        
+        let activatePictureInPicture = local.activatePictureInPicture
+        let deactivatePictureInPicture = local.deactivatePictureInPicture
+        let moreButtonTag = local.moreButtonTag
+        let moreAnimationTag = local.moreAnimationTag
+        
+        func makeBody() -> CGSize {
             let canEnforceOrientation = UIDevice.current.model != "iPad"
             var forceFullScreenInLandscape: Bool { canEnforceOrientation && true }
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -318,17 +290,10 @@ public final class MediaStreamComponent: CombinedComponent {
             let controller = environment.controller
             
             context.state.deactivatePictureInPictureIfVisible.connect {
-                guard let controller = controller() else {
+                guard let controller = controller(), controller.view.window != nil else {
                     return
                 }
-                if controller.view.window == nil {
-                    if state.didAutoDismissForPiP {
-                        state.updated(transition: .easeInOut(duration: 3))
-                        deactivatePictureInPicture.invoke(Void())
-//                        call.accountContext.sharedContext.mainWindow?.inCallNavigate?()
-                    }
-                    return
-                }
+                
                 state.updated(transition: .easeInOut(duration: 3))
                 deactivatePictureInPicture.invoke(Void())
             }
@@ -336,7 +301,6 @@ public final class MediaStreamComponent: CombinedComponent {
             let isLandscape = context.availableSize.width > context.availableSize.height
             
             // Always fullscreen in landscape
-            // TODO: support landscape sheet (wrap in scrollview, video size same as portrait)
             if forceFullScreenInLandscape && isLandscape && !state.isFullscreen {
                 state.isFullscreen = true
                 isFullscreen = true
@@ -350,18 +314,18 @@ public final class MediaStreamComponent: CombinedComponent {
             
             let videoInset: CGFloat
             if !isFullscreen {
-                videoInset = 16
+                videoInset = 16.0
             } else {
-                videoInset = 0
+                videoInset = 0.0
             }
             
             let videoHeight: CGFloat = forceFullScreenInLandscape
-                ? (context.availableSize.width - videoInset * 2) / 16 * 9
-            : context.state.videoSize?.height ?? (min(context.availableSize.width, context.availableSize.height) - videoInset * 2) / 16 * 9
+            ? (context.availableSize.width - videoInset * 2) / 16 * 9
+            : context.state.videoSize?.height ?? (min(context.availableSize.width, context.availableSize.height) - videoInset * 2) / 16.0 * 9.0
             let bottomPadding = 32.0 + environment.safeInsets.bottom
             let requiredSheetHeight: CGFloat = isFullscreen
-                ? context.availableSize.height
-                : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding + 8)
+            ? context.availableSize.height
+            : (44.0 + videoHeight + 40.0 + 69.0 + 16.0 + 32.0 + 70.0 + bottomPadding + 8.0)
             
             let safeAreaTopInView: CGFloat
             if #available(iOS 16.0, *) {
@@ -370,7 +334,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 safeAreaTopInView = context.view.safeAreaInsets.top
             }
             
-            let isFullyDragged = context.availableSize.height - requiredSheetHeight + state.dismissOffset - safeAreaTopInView < 30
+            let isFullyDragged = context.availableSize.height - requiredSheetHeight + state.dismissOffset - safeAreaTopInView < 30.0
             
             var dragOffset = context.state.dismissOffset
             if isFullyDragged {
@@ -383,8 +347,8 @@ public final class MediaStreamComponent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width, height: dismissTapAreaHeight),
                 transition: context.transition
             )
-//            (controller() as? MediaStreamComponentController)?.prefersOnScreenNavigationHidden = isFullscreen
-//            (controller() as? MediaStreamComponentController)?.window?.invalidatePrefersOnScreenNavigationHidden()
+            //            (controller() as? MediaStreamComponentController)?.prefersOnScreenNavigationHidden = isFullscreen
+            //            (controller() as? MediaStreamComponentController)?.window?.invalidatePrefersOnScreenNavigationHidden()
             let video = video.update(
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
@@ -427,38 +391,38 @@ public final class MediaStreamComponent: CombinedComponent {
             
             var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
             
-//            let videoIsPlayable = context.state.videoIsPlayable
-//            if state.wantsPiP && state.hasVideo {
-//                state.wantsPiP = false
-//                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-//                    activatePictureInPicture.invoke(Action {
-//                        guard let controller = controller() as? MediaStreamComponentController else {
-//                            return
-//                        }
-//                        controller.dismiss(closing: false, manual: true)
-//                    })
-//                }
-//            }
+            //            let videoIsPlayable = context.state.videoIsPlayable
+            //            if state.wantsPiP && state.hasVideo {
+            //                state.wantsPiP = false
+            //                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            //                    activatePictureInPicture.invoke(Action {
+            //                        guard let controller = controller() as? MediaStreamComponentController else {
+            //                            return
+            //                        }
+            //                        controller.dismiss(closing: false, manual: true)
+            //                    })
+            //                }
+            //            }
             
-            if context.state.isPictureInPictureSupported /*, context.state.videoIsPlayable*/ {
+            if context.state.isPictureInPictureSupported {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
                     content: AnyComponent(ZStack([
-                            AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
-                                fillColor: .white.withAlphaComponent(0.08),
-                                size: CGSize(width: 32.0, height: 32.0)
-                            ))),
-                            AnyComponentWithIdentity(id: "a", component: AnyComponent(BundleIconComponent(
-                                name: "Call/pip",
-                                tintColor: .white // .withAlphaComponent(context.state.videoIsPlayable ? 1.0 : 0.6)
-                            )))
-                        ]
-                    )),
+                        AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
+                            fillColor: .white.withAlphaComponent(0.08),
+                            size: CGSize(width: 32.0, height: 32.0)
+                        ))),
+                        AnyComponentWithIdentity(id: "a", component: AnyComponent(BundleIconComponent(
+                            name: "Call/pip",
+                            tintColor: .white // .withAlphaComponent(context.state.videoIsPlayable ? 1.0 : 0.6)
+                        )))
+                    ]
+                                                )),
                     action: { [weak state] in
                         guard let state, state.hasVideo else {
                             guard let controller = controller() as? MediaStreamComponentController else {
                                 return
                             }
-                            state?.wantsPiP = true
+                            //                            state?.wantsPiP = true
                             controller.dismiss(closing: false, manual: true)
                             return
                         }
@@ -527,10 +491,10 @@ public final class MediaStreamComponent: CombinedComponent {
                             let initialTitle = state.callTitle ?? ""
                             
                             let presentationData = call.accountContext.sharedContext.currentPresentationData.with { $0 }
-
+                            
                             let title: String = presentationData.strings.LiveStream_EditTitle
                             let text: String = presentationData.strings.LiveStream_EditTitleText
-
+                            
                             let editController = voiceChatTitleEditController(sharedContext: call.accountContext.sharedContext, account: call.accountContext.account, forceTheme: defaultDarkPresentationTheme, title: title, text: text, placeholder: EnginePeer(chatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { [weak call] title in
                                 guard let call = call else {
                                     return
@@ -540,9 +504,9 @@ public final class MediaStreamComponent: CombinedComponent {
                                 
                                 if let title = title, title != initialTitle {
                                     call.updateTitle(title)
-
+                                    
                                     let text: String = title.isEmpty ? presentationData.strings.LiveStream_EditTitleRemoveSuccess : presentationData.strings.LiveStream_EditTitleSuccess(title).string
-
+                                    
                                     let _ = text
                                     //strongSelf.presentUndoOverlay(content: .voiceChatFlag(text: text), action: { _ in return false })
                                 }
@@ -648,7 +612,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             a(.default)
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(id: nil, text: /*presentationData.strings.VoiceChat_StopRecordingStop*/"Stop Live Stream", textColor: .destructive, textLayout: .singleLine, textFont: .regular, badge: nil, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(id: nil, text: presentationData.strings.LiveStream_StopLiveStream, textColor: .destructive, textLayout: .singleLine, textFont: .regular, badge: nil, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor, backgroundColor: nil)
                         }, action: { [weak call] _, a in
                             guard let call = call else {
@@ -727,15 +691,16 @@ public final class MediaStreamComponent: CombinedComponent {
                         }*/
                         controller.presentInGlobalOverlay(contextController)
                     }
-                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(moreButtonTag))//)//)
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(moreButtonTag))
             }
+            
             let navigationComponent = NavigationBarComponent(
                 topInset: environment.statusBarHeight,
                 sideInset: environment.safeInsets.left,
                 backgroundVisible: isFullscreen,
                 leftItem: topLeftButton,
                 rightItems: navigationRightItems,
-                centerItem: AnyComponent(StreamTitleComponent(text: state.callTitle ?? state.peerTitle, isRecording: state.recordingStartTimestamp != nil, isActive: context.state.videoIsPlayable))
+                centerItem: AnyComponent(StreamTitleComponent(text: state.callTitle ?? state.peerTitle, isRecording: state.recordingStartTimestamp != nil, isLive: context.state.videoIsPlayable))
             )
             
             if context.state.storedIsFullscreen != isFullscreen {
@@ -770,7 +735,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         if state.isFullscreen {
                             state.isFullscreen = false
                             state.prevFullscreenOrientation = UIDevice.current.orientation
-                            state.dismissOffset = 0.0// updateDismissOffset(value: 0.0, interactive: false)
+                            state.dismissOffset = 0.0
                             if canEnforceOrientation, let controller = controller() as? MediaStreamComponentController {
                                 controller.updateOrientation(orientation: .portrait)
                             } else {
@@ -779,7 +744,6 @@ public final class MediaStreamComponent: CombinedComponent {
                         } else {
                             if isFullyDragged || state.initialOffset != 0 {
                                 state.updateDismissOffset(value: 0.0, interactive: false)
-//                                state.updateDismissOffset(value: 0.0, interactive: false)
                             } else {
                                 if state.isPictureInPictureSupported {
                                     guard let controller = controller() as? MediaStreamComponentController else {
@@ -793,7 +757,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                             }
                                         })
                                     } else {
-                                        state.wantsPiP = true
+                                        //                                        state.wantsPiP = true
                                         controller.dismiss(closing: false, manual: true)
                                     }
                                 } else {
@@ -802,7 +766,6 @@ public final class MediaStreamComponent: CombinedComponent {
                                     }
                                     controller.dismiss(closing: false, manual: true)
                                 }
-//                                let _ = call.leave(terminateIfPossible: false)
                             }
                         }
                     } else {
@@ -828,9 +791,9 @@ public final class MediaStreamComponent: CombinedComponent {
                     }
                     state.toggleDisplayUI()
                 })
-                .gesture(.pan { panState in
-                    onPanGesture(panState)
-                })
+                    .gesture(.pan { panState in
+                        onPanGesture(panState)
+                    })
             )
             
             context.add(dismissTapComponent
@@ -840,342 +803,237 @@ public final class MediaStreamComponent: CombinedComponent {
                         return
                     }
                     controller.dismiss(closing: false, manual: true)
-                    // _ = call.leave(terminateIfPossible: false)
                 })
-                .gesture(.pan(onPanGesture))
+                    .gesture(.pan(onPanGesture))
             )
             
-            if !isFullscreen || state.isFullscreen {
-                let imageRenderScale = UIScreen.main.scale
-                let bottomComponent = AnyComponent(ButtonsRowComponent(
-                    bottomInset: environment.safeInsets.bottom,
-                    sideInset: environment.safeInsets.left,
-                    leftItem: AnyComponent(Button(
-                        content: AnyComponent(RoundGradientButtonComponent(// BundleIconComponent(
-                            gradientColors: [
-                                UIColor(red: 0.165, green: 0.173, blue: 0.357, alpha: 1).cgColor
-//                                UIColor(red: 0.18, green: 0.17, blue: 0.30, alpha: 1).cgColor,
-//                                UIColor(red: 0.17, green: 0.16, blue: 0.30, alpha: 1).cgColor
-                            ],
-                            image: generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: .white),
-                            // TODO: localize:
-                            title: "share")),
-                        action: {
-                            guard let controller = controller() as? MediaStreamComponentController else {
-                                return
-                            }
-                            controller.presentShare()
+            let presentationData = call.accountContext.sharedContext.currentPresentationData.with { $0 }
+            
+            let imageRenderScale = UIScreen.main.scale
+            let bottomComponent = AnyComponent(ButtonsRowComponent(
+                bottomInset: environment.safeInsets.bottom,
+                sideInset: environment.safeInsets.left,
+                leftItem: AnyComponent(Button(
+                    content: AnyComponent(RoundGradientButtonComponent(
+                        gradientColors: [UIColor(red: 0.165, green: 0.173, blue: 0.357, alpha: 1).cgColor],
+                        image: generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: .white),
+                        // TODO: localize:
+                        title: presentationData.strings.VoiceChat_ShareShort)),
+                    action: {
+                        guard let controller = controller() as? MediaStreamComponentController else {
+                            return
                         }
-                    ).minSize(CGSize(width: 65, height: 80))),
-                    rightItem: AnyComponent(Button(
-                        content: AnyComponent(RoundGradientButtonComponent(
-                            gradientColors: [
-                                UIColor(red: 0.314, green: 0.161, blue: 0.197, alpha: 1).cgColor
-//                                UIColor(red: 0.44, green: 0.18, blue: 0.22, alpha: 1).cgColor,
-//                                UIColor(red: 0.44, green: 0.18, blue: 0.22, alpha: 1).cgColor
-                            ],
-                            image: generateImage(CGSize(width: 44.0 * imageRenderScale, height: 44 * imageRenderScale), opaque: false, rotatedContext: { size, context in
-                                context.translateBy(x: size.width / 2, y: size.height / 2)
-                                context.scaleBy(x: 0.4, y: 0.4)
-                                context.translateBy(x: -size.width / 2, y: -size.height / 2)
-                                let imageColor = UIColor.white
-                                let bounds = CGRect(origin: CGPoint(), size: size)
-                                context.clear(bounds)
-                                let lineWidth: CGFloat = size.width / 7
-                                context.setLineWidth(lineWidth - UIScreenPixel)
-                                context.setLineCap(.round)
-                                context.setStrokeColor(imageColor.cgColor)
-                                
-                                context.move(to: CGPoint(x: lineWidth / 2 + UIScreenPixel, y: lineWidth / 2 + UIScreenPixel))
-                                context.addLine(to: CGPoint(x: size.width - lineWidth / 2 - UIScreenPixel, y: size.height - lineWidth / 2 - UIScreenPixel))
-                                context.strokePath()
-                                
-                                context.move(to: CGPoint(x: size.width - lineWidth / 2 - UIScreenPixel, y: lineWidth / 2 + UIScreenPixel))
-                                context.addLine(to: CGPoint(x: lineWidth / 2 + UIScreenPixel, y: size.height - lineWidth / 2 - UIScreenPixel))
-                                context.strokePath()
-                            }),
-                            title: "leave"
-                        )),
-                        action: { [weak call] in
-                            let _ = call?.leave(terminateIfPossible: false)
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0))),
-                    centerItem: AnyComponent(Button(
-                        content: AnyComponent(RoundGradientButtonComponent(
-                            gradientColors: [
-                                UIColor(red: 0.165, green: 0.173, blue: 0.357, alpha: 1).cgColor
-//                                UIColor(red: 0.23, green: 0.17, blue: 0.29, alpha: 1).cgColor,
-//                                UIColor(red: 0.21, green: 0.16, blue: 0.29, alpha: 1).cgColor
-                            ],
-                            image: generateImage(CGSize(width: 44 * imageRenderScale, height: 44 * imageRenderScale), opaque: false, rotatedContext: { size, context in
-                                
-                                let imageColor = UIColor.white
-                                let bounds = CGRect(origin: CGPoint(), size: size)
-                                context.clear(bounds)
-                                
-                                context.setLineWidth(2.4 * imageRenderScale - UIScreenPixel)
-                                context.setLineCap(.round)
-                                context.setStrokeColor(imageColor.cgColor)
-                                
-                                let lineSide = size.width / 5
-                                let centerOffset = size.width / 20
-                                context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - centerOffset / 2))
-                                context.addLine(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - lineSide))
-                                context.addLine(to: CGPoint(x: size.width / 2 + centerOffset / 2, y: size.height / 2 - lineSide))
-                                context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - lineSide))
-                                context.addLine(to: CGPoint(x: size.width / 2 + centerOffset, y: size.height / 2 - centerOffset))
-                                context.strokePath()
-                                
-                                context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + centerOffset / 2))
-                                context.addLine(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + lineSide))
-                                context.addLine(to: CGPoint(x: size.width / 2 - centerOffset / 2, y: size.height / 2 + lineSide))
-                                context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + lineSide))
-                                context.addLine(to: CGPoint(x: size.width / 2 - centerOffset, y: size.height / 2 + centerOffset))
-                                context.strokePath()
-                            }),
-                            title: "expand"
-                        )),
-                        action: { [weak state] in
-                            guard let state = state else { return }
-//                            guard state.videoIsPlayable else {
-//                                state.isFullscreen = false
-//                                return
-//                            }
-                            if let controller = controller() as? MediaStreamComponentController {
-//                                guard let _ = state.videoSize else { return }
-                                state.isFullscreen.toggle()
-                                if state.isFullscreen {
-                                    state.dismissOffset = 0.0
-//                                    if size.width > size.height {
-                                    let currentOrientation = state.prevFullscreenOrientation ?? UIDevice.current.orientation
-                                    switch currentOrientation {
-                                    case .landscapeLeft:
-                                        controller.updateOrientation(orientation: .landscapeRight)
-                                    case .landscapeRight:
-                                        controller.updateOrientation(orientation: .landscapeLeft)
-                                    default:
-                                        controller.updateOrientation(orientation: .landscapeRight)
-                                    }
-//                                    } else {
-//                                        controller.updateOrientation(orientation: .portrait)
-//                                    }
-                                } else {
-                                    state.prevFullscreenOrientation = UIDevice.current.orientation
-                                    // TODO: Check and mind current device orientation
-                                    controller.updateOrientation(orientation: .portrait)
+                        controller.presentShare()
+                    }
+                ).minSize(CGSize(width: 65, height: 80))),
+                rightItem: AnyComponent(Button(
+                    content: AnyComponent(RoundGradientButtonComponent(
+                        gradientColors: [
+                            UIColor(red: 0.314, green: 0.161, blue: 0.197, alpha: 1).cgColor
+                        ],
+                        image: generateImage(CGSize(width: 44.0 * imageRenderScale, height: 44 * imageRenderScale), opaque: false, rotatedContext: { size, context in
+                            context.translateBy(x: size.width / 2, y: size.height / 2)
+                            context.scaleBy(x: 0.4, y: 0.4)
+                            context.translateBy(x: -size.width / 2, y: -size.height / 2)
+                            let imageColor = UIColor.white
+                            let bounds = CGRect(origin: CGPoint(), size: size)
+                            context.clear(bounds)
+                            let lineWidth: CGFloat = size.width / 7
+                            context.setLineWidth(lineWidth - UIScreenPixel)
+                            context.setLineCap(.round)
+                            context.setStrokeColor(imageColor.cgColor)
+                            
+                            context.move(to: CGPoint(x: lineWidth / 2 + UIScreenPixel, y: lineWidth / 2 + UIScreenPixel))
+                            context.addLine(to: CGPoint(x: size.width - lineWidth / 2 - UIScreenPixel, y: size.height - lineWidth / 2 - UIScreenPixel))
+                            context.strokePath()
+                            
+                            context.move(to: CGPoint(x: size.width - lineWidth / 2 - UIScreenPixel, y: lineWidth / 2 + UIScreenPixel))
+                            context.addLine(to: CGPoint(x: lineWidth / 2 + UIScreenPixel, y: size.height - lineWidth / 2 - UIScreenPixel))
+                            context.strokePath()
+                        }),
+                        title: presentationData.strings.VoiceChat_Leave
+                    )),
+                    action: { [weak call] in
+                        let _ = call?.leave(terminateIfPossible: false)
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0))),
+                centerItem: AnyComponent(Button(
+                    content: AnyComponent(RoundGradientButtonComponent(
+                        gradientColors: [
+                            UIColor(red: 0.165, green: 0.173, blue: 0.357, alpha: 1).cgColor
+                        ],
+                        image: generateImage(CGSize(width: 44 * imageRenderScale, height: 44.0 * imageRenderScale), opaque: false, rotatedContext: { size, context in
+                            
+                            let imageColor = UIColor.white
+                            let bounds = CGRect(origin: CGPoint(), size: size)
+                            context.clear(bounds)
+                            
+                            context.setLineWidth(2.4 * imageRenderScale - UIScreenPixel)
+                            context.setLineCap(.round)
+                            context.setStrokeColor(imageColor.cgColor)
+                            
+                            let lineSide = size.width / 5
+                            let centerOffset = size.width / 20
+                            context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - centerOffset / 2))
+                            context.addLine(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - lineSide))
+                            context.addLine(to: CGPoint(x: size.width / 2 + centerOffset / 2, y: size.height / 2 - lineSide))
+                            context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - lineSide))
+                            context.addLine(to: CGPoint(x: size.width / 2 + centerOffset, y: size.height / 2 - centerOffset))
+                            context.strokePath()
+                            
+                            context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + centerOffset / 2))
+                            context.addLine(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + lineSide))
+                            context.addLine(to: CGPoint(x: size.width / 2 - centerOffset / 2, y: size.height / 2 + lineSide))
+                            context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + lineSide))
+                            context.addLine(to: CGPoint(x: size.width / 2 - centerOffset, y: size.height / 2 + centerOffset))
+                            context.strokePath()
+                        }),
+                        title: presentationData.strings.LiveStream_Expand
+                    )),
+                    action: { [weak state] in
+                        guard let state = state else { return }
+                        
+                        if let controller = controller() as? MediaStreamComponentController {
+                            state.isFullscreen.toggle()
+                            if state.isFullscreen {
+                                state.dismissOffset = 0.0
+                                let currentOrientation = state.prevFullscreenOrientation ?? UIDevice.current.orientation
+                                switch currentOrientation {
+                                case .landscapeLeft:
+                                    controller.updateOrientation(orientation: .landscapeRight)
+                                case .landscapeRight:
+                                    controller.updateOrientation(orientation: .landscapeLeft)
+                                default:
+                                    controller.updateOrientation(orientation: .landscapeRight)
                                 }
-                                if !canEnforceOrientation {
-                                    state.updated(transition: .easeInOut(duration: 0.25))
-                                }
+                            } else {
+                                state.prevFullscreenOrientation = UIDevice.current.orientation
+                                controller.updateOrientation(orientation: .portrait)
+                            }
+                            if !canEnforceOrientation {
+                                state.updated(transition: .easeInOut(duration: 0.25))
                             }
                         }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)))
-                ))
-                
-                let sheetHeight: CGFloat = max(requiredSheetHeight - dragOffset, requiredSheetHeight)
-                let topOffset: CGFloat = isFullscreen
-                    ? max(context.state.dismissOffset, 0)
-                    : (context.availableSize.height - requiredSheetHeight + dragOffset)
-                
-                let sheet = sheet.update(
-                    component: StreamSheetComponent(
-                        topComponent: AnyComponent(navigationComponent),
-                        bottomButtonsRow: bottomComponent,
-                        topOffset: topOffset,
-                        sheetHeight: sheetHeight,
-                        backgroundColor: (isFullscreen && !state.hasVideo) ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
-                        bottomPadding: bottomPadding,
-                        participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
-                        isFullyExtended: isFullyDragged,
-                        deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
-                        videoHeight: videoHeight,
-                        isFullscreen: isFullscreen,
-                        fullscreenTopComponent: AnyComponent(navigationComponent),
-                        fullscreenBottomComponent: bottomComponent
-                    ),
-                    availableSize: context.availableSize,
-                    transition: context.transition
-                )
-                
-                // let sheetOffset: CGFloat = context.availableSize.height - requiredSheetHeight + dragOffset
-                // let sheetPosition = sheetOffset + requiredSheetHeight / 2
-                // Sheet underneath the video when in modal sheet
-                context.add(sheet
-                    .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
-                )
-                
-                //
-                //
-                //
-                var availableWidth: CGFloat { context.availableSize.width }
-                var contentHeight: CGFloat { 44.0 }
-//                print(topItem)
-                // let size = context.availableSize
-                
-                let topItem = topItem.update(
-                    component: AnyComponent(navigationComponent),
-                    availableSize: CGSize(width: availableWidth, height: contentHeight),
-                    transition: context.transition
-                )
-                
-                let fullScreenToolbarComponent = AnyComponent(ToolbarComponent(
-                    bottomInset: environment.safeInsets.bottom,
-                    sideInset: environment.safeInsets.left,
-                    leftItem: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Accessory Panels/MessageSelectionForward",
-                            tintColor: .white
-                        )),
-                        action: {
-                            guard let controller = controller() as? MediaStreamComponentController else {
-                                return
-                            }
-                            controller.presentShare()
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)))
+            ))
+            
+            let sheetHeight: CGFloat = max(requiredSheetHeight - dragOffset, requiredSheetHeight)
+            let topOffset: CGFloat = isFullscreen
+            ? max(context.state.dismissOffset, 0)
+            : (context.availableSize.height - requiredSheetHeight + dragOffset)
+            
+            let sheet = sheet.update(
+                component: StreamSheetComponent(
+                    topOffset: topOffset,
+                    sheetHeight: sheetHeight,
+                    backgroundColor: (isFullscreen && !state.hasVideo) ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
+                    bottomPadding: bottomPadding,
+                    participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998) // [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
+                    isFullyExtended: isFullyDragged,
+                    deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
+                    videoHeight: videoHeight,
+                    isFullscreen: isFullscreen,
+                    fullscreenTopComponent: AnyComponent(navigationComponent),
+                    fullscreenBottomComponent: bottomComponent
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            context.add(sheet
+                .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
+            )
+            
+            var availableWidth: CGFloat { context.availableSize.width }
+            var contentHeight: CGFloat { 44.0 }
+            
+            let topItem = topItem.update(
+                component: AnyComponent(navigationComponent),
+                availableSize: CGSize(width: availableWidth, height: contentHeight),
+                transition: context.transition
+            )
+            
+            let fullScreenToolbarComponent = AnyComponent(ToolbarComponent(
+                bottomInset: environment.safeInsets.bottom,
+                sideInset: environment.safeInsets.left,
+                leftItem: AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Accessory Panels/MessageSelectionForward",
+                        tintColor: .white
+                    )),
+                    action: {
+                        guard let controller = controller() as? MediaStreamComponentController else {
+                            return
                         }
-                    ).minSize(CGSize(width: 64.0, height: 80))),
-                    rightItem: /*state.hasVideo ?*/ AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: isFullscreen ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
-                            tintColor: .white
-                        )),
-                        action: {
-                            state.isFullscreen = false
-                            state.prevFullscreenOrientation = UIDevice.current.orientation
-                            if let controller = controller() as? MediaStreamComponentController {
-                                if canEnforceOrientation {
-                                    controller.updateOrientation(orientation: .portrait)
-                                } else {
-                                    state.updated(transition: .easeInOut(duration: 0.25)) // updated(.easeInOut(duration: 0.3))
-                                }
+                        controller.presentShare()
+                    }
+                ).minSize(CGSize(width: 64.0, height: 80))),
+                rightItem: /*state.hasVideo ?*/ AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: isFullscreen ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
+                        tintColor: .white
+                    )),
+                    action: {
+                        state.isFullscreen = false
+                        state.prevFullscreenOrientation = UIDevice.current.orientation
+                        if let controller = controller() as? MediaStreamComponentController {
+                            if canEnforceOrientation {
+                                controller.updateOrientation(orientation: .portrait)
+                            } else {
+                                state.updated(transition: .easeInOut(duration: 0.25))
                             }
                         }
-                    ).minSize(CGSize(width: 64.0, height: 80)))/* : nil*/,
-                    centerItem: infoItem
-                ))
-                
-                let buttonsRow = buttonsRow.update(
-                    component: bottomComponent,
-                    availableSize: CGSize(width: availableWidth, height: contentHeight),
-                    transition: context.transition
-                )
-                
-                let fullscreenBottomItem = fullscreenBottomItem.update(
-                    component: fullScreenToolbarComponent,
-                    availableSize: CGSize(width: availableWidth, height: contentHeight),
-                    transition: context.transition
-                )
-                
-                let videoPos: CGFloat
-                
-                if isFullscreen {
-                    videoPos = context.availableSize.height / 2 + dragOffset
-                } else {
-                    videoPos = /*sheetPosition - requiredSheetHeight / 2*/topOffset + 28.0 + 28.0 + videoHeight / 2 // + 50 + 12
-                }
-                context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos))
-                )
-                
-                context.add(topItem
-                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 28.0)))
-                    .opacity((!isFullscreen || state.displayUI) ? 1 : 0)
-                    .gesture(.pan { panState in
-                        onPanGesture(panState)
-                    })
-//                    .animation(key: "position")
-                )
-                
-                context.add(buttonsRow
-                    .opacity(isFullscreen ? 0 : 1)
-//                    .animation(key: "opacity")
-                    .position(CGPoint(x: buttonsRow.size.width / 2, y: sheetHeight - 50 / 2 + topOffset - bottomPadding))
-                )
-                
-                context.add(fullscreenBottomItem
-                    .opacity((isFullscreen && state.displayUI) ? 1 : 0)
-//                    .animation(key: "opacity")
-                    .position(CGPoint(x: fullscreenBottomItem.size.width / 2, y: context.availableSize.height - fullscreenBottomItem.size.height / 2 + topOffset - 0.0))
-                )
-                //
-                //
-                //
+                    }
+                ).minSize(CGSize(width: 64.0, height: 80.0))),
+                centerItem: infoItem
+            ))
+            
+            let buttonsRow = buttonsRow.update(
+                component: bottomComponent,
+                availableSize: CGSize(width: availableWidth, height: contentHeight),
+                transition: context.transition
+            )
+            
+            let fullscreenBottomItem = fullscreenBottomItem.update(
+                component: fullScreenToolbarComponent,
+                availableSize: CGSize(width: availableWidth, height: contentHeight),
+                transition: context.transition
+            )
+            
+            let videoPos: CGFloat
+            
+            if isFullscreen {
+                videoPos = context.availableSize.height / 2 + dragOffset
             } else {
-                /*let fullScreenToolbarComponent = AnyComponent(ToolbarComponent(
-                    bottomInset: environment.safeInsets.bottom,
-                    sideInset: environment.safeInsets.left,
-                    leftItem: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Accessory Panels/MessageSelectionForward",
-                            tintColor: .white
-                        )),
-                        action: {
-                            guard let controller = controller() as? MediaStreamComponentController else {
-                                return
-                            }
-                            controller.presentShare()
-                        }
-                    ).minSize(CGSize(width: 64.0, height: 80))),
-                    rightItem: /*state.hasVideo ?*/ AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: isFullscreen ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
-                            tintColor: .white
-                        )),
-                        action: {
-                            state.isFullscreen = false
-                            state.prevFullscreenOrientation = UIDevice.current.orientation
-                            if let controller = controller() as? MediaStreamComponentController {
-                                if canEnforceOrientation {
-                                    controller.updateOrientation(orientation: .portrait)
-                                } else {
-                                    state.updated(transition: .easeInOut(duration: 0.25)) // updated(.easeInOut(duration: 0.3))
-                                }
-                            }
-                        }
-                    ).minSize(CGSize(width: 64.0, height: 80)))/* : nil*/,
-                    centerItem: infoItem
-                ))
-                let fullScreenOverlayComponent = sheet.update(
-                    component: StreamSheetComponent(
-                        topComponent: AnyComponent(navigationComponent),
-                        bottomButtonsRow: fullScreenToolbarComponent,
-                        topOffset: /*context.availableSize.height - sheetHeight +*/ max(context.state.dismissOffset, 0),
-                        sheetHeight: context.availableSize.height,// max(sheetHeight - context.state.dismissOffset, sheetHeight),
-                        backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
-                        bottomPadding: 0,
-                        participantsCount: -1,
-                        isFullyExtended: isFullyDragged,
-                        deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
-                        videoHeight: videoHeight,
-                        isFullscreen: isFullscreen,
-                        fullscreenTopComponent: AnyComponent(navigationComponent),
-                        fullscreenBottomComponent: fullScreenToolbarComponent
-                    ),
-                    availableSize: context.availableSize,
-                    transition: context.transition
-                )
-                
-                context.add(fullScreenOverlayComponent
-                    .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
-                    .opacity(state.displayUI ? 1 : 0)
-                )
-                
-                context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2 + dragOffset)
-                ))*/
+                videoPos = topOffset + 28.0 + 28.0 + videoHeight / 2
             }
-            // TODO: add variable isPictureInPictureActive
-//            let isPictureInPictureActive = state.isPictureInPictureSupported && state.videoIsPlayable && state.hasVideo
-//            if !state.isVisibleInHierarchy && isPictureInPictureActive && state.isFullscreen {
-//                if !state.didAutoDismissForPiP {
-//                    state.didAutoDismissForPiP = true
-//                    (controller() as? MediaStreamComponentController)?.dismiss(closing: false, manual: true)
-//                }
-//            } else {
-//                state.didAutoDismissForPiP = false
-//            }
+            context.add(video
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos))
+            )
+            
+            context.add(topItem
+                .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 28.0)))
+                .opacity((!isFullscreen || state.displayUI) ? 1.0 : 0.0)
+                .gesture(.pan { panState in
+                    onPanGesture(panState)
+                })
+            )
+            
+            context.add(buttonsRow
+                .opacity(isFullscreen ? 0.0 : 1.0)
+                .position(CGPoint(x: buttonsRow.size.width / 2, y: sheetHeight - 50.0 / 2 + topOffset - bottomPadding))
+            )
+            
+            context.add(fullscreenBottomItem
+                .opacity((isFullscreen && state.displayUI) ? 1.0 : 0.0)
+                .position(CGPoint(x: fullscreenBottomItem.size.width / 2, y: context.availableSize.height - fullscreenBottomItem.size.height / 2 + topOffset - 0.0))
+            )
             return context.availableSize
         }
+        return makeBody()
     }
+    
 }
 
 public final class MediaStreamComponentController: ViewControllerComponentContainer, VoiceChatController {
@@ -1413,314 +1271,6 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
 
 // MARK: - Subcomponents
 
-final class StreamTitleComponent: Component {
-    let text: String
-    let isRecording: Bool
-    let isActive: Bool
-    
-    init(text: String, isRecording: Bool, isActive: Bool) {
-        self.text = text
-        self.isRecording = isRecording
-        self.isActive = isActive
-    }
-    
-    static func ==(lhs: StreamTitleComponent, rhs: StreamTitleComponent) -> Bool {
-        if lhs.text != rhs.text {
-            return false
-        }
-        if lhs.isRecording != rhs.isRecording {
-            return false
-        }
-        if lhs.isActive != rhs.isActive {
-            return false
-        }
-        return false
-    }
-    
-    final class LiveIndicatorView: UIView {
-        private let label = UILabel()
-        private let stalledAnimatedGradient = CAGradientLayer()
-        private var wasLive = false
-        
-        var desiredWidth: CGFloat { label.intrinsicContentSize.width + 6.0 + 6.0 }
-        
-        override init(frame: CGRect = .zero) {
-            super.init(frame: frame)
-            
-            addSubview(label)
-            let liveString = NSAttributedString(
-                string: "LIVE",
-                attributes: [
-                    .font: Font.with(size: 11.0, design: .round, weight: .bold),
-                    .paragraphStyle: {
-                        let style = NSMutableParagraphStyle()
-                        style.alignment = .center
-                        return style
-                    }(),
-                    .foregroundColor: UIColor.white,
-                    .kern: -0.6
-                ]
-            )
-            label.attributedText = liveString
-//            label.text = "LIVE"
-//            label.font = Font.with(size: 11.0, design: .round, weight: .bold)// .systemFont(ofSize: 12, weight: .semibold)
-//            label.textAlignment = .center
-//            label.textColor = .white
-            layer.addSublayer(stalledAnimatedGradient)
-            self.clipsToBounds = true
-//            if #available(iOS 13.0, *) {
-//                self.layer.cornerCurve = .continuous
-//            }
-            toggle(isLive: false)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        override func layoutSubviews() {
-            super.layoutSubviews()
-            
-            label.frame = bounds
-            stalledAnimatedGradient.frame = bounds
-            self.layer.cornerRadius = min(bounds.width, bounds.height) / 2
-        }
-        
-        func toggle(isLive: Bool) {
-            if isLive {
-                if !wasLive {
-                    wasLive = true
-                    let anim = CAKeyframeAnimation(keyPath: "transform.scale")
-                    anim.values = [1.0, 1.12, 0.9, 1.0]
-                    anim.keyTimes = [0, 0.5, 0.8, 1]
-                    anim.duration = 0.4
-                    self.layer.add(anim, forKey: "transform")
-                    
-                    UIView.animate(withDuration: 0.15, animations: {
-                        self.toggle(isLive: true) })
-                    return
-                }
-                self.backgroundColor = UIColor(red: 1, green: 0.176, blue: 0.333, alpha: 1)
-                stalledAnimatedGradient.opacity = 0
-                stalledAnimatedGradient.removeAllAnimations()
-            } else {
-                if wasLive {
-                    wasLive = false
-                    UIView.animate(withDuration: 0.3) {
-                        self.toggle(isLive: false)
-                    }
-                    return
-                }
-                self.backgroundColor = UIColor(white: 0.36, alpha: 1)
-                stalledAnimatedGradient.opacity = 1
-            }
-            wasLive = isLive
-        }
-    }
-    
-    public final class View: UIView {
-        private var indicatorView: UIImageView?
-        let liveIndicatorView = LiveIndicatorView()
-        let titleLabel = UILabel()
-        
-        private var titleFadeLayer = CALayer()
-        
-        private let trackingLayer: HierarchyTrackingLayer
-        
-        private func updateTitleFadeLayer(textFrame: CGRect) {
-            // titleLabel.backgroundColor = .red
-            guard let textBounds = titleLabel.attributedText.flatMap({ $0.boundingRect(with: CGSize(width: .max, height: .max), context: nil) }),
-                textBounds.width > textFrame.width
-            else {
-                titleLabel.layer.mask = nil
-                titleLabel.frame = textFrame
-                self.titleLabel.textAlignment = .center
-                return
-            }
-                 
-            var isRTL: Bool = false
-            if let string = titleLabel.attributedText {
-                let coreTextLine = CTLineCreateWithAttributedString(string)
-                let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
-                if glyphRuns.count > 0 {
-                    let run = glyphRuns[0] as! CTRun
-                    if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
-                        isRTL = true
-                    }
-                }
-            }
-            
-            let gradientInset: CGFloat = 0
-            let gradientRadius: CGFloat = 50
-            
-            let solidPartLayer = CALayer()
-            solidPartLayer.backgroundColor = UIColor.blue.cgColor
-            
-//            let containerWidth: CGFloat = textFrame.width
-            let availableWidth: CGFloat = textFrame.width - gradientRadius
-            let extraSpace: CGFloat = 100
-            if isRTL {
-//                let adjustForRTL: CGFloat = 12
-                
-//                let safeSolidWidth: CGFloat = containerWidth + adjustForRTL
-//                let widthDiff = min(textFrame.width - containerWidth)
-                
-                solidPartLayer.frame = CGRect(
-                    origin: CGPoint(x: textFrame.width + extraSpace - availableWidth, y: 0),
-                    size: CGSize(width: availableWidth, height: textFrame.height))
-                
-                self.titleLabel.textAlignment = .right
-                
-                titleLabel.frame = CGRect(x: textFrame.minX - extraSpace, y: textFrame.minY, width: textFrame.width + extraSpace, height: textFrame.height)
-            } else {
-                self.titleLabel.textAlignment = .left
-                solidPartLayer.frame = CGRect(
-                    origin: .zero,
-                    size: CGSize(width: availableWidth, height: textFrame.height))
-                titleLabel.frame = CGRect(origin: textFrame.origin, size: CGSize(width: textFrame.width + extraSpace, height: textFrame.height))
-            }
-            titleFadeLayer.removeFromSuperlayer()
-            
-            titleFadeLayer = CALayer()
-            titleFadeLayer.addSublayer(solidPartLayer)
-            
-            let gradientLayer = CAGradientLayer()
-            gradientLayer.colors = [UIColor.red.cgColor, UIColor.clear.cgColor]
-            if isRTL {
-                gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
-                gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
-                gradientLayer.frame = CGRect(x: solidPartLayer.frame.minX - gradientRadius, y: 0, width: gradientRadius, height: textFrame.height)
-            } else {
-                gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
-                gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-                gradientLayer.frame = CGRect(x: availableWidth + gradientInset, y: 0, width: gradientRadius, height: textFrame.height)
-            }
-            titleFadeLayer.addSublayer(gradientLayer)
-            titleFadeLayer.masksToBounds = false
-            
-            titleFadeLayer.frame = titleLabel.bounds
-            
-//            titleLabel.layer.addSublayer(titleFadeLayer)
-//            titleFadeLayer.opacity = 0.4
-            
-            titleLabel.layer.mask = titleFadeLayer
-//            titleLabel.backgroundColor = .green
-        }
-        
-        override init(frame: CGRect) {
-            self.trackingLayer = HierarchyTrackingLayer()
-            
-            super.init(frame: frame)
-            
-            self.addSubview(self.titleLabel)
-            self.addSubview(self.liveIndicatorView)
-            
-            self.trackingLayer.didEnterHierarchy = { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.updateIndicatorAnimation()
-            }
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        private func updateIndicatorAnimation() {
-            guard let indicatorView = self.indicatorView else {
-                return
-            }
-            if indicatorView.layer.animation(forKey: "blink") == nil {
-                let animation = CAKeyframeAnimation(keyPath: "opacity")
-                animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.55 as NSNumber]
-                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-                animation.duration = 0.7
-                animation.autoreverses = true
-                animation.repeatCount = Float.infinity
-                indicatorView.layer.add(animation, forKey: "recording")
-            }
-        }
-        
-        func update(component: StreamTitleComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            let liveIndicatorWidth: CGFloat = self.liveIndicatorView.desiredWidth
-            let liveIndicatorHeight: CGFloat = 20.0
-            
-            let currentText = self.titleLabel.text
-            if currentText != component.text {
-                if currentText?.isEmpty == false {
-                    UIView.transition(with: self.titleLabel, duration: 0.2) {
-                        self.titleLabel.text = component.text
-                        self.titleLabel.invalidateIntrinsicContentSize()
-                    }
-                } else {
-                    self.titleLabel.text = component.text
-                    self.titleLabel.invalidateIntrinsicContentSize()
-                }
-            }
-            self.titleLabel.font = Font.semibold(17.0)
-            self.titleLabel.textColor = .white
-            self.titleLabel.numberOfLines = 1
-            
-            let textSize = CGSize(width: min(availableSize.width - 4 - liveIndicatorWidth, self.titleLabel.intrinsicContentSize.width), height: availableSize.height)
-            
-//            let textSize = self.textView.update(
-//                transition: .immediate,
-//                component: AnyComponent(Text(
-//                    text: component.text,
-//                    font: Font.semibold(17.0),
-//                    color: .white
-//                )),
-//                environment: {},
-//                containerSize: CGSize(width: availableSize.width - 4 - liveIndicatorWidth, height: availableSize.height)
-//            )
-            
-            if component.isRecording {
-                if self.indicatorView == nil {
-                    let indicatorView = UIImageView(image: generateFilledCircleImage(diameter: 8.0, color: .red, strokeColor: nil, strokeWidth: nil, backgroundColor: nil))
-                    self.addSubview(indicatorView)
-                    self.indicatorView = indicatorView
-                    
-                    self.updateIndicatorAnimation()
-                }
-            } else {
-                if let indicatorView = self.indicatorView {
-                    self.indicatorView = nil
-                    indicatorView.removeFromSuperview()
-                }
-            }
-            let sideInset: CGFloat = 20.0
-            let size = CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height)
-            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
-//            self.textView.frame = textFrame
-            if currentText?.isEmpty == false {
-                UIView.transition(with: self.titleLabel, duration: 0.2) {
-                    self.updateTitleFadeLayer(textFrame: textFrame)
-                }
-            } else {
-                self.updateTitleFadeLayer(textFrame: textFrame)
-            }
-            
-            liveIndicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: /*floorToScreenPixels((size.height - textSize.height) / 2.0 - 2) + 1.0*/textFrame.midY - liveIndicatorHeight / 2), size: .init(width: liveIndicatorWidth, height: liveIndicatorHeight))
-            self.liveIndicatorView.toggle(isLive: component.isActive)
-            
-            if let indicatorView = self.indicatorView, let image = indicatorView.image {
-                indicatorView.frame = CGRect(origin: CGPoint(x: liveIndicatorView.frame.maxX + 6.0, y: floorToScreenPixels((size.height - image.size.height) / 2.0) + 1.0), size: image.size)
-            }
-            
-            return size
-        }
-    }
-    
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
 private final class NavigationBarComponent: CombinedComponent {
     let topInset: CGFloat
     let sideInset: CGFloat
@@ -1780,7 +1330,7 @@ private final class NavigationBarComponent: CombinedComponent {
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
             
             let background = background.update(
-                component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5/*context.component.backgroundVisible ? 0.5 : 0*/)),
+                component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5)),
                 availableSize: CGSize(width: size.width, height: size.height),
                 transition: context.transition
             )
@@ -1810,7 +1360,7 @@ private final class NavigationBarComponent: CombinedComponent {
             let centerItem = context.component.centerItem.flatMap { centerItemComponent in
                 return centerItem.update(
                     component: centerItemComponent,
-                    availableSize: CGSize(width: availableWidth - 44 - 44, height: contentHeight),
+                    availableSize: CGSize(width: availableWidth - 44.0 - 44.0, height: contentHeight),
                     transition: context.transition
                 )
             }
@@ -1840,10 +1390,10 @@ private final class NavigationBarComponent: CombinedComponent {
                 rightItemX -= item.size.width + 8.0
             }
             
-            let someUndesiredOffset: CGFloat = 16
+            let accumulatedOffset: CGFloat = 16.0
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: context.availableSize.width / 2 - someUndesiredOffset, y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2 - accumulatedOffset, y: context.component.topInset + contentHeight / 2.0))
                 )
             }
             
@@ -1851,6 +1401,289 @@ private final class NavigationBarComponent: CombinedComponent {
         }
     }
 }
+
+private final class StreamTitleComponent: Component {
+    private final class LiveIndicatorView: UIView {
+        private let label = UILabel()
+        private let stalledAnimatedGradient = CAGradientLayer()
+        private var wasLive = false
+        
+        var desiredWidth: CGFloat { label.intrinsicContentSize.width + 6.0 + 6.0 }
+        
+        override init(frame: CGRect = .zero) {
+            super.init(frame: frame)
+            
+            self.addSubview(label)
+            
+            let liveString = NSAttributedString(
+                string: "LIVE",
+                attributes: [
+                    .font: Font.with(size: 11.0, design: .round, weight: .bold),
+                    .paragraphStyle: {
+                        let style = NSMutableParagraphStyle()
+                        style.alignment = .center
+                        return style
+                    }(),
+                    .foregroundColor: UIColor.white,
+                    .kern: -0.6
+                ]
+            )
+            self.label.attributedText = liveString
+            
+            self.layer.addSublayer(stalledAnimatedGradient)
+            self.clipsToBounds = true
+            self.toggle(isLive: false)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            
+            label.frame = bounds
+            stalledAnimatedGradient.frame = bounds
+            self.layer.cornerRadius = min(bounds.width, bounds.height) / 2
+        }
+        
+        func toggle(isLive: Bool) {
+            if isLive {
+                if !self.wasLive {
+                    self.wasLive = true
+                    let anim = CAKeyframeAnimation(keyPath: "transform.scale")
+                    anim.values = [1.0, 1.12, 0.9, 1.0]
+                    anim.keyTimes = [0, 0.5, 0.8, 1]
+                    anim.duration = 0.4
+                    self.layer.add(anim, forKey: "transform")
+                    
+                    UIView.animate(withDuration: 0.15, animations: {
+                        self.toggle(isLive: true) })
+                    return
+                }
+                self.backgroundColor = UIColor(red: 1, green: 0.176, blue: 0.333, alpha: 1)
+                self.stalledAnimatedGradient.opacity = 0
+                self.stalledAnimatedGradient.removeAllAnimations()
+            } else {
+                if wasLive {
+                    wasLive = false
+                    UIView.animate(withDuration: 0.3) {
+                        self.toggle(isLive: false)
+                    }
+                    return
+                }
+                self.backgroundColor = UIColor(white: 0.36, alpha: 1)
+                stalledAnimatedGradient.opacity = 1
+            }
+            wasLive = isLive
+        }
+    }
+    
+    private let text: String
+    private let isRecording: Bool
+    private let isLive: Bool
+    
+    init(text: String, isRecording: Bool, isLive: Bool) {
+        self.text = text
+        self.isRecording = isRecording
+        self.isLive = isLive
+    }
+    
+    static func ==(lhs: StreamTitleComponent, rhs: StreamTitleComponent) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.isRecording != rhs.isRecording {
+            return false
+        }
+        if lhs.isLive != rhs.isLive {
+            return false
+        }
+        return false
+    }
+    
+    public final class View: UIView {
+        private var indicatorView: UIImageView?
+        private let liveIndicatorView = LiveIndicatorView()
+        private let titleLabel = UILabel()
+        private var titleFadeLayer = CALayer()
+        
+        private let trackingLayer: HierarchyTrackingLayer
+        
+        override init(frame: CGRect) {
+            self.trackingLayer = HierarchyTrackingLayer()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.titleLabel)
+            self.addSubview(self.liveIndicatorView)
+            
+            self.trackingLayer.didEnterHierarchy = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.updateIndicatorAnimation()
+            }
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        private func updateIndicatorAnimation() {
+            guard let indicatorView = self.indicatorView else {
+                return
+            }
+            if indicatorView.layer.animation(forKey: "blink") == nil {
+                let animation = CAKeyframeAnimation(keyPath: "opacity")
+                animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.55 as NSNumber]
+                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                animation.duration = 0.7
+                animation.autoreverses = true
+                animation.repeatCount = Float.infinity
+                indicatorView.layer.add(animation, forKey: "recording")
+            }
+        }
+        
+        func update(component: StreamTitleComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            let liveIndicatorWidth: CGFloat = self.liveIndicatorView.desiredWidth
+            let liveIndicatorHeight: CGFloat = 20.0
+            
+            let currentText = self.titleLabel.text
+            if currentText != component.text {
+                if currentText?.isEmpty == false {
+                    UIView.transition(with: self.titleLabel, duration: 0.2) {
+                        self.titleLabel.text = component.text
+                        self.titleLabel.invalidateIntrinsicContentSize()
+                    }
+                } else {
+                    self.titleLabel.text = component.text
+                    self.titleLabel.invalidateIntrinsicContentSize()
+                }
+            }
+            self.titleLabel.font = Font.semibold(17.0)
+            self.titleLabel.textColor = .white
+            self.titleLabel.numberOfLines = 1
+            
+            let textSize = CGSize(width: min(availableSize.width - 4 - liveIndicatorWidth, self.titleLabel.intrinsicContentSize.width), height: availableSize.height)
+            
+            if component.isRecording {
+                if self.indicatorView == nil {
+                    let indicatorView = UIImageView(image: generateFilledCircleImage(diameter: 8.0, color: .red, strokeColor: nil, strokeWidth: nil, backgroundColor: nil))
+                    self.addSubview(indicatorView)
+                    self.indicatorView = indicatorView
+                    
+                    self.updateIndicatorAnimation()
+                }
+            } else {
+                if let indicatorView = self.indicatorView {
+                    self.indicatorView = nil
+                    indicatorView.removeFromSuperview()
+                }
+            }
+            let sideInset: CGFloat = 20.0
+            let size = CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height)
+            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
+            
+            if currentText?.isEmpty == false {
+                UIView.transition(with: self.titleLabel, duration: 0.2, options: .transitionCrossDissolve) {
+                    self.updateTitleFadeLayer(constrainedTextFrame: textFrame)
+                }
+            } else {
+                self.updateTitleFadeLayer(constrainedTextFrame: textFrame)
+            }
+            
+            liveIndicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: textFrame.midY - liveIndicatorHeight / 2), size: .init(width: liveIndicatorWidth, height: liveIndicatorHeight))
+            self.liveIndicatorView.toggle(isLive: component.isLive)
+            
+            if let indicatorView = self.indicatorView, let image = indicatorView.image {
+                indicatorView.frame = CGRect(origin: CGPoint(x: liveIndicatorView.frame.maxX + 6.0, y: floorToScreenPixels((size.height - image.size.height) / 2.0) + 1.0), size: image.size)
+            }
+            
+            return size
+        }
+        
+        private func updateTitleFadeLayer(constrainedTextFrame: CGRect) {
+            guard let textBounds = titleLabel.attributedText.flatMap({ $0.boundingRect(with: CGSize(width: .max, height: .max), context: nil) }),
+                textBounds.width > constrainedTextFrame.width
+            else {
+                titleLabel.layer.mask = nil
+                titleLabel.frame = constrainedTextFrame
+                self.titleLabel.textAlignment = .center
+                return
+            }
+                 
+            var isRTL: Bool = false
+            if let string = titleLabel.attributedText {
+                let coreTextLine = CTLineCreateWithAttributedString(string)
+                let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
+                if glyphRuns.count > 0 {
+                    let run = glyphRuns[0] as! CTRun
+                    if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                        isRTL = true
+                    }
+                }
+            }
+            
+            let gradientInset: CGFloat = 0.0
+            let gradientRadius: CGFloat = 50.0
+            let extraSpaceToFitTruncation: CGFloat = 100.0
+            
+            let solidPartLayer = CALayer()
+            solidPartLayer.backgroundColor = UIColor.black.cgColor
+            
+            let availableWidth: CGFloat = constrainedTextFrame.width - gradientRadius
+            
+            if isRTL {
+                solidPartLayer.frame = CGRect(
+                    origin: CGPoint(x: constrainedTextFrame.width + extraSpaceToFitTruncation - availableWidth, y: 0),
+                    size: CGSize(width: availableWidth, height: constrainedTextFrame.height))
+                
+                self.titleLabel.textAlignment = .right
+                
+                titleLabel.frame = CGRect(x: constrainedTextFrame.minX - extraSpaceToFitTruncation, y: constrainedTextFrame.minY, width: constrainedTextFrame.width + extraSpaceToFitTruncation, height: constrainedTextFrame.height)
+            } else {
+                self.titleLabel.textAlignment = .left
+                
+                solidPartLayer.frame = CGRect(
+                    origin: .zero,
+                    size: CGSize(width: availableWidth, height: constrainedTextFrame.height))
+                titleLabel.frame = CGRect(origin: constrainedTextFrame.origin, size: CGSize(width: constrainedTextFrame.width + extraSpaceToFitTruncation, height: constrainedTextFrame.height))
+            }
+            
+            titleFadeLayer = CALayer()
+            titleFadeLayer.addSublayer(solidPartLayer)
+            
+            let gradientLayer = CAGradientLayer()
+            gradientLayer.colors = [UIColor.red.cgColor, UIColor.clear.cgColor]
+            if isRTL {
+                gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
+                gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
+                gradientLayer.frame = CGRect(x: solidPartLayer.frame.minX - gradientRadius, y: 0, width: gradientRadius, height: constrainedTextFrame.height)
+            } else {
+                gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+                gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+                gradientLayer.frame = CGRect(x: availableWidth + gradientInset, y: 0, width: gradientRadius, height: constrainedTextFrame.height)
+            }
+            titleFadeLayer.addSublayer(gradientLayer)
+            titleFadeLayer.masksToBounds = false
+            
+            titleFadeLayer.frame = titleLabel.bounds
+            
+            titleLabel.layer.mask = titleFadeLayer
+        }
+        
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
 
 private final class OriginInfoComponent: CombinedComponent {
     let participantsCount: Int

@@ -5820,6 +5820,8 @@ Sorry for the inconvenience.";
 "VoiceChat.Audio" = "audio";
 "VoiceChat.Leave" = "leave";
 
+"LiveStream.Expand" = "expand";
+
 "VoiceChat.SpeakPermissionEveryone" = "New participants can speak";
 "VoiceChat.SpeakPermissionAdmin" = "New paricipants are muted";
 "VoiceChat.Share" = "Share Invite Link";
@@ -5957,6 +5959,8 @@ Sorry for the inconvenience.";
 
 "VoiceChat.StopRecordingTitle" = "Stop Recording?";
 "VoiceChat.StopRecordingStop" = "Stop Recording";
+
+"LiveStream.StopLiveStream" = "Stop Live Stream";
 
 "VoiceChat.RecordingSaved" = "Audio saved to **Saved Messages**.";
 
@@ -7415,6 +7419,7 @@ Sorry for the inconvenience.";
 "LiveStream.NoViewers" = "No viewers";
 "LiveStream.ViewerCount_1" = "1 viewer";
 "LiveStream.ViewerCount_any" = "%@ viewers";
+"LiveStream.Watching" = "watching";
 
 "LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
 "LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";

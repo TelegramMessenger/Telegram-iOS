@@ -8,9 +8,6 @@ import MultilineTextComponent
 import Display
 
 final class StreamSheetComponent: CombinedComponent {
-    let topComponent: AnyComponent<Empty>?
-    let bottomButtonsRow: AnyComponent<Empty>?
-    // TODO: sync
     let sheetHeight: CGFloat
     let topOffset: CGFloat
     let backgroundColor: UIColor
@@ -25,8 +22,6 @@ final class StreamSheetComponent: CombinedComponent {
     let fullscreenBottomComponent: AnyComponent<Empty>
     
     init(
-        topComponent: AnyComponent<Empty>,
-        bottomButtonsRow: AnyComponent<Empty>,
         topOffset: CGFloat,
         sheetHeight: CGFloat,
         backgroundColor: UIColor,
@@ -39,8 +34,6 @@ final class StreamSheetComponent: CombinedComponent {
         fullscreenTopComponent: AnyComponent<Empty>,
         fullscreenBottomComponent: AnyComponent<Empty>
     ) {
-        self.topComponent = nil // topComponent
-        self.bottomButtonsRow = nil // bottomButtonsRow
         self.topOffset = topOffset
         self.sheetHeight = sheetHeight
         self.backgroundColor = backgroundColor
@@ -56,12 +49,6 @@ final class StreamSheetComponent: CombinedComponent {
     }
     
     static func ==(lhs: StreamSheetComponent, rhs: StreamSheetComponent) -> Bool {
-        if lhs.topComponent != rhs.topComponent {
-            return false
-        }
-        if lhs.bottomButtonsRow != rhs.bottomButtonsRow {
-            return false
-        }
         if lhs.topOffset != rhs.topOffset {
             return false
         }
@@ -119,12 +106,12 @@ final class StreamSheetComponent: CombinedComponent {
         override func draw(_ rect: CGRect) {
             super.draw(rect)
             // Debug interactive area
-            guard let context = UIGraphicsGetCurrentContext() else { return }
-            context.setFillColor(UIColor.red.withAlphaComponent(0.3).cgColor)
-            overlayComponentsFrames.forEach { frame in
-                context.addRect(frame)
-                context.fillPath()
-            }
+//            guard let context = UIGraphicsGetCurrentContext() else { return }
+//            context.setFillColor(UIColor.red.withAlphaComponent(0.3).cgColor)
+//            overlayComponentsFrames.forEach { frame in
+//                context.addRect(frame)
+//                context.fillPath()
+//            }
         }
     }
     
@@ -146,19 +133,15 @@ final class StreamSheetComponent: CombinedComponent {
     
     static var body: Body {
         let background = Child(SheetBackgroundComponent.self)
-        let topItem = Child(environment: Empty.self)
         let viewerCounter = Child(ParticipantsComponent.self)
-        let bottomButtonsRow = Child(environment: Empty.self)
         
         return { context in
-            let availableWidth = context.availableSize.width
-            let contentHeight: CGFloat = 44.0
             let size = context.availableSize
             
             let topOffset = context.component.topOffset
             let backgroundExtraOffset: CGFloat
             if #available(iOS 16.0, *) {
-                // In iOS context.view does not inherit safeAreaInsets, quick fix until figure out how to deal properly:
+                // In iOS 16 context.view does not inherit safeAreaInsets, quick fix:
                 let safeAreaTopInView = context.view.window.flatMap { $0.convert(CGPoint(x: 0, y: $0.safeAreaInsets.top), to: context.view).y } ?? 0
                 backgroundExtraOffset = context.component.isFullyExtended ? -safeAreaTopInView : 0
             } else {
@@ -175,29 +158,13 @@ final class StreamSheetComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            let topItem = context.component.topComponent.flatMap { topItemComponent in
-                return topItem.update(
-                    component: topItemComponent,
-                    availableSize: CGSize(width: availableWidth, height: contentHeight),
-                    transition: context.transition
-                )
-            }
-            
             let viewerCounter = viewerCounter.update(
                 component: ParticipantsComponent(count: context.component.participantsCount, fontSize: 44.0),
                 availableSize: CGSize(width: context.availableSize.width, height: 70),
                 transition: context.transition
             )
             
-            let bottomButtonsRow = context.component.bottomButtonsRow.flatMap { bottomButtonsRowComponent in
-                return bottomButtonsRow.update(
-                    component: bottomButtonsRowComponent,
-                    availableSize: CGSize(width: availableWidth, height: contentHeight),
-                    transition: context.transition
-                )
-            }
-            // TODO: replace
-            let isFullscreen = context.component.isFullscreen // context.component.participantsCount == -1
+            let isFullscreen = context.component.isFullscreen
             
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: topOffset + context.component.sheetHeight / 2))
@@ -206,39 +173,20 @@ final class StreamSheetComponent: CombinedComponent {
             (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames = []
             context.view.backgroundColor = .clear
             
-            if let topItem = topItem {
-                context.add(topItem
-                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + (isFullscreen ? topItem.size.height / 2.0 : 28)))
-                )
-                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
-            }
             let videoHeight = context.component.videoHeight
             let sheetHeight = context.component.sheetHeight
             let animatedParticipantsVisible = !isFullscreen// context.component.participantsCount != -1
             
             context.add(viewerCounter
-                .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + (sheetHeight - 69 - videoHeight - 50 - context.component.bottomPadding) / 2 - 10))
+                .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50.0 + videoHeight + (sheetHeight - 69.0 - videoHeight - 50.0 - context.component.bottomPadding) / 2 - 10.0))
                 .opacity(animatedParticipantsVisible ? 1 : 0)
-                        //                    .animation(key: "position")
             )
-            
-            if let bottomButtonsRow = bottomButtonsRow {
-                context.add(bottomButtonsRow
-                    .position(CGPoint(x: bottomButtonsRow.size.width / 2, y: context.component.sheetHeight - 50 / 2 + topOffset - context.component.bottomPadding))
-                )
-                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: context.component.sheetHeight - 50 - 20 + topOffset - context.component.bottomPadding, width: bottomButtonsRow.size.width, height: bottomButtonsRow.size.height ))
-            }
             
             return size
         }
     }
 }
 
-import TelegramPresentationData
-import TelegramStringFormatting
-
-private let purple = UIColor(rgb: 0x3252ef)
-private let pink = UIColor(rgb: 0xe4436c)
 
 private let latePurple = UIColor(rgb: 0x974aa9)
 private let latePink = UIColor(rgb: 0xf0436c)
@@ -255,15 +203,14 @@ final class SheetBackgroundComponent: Component {
             if backgroundView.superview == nil {
                 self.addSubview(backgroundView)
             }
-            // To fix release animation
-            let extraBottom: CGFloat = 500
+            
+            let extraBottomForReleaseAnimation: CGFloat = 500
             
             if backgroundView.backgroundColor != color && backgroundView.backgroundColor != nil {
                 if transition.animation.isImmediate {
                     UIView.animate(withDuration: 0.4) { [self] in
                         backgroundView.backgroundColor = color
-                        // TODO: determine if animation is needed (with logic, not color)
-                        backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
+                        backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottomForReleaseAnimation))
                     }
                     
                     let anim = CABasicAnimation(keyPath: "cornerRadius")
@@ -274,12 +221,12 @@ final class SheetBackgroundComponent: Component {
                     backgroundView.layer.add(anim, forKey: "cornerRadius")
                 } else {
                     transition.setBackgroundColor(view: backgroundView, color: color)
-                    transition.setFrame(view: backgroundView, frame: CGRect(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom)))
+                    transition.setFrame(view: backgroundView, frame: CGRect(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottomForReleaseAnimation)))
                     transition.setCornerRadius(layer: backgroundView.layer, cornerRadius: cornerRadius)
                 }
             } else {
                 backgroundView.backgroundColor = color
-                backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
+                backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottomForReleaseAnimation))
                 backgroundView.layer.cornerRadius = cornerRadius
             }
             backgroundView.isUserInteractionEnabled = false
@@ -316,79 +263,4 @@ final class SheetBackgroundComponent: Component {
         view.update(availableSize: availableSize, color: color, cornerRadius: radius, offset: offset, transition: transition)
         return availableSize
     }
-}
-
-final class ParticipantsComponent: Component {
-    static func == (lhs: ParticipantsComponent, rhs: ParticipantsComponent) -> Bool {
-        if lhs.count != rhs.count {
-            return false
-        }
-        if lhs.showsSubtitle != rhs.showsSubtitle {
-            return false
-        }
-        if lhs.fontSize != rhs.fontSize {
-            return false
-        }
-        return true
-    }
-    
-    func makeView() -> View {
-        View(frame: .zero)
-    }
-    
-    func update(view: View, availableSize: CGSize, state: ComponentFlow.EmptyComponentState, environment: ComponentFlow.Environment<ComponentFlow.Empty>, transition: ComponentFlow.Transition) -> CGSize {
-        view.counter.update(
-            countString: self.count > 0 ? presentationStringsFormattedNumber(Int32(count), ",") : "",
-            subtitle: self.showsSubtitle ? (self.count > 0 ? "watching" : "no viewers") : "",
-            fontSize: self.fontSize,
-            gradientColors: self.gradientColors
-        )// environment.strings.LiveStream_NoViewers)
-        switch transition.animation {
-        case let .curve(duration, curve):
-            UIView.animate(withDuration: duration, delay: 0, options: curve.containedViewLayoutTransitionCurve.viewAnimationOptions, animations: {
-                view.bounds.size = availableSize
-                view.counter.frame.size = availableSize
-                view.counter.updateFrames(transition: transition)
-//                view.counter.setNeedsLayout()
-//                view.counter.setNeedsDisplay()
-            })
-            
-        default:
-            view.bounds.size = availableSize
-            view.counter.frame.size = availableSize
-            view.counter.updateFrames()
-        }
-        return availableSize
-    }
-    
-    private let count: Int
-    private let showsSubtitle: Bool
-    private let fontSize: CGFloat
-    private let gradientColors: [CGColor]
-    
-    init(count: Int, showsSubtitle: Bool = true, fontSize: CGFloat = 48.0, gradientColors: [CGColor] = [pink.cgColor, purple.cgColor, purple.cgColor]) {
-        self.count = count
-        self.showsSubtitle = showsSubtitle
-        self.fontSize = fontSize
-        self.gradientColors = gradientColors
-    }
-    
-    final class View: UIView {
-        let counter = AnimatedCountView()
-        
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-            self.addSubview(counter)
-        }
-        
-        override func layoutSubviews() {
-            super.layoutSubviews()
-//            self.counter.frame = self.bounds
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-    }
-    
 }
