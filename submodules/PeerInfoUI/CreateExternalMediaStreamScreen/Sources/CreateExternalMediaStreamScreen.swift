@@ -102,11 +102,11 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 }
                 
                 strongSelf.isDelayingLoadingIndication = true
-                Timer(timeout: 0.3, repeat: false, completion: { [weak strongSelf] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak strongSelf] in
                     guard let strongSelf else { return }
                     strongSelf.isDelayingLoadingIndication = false
                     strongSelf.updated(transition: .easeInOut(duration: 0.3))
-                }, queue: .mainQueue()).start()
+                }
                 
                 var cancelImpl: (() -> Void)?
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

@@ -1083,13 +1083,13 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             })
         
         self.view.layer.allowsGroupOpacity = true
-        self.view.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+        
+        self.backgroundDimView.layer.animateAlpha(from: 0, to: 1, duration: 0.3, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.view.layer.allowsGroupOpacity = false
         })
-        self.backgroundDimView.layer.animateAlpha(from: 0, to: 1, duration: 0.3)
         if backgroundDimView.superview == nil {
             guard let superview = view.superview else { return }
             superview.insertSubview(backgroundDimView, belowSubview: view)
@@ -1130,9 +1130,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.view.layer.allowsGroupOpacity = true
-//        self.view.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.4, removeOnCompletion: false, completion: { [weak self] _ in
-//
-//        })
+        
         self.backgroundDimView.layer.animateAlpha(from: 1.0, to: 0, duration: 0.3, removeOnCompletion: false)
         self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), duration: 0.4, removeOnCompletion: false, completion: { [weak self] _ in
             guard let strongSelf = self else {
@@ -1371,7 +1369,6 @@ private final class NavigationBarComponent: CombinedComponent {
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
                 .opacity(context.component.backgroundVisible ? 1 : 0)
-                .animation(key: "opacity")
             )
             
             var centerLeftInset = sideInset
@@ -1688,8 +1685,6 @@ private final class StreamTitleComponent: Component {
 private final class OriginInfoComponent: CombinedComponent {
     let participantsCount: Int
     
-    private static var usingAnimatedCounter: Bool { true }
-    
     init(
         memberCount: Int
     ) {
@@ -1705,64 +1700,29 @@ private final class OriginInfoComponent: CombinedComponent {
     }
     
     static var body: Body {
-        if usingAnimatedCounter {
-            let viewerCounter = Child(ParticipantsComponent.self)
+        let viewerCounter = Child(ParticipantsComponent.self)
+        
+        return { context in
+            let viewerCounter = viewerCounter.update(
+                component: ParticipantsComponent(
+                    count: context.component.participantsCount,
+                    showsSubtitle: true,
+                    fontSize: 18.0,
+                    gradientColors: [UIColor.white.cgColor]
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                transition: context.transition
+            )
+            let heightReduction: CGFloat = 16.0
+            var size = CGSize(width: viewerCounter.size.width, height: viewerCounter.size.height - heightReduction)
+            size.width = min(size.width, context.availableSize.width)
+            size.height = min(size.height, context.availableSize.height)
             
-            return { context in
-//                let spacing: CGFloat = 0.0
-                
-                let viewerCounter = viewerCounter.update(
-                    component: ParticipantsComponent(
-                        count: context.component.participantsCount,
-                        showsSubtitle: true,
-                        fontSize: 18.0,
-                        gradientColors: [UIColor.white.cgColor]
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
-                    transition: context.transition
-                )
-                let heightReduction: CGFloat = 16.0
-                var size = CGSize(width: viewerCounter.size.width, height: viewerCounter.size.height - heightReduction)
-                size.width = min(size.width, context.availableSize.width)
-                size.height = min(size.height, context.availableSize.height)
-                
-                context.add(viewerCounter
-                    .position(CGPoint(x: size.width / 2.0, y: /*(context.availableSize.height - viewerCounter.size.height)*/context.availableSize.height / 2.0 + 16.0 - heightReduction / 2))
-                )
-                
-                return size
-            }
-        } else {
-            let subtitle = Child(Text.self)
+            context.add(viewerCounter
+                .position(CGPoint(x: size.width / 2.0, y: context.availableSize.height / 2.0 + 16.0 - heightReduction / 2))
+            )
             
-            return { context in
-//                let spacing: CGFloat = 0.0
-                
-                let memberCount = context.component.participantsCount
-                let memberCountString: String
-                if memberCount == 0 {
-                    memberCountString = "no viewers"
-                } else {
-                    memberCountString = memberCount > 0 ? presentationStringsFormattedNumber(Int32(memberCount), ",") : ""
-                }
-
-                let subtitle = subtitle.update(
-                    component: Text(
-                        text: memberCountString, font: Font.regular(14.0), color: .white),
-                    availableSize: context.availableSize,
-                    transition: context.transition
-                )
-                
-                var size = CGSize(width: subtitle.size.width, height:  subtitle.size.height)
-                size.width = min(size.width, context.availableSize.width)
-                size.height = min(size.height, context.availableSize.height)
-                
-                context.add(subtitle
-                    .position(CGPoint(x: size.width / 2.0, y: subtitle.size.height / 2.0))
-                )
-                
-                return size
-            }
+            return size
         }
     }
 }
@@ -1939,13 +1899,13 @@ private final class ButtonsRowComponent: CombinedComponent {
             var availableWidth = context.availableSize.width
             let sideInset: CGFloat = 48.0 + context.component.sideInset
             
-            let contentHeight: CGFloat = 80 // 44
+            let contentHeight: CGFloat = 80.0
             let size = CGSize(width: context.availableSize.width, height: contentHeight + context.component.bottomInset)
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
                     component: leftItemComponent,
-                    availableSize: CGSize(width: 50, height: contentHeight),
+                    availableSize: CGSize(width: 50.0, height: contentHeight),
                     transition: context.transition
                 )
             }
@@ -1956,7 +1916,7 @@ private final class ButtonsRowComponent: CombinedComponent {
             let rightItem = context.component.rightItem.flatMap { rightItemComponent in
                 return rightItem.update(
                     component: rightItemComponent,
-                    availableSize: CGSize(width: 50, height: contentHeight),
+                    availableSize: CGSize(width: 50.0, height: contentHeight),
                     transition: context.transition
                 )
             }
@@ -1967,7 +1927,7 @@ private final class ButtonsRowComponent: CombinedComponent {
             let centerItem = context.component.centerItem.flatMap { centerItemComponent in
                 return centerItem.update(
                     component: centerItemComponent,
-                    availableSize: CGSize(width: 50, height: contentHeight),
+                    availableSize: CGSize(width: 50.0, height: contentHeight),
                     transition: context.transition
                 )
             }

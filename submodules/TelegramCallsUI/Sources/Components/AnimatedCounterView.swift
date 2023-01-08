@@ -3,11 +3,8 @@ import UIKit
 import Display
 import ComponentFlow
 
-private let purple = UIColor(rgb: 0xdf44b8) // 0x3252ef)
-private let pink = UIColor(rgb: 0x3851eb) // 0xe4436c)
-
-private let latePurple = UIColor(rgb: 0x974aa9)
-private let latePink = UIColor(rgb: 0xf0436c)
+private let purple = UIColor(rgb: 0xdf44b8)
+private let pink = UIColor(rgb: 0x3851eb)
 
 public final class AnimatedCountView: UIView {
     let countLabel = AnimatedCountLabel()
@@ -59,15 +56,9 @@ public final class AnimatedCountView: UIView {
             self.foregroundView.frame = CGRect(origin: CGPoint.zero, size: bounds.size)// .insetBy(dx: -40, dy: -40)
             self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
             self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
-            // 18
-            //        let counterInset: CGFloat = 8
-            //        let counterBottomOffset: CGFloat = subtitleHeight + counterInset
             
             countLabel.frame = CGRect(origin: .zero, size: CGSize(width: bounds.width, height: bounds.height))
             subtitleLabel.frame = subtitleFrame
-            //        backgroundColor = .white.withAlphaComponent(0.3)
-            //        countLabel.backgroundColor = .red.withAlphaComponent(0.2)
-            //        subtitleLabel.backgroundColor = .blue.withAlphaComponent(0.2)
         }
             
     }
@@ -348,7 +339,7 @@ class AnimatedCountLabel: UILabel {
         self.clipsToBounds = false
     }
     func animateOut(for layer: CALayer, duration: CFTimeInterval, beginTime: CFTimeInterval) {
-        let beginTimeOffset: CFTimeInterval = 0/*beginTime == .zero ? 0 :*/ // CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000) /*layer.convertTime(*/// CACurrentMediaTime()//, to: nil)
+        let beginTimeOffset: CFTimeInterval = 0
         DispatchQueue.main.asyncAfter(deadline: .now() + beginTime) {
             let beginTime: CFTimeInterval = 0
             

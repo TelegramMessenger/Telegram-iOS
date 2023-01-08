@@ -541,20 +541,7 @@ public final class StandaloneShimmerEffect {
             animation.repeatCount = .infinity
             animation.duration = 0.8 * delay
             animation.timingFunction = .init(name: .easeInEaseOut)
-//            animation.beginTime = layer.convertTime(1.0, from: nil)
             layer.add(animation, forKey: "shimmer")
-            /*let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
-            opacityAnimation.values = [0.0, 1.0, 0.0]
-            opacityAnimation.keyTimes = [0, 0.5, 0]
-            opacityAnimation.calculationMode = .linear
-//            opacityAnimation.fromValue = 2.0 as NSNumber
-//            opacityAnimation.toValue = -2.0 as NSNumber
-//            opacityAnimation.isAdditive = true
-            opacityAnimation.repeatCount = .infinity
-            opacityAnimation.duration = 1.6
-            opacityAnimation.timingFunctions = [.init(name: .easeInEaseOut)]
-//            opacityAnimation.beginTime = layer.convertTime(1.0, from: nil)
-            layer.add(opacityAnimation, forKey: "opacity")*/
         }
     }
 }

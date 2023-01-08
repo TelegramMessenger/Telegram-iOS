@@ -180,14 +180,6 @@ public final class _UpdatedChildComponent {
     var _opacity: CGFloat?
     var _cornerRadius: CGFloat?
     var _clipsToBounds: Bool?
-    /// Quick animation addition
-    var _animations: [AnimationKey: AnimationType] = [:]
-    
-    public typealias AnimationKey = String
-    public enum AnimationType {
-        case transition
-        case custom(duration: TimeInterval, curveAndOtherParams: Any)
-    }
     
     fileprivate var transitionAppear: Transition.Appear?
     fileprivate var transitionAppearWithGuide: (Transition.AppearWithGuide, _AnyChildComponent.Id)?
@@ -249,11 +241,6 @@ public final class _UpdatedChildComponent {
         return self
     }
     
-    @discardableResult public func animation(key: AnimationKey) -> _UpdatedChildComponent {
-        self._animations[key] = .transition
-        return self
-    }
-
     @discardableResult public func scale(_ scale: CGFloat) -> _UpdatedChildComponent {
         self._scale = scale
         return self
@@ -708,22 +695,12 @@ public extension CombinedComponent {
 
                         view.insertSubview(updatedChild.view, at: index)
 
-                        let currentPosition = updatedChild.view.center
-                        
                         if let scale = updatedChild._scale {
                             updatedChild.view.bounds = CGRect(origin: CGPoint(), size: updatedChild.size)
                             updatedChild.view.center = updatedChild._position ?? CGPoint()
                             updatedChild.view.transform = CGAffineTransform(scaleX: scale, y: scale)
                         } else {
                             updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
-                        }
-//                        for animation in updatedChild._animations { }
-                        
-                        if updatedChild._animations["position"] != nil, let position = updatedChild._position {
-                            transition.animatePosition(view: updatedChild.view, from: currentPosition, to: position)
-                        }
-                        if updatedChild._animations["opacity"] != nil, let opacity = updatedChild._opacity {
-                            transition.animateAlpha(view: updatedChild.view, from: updatedChild.view.alpha, to: opacity)
                         }
                         
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0

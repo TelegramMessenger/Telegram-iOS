@@ -175,7 +175,7 @@ final class StreamSheetComponent: CombinedComponent {
             
             let videoHeight = context.component.videoHeight
             let sheetHeight = context.component.sheetHeight
-            let animatedParticipantsVisible = !isFullscreen// context.component.participantsCount != -1
+            let animatedParticipantsVisible = !isFullscreen
             
             context.add(viewerCounter
                 .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50.0 + videoHeight + (sheetHeight - 69.0 - videoHeight - 50.0 - context.component.bottomPadding) / 2 - 10.0))
@@ -186,10 +186,6 @@ final class StreamSheetComponent: CombinedComponent {
         }
     }
 }
-
-
-private let latePurple = UIColor(rgb: 0x974aa9)
-private let latePink = UIColor(rgb: 0xf0436c)
 
 final class SheetBackgroundComponent: Component {
     private let color: UIColor
