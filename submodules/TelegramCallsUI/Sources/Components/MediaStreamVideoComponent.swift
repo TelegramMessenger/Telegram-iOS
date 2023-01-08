@@ -469,7 +469,6 @@ final class MediaStreamVideoComponent: Component {
                 if videoView.bounds.size.width > 0,
                     videoView.alpha > 0,
                     self.hadVideo,
-                   // TODO: remove from here and move to call end (or at least to background)
                     let snapshot = videoView.snapshotView(afterScreenUpdates: false) ?? videoView.snapshotView(afterScreenUpdates: true) {
                     lastFrame[component.call.peerId.id.description] = snapshot
                 }
