@@ -1797,6 +1797,9 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                 
                                 if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
                                     var toMedia: Media?
+                                    var storageResource: TelegramMediaResource?
+                                    var contentType: MediaResourceUserContentType?
+                                    
                                     if let fromMedia = fromMedia as? TelegramMediaFile {
                                         var updatedImmediateThumbnailData: Data?
                                         if let immediateThumbnailData = fromMedia.immediateThumbnailData {
@@ -1815,6 +1818,9 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), partialReference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: updatedImmediateThumbnailData, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
                                         toMedia = updatedFile
                                         updatedMedia = [updatedFile]
+                                        
+                                        storageResource = updatedFile.resource
+                                        contentType = MediaResourceUserContentType(file: updatedFile)
                                     } else if let fromMedia = fromMedia as? TelegramMediaImage, let largestRepresentation = largestImageRepresentation(fromMedia.representations) {
                                         var updatedImmediateThumbnailData: Data?
                                         if let immediateThumbnailData = fromMedia.immediateThumbnailData {
@@ -1833,6 +1839,14 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         let updatedImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: encryptedFile.id), representations: [TelegramMediaImageRepresentation(dimensions: largestRepresentation.dimensions, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], immediateThumbnailData: updatedImmediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                                         toMedia = updatedImage
                                         updatedMedia = [updatedImage]
+                                        
+                                        storageResource = updatedImage.representations.first!.resource
+                                        contentType = .image
+                                    }
+                                    
+                                    // 0 in messageNamespace and messageId are intended for secret chats
+                                    if let storageResource = storageResource, let contentType = contentType {
+                                        postbox.mediaBox.storageBox.add(reference: StorageBox.Reference(peerId: messageId.peerId.toInt64(), messageNamespace: UInt8(clamping: 0), messageId: 0), to: storageResource.id.stringRepresentation.data(using: .utf8)!, contentType: contentType.rawValue, size: storageResource.size)
                                     }
                                     
                                     if let toMedia = toMedia {

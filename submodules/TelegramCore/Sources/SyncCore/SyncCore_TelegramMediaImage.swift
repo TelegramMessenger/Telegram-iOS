@@ -298,6 +298,10 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
         return TelegramMediaImage(imageId: self.imageId, representations: self.representations, videoRepresentations: self.videoRepresentations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference, flags: self.flags)
     }
+    
+    public func withUpdatedImmediateThumbnailData(_ immediateThumbnailData: Data?) -> TelegramMediaImage {
+        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, videoRepresentations: self.videoRepresentations, immediateThumbnailData: immediateThumbnailData, reference: self.reference, partialReference: self.partialReference, flags: self.flags)
+    }
 }
 
 public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, CustomStringConvertible {

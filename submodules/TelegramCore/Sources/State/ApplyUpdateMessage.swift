@@ -17,7 +17,7 @@ private func copyOrMoveResourceData(from fromResource: MediaResource, to toResou
 func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: Bool) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
-        if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
+        if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations), fromImage.representations.count > 1, toImage.representations.count > 1 {
             let leeway: Int32 = 4
             let widthDifference = fromSmallestRepresentation.dimensions.width - toSmallestRepresentation.dimensions.width
             let heightDifference = fromSmallestRepresentation.dimensions.height - toSmallestRepresentation.dimensions.height
