@@ -669,7 +669,7 @@ public final class StorageBox {
             let queue = self.queue
             return ActionDisposable { [weak self] in
                 queue.async {
-                    guard let self else {
+                    guard let `self` = self else {
                         return
                     }
                     self.totalSizeSubscribers.remove(index)
