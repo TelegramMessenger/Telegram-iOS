@@ -317,6 +317,11 @@ private final class TimeBasedCleanupImpl {
     }
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        if "".isEmpty {
+            //TODO:remove debugging
+            return
+        }
+        
         let generalPaths = self.generalPaths
         let totalSizeBasedPath = self.totalSizeBasedPath
         let shortLivedPaths = self.shortLivedPaths
@@ -376,7 +381,7 @@ private final class TimeBasedCleanupImpl {
                 }
                 
                 var performSizeMapping = true
-                if totalApproximateSize <= gigabytesLimit {
+                if totalApproximateSize <= bytesLimit {
                     performSizeMapping = false
                 }
                 

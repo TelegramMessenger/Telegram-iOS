@@ -1,10 +1,20 @@
 import Foundation
 import UIKit
 
+public protocol SharedDisplayLinkDriverLink: AnyObject {
+    var isPaused: Bool { get set }
+    
+    func invalidate()
+}
+
 public final class SharedDisplayLinkDriver {
+    public typealias Link = SharedDisplayLinkDriverLink
+    
     public static let shared = SharedDisplayLinkDriver()
     
-    public final class Link {
+    private let useNative: Bool
+    
+    public final class LinkImpl: Link {
         private let driver: SharedDisplayLinkDriver
         public let needsHighestFramerate: Bool
         let update: () -> Void
@@ -28,10 +38,52 @@ public final class SharedDisplayLinkDriver {
         }
     }
     
-    private final class RequestContext {
-        weak var link: Link?
+    public final class NativeLinkImpl: Link {
+        private var displayLink: CADisplayLink?
         
-        init(link: Link) {
+        public var isPaused: Bool = false {
+            didSet {
+                self.displayLink?.isPaused = self.isPaused
+            }
+        }
+        
+        init(needsHighestFramerate: Bool, update: @escaping () -> Void) {
+            let displayLink = CADisplayLink(target: DisplayLinkTarget {
+                update()
+            }, selector: #selector(DisplayLinkTarget.event))
+            
+            if #available(iOS 15.0, *) {
+                let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
+                if maxFps > 61.0 {
+                    let frameRateRange: CAFrameRateRange
+                    if needsHighestFramerate {
+                        frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
+                    } else {
+                        frameRateRange = .default
+                    }
+                    if displayLink.preferredFrameRateRange != frameRateRange {
+                        displayLink.preferredFrameRateRange = frameRateRange
+                    }
+                }
+            }
+            
+            self.displayLink = displayLink
+            displayLink.add(to: .main, forMode: .common)
+        }
+        
+        deinit {
+            self.displayLink?.invalidate()
+        }
+        
+        public func invalidate() {
+            self.displayLink?.invalidate()
+        }
+    }
+    
+    private final class RequestContext {
+        weak var link: LinkImpl?
+        
+        init(link: LinkImpl) {
             self.link = link
         }
     }
@@ -43,6 +95,8 @@ public final class SharedDisplayLinkDriver {
     private var isInForeground: Bool = false
     
     private init() {
+        self.useNative = true
+        
         let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
             guard let self else {
                 return
@@ -146,12 +200,16 @@ public final class SharedDisplayLinkDriver {
     }
     
     public func add(needsHighestFramerate: Bool = true, _ update: @escaping () -> Void) -> Link {
-        let link = Link(driver: self, needsHighestFramerate: needsHighestFramerate, update: update)
-        self.requests.append(RequestContext(link: link))
-        
-        self.update()
-        
-        return link
+        if self.useNative {
+            return NativeLinkImpl(needsHighestFramerate: needsHighestFramerate, update: update)
+        } else {
+            let link = LinkImpl(driver: self, needsHighestFramerate: needsHighestFramerate, update: update)
+            self.requests.append(RequestContext(link: link))
+            
+            self.update()
+            
+            return link
+        }
     }
 }
 
