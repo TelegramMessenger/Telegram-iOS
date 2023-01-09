@@ -99,14 +99,17 @@ public final class SharedDisplayLinkDriver {
                 displayLink.add(to: .main, forMode: .common)
             }
             if #available(iOS 15.0, *) {
-                let frameRateRange: CAFrameRateRange
-                if needHighestFramerate {
-                    frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
-                } else {
-                    frameRateRange = .default
-                }
-                if displayLink.preferredFrameRateRange != frameRateRange {
-                    displayLink.preferredFrameRateRange = frameRateRange
+                let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
+                if maxFps > 61.0 {
+                    let frameRateRange: CAFrameRateRange
+                    if needHighestFramerate {
+                        frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
+                    } else {
+                        frameRateRange = .default
+                    }
+                    if displayLink.preferredFrameRateRange != frameRateRange {
+                        displayLink.preferredFrameRateRange = frameRateRange
+                    }
                 }
             }
             displayLink.isPaused = false
