@@ -85,6 +85,7 @@
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Адфільтроўваць з вынікаў пошуку паведамлення, якія былі ўключаны толькі з-за тэксту маркіроўкі замежных агентаў.";
 "PtgSettings.EnableLiveText" = "Распазнанне тэксту";
 "PtgSettings.EnableLiveTextHelp" = "Аўтаматычна выконваць распазнанне тэксту і штрых-кодаў (напрыклад, QR-кода) на кожнай выяве, якую вы праглядаеце ў поўнаэкранным рэжыме. Выключыце, каб зэканоміць зарад батарэі.";
+"PtgSettings.LocalTranscription" = "Пераклад голасу ў тэкст ад Apple";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скапіяваны ў буфер абмену.";

@@ -49,6 +49,7 @@
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Filter out search result messages that were included only because of the foreign agent notice.";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
+"PtgSettings.LocalTranscription" = "Voice-to-Text Transcription by Apple";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";

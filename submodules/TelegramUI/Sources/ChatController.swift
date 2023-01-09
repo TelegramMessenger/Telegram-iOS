@@ -575,7 +575,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch chatLocation {
         case let .peer(peerId):
-            precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+            precondition(Bundle.isTestFlight || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+            
             locationBroadcastPanelSource = .peer(peerId)
             switch subject {
             case .message, .none:

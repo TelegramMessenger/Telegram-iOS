@@ -13,4 +13,6 @@ public extension Bundle {
     var ptgVersion: String {
         return (infoDictionary?["PTelegramVersion"] as? String) ?? "unknown"
     }
+    
+    static let isTestFlight: Bool = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
 }

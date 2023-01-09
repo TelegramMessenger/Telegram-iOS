@@ -14,12 +14,14 @@ private final class PtgSettingsControllerArguments {
     let switchSuppressForeignAgentNotice: (Bool) -> Void
     let switchEnableForeignAgentNoticeSearchFiltering: (Bool) -> Void
     let switchEnableLiveText: (Bool) -> Void
+    let switchLocalTranscription: (Bool) -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void) {
+    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchLocalTranscription: @escaping (Bool) -> Void) {
         self.switchShowPeerId = switchShowPeerId
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
         self.switchEnableForeignAgentNoticeSearchFiltering = switchEnableForeignAgentNoticeSearchFiltering
         self.switchEnableLiveText = switchEnableLiveText
+        self.switchLocalTranscription = switchLocalTranscription
     }
 }
 
@@ -27,6 +29,7 @@ private enum PtgSettingsSection: Int32 {
     case showPeerId
     case foreignAgentNotice
     case liveText
+    case localTranscription
 }
 
 private enum PtgSettingsEntry: ItemListNodeEntry {
@@ -40,6 +43,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
 
     case enableLiveText(String, Bool)
     case enableLiveTextInfo(String)
+    
+    case localTranscription(String, Bool)
 
     var section: ItemListSectionId {
         switch self {
@@ -49,6 +54,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return PtgSettingsSection.foreignAgentNotice.rawValue
         case .enableLiveText, .enableLiveTextInfo:
             return PtgSettingsSection.liveText.rawValue
+        case .localTranscription:
+            return PtgSettingsSection.localTranscription.rawValue
         }
     }
     
@@ -70,6 +77,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 6
         case .enableLiveTextInfo:
             return 7
+        case .localTranscription:
+            return 8
         }
     }
     
@@ -100,6 +109,10 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             })
         case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .localTranscription(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                arguments.switchLocalTranscription(updatedValue)
+            })
         }
     }
 }
@@ -112,7 +125,7 @@ private struct PtgSettingsState: Equatable {
     }
 }
 
-private func ptgSettingsControllerEntries(presentationData: PresentationData, settings: PtgSettings) -> [PtgSettingsEntry] {
+private func ptgSettingsControllerEntries(presentationData: PresentationData, settings: PtgSettings, experimentalSettings: ExperimentalUISettings) -> [PtgSettingsEntry] {
     var entries: [PtgSettingsEntry] = []
     
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
@@ -123,11 +136,11 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.enableForeignAgentNoticeSearchFiltering(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFiltering, settings.enableForeignAgentNoticeSearchFiltering, settings.suppressForeignAgentNotice))
     entries.append(.enableForeignAgentNoticeSearchFilteringInfo(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFilteringHelp))
 
-    if #available(iOS 11.0, *) {
-        entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, settings.enableLiveText))
-        entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
-    }
+    entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, settings.enableLiveText))
+    entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
 
+    entries.append(.localTranscription(presentationData.strings.PtgSettings_LocalTranscription, experimentalSettings.localTranscription))
+    
     return entries
 }
 
@@ -153,13 +166,23 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
         updateSettings(context, statePromise) { settings in
             return settings.withUpdated(enableLiveText: value)
         }
+    }, switchLocalTranscription: { value in
+        let _ = context.sharedContext.accountManager.transaction ({ transaction in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                settings.localTranscription = value
+                return PreferencesEntry(settings)
+            })
+        }).start()
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings]))
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PtgSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ptgSettingsControllerEntries(presentationData: presentationData, settings: state.settings), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ptgSettingsControllerEntries(presentationData: presentationData, settings: state.settings, experimentalSettings: experimentalSettings), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

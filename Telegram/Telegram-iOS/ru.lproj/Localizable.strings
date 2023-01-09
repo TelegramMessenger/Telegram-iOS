@@ -85,6 +85,7 @@
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Отфильтровывать из результатов поиска сообщения, которые были включены только из-за текста маркировки иноагентов.";
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
+"PtgSettings.LocalTranscription" = "Перевод голоса в текст от Apple";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопирован.";
