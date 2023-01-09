@@ -350,6 +350,15 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
+    public var containerNode: ASDisplayNode {
+        switch self.contentNodes {
+            case let .standard(node):
+                return node.containerNode
+            case let .custom(node):
+                return node.backgroundNode
+        }
+    }
+    
     private var _statusValue: MediaPlayerStatus?
     private var statusValue: MediaPlayerStatus? {
         get {
@@ -713,7 +722,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         self.updateProgressAnimations()
     }
     
+    private var isCollapsed = false
     public func setCollapsed(_ collapsed: Bool, animated: Bool) {
+        self.isCollapsed = collapsed
+        
         let alpha: CGFloat = collapsed ? 0.0 : 1.0
         let backgroundScale: CGFloat = collapsed ? 0.4 : 1.0
         let handleScale: CGFloat = collapsed ? 0.2 : 1.0
@@ -947,7 +959,12 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         
                         if let handleNodeContainer = node.handleNodeContainer {
                             handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)
-                            handleNodeContainer.isHidden = false
+                            if !self.isCollapsed {
+                                if handleNodeContainer.alpha.isZero {
+                                    handleNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                                handleNodeContainer.alpha = 1.0
+                            }
                         }
                     } else if let statusValue = self.statusValue {
                         var actualTimestamp: Double
@@ -975,15 +992,20 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         
                         if let handleNodeContainer = node.handleNodeContainer {
                             handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)
-                            handleNodeContainer.isHidden = false
+                            if !self.isCollapsed {
+                                if handleNodeContainer.alpha.isZero {
+                                    handleNodeContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                                handleNodeContainer.alpha = 1.0
+                            }
                         }
                     } else {
-                        node.handleNodeContainer?.isHidden = true
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
+                        node.handleNodeContainer?.alpha = 0.0
                     }
                 } else {
                     node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                    node.handleNodeContainer?.isHidden = true
+                    node.handleNodeContainer?.alpha = 0.0
                 }
             case let .custom(node):
                 if let handleNodeContainer = node.handleNodeContainer {

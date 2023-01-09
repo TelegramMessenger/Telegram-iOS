@@ -58,11 +58,15 @@ public final class SharedDisplayLinkDriver {
             self.update()
         })
         
-        switch UIApplication.shared.applicationState {
-        case .active:
+        if Bundle.main.bundlePath.hasSuffix(".appex") {
             self.isInForeground = true
-        default:
-            self.isInForeground = false
+        } else {
+            switch UIApplication.shared.applicationState {
+            case .active:
+                self.isInForeground = true
+            default:
+                self.isInForeground = false
+            }
         }
         
         self.update()

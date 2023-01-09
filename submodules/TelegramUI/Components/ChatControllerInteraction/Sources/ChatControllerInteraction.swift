@@ -100,7 +100,7 @@ public final class ChatControllerInteraction {
     public let sendCurrentMessage: (Bool) -> Void
     public let sendMessage: (String) -> Void
     public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
-    public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
+    public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
     public let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
     public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
@@ -210,7 +210,7 @@ public final class ChatControllerInteraction {
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
-        sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void,
+        sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,

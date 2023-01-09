@@ -216,7 +216,7 @@ final class PenTool: DrawingElement {
                 context.scaleBy(x: 1.0 / parent.drawScale.width, y: 1.0 / parent.drawScale.height)
                 element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
                 
-                if !element.isEraser || !element.isBlur {
+                if !element.isEraser && !element.isBlur {
                     element.drawActiveSegments(in: context, strokeWidth: !parent.isActiveDrying ? element.renderLineWidth * parent.dryingFactor : nil)
                 } else {
                     element.drawActiveSegments(in: context, strokeWidth: nil)
@@ -237,7 +237,6 @@ final class PenTool: DrawingElement {
     var renderArrowLineWidth: CGFloat
     
     let isEraser: Bool
-    
     let isBlur: Bool
     
     var arrowStart: CGPoint?
@@ -277,7 +276,12 @@ final class PenTool: DrawingElement {
     }
     
     var bounds: CGRect {
-        return normalizeDrawingRect(boundingRect(from: 0, to: self.segments.count).insetBy(dx: -20.0, dy: -20.0), drawingSize: self.drawingSize)
+        let segmentsBounds = boundingRect(from: 0, to: self.segments.count).insetBy(dx: -20.0, dy: -20.0)
+        var combinedBounds = segmentsBounds
+        if self.hasArrow, let arrowLeftPath, let arrowRightPath {
+            combinedBounds = combinedBounds.union(arrowLeftPath.bounds).union(arrowRightPath.bounds).insetBy(dx: -20.0, dy: -20.0)
+        }
+        return normalizeDrawingRect(combinedBounds, drawingSize: self.drawingSize)
     }
     
     required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, hasArrow: Bool, isEraser: Bool, isBlur: Bool, blurredImage: UIImage?) {

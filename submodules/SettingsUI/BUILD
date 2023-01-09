@@ -88,7 +88,6 @@ swift_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
         "//submodules/AccountUtils:AccountUtils",
-        "//submodules/AuthTransferUI:AuthTransferUI",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
         "//submodules/DebugSettingsUI:DebugSettingsUI",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",

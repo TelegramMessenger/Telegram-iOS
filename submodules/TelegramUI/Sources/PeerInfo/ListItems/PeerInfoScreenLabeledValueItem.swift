@@ -402,7 +402,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 let entities = generateTextEntities(additionalText, enabledTypes: [.mention])
                 let attributedAdditionalText = stringWithAppliedEntities(additionalText, entities: entities, baseColor: presentationData.theme.list.itemPrimaryTextColor, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont, underlineLinks: false, message: nil)
                 
-                self.additionalTextNode.maximumNumberOfLines = 3
+                self.additionalTextNode.maximumNumberOfLines = 10
                 self.additionalTextNode.attributedText = attributedAdditionalText
             } else {
                 self.additionalTextNode.attributedText = nil

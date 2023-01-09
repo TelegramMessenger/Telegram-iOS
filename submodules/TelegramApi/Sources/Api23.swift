@@ -279,6 +279,7 @@ public extension Api.auth {
 public extension Api.auth {
     enum SentCode: TypeConstructorDescription {
         case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?)
+        case sentCodeSuccess(authorization: Api.auth.Authorization)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -292,6 +293,12 @@ public extension Api.auth {
                     if Int(flags) & Int(1 << 1) != 0 {nextType!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
                     break
+                case .sentCodeSuccess(let authorization):
+                    if boxed {
+                        buffer.appendInt32(596704836)
+                    }
+                    authorization.serialize(buffer, true)
+                    break
     }
     }
     
@@ -299,6 +306,8 @@ public extension Api.auth {
         switch self {
                 case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
                 return ("sentCode", [("flags", flags as Any), ("type", type as Any), ("phoneCodeHash", phoneCodeHash as Any), ("nextType", nextType as Any), ("timeout", timeout as Any)])
+                case .sentCodeSuccess(let authorization):
+                return ("sentCodeSuccess", [("authorization", authorization as Any)])
     }
     }
     
@@ -324,6 +333,19 @@ public extension Api.auth {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sentCodeSuccess(_ reader: BufferReader) -> SentCode? {
+            var _1: Api.auth.Authorization?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.auth.Authorization
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.auth.SentCode.sentCodeSuccess(authorization: _1!)
             }
             else {
                 return nil
@@ -1104,64 +1126,6 @@ public extension Api.contacts {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.contacts.ImportedContacts.importedContacts(imported: _1!, popularInvites: _2!, retryContacts: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.contacts {
-    enum ResolvedPeer: TypeConstructorDescription {
-        case resolvedPeer(peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .resolvedPeer(let peer, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(2131196633)
-                    }
-                    peer.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .resolvedPeer(let peer, let chats, let users):
-                return ("resolvedPeer", [("peer", peer as Any), ("chats", chats as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_resolvedPeer(_ reader: BufferReader) -> ResolvedPeer? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.contacts.ResolvedPeer.resolvedPeer(peer: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil

@@ -91,6 +91,7 @@ public final class ChatListNodeInteraction {
     let activateChatPreview: (ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     let present: (ViewController) -> Void
     let openForumThread: (EnginePeer.Id, Int64) -> Void
+    let openStorageManagement: () -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -132,7 +133,8 @@ public final class ChatListNodeInteraction {
         hidePsa: @escaping (EnginePeer.Id) -> Void,
         activateChatPreview: @escaping (ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void,
         present: @escaping (ViewController) -> Void,
-        openForumThread: @escaping (EnginePeer.Id, Int64) -> Void
+        openForumThread: @escaping (EnginePeer.Id, Int64) -> Void,
+        openStorageManagement: @escaping () -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -162,6 +164,7 @@ public final class ChatListNodeInteraction {
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.openForumThread = openForumThread
+        self.openStorageManagement = openStorageManagement
     }
 }
 
@@ -567,6 +570,10 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 ), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
+            case let .StorageInfo(presentationData, sizeFraction):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, sizeFraction: sizeFraction, action: { [weak nodeInteraction] in
+                    nodeInteraction?.openStorageManagement()
+                }), directionHint: entry.directionHint)
         }
     }
 }
@@ -778,6 +785,10 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 ), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
+            case let .StorageInfo(presentationData, sizeFraction):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, sizeFraction: sizeFraction, action: { [weak nodeInteraction] in
+                    nodeInteraction?.openStorageManagement()
+                }), directionHint: entry.directionHint)
             case .HeaderEntry:
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
             case let .AdditionalCategory(index: _, id, title, image, appearance, selected, presentationData):
@@ -964,6 +975,8 @@ public final class ChatListNode: ListView {
     private var visibleTopInset: CGFloat?
     private var originalTopInset: CGFloat?
     
+    public var passthroughPeerSelection = false
+    
     let hideArhiveIntro = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
@@ -1009,12 +1022,12 @@ public final class ChatListNode: ListView {
             guard let strongSelf = self else {
                 return
             }
-//            if case .peers = strongSelf.mode {
-//                if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-//                    peerSelected(peer, nil, true, true, nil)
-//                }
-//                return
-//            }
+            if case .peers = strongSelf.mode, strongSelf.passthroughPeerSelection {
+                if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
+                    peerSelected(peer, nil, true, true, nil)
+                }
+                return
+            }
             var didBeginSelecting = false
             var count = 0
             strongSelf.updateState { [weak self] state in
@@ -1258,6 +1271,12 @@ public final class ChatListNode: ListView {
                 }
                 self.peerSelected?(peer, threadId, true, true, nil)
             })
+        }, openStorageManagement: { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = self.context.sharedContext.makeStorageManagementController(context: self.context)
+            self.push?(controller)
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -1323,15 +1342,102 @@ public final class ChatListNode: ListView {
             displayArchiveIntro = .single(false)
         }
         
+        let storageInfo: Signal<Double?, NoError>
+        if !"".isEmpty, case .chatList(groupId: .root) = location, chatListFilter == nil {
+            let totalSizeSignal = combineLatest(context.account.postbox.mediaBox.storageBox.totalSize(), context.account.postbox.mediaBox.cacheStorageBox.totalSize())
+            |> map { a, b -> Int64 in
+                return a + b
+            }
+            
+            storageInfo = totalSizeSignal
+            |> take(1)
+            |> mapToSignal { initialSize -> Signal<Double?, NoError> in
+                #if DEBUG
+                let fractionLimit: Double = 0.0001
+                #else
+                let fractionLimit: Double = 0.3
+                #endif
+                
+                let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
+                let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+                
+                let initialFraction: Double
+                if deviceFreeSpace != 0 && initialSize != 0 {
+                    initialFraction = Double(initialSize) / Double(deviceFreeSpace + initialSize)
+                } else {
+                    initialFraction = 0.0
+                }
+                
+                let initialReportSize: Double?
+                if initialFraction > fractionLimit {
+                    initialReportSize = Double(initialSize)
+                } else {
+                    initialReportSize = nil
+                }
+                
+                final class ReportState {
+                    var lastSize: Int64
+                    
+                    init(lastSize: Int64) {
+                        self.lastSize = lastSize
+                    }
+                }
+                
+                let state = Atomic(value: ReportState(lastSize: initialSize))
+                let updatedReportSize: Signal<Double?, NoError> = Signal { subscriber in
+                    let disposable = totalSizeSignal.start(next: { size in
+                        let updatedSize = state.with { state -> Int64 in
+                            if abs(initialSize - size) > 50 * 1024 * 1024 {
+                                state.lastSize = size
+                                return size
+                            } else {
+                                return -1
+                            }
+                        }
+                        if updatedSize >= 0 {
+                            let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+                            
+                            let updatedFraction: Double
+                            if deviceFreeSpace != 0 && updatedSize != 0 {
+                                updatedFraction = Double(updatedSize) / Double(deviceFreeSpace + updatedSize)
+                            } else {
+                                updatedFraction = 0.0
+                            }
+                            
+                            let updatedReportSize: Double?
+                            if updatedFraction > fractionLimit {
+                                updatedReportSize = Double(updatedSize)
+                            } else {
+                                updatedReportSize = nil
+                            }
+                            
+                            subscriber.putNext(updatedReportSize)
+                        }
+                    })
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
+                }
+                
+                return .single(initialReportSize)
+                |> then(
+                    updatedReportSize
+                )
+            }
+        } else {
+            storageInfo = .single(nil)
+        }
+        
         let currentPeerId: EnginePeer.Id = context.account.peerId
         
-        let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode, chatListLocation: location)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, storageInfo: storageInfo, mode: mode, chatListLocation: location)
             let entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(peerEntry):
@@ -2361,7 +2467,7 @@ public final class ChatListNode: ListView {
                                 } else {
                                     break loop
                                 }
-                            case .ArchiveIntro, .HeaderEntry, .AdditionalCategory:
+                            case .ArchiveIntro, .StorageInfo, .HeaderEntry, .AdditionalCategory:
                                 break
                             }
                         }

@@ -9,7 +9,6 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
-import AuthTransferUI
 import ItemListPeerActionItem
 import DeviceAccess
 import QrCodeUI

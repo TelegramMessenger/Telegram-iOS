@@ -51,14 +51,16 @@ func _internal_requestChangeAccountPhoneNumberVerification(account: Account, pho
                 return .generic
             }
         }
-        |> map { sentCode -> ChangeAccountPhoneNumberData in
+        |> mapToSignal { sentCode -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> in
             switch sentCode {
-                case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                    var parsedNextType: AuthorizationCodeNextType?
-                    if let nextType = nextType {
-                        parsedNextType = AuthorizationCodeNextType(apiType: nextType)
-                    }
-                    return ChangeAccountPhoneNumberData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)
+            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+                var parsedNextType: AuthorizationCodeNextType?
+                if let nextType = nextType {
+                    parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+                }
+                return .single(ChangeAccountPhoneNumberData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType))
+            case .sentCodeSuccess:
+                return .never()
             }
         }
 }
@@ -76,15 +78,17 @@ func _internal_requestNextChangeAccountPhoneNumberVerification(account: Account,
                 return .generic
             }
         }
-        |> map { sentCode -> ChangeAccountPhoneNumberData in
-            switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                var parsedNextType: AuthorizationCodeNextType?
-                if let nextType = nextType {
-                    parsedNextType = AuthorizationCodeNextType(apiType: nextType)
-                }
-                return ChangeAccountPhoneNumberData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)
+    |> mapToSignal { sentCode -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> in
+        switch sentCode {
+        case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+            var parsedNextType: AuthorizationCodeNextType?
+            if let nextType = nextType {
+                parsedNextType = AuthorizationCodeNextType(apiType: nextType)
             }
+            return .single(ChangeAccountPhoneNumberData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType))
+        case .sentCodeSuccess:
+            return .never()
+        }
     }
 }
 

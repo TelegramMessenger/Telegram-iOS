@@ -42,7 +42,6 @@ import ChatListUI
 import CallListUI
 import AccountUtils
 import PassportUI
-import AuthTransferUI
 import DeviceAccess
 import LegacyMediaPickerUI
 import TelegramNotices
@@ -1752,8 +1751,14 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         if let defaultBannedRights = channel.defaultBannedRights {
                             var count = 0
                             for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
-                                if !defaultBannedRights.flags.contains(right) {
-                                    count += 1
+                                if right == .banSendMedia {
+                                    if banSendMediaSubList().allSatisfy({ !defaultBannedRights.flags.contains($0.0) }) {
+                                        count += 1
+                                    }
+                                } else {
+                                    if !defaultBannedRights.flags.contains(right) {
+                                        count += 1
+                                    }
                                 }
                             }
                             activePermissionCount = count
@@ -1869,8 +1874,14 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 if let defaultBannedRights = group.defaultBannedRights {
                     var count = 0
                     for (right, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
-                        if !defaultBannedRights.flags.contains(right) {
-                            count += 1
+                        if right == .banSendMedia {
+                            if banSendMediaSubList().allSatisfy({ !defaultBannedRights.flags.contains($0.0) }) {
+                                count += 1
+                            }
+                        } else {
+                            if !defaultBannedRights.flags.contains(right) {
+                                count += 1
+                            }
                         }
                     }
                     activePermissionCount = count
@@ -2564,7 +2575,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, sendMessage: { _ in
         }, sendSticker: { _, _, _, _, _, _, _, _, _ in
             return false
-        }, sendEmoji: { _, _ in
+        }, sendEmoji: { _, _, _ in
         }, sendGif: { _, _, _, _, _ in
             return false
         }, sendBotContextResultAsGif: { _, _, _, _, _ in

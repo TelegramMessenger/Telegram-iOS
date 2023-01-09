@@ -2004,6 +2004,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 interaction.openPeer(peer, peer, threadId, false)
                 self.listNode.clearHighlightAnimated(true)
             })
+        }, openStorageManagement: {
         })
         chatListInteraction.isSearchMode = true
         
@@ -2096,6 +2097,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
+        let previousExpandGlobalSearch = Atomic<Bool>(value: false)
         
         let _ = (searchQuery
         |> deliverOnMainQueue).start(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
@@ -2109,10 +2111,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             self?.searchOptionsValue = options
         })
 
+        
         self.searchDisposable.set((foundItems
         |> deliverOnMainQueue).start(next: { [weak self] foundItems in
             if let strongSelf = self {
                 let previousSelectedMessageIds = previousSelectedMessages.swap(strongSelf.selectedMessages)
+                let previousExpandGlobalSearch = previousExpandGlobalSearch.swap(strongSelf.searchStateValue.expandGlobalSearch)
                 
                 var entriesAndFlags = foundItems?.0
                 
@@ -2147,7 +2151,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let previousEntries = previousSearchItems.swap(entriesAndFlags)
                 let newEntries = entriesAndFlags ?? []
                 
-                let animated = (previousSelectedMessageIds == nil) != (strongSelf.selectedMessages == nil)
+                let selectionChanged = (previousSelectedMessageIds == nil) != (strongSelf.selectedMessages == nil)
+                let expandGlobalSearchChanged = previousExpandGlobalSearch != strongSelf.searchStateValue.expandGlobalSearch
+                
+                let animated = selectionChanged || expandGlobalSearchChanged
                 let firstTime = previousEntries == nil
                 var transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags != nil, isEmpty: !isSearching && (entriesAndFlags?.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, location: location, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture, location in
                     interaction.peerContextAction?(message, node, rect, gesture, location)
@@ -3199,7 +3206,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
             let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
-            }, present: { _ in }, openForumThread: { _, _ in })
+            }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {})
             var isInlineMode = false
             if case .topics = key {
                 isInlineMode = false

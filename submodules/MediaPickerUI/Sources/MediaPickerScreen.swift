@@ -141,7 +141,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let peer: EnginePeer?
     private let threadTitle: String?
     private let chatLocation: ChatLocation?
-    private let bannedSendMedia: (Int32, Bool)?
+    private let bannedSendPhotos: (Int32, Bool)?
+    private let bannedSendVideos: (Int32, Bool)?
     private let subject: Subject
     private let saveEditedPhotos: Bool
     
@@ -945,7 +946,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if cameraAccess == nil {
                     cameraRect = nil
                 }
-                if let (untilDate, personal) = self.controller?.bannedSendMedia {
+                /*if let (untilDate, personal) = self.controller?.bannedSendMedia {
                     self.gridNode.isHidden = true
                     
                     let banDescription: String
@@ -972,8 +973,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     placeholderTransition.updateFrame(node: placeholderNode, frame: innerBounds)
                     
                     self.updateNavigation(transition: .immediate)
-                } else if case .notDetermined = mediaAccess {
-                    
+                } else */if case .notDetermined = mediaAccess {
                 } else {
                     if case .limited = mediaAccess {
                         let manageNode: MediaPickerManageNode
@@ -1099,7 +1099,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
                 placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, hasCamera: cameraAccess == .authorized, transition: placeholderTransition)
                 placeholderTransition.updateFrame(node: placeholderNode, frame: innerBounds)
-            } else if let placeholderNode = self.placeholderNode, self.controller?.bannedSendMedia == nil {
+            } else if let placeholderNode = self.placeholderNode {//, self.controller?.bannedSendMedia == nil {
                 self.placeholderNode = nil
                 placeholderNode.removeFromSupernode()
             }
@@ -1131,7 +1131,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     private var isDismissing = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, threadTitle: String?, chatLocation: ChatLocation?, bannedSendMedia: (Int32, Bool)?, subject: Subject, editingContext: TGMediaEditingContext? = nil, selectionContext: TGMediaSelectionContext? = nil, saveEditedPhotos: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, threadTitle: String?, chatLocation: ChatLocation?, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, subject: Subject, editingContext: TGMediaEditingContext? = nil, selectionContext: TGMediaSelectionContext? = nil, saveEditedPhotos: Bool = false) {
         self.context = context
                 
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -1140,7 +1140,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.peer = peer
         self.threadTitle = threadTitle
         self.chatLocation = chatLocation
-        self.bannedSendMedia = bannedSendMedia
+        self.bannedSendPhotos = bannedSendPhotos
+        self.bannedSendVideos = bannedSendVideos
         self.subject = subject
         self.saveEditedPhotos = saveEditedPhotos
         
@@ -1495,7 +1496,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.requestAttachmentMenuExpansion()
                 self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
                     if let strongSelf = self {
-                        let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, subject: .assets(collection), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
+                        let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendPhotos: strongSelf.bannedSendPhotos, bannedSendVideos: strongSelf.bannedSendVideos, subject: .assets(collection), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
                         
                         mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
                         mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker

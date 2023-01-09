@@ -165,6 +165,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case forcedPasswordSetup = 31
     case emojiTooltip = 32
     case audioTranscriptionSuggestion = 33
+    case clearStorageDismissedTipSize = 34
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -348,6 +349,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func audioTranscriptionSuggestion() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.audioTranscriptionSuggestion.key)
+    }
+    
+    static func clearStorageDismissedTipSize() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.clearStorageDismissedTipSize.key)
     }
 }
 
@@ -1085,6 +1090,25 @@ public struct ApplicationSpecificNotice {
             
             return Int(previousValue)
         }
+    }
+    
+    public static func getClearStorageDismissedTipSize(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.clearStorageDismissedTipSize())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func setClearStorageDismissedTipSize(accountManager: AccountManager<TelegramAccountManagerTypes>, value: Int32) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.clearStorageDismissedTipSize(), entry)
+            }
+        }
+        |> ignoreValues
     }
     
     public static func getInteractiveEmojiSyncTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {

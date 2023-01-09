@@ -76,8 +76,8 @@ public enum DataAndStorageEntryTag: ItemListItemTag {
 }
 
 private enum DataAndStorageEntry: ItemListNodeEntry {
-    case storageUsage(PresentationTheme, String)
-    case networkUsage(PresentationTheme, String)
+    case storageUsage(PresentationTheme, String, String)
+    case networkUsage(PresentationTheme, String, String)
     case automaticDownloadHeader(PresentationTheme, String)
     case automaticDownloadCellular(PresentationTheme, String, String)
     case automaticDownloadWifi(PresentationTheme, String, String)
@@ -170,14 +170,14 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     
     static func ==(lhs: DataAndStorageEntry, rhs: DataAndStorageEntry) -> Bool {
         switch lhs {
-            case let .storageUsage(lhsTheme, lhsText):
-                if case let .storageUsage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .storageUsage(lhsTheme, lhsText, lhsValue):
+                if case let .storageUsage(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .networkUsage(lhsTheme, lhsText):
-                if case let .networkUsage(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .networkUsage(lhsTheme, lhsText, lhsValue):
+                if case let .networkUsage(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -306,12 +306,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DataAndStorageControllerArguments
         switch self {
-            case let .storageUsage(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Storage")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .storageUsage(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Storage")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openStorageUsage()
                 })
-            case let .networkUsage(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Network")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .networkUsage(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Network")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openNetworkUsage()
                 })
             case let .automaticDownloadHeader(_, text):
@@ -478,11 +478,11 @@ private func stringForAutoDownloadSetting(strings: PresentationStrings, decimalS
     }
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?) -> [DataAndStorageEntry] {
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
-    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache))
-    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title))
+    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title, dataSizeString(networkUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
     
     entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle.uppercased()))
     entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
@@ -554,6 +554,67 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     contentSettingsConfiguration.set(.single(nil)
     |> then(updatedContentSettingsConfiguration))
     
+    struct UsageData: Equatable {
+        var network: Int64
+        var storage: Int64
+    }
+    let usageSignal: Signal<UsageData, NoError> = combineLatest(
+        context.account.postbox.mediaBox.storageBox.totalSize(),
+        context.account.postbox.mediaBox.cacheStorageBox.totalSize(),
+        accountNetworkUsageStats(account: context.account, reset: [])
+    )
+    |> map { disk1, disk2, networkStats -> UsageData in
+        var network: Int64 = 0
+        
+        var keys: [KeyPath<NetworkUsageStats, Int64>] = []
+        
+        keys.append(\.generic.cellular.outgoing)
+        keys.append(\.generic.cellular.incoming)
+        keys.append(\.generic.wifi.incoming)
+        keys.append(\.generic.wifi.outgoing)
+        
+        keys.append(\.image.cellular.outgoing)
+        keys.append(\.image.cellular.incoming)
+        keys.append(\.image.wifi.incoming)
+        keys.append(\.image.wifi.outgoing)
+        
+        keys.append(\.video.cellular.outgoing)
+        keys.append(\.video.cellular.incoming)
+        keys.append(\.video.wifi.incoming)
+        keys.append(\.video.wifi.outgoing)
+        
+        keys.append(\.audio.cellular.outgoing)
+        keys.append(\.audio.cellular.incoming)
+        keys.append(\.audio.wifi.incoming)
+        keys.append(\.audio.wifi.outgoing)
+        
+        keys.append(\.file.cellular.outgoing)
+        keys.append(\.file.cellular.incoming)
+        keys.append(\.file.wifi.incoming)
+        keys.append(\.file.wifi.outgoing)
+        
+        keys.append(\.call.cellular.outgoing)
+        keys.append(\.call.cellular.incoming)
+        keys.append(\.call.wifi.incoming)
+        keys.append(\.call.wifi.outgoing)
+        
+        keys.append(\.sticker.cellular.outgoing)
+        keys.append(\.sticker.cellular.incoming)
+        keys.append(\.sticker.wifi.incoming)
+        keys.append(\.sticker.wifi.outgoing)
+        
+        keys.append(\.voiceMessage.cellular.outgoing)
+        keys.append(\.voiceMessage.cellular.incoming)
+        keys.append(\.voiceMessage.wifi.incoming)
+        keys.append(\.voiceMessage.wifi.outgoing)
+        
+        for key in keys {
+            network += networkStats[keyPath: key]
+        }
+        
+        return UsageData(network: network, storage: disk1 + disk2)
+    }
+    
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
     dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
     |> map { sharedData -> DataAndStorageData in
@@ -598,9 +659,14 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         pushControllerImpl?(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
             return storageUsageExceptionsScreen(context: context, category: category)
         }))
-        //pushControllerImpl?(storageUsageController(context: context, cacheUsagePromise: cacheUsagePromise))
     }, openNetworkUsage: {
-        pushControllerImpl?(networkUsageStatsController(context: context))
+        //pushControllerImpl?(networkUsageStatsController(context: context))
+        
+        let _ = (accountNetworkUsageStats(account: context.account, reset: [])
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { stats in
+            pushControllerImpl?(DataUsageScreen(context: context, stats: stats))
+        })
     }, openProxy: {
         pushControllerImpl?(proxySettingsController(context: context))
     }, openAutomaticDownloadConnectionType: { connectionType in
@@ -680,9 +746,10 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         statePromise.get(),
         dataAndStorageDataPromise.get(),
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings]),
-        contentSettingsConfiguration.get()
+        contentSettingsConfiguration.get(),
+        usageSignal
     )
-    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration, usageSignal -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let webBrowserSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
@@ -693,7 +760,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

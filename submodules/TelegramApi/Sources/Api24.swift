@@ -1,4 +1,62 @@
 public extension Api.contacts {
+    enum ResolvedPeer: TypeConstructorDescription {
+        case resolvedPeer(peer: Api.Peer, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .resolvedPeer(let peer, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(2131196633)
+                    }
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .resolvedPeer(let peer, let chats, let users):
+                return ("resolvedPeer", [("peer", peer as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_resolvedPeer(_ reader: BufferReader) -> ResolvedPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.contacts.ResolvedPeer.resolvedPeer(peer: _1!, chats: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.contacts {
     enum TopPeers: TypeConstructorDescription {
         case topPeers(categories: [Api.TopPeerCategoryPeers], chats: [Api.Chat], users: [Api.User])
         case topPeersDisabled
@@ -1244,64 +1302,6 @@ public extension Api.messages {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum AvailableReactions: TypeConstructorDescription {
-        case availableReactions(hash: Int32, reactions: [Api.AvailableReaction])
-        case availableReactionsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .availableReactions(let hash, let reactions):
-                    if boxed {
-                        buffer.appendInt32(1989032621)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(reactions.count))
-                    for item in reactions {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .availableReactionsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-1626924713)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .availableReactions(let hash, let reactions):
-                return ("availableReactions", [("hash", hash as Any), ("reactions", reactions as Any)])
-                case .availableReactionsNotModified:
-                return ("availableReactionsNotModified", [])
-    }
-    }
-    
-        public static func parse_availableReactions(_ reader: BufferReader) -> AvailableReactions? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.AvailableReaction]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableReaction.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.AvailableReactions.availableReactions(hash: _1!, reactions: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_availableReactionsNotModified(_ reader: BufferReader) -> AvailableReactions? {
-            return Api.messages.AvailableReactions.availableReactionsNotModified
         }
     
     }

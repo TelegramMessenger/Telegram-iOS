@@ -14,12 +14,14 @@ public struct ChatListNodeAdditionalCategory {
     
     public var id: Int
     public var icon: UIImage?
+    public var smallIcon: UIImage?
     public var title: String
     public var appearance: Appearance
     
-    public init(id: Int, icon: UIImage?, title: String, appearance: Appearance = .option) {
+    public init(id: Int, icon: UIImage?, smallIcon: UIImage?, title: String, appearance: Appearance = .option) {
         self.id = id
         self.icon = icon
+        self.smallIcon = smallIcon
         self.title = title
         self.appearance = appearance
     }

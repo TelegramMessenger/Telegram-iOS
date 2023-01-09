@@ -33,8 +33,9 @@ private final class ChannelPermissionsControllerArguments {
     let presentConversionToBroadcastGroup: () -> Void
     let openChannelExample: () -> Void
     let updateSlowmode: (Int32) -> Void
+    let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -47,6 +48,7 @@ private final class ChannelPermissionsControllerArguments {
         self.presentConversionToBroadcastGroup = presentConversionToBroadcastGroup
         self.openChannelExample = openChannelExample
         self.updateSlowmode = updateSlowmode
+        self.toggleIsOptionExpanded = toggleIsOptionExpanded
     }
 }
 
@@ -63,9 +65,15 @@ private enum ChannelPermissionsEntryStableId: Hashable {
     case peer(PeerId)
 }
 
+private struct SubPermission: Equatable {
+    var title: String
+    var flags: TelegramChatBannedRightsFlags
+    var isSelected: Bool
+}
+
 private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case permissionsHeader(PresentationTheme, String)
-    case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool?)
+    case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool?, [SubPermission], Bool)
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
     case slowmodeInfo(PresentationTheme, String)
@@ -96,7 +104,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case .permissionsHeader:
                 return .index(0)
-            case let .permission(_, index, _, _, _, _):
+            case let .permission(_, index, _, _, _, _, _, _):
                 return .index(1 + index)
             case .conversionHeader:
                 return .index(998)
@@ -129,8 +137,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .permission(theme, index, title, value, rights, enabled):
-                if case .permission(theme, index, title, value, rights, enabled) = rhs {
+            case let .permission(theme, index, title, value, rights, enabled, subPermissions, isExpanded):
+                if case .permission(theme, index, title, value, rights, enabled, subPermissions, isExpanded) = rhs {
                     return true
                 } else {
                     return false
@@ -256,16 +264,47 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case let .permissionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .permission(_, _, title, value, rights, enabled):
-                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, type: .icon, enableInteractiveChanges: enabled != nil, enabled: enabled ?? true, sectionId: self.section, style: .blocks, updated: { value in
-                    if let _ = enabled {
-                        arguments.updatePermission(rights, value)
-                    } else {
+            case let .permission(_, _, title, value, rights, enabled, subPermissions, isExpanded):
+                if !subPermissions.isEmpty {
+                    return ItemListExpandableSwitchItem(presentationData: presentationData, title: title, value: value, isExpanded: isExpanded, subItems: subPermissions.map { item in
+                        return ItemListExpandableSwitchItem.SubItem(
+                            id: AnyHashable(item.flags.rawValue),
+                            title: item.title,
+                            isSelected: item.isSelected
+                        )
+                    }, type: .icon, enableInteractiveChanges: enabled != nil, enabled: enabled ?? true, sectionId: self.section, style: .blocks, updated: { value in
+                        if let _ = enabled {
+                            arguments.updatePermission(rights, value)
+                        } else {
+                            arguments.presentRestrictedPermissionAlert(rights)
+                        }
+                    }, activatedWhileDisabled: {
                         arguments.presentRestrictedPermissionAlert(rights)
-                    }
-                }, activatedWhileDisabled: {
-                    arguments.presentRestrictedPermissionAlert(rights)
-                })
+                    }, selectAction: {
+                        arguments.toggleIsOptionExpanded(rights)
+                    }, subAction: { item in
+                        guard let value = item.id.base as? Int32 else {
+                            return
+                        }
+                        let subRights = TelegramChatBannedRightsFlags(rawValue: value)
+                        
+                        if let _ = enabled {
+                            arguments.updatePermission(subRights, !item.isSelected)
+                        } else {
+                            arguments.presentRestrictedPermissionAlert(subRights)
+                        }
+                    })
+                } else {
+                    return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, type: .icon, enableInteractiveChanges: enabled != nil, enabled: enabled ?? true, sectionId: self.section, style: .blocks, updated: { value in
+                        if let _ = enabled {
+                            arguments.updatePermission(rights, value)
+                        } else {
+                            arguments.presentRestrictedPermissionAlert(rights)
+                        }
+                    }, activatedWhileDisabled: {
+                        arguments.presentRestrictedPermissionAlert(rights)
+                    })
+                }
             case let .slowmodeHeader(_, value):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
             case let .slowmode(theme, strings, value):
@@ -334,9 +373,11 @@ private struct ChannelPermissionsControllerState: Equatable {
     var searchingMembers: Bool = false
     var modifiedRightsFlags: TelegramChatBannedRightsFlags?
     var modifiedSlowmodeTimeout: Int32?
+    var expandedPermissions = Set<TelegramChatBannedRightsFlags>()
 }
 
 func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool) -> String {
+    //TODO:localize
     if right.contains(.banSendMessages) {
         return strings.Channel_BanUser_PermissionSendMessages
     } else if right.contains(.banSendMedia) {
@@ -355,6 +396,20 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
         return strings.Channel_EditAdmin_PermissionPinMessages
     } else if right.contains(.banManageTopics) {
         return strings.Channel_EditAdmin_PermissionCreateTopics
+    } else if right.contains(.banSendPhotos) {
+        return "Send Photos"
+    } else if right.contains(.banSendVideos) {
+        return "Send Videos"
+    } else if right.contains(.banSendStickers) {
+        return strings.Channel_BanUser_PermissionSendStickersAndGifs
+    } else if right.contains(.banSendMusic) {
+        return "Send Music"
+    } else if right.contains(.banSendFiles) {
+        return "Send Files"
+    } else if right.contains(.banSendVoice) {
+        return "Send Voice Messages"
+    } else if right.contains(.banSendInstantVideos) {
+        return "Send Video Messages"
     } else {
         return ""
     }
@@ -387,7 +442,13 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
 private let internal_allPossibleGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
     (.banSendMessages, .banMembers),
     (.banSendMedia, .banMembers),
+    (.banSendPhotos, .banMembers),
+    (.banSendVideos, .banMembers),
     (.banSendGifs, .banMembers),
+    (.banSendMusic, .banMembers),
+    (.banSendFiles, .banMembers),
+    (.banSendVoice, .banMembers),
+    (.banSendInstantVideos, .banMembers),
     (.banEmbedLinks, .banMembers),
     (.banSendPolls, .banMembers),
     (.banAddMembers, .banMembers),
@@ -401,8 +462,6 @@ public func allGroupPermissionList(peer: EnginePeer) -> [(TelegramChatBannedRigh
         return [
             (.banSendMessages, .banMembers),
             (.banSendMedia, .banMembers),
-            (.banSendGifs, .banMembers),
-            (.banEmbedLinks, .banMembers),
             (.banSendPolls, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
@@ -413,14 +472,25 @@ public func allGroupPermissionList(peer: EnginePeer) -> [(TelegramChatBannedRigh
         return [
             (.banSendMessages, .banMembers),
             (.banSendMedia, .banMembers),
-            (.banSendGifs, .banMembers),
-            (.banEmbedLinks, .banMembers),
             (.banSendPolls, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
             (.banChangeInfo, .changeInfo)
         ]
     }
+}
+    
+public func banSendMediaSubList() -> [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] {
+    return [
+        (.banSendPhotos, .banMembers),
+        (.banSendVideos, .banMembers),
+        (.banSendGifs, .banMembers),
+        (.banSendMusic, .banMembers),
+        (.banSendFiles, .banMembers),
+        (.banSendVoice, .banMembers),
+        (.banSendInstantVideos, .banMembers),
+        (.banEmbedLinks, .banMembers),
+    ]
 }
 
 let publicGroupRestrictedPermissions: TelegramChatBannedRightsFlags = [
@@ -429,7 +499,7 @@ let publicGroupRestrictedPermissions: TelegramChatBannedRightsFlags = [
 ]
 
 func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
-    if right.contains(.banSendMedia) {
+    if right.contains(.banSendMedia) || banSendMediaSubList().contains(where: { $0.0 == right }) {
         return [.banSendMessages]
     } else if right.contains(.banSendGifs) {
         return [.banSendMessages]
@@ -476,7 +546,18 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             if !channel.hasPermission(correspondingAdminRight) {
                 enabled = false
             }
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: channel.flags.contains(.isForum)), !effectiveRightsFlags.contains(rights), rights, enabled))
+            
+            var isSelected = !effectiveRightsFlags.contains(rights)
+            var subItems: [SubPermission] = []
+            if rights == .banSendMedia {
+                isSelected = banSendMediaSubList().allSatisfy({ !effectiveRightsFlags.contains($0.0) })
+                
+                for (subRight, _) in banSendMediaSubList() {
+                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: channel.isForum), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight)))
+                }
+            }
+            
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: channel.flags.contains(.isForum)), isSelected, rights, enabled, subItems, state.expandedPermissions.contains(rights)))
             rightIndex += 1
         }
         
@@ -513,7 +594,14 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), !effectiveRightsFlags.contains(rights), rights, true))
+            var subItems: [SubPermission] = []
+            if rights == .banSendMedia {
+                for (subRight, _) in banSendMediaSubList() {
+                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: false), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight)))
+                }
+            }
+            
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), !effectiveRightsFlags.contains(rights), rights, true, subItems, state.expandedPermissions.contains(rights)))
             rightIndex += 1
         }
         
@@ -611,16 +699,47 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     } else {
                         effectiveRightsFlags = TelegramChatBannedRightsFlags()
                     }
-                    if value {
-                        effectiveRightsFlags.remove(rights)
-                        effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
-                    } else {
-                        effectiveRightsFlags.insert(rights)
-                        for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
-                            if groupPermissionDependencies(right).contains(rights) {
-                                effectiveRightsFlags.insert(right)
+                    
+                    if rights == .banSendMedia {
+                        if value {
+                            effectiveRightsFlags.remove(rights)
+                            for item in banSendMediaSubList() {
+                                effectiveRightsFlags.remove(item.0)
+                            }
+                        } else {
+                            effectiveRightsFlags.insert(rights)
+                            for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
+                                if groupPermissionDependencies(right).contains(rights) {
+                                    effectiveRightsFlags.insert(right)
+                                }
+                            }
+                            
+                            for item in banSendMediaSubList() {
+                                effectiveRightsFlags.insert(item.0)
+                                for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
+                                    if groupPermissionDependencies(right).contains(item.0) {
+                                        effectiveRightsFlags.insert(right)
+                                    }
+                                }
                             }
                         }
+                    } else {
+                        if value {
+                            effectiveRightsFlags.remove(rights)
+                            effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
+                        } else {
+                            effectiveRightsFlags.insert(rights)
+                            for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
+                                if groupPermissionDependencies(right).contains(rights) {
+                                    effectiveRightsFlags.insert(right)
+                                }
+                            }
+                        }
+                    }
+                    if banSendMediaSubList().allSatisfy({ !effectiveRightsFlags.contains($0.0) }) {
+                        effectiveRightsFlags.remove(.banSendMedia)
+                    } else {
+                        effectiveRightsFlags.insert(.banSendMedia)
                     }
                     state.modifiedRightsFlags = effectiveRightsFlags
                     return state
@@ -868,6 +987,16 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                 }))
             }
         })
+    }, toggleIsOptionExpanded: { flags in
+        updateState { state in
+            var state = state
+            if state.expandedPermissions.contains(flags) {
+                state.expandedPermissions.remove(flags)
+            } else {
+                state.expandedPermissions.insert(flags)
+            }
+            return state
+        }
     })
     
     let previousParticipants = Atomic<[RenderedChannelParticipant]?>(value: nil)
@@ -888,6 +1017,8 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
         return .single((view, peers.1))
     }
+    
+    let previousExpandedPermissionsValue = Atomic<Set<TelegramChatBannedRightsFlags>?>(value: nil)
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), viewAndParticipants)
@@ -912,6 +1043,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
         
         let previous = previousParticipants.swap(participants)
+        let previousExpandedPermissions = previousExpandedPermissionsValue.swap(state.expandedPermissions)
         
         var searchItem: ItemListControllerSearch?
         if state.searchingMembers {
@@ -940,8 +1072,13 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             })
         }
         
+        var animateChanges = previous != nil && participants != nil && previous!.count >= participants!.count
+        if let previousExpandedPermissions, previousExpandedPermissions != state.expandedPermissions {
+            animateChanges = true
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.GroupInfo_Permissions_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: participants), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && participants != nil && previous!.count >= participants!.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: participants), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

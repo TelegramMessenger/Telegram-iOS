@@ -1176,18 +1176,19 @@ public extension Api.account {
 }
 public extension Api.auth {
     enum Authorization: TypeConstructorDescription {
-        case authorization(flags: Int32, otherwiseReloginDays: Int32?, tmpSessions: Int32?, user: Api.User)
+        case authorization(flags: Int32, otherwiseReloginDays: Int32?, tmpSessions: Int32?, futureAuthToken: Buffer?, user: Api.User)
         case authorizationSignUpRequired(flags: Int32, termsOfService: Api.help.TermsOfService?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let user):
+                case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let futureAuthToken, let user):
                     if boxed {
-                        buffer.appendInt32(872119224)
+                        buffer.appendInt32(782418132)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(otherwiseReloginDays!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(tmpSessions!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeBytes(futureAuthToken!, buffer: buffer, boxed: false)}
                     user.serialize(buffer, true)
                     break
                 case .authorizationSignUpRequired(let flags, let termsOfService):
@@ -1202,8 +1203,8 @@ public extension Api.auth {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let user):
-                return ("authorization", [("flags", flags as Any), ("otherwiseReloginDays", otherwiseReloginDays as Any), ("tmpSessions", tmpSessions as Any), ("user", user as Any)])
+                case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let futureAuthToken, let user):
+                return ("authorization", [("flags", flags as Any), ("otherwiseReloginDays", otherwiseReloginDays as Any), ("tmpSessions", tmpSessions as Any), ("futureAuthToken", futureAuthToken as Any), ("user", user as Any)])
                 case .authorizationSignUpRequired(let flags, let termsOfService):
                 return ("authorizationSignUpRequired", [("flags", flags as Any), ("termsOfService", termsOfService as Any)])
     }
@@ -1216,16 +1217,19 @@ public extension Api.auth {
             if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
             var _3: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            var _4: Api.User?
+            var _4: Buffer?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseBytes(reader) }
+            var _5: Api.User?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.User
+                _5 = Api.parse(reader, signature: signature) as? Api.User
             }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.auth.Authorization.authorization(flags: _1!, otherwiseReloginDays: _2, tmpSessions: _3, user: _4!)
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.auth.Authorization.authorization(flags: _1!, otherwiseReloginDays: _2, tmpSessions: _3, futureAuthToken: _4, user: _5!)
             }
             else {
                 return nil

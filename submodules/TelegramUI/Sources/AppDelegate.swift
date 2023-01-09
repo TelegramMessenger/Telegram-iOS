@@ -1306,26 +1306,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: DispatchQueue.main) { task in
                 Logger.shared.log("App \(self.episodeId)", "Executing cleanup task")
                 
-                let disposable = MetaDisposable()
-                
-                let _ = (self.sharedContextPromise.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-                    let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { activeAccounts in
-                        var signals: Signal<Never, NoError> = .complete()
-                        
-                        for (_, context, _) in activeAccounts.accounts {
-                            signals = signals |> then(context.account.cleanupTasks(lowImpact: false))
-                        }
-                        
-                        disposable.set(signals.start(completed: {
-                            Logger.shared.log("App \(self.episodeId)", "Completed cleanup task")
-                            
-                            task.setTaskCompleted(success: true)
-                        }))
-                    })
+                let disposable = self.runCacheReindexTasks(lowImpact: true, completion: {
+                    Logger.shared.log("App \(self.episodeId)", "Completed cleanup task")
+                    
+                    task.setTaskCompleted(success: true)
                 })
                 
                 task.expirationHandler = {
@@ -1351,7 +1335,42 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }
         
+        let timestamp = Int(CFAbsoluteTimeGetCurrent())
+        let minReindexTimestamp = timestamp - 2 * 24 * 60 * 60
+        if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= minReindexTimestamp {
+        } else {
+            Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground")
+            let _ = self.runCacheReindexTasks(lowImpact: true, completion: {
+                Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground — done")
+                UserDefaults.standard.set(timestamp as NSNumber, forKey: "TelegramCacheIndexTimestamp")
+            })
+        }
+        
         return true
+    }
+    
+    private func runCacheReindexTasks(lowImpact: Bool, completion: @escaping () -> Void) -> Disposable {
+        let disposable = MetaDisposable()
+        
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { activeAccounts in
+                var signals: Signal<Never, NoError> = .complete()
+                
+                for (_, context, _) in activeAccounts.accounts {
+                    signals = signals |> then(context.account.cleanupTasks(lowImpact: lowImpact))
+                }
+                
+                disposable.set(signals.start(completed: {
+                    completion()
+                }))
+            })
+        })
+        
+        return disposable
     }
 
     private func resetBadge() {

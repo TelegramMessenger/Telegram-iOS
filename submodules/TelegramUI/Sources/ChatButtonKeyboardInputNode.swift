@@ -78,7 +78,6 @@ private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNo
             if let strongSelf = self {
                 if highlighted, !strongSelf.bounds.width.isZero {
                     let scale = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
-                    
                     strongSelf.layer.animateScale(from: 1.0, to: scale, duration: 0.15, removeOnCompletion: false)
                     
                     strongSelf.backgroundContainerNode.layer.removeAnimation(forKey: "opacity")

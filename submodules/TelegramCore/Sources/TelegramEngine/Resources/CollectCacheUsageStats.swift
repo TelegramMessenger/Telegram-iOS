@@ -123,18 +123,83 @@ private extension StorageUsageStats {
                 mappedCategory = .avatars
             case MediaResourceUserContentType.sticker.rawValue:
                 mappedCategory = .stickers
+            case MediaResourceUserContentType.other.rawValue:
+                mappedCategory = .misc
+            case MediaResourceUserContentType.audioVideoMessage.rawValue:
+                mappedCategory = .misc
             default:
                 mappedCategory = .misc
             }
-            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+            if mappedCategories[mappedCategory] == nil {
+                mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+            } else {
+                mappedCategories[mappedCategory]?.size += value.size
+                mappedCategories[mappedCategory]?.messages.merge(value.messages, uniquingKeysWith: { lhs, _ in lhs})
+            }
         }
         
         self.init(categories: mappedCategories)
     }
 }
 
+private func statForDirectory(path: String) -> Int64 {
+    var s = darwin_dirstat()
+    var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
+    if result != -1 {
+        return Int64(s.total_size)
+    } else {
+        result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+        if result != -1 {
+            return Int64(s.total_size)
+        } else {
+            return 0
+        }
+    }
+}
+
+private func collectDirectoryUsageReportRecursive(path: String, indent: String, log: inout String) {
+    guard let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey], options: .skipsSubdirectoryDescendants) else {
+        return
+    }
+    for url in enumerator {
+        guard let url = url as? URL else {
+            continue
+        }
+        if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
+            let subdirectorySize = statForDirectory(path: url.path)
+            log.append("\(indent)+ \(url.lastPathComponent): \(subdirectorySize)\n")
+            collectDirectoryUsageReportRecursive(path: url.path, indent: indent + "  ", log: &log)
+        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
+            if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                log.append("\(indent)\(url.lastPathComponent): SYMLINK\n")
+            } else {
+                log.append("\(indent)\(url.lastPathComponent): \(fileSizeValue)\n")
+            }
+        }
+    }
+}
+
+public func collectRawStorageUsageReport(containerPath: String) -> String {
+    var log = ""
+    
+    let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+    let documentsSize = statForDirectory(path: documentsPath)
+    log.append("Documents (\(documentsPath)): \(documentsSize)\n")
+    collectDirectoryUsageReportRecursive(path: documentsPath, indent: "  ", log: &log)
+    
+    let systemCachePath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
+    let systemCacheSize = statForDirectory(path: systemCachePath)
+    log.append("System Cache (\(systemCachePath)): \(systemCacheSize)\n")
+    
+    let containerSize = statForDirectory(path: containerPath)
+    log.append("Container (\(containerPath)): \(containerSize)\n")
+    collectDirectoryUsageReportRecursive(path: containerPath, indent: "  ", log: &log)
+    
+    return log
+}
+
 func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
-    let additionalStats = Signal<Int64, NoError> { subscriber in
+    /*let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {
             var totalSize: Int64 = 0
             
@@ -207,7 +272,9 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
         }
         
         return EmptyDisposable
-    }
+    }*/
+    
+    let additionalStats = account.postbox.mediaBox.cacheStorageBox.totalSize() |> take(1)
     
     return combineLatest(
         additionalStats,
@@ -264,6 +331,7 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
 func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
     return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
         var result: [EngineMessage.Id: Message] = [:]
+        var peerInChatList: [EnginePeer.Id: Bool] = [:]
         for (category, value) in stats.categories {
             if !categories.contains(category) {
                 continue
@@ -273,8 +341,23 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
                 if result[id] == nil {
                     if let message = existingMessages[id] {
                         result[id] = message
-                    } else if let message = transaction.getMessage(id) {
-                        result[id] = message
+                    } else {
+                        var matches = false
+                        if let peerInChatListValue = peerInChatList[id.peerId] {
+                            if peerInChatListValue {
+                                matches = true
+                            }
+                        } else {
+                            let peerInChatListValue = transaction.getPeerChatListIndex(id.peerId) != nil
+                            peerInChatList[id.peerId] = peerInChatListValue
+                            if peerInChatListValue {
+                                matches = true
+                            }
+                        }
+                        
+                        if matches, let message = transaction.getMessage(id) {
+                            result[id] = message
+                        }
                     }
                 }
             }
@@ -327,6 +410,9 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
             case .misc:
                 mappedContentTypes.append(MediaResourceUserContentType.other.rawValue)
                 mappedContentTypes.append(MediaResourceUserContentType.audioVideoMessage.rawValue)
+                
+                // Legacy value for Gif
+                mappedContentTypes.append(5)
             }
         }
         
@@ -356,6 +442,8 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                             }
                         }
                     }
+                    
+                    mediaBox.cacheStorageBox.reset()
                     
                     subscriber.putCompletion()
                 } else {

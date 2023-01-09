@@ -29,6 +29,7 @@ import PremiumUI
 import StickerPackPreviewUI
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
+import StorageUsageScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1300,7 +1301,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 tapMessage?(message)
         }, clickThroughMessage: {
             clickThroughMessage?()
-        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
+        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
@@ -1422,6 +1423,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
+    }
+    
+    public func makeStorageManagementController(context: AccountContext) -> ViewController {
+        return StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { [weak context] category in
+            guard let context else {
+                return nil
+            }
+            return storageUsageExceptionsScreen(context: context, category: category)
+        })
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {

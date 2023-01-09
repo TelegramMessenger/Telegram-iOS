@@ -1,11 +1,13 @@
 import Foundation
 import UIKit
+import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
 import MusicAlbumArtResources
+import TextFormat
 
 private enum PeerMessagesMediaPlaylistLoadAnchor {
     case messageId(MessageId)
@@ -95,6 +97,15 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
 
     var displayData: SharedMediaPlaybackDisplayData? {
         if let file = extractFileMedia(self.message) {
+            let text = self.message.text
+            var entities: [MessageTextEntity] = []
+            if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: [], mediaDuration: file.duration.flatMap(Double.init)) {
+                entities = result
+            }
+              
+            let textFont = Font.regular(14.0)
+            let caption = stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: .white, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: self.message)
+                        
             for attribute in file.attributes {
                 switch attribute {
                     case let .Audio(isVoice, duration, title, performer, _):
@@ -114,7 +125,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                                 albumArt = SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(self.message), media: file), title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(self.message), media: file), title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false))
                             }
                             
-                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0)
+                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0, caption: caption)
                         }
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
@@ -127,7 +138,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                 }
             }
             
-            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.effectiveAuthor?.debugDisplayTitle ?? "", albumArt: nil, long: false)
+            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.effectiveAuthor?.debugDisplayTitle ?? "", albumArt: nil, long: false, caption: caption)
         }
         return nil
     }

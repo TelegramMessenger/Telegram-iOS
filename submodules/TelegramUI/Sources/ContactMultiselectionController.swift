@@ -147,12 +147,12 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 if let additionalCategories = additionalCategories {
                     for i in 0 ..< additionalCategories.categories.count {
                         if additionalCategories.selectedCategories.contains(additionalCategories.categories[i].id) {
-                            strongSelf.contactsNode.editableTokens.append(EditableTokenListToken(id: additionalCategories.categories[i].id, title: additionalCategories.categories[i].title, fixedPosition: i))
+                            strongSelf.contactsNode.editableTokens.append(EditableTokenListToken(id: additionalCategories.categories[i].id, title: additionalCategories.categories[i].title, fixedPosition: i, subject: .category(additionalCategories.categories[i].smallIcon)))
                         }
                     }
                 }
                 strongSelf.contactsNode.editableTokens.append(contentsOf: peers.map { peer -> EditableTokenListToken in
-                    return EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: params.context.account.peerId, peer: peer._asPeer(), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
+                    return EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: params.context.account.peerId, peer: peer._asPeer(), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil, subject: .peer(peer))
                 })
                 strongSelf._peersReady.set(.single(true))
                 if strongSelf.isNodeLoaded {
@@ -261,7 +261,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                                     displayCountAlert = true
                                     updatedState = updatedState.withToggledPeerId(.peer(peer.id))
                                 } else {
-                                    addedToken = EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: accountPeerId, peer: peer, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
+                                    addedToken = EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: accountPeerId, peer: peer, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil, subject: .peer(EnginePeer(peer)))
                                 }
                             }
                             updatedCount = updatedState.selectedPeerIndices.count
@@ -279,7 +279,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                             state.selectedPeerIds.remove(peer.id)
                             removedTokenId = peer.id
                         } else {
-                            addedToken = EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: accountPeerId, peer: peer, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
+                            addedToken = EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: accountPeerId, peer: peer, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil, subject: .peer(EnginePeer(peer)))
                             state.selectedPeerIds.insert(peer.id)
                         }
                         updatedCount = state.selectedPeerIds.count
@@ -450,7 +450,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     if let additionalCategories = chatSelection.additionalCategories {
                         for i in 0 ..< additionalCategories.categories.count {
                             if additionalCategories.categories[i].id == id {
-                                categoryToken = EditableTokenListToken(id: id, title: additionalCategories.categories[i].title, fixedPosition: i)
+                                categoryToken = EditableTokenListToken(id: id, title: additionalCategories.categories[i].title, fixedPosition: i, subject: .category(additionalCategories.categories[i].smallIcon))
                                 break
                             }
                         }
