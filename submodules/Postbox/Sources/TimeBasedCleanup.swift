@@ -132,6 +132,8 @@ private final class TempScanDatabase {
 private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, performSizeMapping: Bool, tempDatabase: TempScanDatabase) -> ScanFilesResult {
     var result = ScanFilesResult()
     
+    var subdirectories: [String] = []
+    
     if let dp = opendir(path) {
         let pathBuffer = malloc(2048).assumingMemoryBound(to: Int8.self)
         defer {
@@ -158,9 +160,7 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
                 if (((value.st_mode) & S_IFMT) == S_IFDIR) {
                     if includeSubdirectories {
                         if let subPath = String(data: Data(bytes: pathBuffer, count: strnlen(pathBuffer, 1024)), encoding: .utf8) {
-                            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
-                            result.totalSize += subResult.totalSize
-                            result.unlinkedCount += subResult.unlinkedCount
+                            subdirectories.append(subPath)
                         }
                     }
                 } else {
@@ -177,6 +177,14 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
             }
         }
         closedir(dp)
+    }
+    
+    if includeSubdirectories {
+        for subPath in subdirectories {
+            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+            result.totalSize += subResult.totalSize
+            result.unlinkedCount += subResult.unlinkedCount
+        }
     }
     
     return result
