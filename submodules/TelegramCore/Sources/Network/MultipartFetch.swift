@@ -787,6 +787,9 @@ private final class MultipartFetchManager {
                     case .revalidateMediaReference:
                         if !strongSelf.revalidatingMediaReference && !strongSelf.revalidatedMediaReference {
                             strongSelf.revalidatingMediaReference = true
+                            for (_, part) in strongSelf.fetchingParts {
+                                part.1.dispose()
+                            }
                             strongSelf.fetchingParts.removeAll()
                             
                             if let info = strongSelf.parameters?.info as? TelegramCloudMediaResourceFetchInfo, let revalidationContext = strongSelf.revalidationContext {
