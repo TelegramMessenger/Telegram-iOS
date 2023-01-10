@@ -193,24 +193,60 @@
     }];
     [itemViews addObject:galleryItem];
     
-//    if (_hasSearchButton)
-//    {
-//        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-//        {
-//            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-//            if (strongSelf == nil)
-//                return;
-//            
-//            __strong TGMenuSheetController *strongController = weakController;
-//            if (strongController == nil)
-//                return;
-//            
-//            [strongController dismissAnimated:true];
-//            if (strongSelf != nil)
-//                strongSelf.requestSearchController(nil);
-//        }];
-//        [itemViews addObject:viewItem];
-//    }
+    if (!_signup) {
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"Emoji or Sticker" type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+                                               {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            if (strongSelf != nil)
+                strongSelf.requestAvatarEditor(^(UIImage *image, NSURL *asset, TGVideoEditAdjustments *adjustments, void (^commit)(void)) {
+                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    if (strongSelf.willFinishWithVideo != nil) {
+                        strongSelf.willFinishWithVideo(image, ^{
+                            if (strongSelf.didFinishWithVideo != nil)
+                                strongSelf.didFinishWithVideo(image, asset, adjustments);
+                            
+                            commit();
+                        });
+                    } else {
+                        if (strongSelf.didFinishWithVideo != nil)
+                            strongSelf.didFinishWithVideo(image, asset, adjustments);
+                        
+                        commit();
+                    }
+                });
+        }];
+        [itemViews addObject:viewItem];
+    }
+    
+    if (_hasSearchButton)
+    {
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+        {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            if (strongSelf != nil)
+                strongSelf.requestSearchController(nil);
+        }];
+        [itemViews addObject:viewItem];
+    }
     
     if (_hasViewButton)
     {

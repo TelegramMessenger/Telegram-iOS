@@ -84,6 +84,7 @@ import StickerPackPreviewUI
 import ChatListHeaderComponent
 import ChatControllerInteraction
 import StorageUsageScreen
+import AvatarEditorScreen
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -7208,6 +7209,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     completion(nil)
                 }
             }
+            mixin.requestAvatarEditor = { [weak self] completion in
+                guard let strongSelf = self, let completion else {
+                    return
+                }
+                
+                let controller = AvatarEditorScreen(context: strongSelf.context)
+                controller.completion = completion
+                (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
+            }
+
             if let confirmationTextPhoto, let confirmationAction {
                 mixin.willFinishWithImage = { [weak self] image, commit in
                     if let strongSelf = self, let image {

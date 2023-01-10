@@ -2534,6 +2534,13 @@ public final class EmojiPagerContentComponent: Component {
             let frame: CGRect
             let supergroupId: AnyHashable
             let groupId: AnyHashable
+            let itemsPerRow: Int
+            let nativeItemSize: CGFloat
+            let visibleItemSize: CGFloat
+            let playbackItemSize: CGFloat
+            let horizontalSpacing: CGFloat
+            let verticalSpacing: CGFloat
+            let itemInsets: UIEdgeInsets
             let headerHeight: CGFloat
             let itemTopOffset: CGFloat
             let itemCount: Int
@@ -2642,6 +2649,30 @@ public final class EmojiPagerContentComponent: Component {
                 var verticalGroupOrigin: CGFloat = self.itemInsets.top
                 self.itemGroupLayouts = []
                 for itemGroup in itemGroups {
+                    var itemsPerRow = self.itemsPerRow
+                    var nativeItemSize = self.nativeItemSize
+                    var visibleItemSize = self.visibleItemSize
+                    var playbackItemSize = self.playbackItemSize
+                    var horizontalSpacing = self.horizontalSpacing
+                    var verticalSpacing = self.verticalSpacing
+                    var itemInsets = self.itemInsets
+
+                    if itemGroup.groupId == AnyHashable("stickers") {
+                        let minItemsPerRow = 5
+                        nativeItemSize = 70.0
+                        playbackItemSize = 96.0
+                        verticalSpacing = 2.0
+                        let minSpacing = 12.0
+
+                        itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 10.0, bottom: containerInsets.bottom, right: containerInsets.right + 10.0)
+                        
+                        let itemHorizontalSpace = width - itemInsets.left - itemInsets.right
+                        itemsPerRow = max(minItemsPerRow, Int((itemHorizontalSpace + minSpacing) / (nativeItemSize + minSpacing)))
+                        let proposedItemSize = floor((itemHorizontalSpace - minSpacing * (CGFloat(itemsPerRow) - 1.0)) / CGFloat(itemsPerRow))
+                        visibleItemSize = proposedItemSize < nativeItemSize ? proposedItemSize : nativeItemSize
+                        horizontalSpacing = floorToScreenPixels((itemHorizontalSpace - visibleItemSize * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1))
+                    }
+                    
                     var itemTopOffset: CGFloat = 0.0
                     var headerHeight: CGFloat = 0.0
                     var groupSpacing = self.verticalGroupDefaultSpacing
@@ -2663,7 +2694,7 @@ public final class EmojiPagerContentComponent: Component {
                     if itemGroup.isEmbedded {
                         numRowsInGroup = 0
                     } else {
-                        numRowsInGroup = (itemGroup.itemCount + (self.itemsPerRow - 1)) / self.itemsPerRow
+                        numRowsInGroup = (itemGroup.itemCount + (itemsPerRow - 1)) / itemsPerRow
                     }
                     
                     var collapsedItemIndex: Int?
@@ -2674,7 +2705,7 @@ public final class EmojiPagerContentComponent: Component {
                     } else if let collapsedLineCount = itemGroup.collapsedLineCount, !expandedGroupIds.contains(itemGroup.groupId) {
                         let maxLines: Int = collapsedLineCount
                         if numRowsInGroup > maxLines {
-                            visibleItemCount = self.itemsPerRow * maxLines - 1
+                            visibleItemCount = itemsPerRow * maxLines - 1
                             collapsedItemIndex = visibleItemCount
                             collapsedItemText = "+\(itemGroup.itemCount - visibleItemCount)"
                         } else {
@@ -2685,10 +2716,10 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     if !itemGroup.isEmbedded {
-                        numRowsInGroup = (visibleItemCount + (self.itemsPerRow - 1)) / self.itemsPerRow
+                        numRowsInGroup = (visibleItemCount + (itemsPerRow - 1)) / itemsPerRow
                     }
                     
-                    var groupContentSize = CGSize(width: width, height: itemTopOffset + CGFloat(numRowsInGroup) * self.visibleItemSize + CGFloat(max(0, numRowsInGroup - 1)) * self.verticalSpacing)
+                    var groupContentSize = CGSize(width: width, height: itemTopOffset + CGFloat(numRowsInGroup) * visibleItemSize + CGFloat(max(0, numRowsInGroup - 1)) * verticalSpacing)
                     if (itemGroup.isPremiumLocked || itemGroup.isFeatured), case .compact = layoutType {
                         groupContentSize.height += self.premiumButtonInset + self.premiumButtonHeight
                     }
@@ -2697,6 +2728,13 @@ public final class EmojiPagerContentComponent: Component {
                         frame: CGRect(origin: CGPoint(x: 0.0, y: verticalGroupOrigin), size: groupContentSize),
                         supergroupId: itemGroup.supergroupId,
                         groupId: itemGroup.groupId,
+                        itemsPerRow: itemsPerRow,
+                        nativeItemSize: nativeItemSize,
+                        visibleItemSize: visibleItemSize,
+                        playbackItemSize: playbackItemSize,
+                        horizontalSpacing: horizontalSpacing,
+                        verticalSpacing: verticalSpacing,
+                        itemInsets: itemInsets,
                         headerHeight: headerHeight,
                         itemTopOffset: itemTopOffset,
                         itemCount: visibleItemCount,
@@ -2705,24 +2743,24 @@ public final class EmojiPagerContentComponent: Component {
                     ))
                     verticalGroupOrigin += groupContentSize.height + groupSpacing
                 }
-                verticalGroupOrigin += self.itemInsets.bottom
+                verticalGroupOrigin += itemInsets.bottom
                 self.contentSize = CGSize(width: width, height: verticalGroupOrigin)
             }
             
             func frame(groupIndex: Int, itemIndex: Int) -> CGRect {
                 let groupLayout = self.itemGroupLayouts[groupIndex]
                 
-                let row = itemIndex / self.itemsPerRow
-                let column = itemIndex % self.itemsPerRow
+                let row = itemIndex / groupLayout.itemsPerRow
+                let column = itemIndex % groupLayout.itemsPerRow
                 
                 return CGRect(
                     origin: CGPoint(
-                        x: self.itemInsets.left + CGFloat(column) * (self.visibleItemSize + self.horizontalSpacing),
-                        y: groupLayout.frame.minY + groupLayout.itemTopOffset + CGFloat(row) * (self.visibleItemSize + self.verticalSpacing)
+                        x: groupLayout.itemInsets.left + CGFloat(column) * (groupLayout.visibleItemSize + groupLayout.horizontalSpacing),
+                        y: groupLayout.frame.minY + groupLayout.itemTopOffset + CGFloat(row) * (groupLayout.visibleItemSize + groupLayout.verticalSpacing)
                     ),
                     size: CGSize(
-                        width: self.visibleItemSize,
-                        height: self.visibleItemSize
+                        width: groupLayout.visibleItemSize,
+                        height: groupLayout.visibleItemSize
                     )
                 )
             }
@@ -2731,22 +2769,22 @@ public final class EmojiPagerContentComponent: Component {
                 var result: [(supergroupId: AnyHashable, groupId: AnyHashable, groupIndex: Int, groupItems: Range<Int>?)] = []
                 
                 for groupIndex in 0 ..< self.itemGroupLayouts.count {
-                    let group = self.itemGroupLayouts[groupIndex]
+                    let groupLayout = self.itemGroupLayouts[groupIndex]
                     
-                    if !rect.intersects(group.frame) {
+                    if !rect.intersects(groupLayout.frame) {
                         continue
                     }
-                    let offsetRect = rect.offsetBy(dx: -self.itemInsets.left, dy: -group.frame.minY - group.itemTopOffset)
-                    var minVisibleRow = Int(floor((offsetRect.minY - self.verticalSpacing) / (self.visibleItemSize + self.verticalSpacing)))
+                    let offsetRect = rect.offsetBy(dx: -groupLayout.itemInsets.left, dy: -groupLayout.frame.minY - groupLayout.itemTopOffset)
+                    var minVisibleRow = Int(floor((offsetRect.minY - groupLayout.verticalSpacing) / (groupLayout.visibleItemSize + groupLayout.verticalSpacing)))
                     minVisibleRow = max(0, minVisibleRow)
-                    let maxVisibleRow = Int(ceil((offsetRect.maxY - self.verticalSpacing) / (self.visibleItemSize + self.verticalSpacing)))
+                    let maxVisibleRow = Int(ceil((offsetRect.maxY - groupLayout.verticalSpacing) / (groupLayout.visibleItemSize + groupLayout.verticalSpacing)))
 
-                    let minVisibleIndex = minVisibleRow * self.itemsPerRow
-                    let maxVisibleIndex = min(group.itemCount - 1, (maxVisibleRow + 1) * self.itemsPerRow - 1)
+                    let minVisibleIndex = minVisibleRow * groupLayout.itemsPerRow
+                    let maxVisibleIndex = min(groupLayout.itemCount - 1, (maxVisibleRow + 1) * groupLayout.itemsPerRow - 1)
                     
                     result.append((
-                        supergroupId: group.supergroupId,
-                        groupId: group.groupId,
+                        supergroupId: groupLayout.supergroupId,
+                        groupId: groupLayout.groupId,
                         groupIndex: groupIndex,
                         groupItems: maxVisibleIndex >= minVisibleIndex ? (minVisibleIndex ..< (maxVisibleIndex + 1)) : nil
                     ))
@@ -5204,6 +5242,7 @@ public final class EmojiPagerContentComponent: Component {
                 if !itemGroup.isEmbedded, let groupItemRange = groupItems.groupItems {
                     for index in groupItemRange.lowerBound ..< groupItemRange.upperBound {
                         let item = itemGroup.items[index]
+
                         
                         if assignTopVisibleSubgroupId {
                             if let subgroupId = item.subgroupId {
@@ -5219,9 +5258,9 @@ public final class EmojiPagerContentComponent: Component {
                         
                         let itemDimensions: CGSize = item.animationData?.dimensions ?? CGSize(width: 512.0, height: 512.0)
                         
-                        let itemNativeFitSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.nativeItemSize, height: itemLayout.nativeItemSize))
-                        let itemVisibleFitSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.visibleItemSize, height: itemLayout.visibleItemSize))
-                        let itemPlaybackSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.playbackItemSize, height: itemLayout.playbackItemSize))
+                        let itemNativeFitSize = itemDimensions.aspectFitted(CGSize(width: itemGroupLayout.nativeItemSize, height: itemGroupLayout.nativeItemSize))
+                        let itemVisibleFitSize = itemDimensions.aspectFitted(CGSize(width: itemGroupLayout.visibleItemSize, height: itemGroupLayout.visibleItemSize))
+                        let itemPlaybackSize = itemDimensions.aspectFitted(CGSize(width: itemGroupLayout.playbackItemSize, height: itemGroupLayout.playbackItemSize))
                         
                         var animateItemIn = false
                         var updateItemLayerPlaceholder = false
@@ -6309,6 +6348,8 @@ public final class EmojiPagerContentComponent: Component {
         isEmojiSelection: Bool,
         isTopicIconSelection: Bool = false,
         isQuickReactionSelection: Bool = false,
+        isProfilePhotoEmojiSelection: Bool = false,
+        isGroupPhotoEmojiSelection: Bool = false,
         topReactionItems: [EmojiComponentReactionItem],
         areUnicodeEmojiEnabled: Bool,
         areCustomEmojiEnabled: Bool,
@@ -6359,6 +6400,8 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             |> take(1)
+        } else if isProfilePhotoEmojiSelection {
+            //orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji)
         }
         
         let availableReactions: Signal<AvailableReactions?, NoError>
@@ -7071,7 +7114,7 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             var displaySearchWithPlaceholder: String?
-            var searchInitiallyHidden = true
+            let searchInitiallyHidden = true
             if hasSearch {
                 if isReactionSelection {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
@@ -7079,7 +7122,8 @@ public final class EmojiPagerContentComponent: Component {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
                 } else if isEmojiSelection {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
-                    searchInitiallyHidden = false
+                } else if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+                    displaySearchWithPlaceholder = "Search"
                 }
             }
             
@@ -7147,7 +7191,8 @@ public final class EmojiPagerContentComponent: Component {
         chatPeerId: EnginePeer.Id?,
         hasSearch: Bool,
         hasTrending: Bool,
-        forceHasPremium: Bool
+        forceHasPremium: Bool,
+        searchIsPlaceholderOnly: Bool = true
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7637,7 +7682,7 @@ public final class EmojiPagerContentComponent: Component {
                 warpContentsOnEdges: false,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchInitiallyHidden: true,
-                searchIsPlaceholderOnly: true,
+                searchIsPlaceholderOnly: searchIsPlaceholderOnly,
                 emptySearchResults: nil,
                 enableLongPress: false,
                 selectedItems: Set()

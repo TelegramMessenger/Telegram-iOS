@@ -186,6 +186,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?
     public let isTopPanelExpandedUpdated: (Bool, Transition) -> Void
     public let isTopPanelHiddenUpdated: (Bool, Transition) -> Void
+    public let contentIdUpdated: (AnyHashable) -> Void
     public let panelHideBehavior: PagerComponentPanelHideBehavior
     public let clipContentToTopPanel: Bool
     
@@ -205,6 +206,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?,
         isTopPanelExpandedUpdated: @escaping (Bool, Transition) -> Void,
         isTopPanelHiddenUpdated: @escaping (Bool, Transition) -> Void,
+        contentIdUpdated: @escaping (AnyHashable) -> Void,
         panelHideBehavior: PagerComponentPanelHideBehavior,
         clipContentToTopPanel: Bool
     ) {
@@ -223,6 +225,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.panelStateUpdated = panelStateUpdated
         self.isTopPanelExpandedUpdated = isTopPanelExpandedUpdated
         self.isTopPanelHiddenUpdated = isTopPanelHiddenUpdated
+        self.contentIdUpdated = contentIdUpdated
         self.panelHideBehavior = panelHideBehavior
         self.clipContentToTopPanel = clipContentToTopPanel
     }
@@ -397,10 +400,31 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     } else {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                     }
+                    if let centralId = self.centralId {
+                        self.component?.contentIdUpdated(centralId)
+                    }
                 }
             default:
                 break
             }
+        }
+        
+        public func navigateToContentId(_ id: AnyHashable) {
+            var updateTopPanelExpanded = false
+            if self.centralId != id {
+                self.centralId = id
+                
+                if self.isTopPanelExpanded {
+                    updateTopPanelExpanded = true
+                }
+            }
+            
+            if updateTopPanelExpanded {
+                self.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            } else {
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            }
+            self.component?.contentIdUpdated(id)
         }
         
         func update(component: PagerComponent<ChildEnvironmentType, TopPanelEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -418,21 +442,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 guard let strongSelf = self else {
                     return
                 }
-                
-                var updateTopPanelExpanded = false
-                if strongSelf.centralId != id {
-                    strongSelf.centralId = id
-                    
-                    if strongSelf.isTopPanelExpanded {
-                        updateTopPanelExpanded = true
-                    }
-                }
-                
-                if updateTopPanelExpanded {
-                    strongSelf.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                } else {
-                    strongSelf.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                }
+                strongSelf.navigateToContentId(id)
             }
             
             var centralId: AnyHashable?
