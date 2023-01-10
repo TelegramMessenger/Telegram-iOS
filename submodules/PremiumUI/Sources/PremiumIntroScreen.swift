@@ -622,7 +622,7 @@ final class PremiumOptionComponent: CombinedComponent {
                         text: .plain(subtitleString),
                         maximumNumberOfLines: 1
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - insets.left - insets.right - label.size.width, height: context.availableSize.height),
+                    availableSize: CGSize(width: context.availableSize.width - insets.left - insets.right, height: context.availableSize.height),
                     transition: context.transition
                 )
                 context.add(subtitle

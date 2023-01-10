@@ -23,6 +23,10 @@ public extension TelegramEngineUnauthorized {
         public func twoStepAuthData() -> Signal<TwoStepAuthData, MTRpcError> {
             return _internal_twoStepAuthData(self.account.network)
         }
+        
+        public func test() -> Signal<Bool, String> {
+            return _internal_test(self.account.network)
+        }
 
         public func updateTwoStepVerificationPassword(currentPassword: String?, updatedPassword: UpdatedTwoStepVerificationPassword) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
             return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)

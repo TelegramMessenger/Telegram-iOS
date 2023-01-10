@@ -261,6 +261,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
         self.containerNode = ASDisplayNode()
         self.containerNode.isLayerBacked = true
         self.containerNode.clipsToBounds = true
+        self.containerNode.cornerRadius = lineHeight / 2.0
         
         self.foregroundNode = ASImageNode()
         self.foregroundNode.isLayerBacked = true
