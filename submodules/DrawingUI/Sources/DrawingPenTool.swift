@@ -279,7 +279,7 @@ final class PenTool: DrawingElement {
         let segmentsBounds = boundingRect(from: 0, to: self.segments.count).insetBy(dx: -20.0, dy: -20.0)
         var combinedBounds = segmentsBounds
         if self.hasArrow, let arrowLeftPath, let arrowRightPath {
-            combinedBounds = combinedBounds.union(arrowLeftPath.bounds).union(arrowRightPath.bounds).insetBy(dx: -20.0, dy: -20.0)
+            combinedBounds = combinedBounds.union(arrowLeftPath.bounds.insetBy(dx: -renderArrowLineWidth, dy: -renderArrowLineWidth)).union(arrowRightPath.bounds.insetBy(dx: -renderArrowLineWidth, dy: -renderArrowLineWidth)).insetBy(dx: -20.0, dy: -20.0)
         }
         return normalizeDrawingRect(combinedBounds, drawingSize: self.drawingSize)
     }

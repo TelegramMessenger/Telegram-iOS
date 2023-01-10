@@ -902,7 +902,7 @@ final class AvatarEditorScreenComponent: Component {
             
             if state.isSearchActive {
                 keyboardTitle = "Emoji or Sticker"
-                keyboardSwitchTitle = ""
+                keyboardSwitchTitle = " "
             } else if state.keyboardContentId == AnyHashable("emoji") {
                 keyboardTitle = "Emoji"
                 keyboardSwitchTitle = "Switch to Stickers"
@@ -910,12 +910,12 @@ final class AvatarEditorScreenComponent: Component {
                 keyboardTitle = "Stickers"
                 keyboardSwitchTitle = "Switch to Emoji"
             } else {
-                keyboardTitle = ""
-                keyboardSwitchTitle = ""
+                keyboardTitle = " "
+                keyboardSwitchTitle = " "
             }
             
             let keyboardTitleSize = self.keyboardTitleView.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .markdown(
                         text: keyboardTitle.uppercased(), attributes: MarkdownAttributes(
@@ -935,12 +935,17 @@ final class AvatarEditorScreenComponent: Component {
                 if keyboardTitleView.superview == nil {
                     self.addSubview(keyboardTitleView)
                 }
-                transition.setFrame(view: keyboardTitleView, frame: keyboardTitleFrame)
+                keyboardTitleView.bounds = CGRect(origin: .zero, size: keyboardTitleFrame.size)
+                if keyboardTitleFrame.center.y == keyboardTitleView.center.y {
+                    keyboardTitleView.center = keyboardTitleFrame.center
+                } else {
+                    transition.setPosition(view: keyboardTitleView, position: keyboardTitleFrame.center)
+                }
                 transition.setAlpha(view: keyboardTitleView, alpha: state.editingColor ? 0.0 : 1.0)
             }
             
             let keyboardSwitchSize = self.keyboardSwitchView.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(
                     Button(
                         content: AnyComponent(
@@ -978,7 +983,12 @@ final class AvatarEditorScreenComponent: Component {
                 if keyboardSwitchView.superview == nil {
                     self.addSubview(keyboardSwitchView)
                 }
-                transition.setFrame(view: keyboardSwitchView, frame: keyboardSwitchFrame)
+                keyboardSwitchView.bounds = CGRect(origin: .zero, size: keyboardSwitchFrame.size)
+                if keyboardSwitchFrame.center.y == keyboardSwitchView.center.y {
+                    keyboardSwitchView.center = keyboardSwitchFrame.center
+                } else {
+                    transition.setPosition(view: keyboardSwitchView, position: keyboardSwitchFrame.center)
+                }
                 transition.setAlpha(view: keyboardSwitchView, alpha: state.editingColor ? 0.0 : 1.0)
             }
             contentHeight += keyboardTitleSize.height
