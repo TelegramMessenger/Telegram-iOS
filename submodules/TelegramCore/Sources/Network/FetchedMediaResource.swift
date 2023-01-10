@@ -95,6 +95,12 @@ public func fetchedMediaResource(
     
     let location = MediaResourceStorageLocation(userLocation: userLocation, reference: reference)
     
+    var ranges = ranges
+    
+    if let rangesValue = ranges, rangesValue.count == 1, rangesValue[0].0 == 0 ..< Int64.max {
+        ranges = nil
+    }
+    
     if let ranges = ranges {
         let signals = ranges.map { (range, priority) -> Signal<Void, FetchResourceError> in
             return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(
