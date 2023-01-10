@@ -175,6 +175,7 @@ final class DataCategoriesComponent: Component {
             }
             
             self.backgroundColor = component.theme.list.itemBlocksBackgroundColor
+            self.containerView.backgroundColor = component.theme.list.itemBlocksBackgroundColor
             
             self.containerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: contentHeight))
             

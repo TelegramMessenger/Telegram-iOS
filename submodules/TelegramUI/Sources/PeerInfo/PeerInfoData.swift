@@ -112,6 +112,7 @@ final class PeerInfoState {
 final class TelegramGlobalSettings {
     let suggestPhoneNumberConfirmation: Bool
     let suggestPasswordConfirmation: Bool
+    let suggestPasswordSetup: Bool
     let accountsAndPeers: [(AccountContext, EnginePeer, Int32)]
     let activeSessionsContext: ActiveSessionsContext?
     let webSessionsContext: WebSessionsContext?
@@ -132,6 +133,7 @@ final class TelegramGlobalSettings {
     init(
         suggestPhoneNumberConfirmation: Bool,
         suggestPasswordConfirmation: Bool,
+        suggestPasswordSetup: Bool,
         accountsAndPeers: [(AccountContext, EnginePeer, Int32)],
         activeSessionsContext: ActiveSessionsContext?,
         webSessionsContext: WebSessionsContext?,
@@ -151,6 +153,7 @@ final class TelegramGlobalSettings {
     ) {
         self.suggestPhoneNumberConfirmation = suggestPhoneNumberConfirmation
         self.suggestPasswordConfirmation = suggestPasswordConfirmation
+        self.suggestPasswordSetup = suggestPasswordSetup
         self.accountsAndPeers = accountsAndPeers
         self.activeSessionsContext = activeSessionsContext
         self.webSessionsContext = webSessionsContext
@@ -409,6 +412,23 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         )
     }
     
+    let hasPassword: Signal<Bool?, NoError> = .single(nil) |> then(
+        context.engine.auth.twoStepVerificationConfiguration()
+        |> map { configuration -> Bool? in
+            var notSet = false
+            switch configuration {
+            case let .notSet(pendingEmail):
+                if pendingEmail == nil {
+                    notSet = true
+                }
+            case .set:
+                break
+            }
+            return !notSet
+        }
+    )
+    |> distinctUntilChanged
+    
     return combineLatest(
         context.account.viewTracker.peerView(peerId, updateData: true),
         accountsAndPeers,
@@ -424,9 +444,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-        )
+        ),
+        hasPassword
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -443,10 +464,16 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             enableQRLogin = true
         }
         
+        var suggestPasswordSetup = false
+        if suggestions.contains(.setupPassword), let hasPassword, !hasPassword {
+            suggestPasswordSetup = true
+        }
+        
         let peer = peerView.peers[peerId]
         let globalSettings = TelegramGlobalSettings(
             suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber),
             suggestPasswordConfirmation: suggestions.contains(.validatePassword),
+            suggestPasswordSetup: suggestPasswordSetup,
             accountsAndPeers: accountsAndPeers,
             activeSessionsContext: accountSessions?.0,
             webSessionsContext: accountSessions?.2,

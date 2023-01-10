@@ -1,5 +1,7 @@
 import Foundation
 import SwiftSignalKit
+import DarwinDirStat
+
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
 struct InodeInfo {
@@ -52,7 +54,7 @@ private final class TempScanDatabase {
     
     init?(queue: Queue, basePath: String) {
         self.queue = queue
-        guard let valueBox = SqliteValueBox(basePath: basePath, queue: queue, isTemporary: true, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+        guard let valueBox = SqliteValueBox(basePath: basePath, queue: queue, isTemporary: true, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, encryptionParameters: nil, upgradeProgress: { _ in }, inMemory: true) else {
             return nil
         }
         self.valueBox = valueBox
@@ -127,8 +129,10 @@ private final class TempScanDatabase {
     }
 }
 
-private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, tempDatabase: TempScanDatabase) -> ScanFilesResult {
+private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, performSizeMapping: Bool, tempDatabase: TempScanDatabase) -> ScanFilesResult {
     var result = ScanFilesResult()
+    
+    var subdirectories: [String] = []
     
     if let dp = opendir(path) {
         let pathBuffer = malloc(2048).assumingMemoryBound(to: Int8.self)
@@ -156,9 +160,7 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
                 if (((value.st_mode) & S_IFMT) == S_IFDIR) {
                     if includeSubdirectories {
                         if let subPath = String(data: Data(bytes: pathBuffer, count: strnlen(pathBuffer, 1024)), encoding: .utf8) {
-                            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, tempDatabase: tempDatabase)
-                            result.totalSize += subResult.totalSize
-                            result.unlinkedCount += subResult.unlinkedCount
+                            subdirectories.append(subPath)
                         }
                     }
                 } else {
@@ -167,12 +169,22 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
                         result.unlinkedCount += 1
                     } else {
                         result.totalSize += UInt64(value.st_size)
-                        tempDatabase.add(pathBuffer: pathBuffer, pathSize: strnlen(pathBuffer, 1024), size: Int64(value.st_size), timestamp: Int32(value.st_mtimespec.tv_sec))
+                        if performSizeMapping {
+                            tempDatabase.add(pathBuffer: pathBuffer, pathSize: strnlen(pathBuffer, 1024), size: Int64(value.st_size), timestamp: Int32(value.st_mtimespec.tv_sec))
+                        }
                     }
                 }
             }
         }
         closedir(dp)
+    }
+    
+    if includeSubdirectories {
+        for subPath in subdirectories {
+            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+            result.totalSize += subResult.totalSize
+            result.unlinkedCount += subResult.unlinkedCount
+        }
     }
     
     return result
@@ -259,6 +271,21 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
     }
 }*/
 
+private func statForDirectory(path: String) -> Int64 {
+    var s = darwin_dirstat()
+    var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
+    if result != -1 {
+        return Int64(s.total_size)
+    } else {
+        result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+        if result != -1 {
+            return Int64(s.total_size)
+        } else {
+            return 0
+        }
+    }
+}
+
 private final class TimeBasedCleanupImpl {
     private let queue: Queue
     private let storageBox: StorageBox
@@ -298,6 +325,11 @@ private final class TimeBasedCleanupImpl {
     }
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        if "".isEmpty {
+            //TODO:remove debugging
+            return
+        }
+        
         let generalPaths = self.generalPaths
         let totalSizeBasedPath = self.totalSizeBasedPath
         let shortLivedPaths = self.shortLivedPaths
@@ -329,10 +361,42 @@ private final class TimeBasedCleanupImpl {
                 let bytesLimit = UInt64(gigabytesLimit) * 1024 * 1024 * 1024
                 //#endif
                 
+                var totalApproximateSize: Int64 = 0
+                for path in shortLivedPaths {
+                    totalApproximateSize += statForDirectory(path: path)
+                }
+                for path in generalPaths {
+                    totalApproximateSize += statForDirectory(path: path)
+                }
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: totalSizeBasedPath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    var fileIds = Set<Data>()
+                    loop: for url in enumerator {
+                        guard let url = url as? URL else {
+                            continue
+                        }
+                        if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
+                            if fileIds.contains(fileId) {
+                                continue loop
+                            }
+                        
+                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                fileIds.insert(fileId)
+                                totalApproximateSize += Int64(value)
+                            }
+                        }
+                    }
+                }
+                
+                var performSizeMapping = true
+                if totalApproximateSize <= bytesLimit {
+                    performSizeMapping = false
+                }
+                
                 let oldestShortLivedTimestamp = timestamp - shortLived
                 let oldestGeneralTimestamp = timestamp - general
                 for path in shortLivedPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, tempDatabase: tempDatabase)
+                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -342,7 +406,7 @@ private final class TimeBasedCleanupImpl {
                 var totalLimitSize: UInt64 = 0
                 
                 for path in generalPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, tempDatabase: tempDatabase)
+                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -350,7 +414,7 @@ private final class TimeBasedCleanupImpl {
                     totalLimitSize += scanResult.totalSize
                 }
                 do {
-                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, tempDatabase: tempDatabase)
+                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
                     if !paths.contains(totalSizeBasedPath) {
                         paths.append(totalSizeBasedPath)
                     }

@@ -13,7 +13,7 @@ enum ChatListNodeEntryId: Hashable {
     case ThreadId(Int64)
     case GroupId(EngineChatList.Group)
     case ArchiveIntro
-    case StorageInfo
+    case Notice
     case additionalCategory(Int)
 }
 
@@ -44,6 +44,11 @@ enum ChatListNodeEntrySortIndex: Comparable {
 public enum ChatListNodeEntryPromoInfo: Equatable {
     case proxy
     case psa(type: String, message: String?)
+}
+
+enum ChatListNotice: Equatable {
+    case clearStorage(sizeFraction: Double)
+    case setupPassword
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
@@ -235,7 +240,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
     case GroupReferenceEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, editing: Bool, unreadCount: Int, revealed: Bool, hiddenByDefault: Bool)
     case ArchiveIntro(presentationData: ChatListPresentationData)
-    case StorageInfo(presentationData: ChatListPresentationData, sizeFraction: Double)
+    case Notice(presentationData: ChatListPresentationData, notice: ChatListNotice)
     case AdditionalCategory(index: Int, id: Int, title: String, image: UIImage?, appearance: ChatListNodeAdditionalCategory.Appearance, selected: Bool, presentationData: ChatListPresentationData)
     
     var sortIndex: ChatListNodeEntrySortIndex {
@@ -250,7 +255,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(index)
         case .ArchiveIntro:
             return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor))
-        case .StorageInfo:
+        case .Notice:
             return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor.successor))
         case let .AdditionalCategory(index, _, _, _, _, _, _):
             return .additionalCategory(index)
@@ -274,8 +279,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .GroupId(groupId)
         case .ArchiveIntro:
             return .ArchiveIntro
-        case .StorageInfo:
-            return .StorageInfo
+        case .Notice:
+            return .Notice
         case let .AdditionalCategory(_, id, _, _, _, _, _):
             return .additionalCategory(id)
         }
@@ -348,8 +353,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .StorageInfo(lhsPresentationData, lhsInfo):
-                if case let .StorageInfo(rhsPresentationData, rhsInfo) = rhs {
+            case let .Notice(lhsPresentationData, lhsInfo):
+                if case let .Notice(rhsPresentationData, rhsInfo) = rhs {
                     if lhsPresentationData !== rhsPresentationData {
                         return false
                     }
@@ -399,7 +404,7 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, storageInfo: Double?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, storageInfo: Double?, suggestPasswordSetup: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -661,8 +666,10 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             if displayArchiveIntro {
                 result.append(.ArchiveIntro(presentationData: state.presentationData))
             }
-            if let storageInfo {
-                result.append(.StorageInfo(presentationData: state.presentationData, sizeFraction: storageInfo))
+            if suggestPasswordSetup {
+                result.append(.Notice(presentationData: state.presentationData, notice: .setupPassword))
+            } else if let storageInfo {
+                result.append(.Notice(presentationData: state.presentationData, notice: .clearStorage(sizeFraction: storageInfo)))
             }
             
             result.append(.HeaderEntry)

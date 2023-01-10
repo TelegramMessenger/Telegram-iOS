@@ -454,6 +454,7 @@ private enum PeerInfoSettingsSection {
     case chatFolders
     case notificationsAndSounds
     case privacyAndSecurity
+    case passwordSetup
     case dataAndStorage
     case appearance
     case language
@@ -720,6 +721,13 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
                 interaction.openSettings(.rememberPassword)
+            }))
+        } else if settings.suggestPasswordSetup {
+            //TODO:localize
+            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: "Protect Your Account", text: .markdown("Set a password that will be required each time log in with this phone number."), linkAction: { _ in
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: "Set Additional Password", action: {
+                interaction.openSettings(.passwordSetup)
             }))
         }
         
@@ -7466,6 +7474,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     })
                 }
+            case .passwordSetup:
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.6, execute: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).start()
+                })
+                
+                let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
+                push(controller)
             case .dataAndStorage:
                 push(dataAndStorageController(context: self.context))
             case .appearance:

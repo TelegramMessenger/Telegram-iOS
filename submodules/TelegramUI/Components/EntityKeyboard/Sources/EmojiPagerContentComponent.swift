@@ -6204,10 +6204,10 @@ public final class EmojiPagerContentComponent: Component {
                             }
                         }
                     } else {
-                        if visibleSearchHeader.superview != self.scrollView {
+                        /*if visibleSearchHeader.superview != self.scrollView {
                             self.scrollView.addSubview(visibleSearchHeader)
                             self.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
-                        }
+                        }*/
                     }
                 } else {
                     visibleSearchHeader = EmojiSearchHeaderView(activated: { [weak self] in

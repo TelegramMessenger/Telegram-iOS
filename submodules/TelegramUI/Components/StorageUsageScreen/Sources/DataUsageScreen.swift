@@ -168,7 +168,7 @@ final class DataUsageScreenComponent: Component {
         init(stats: NetworkUsageStats) {
             self.wifi = Stats(stats: stats, isWifi: true)
             self.cellular = Stats(stats: stats, isWifi: false)
-            self.resetTimestamp = stats.resetWifiTimestamp
+            self.resetTimestamp = max(stats.resetWifiTimestamp, stats.resetCellularTimestamp)
         }
     }
     
@@ -293,7 +293,8 @@ final class DataUsageScreenComponent: Component {
         private let headerOffsetContainer: UIView
         private let headerDescriptionView = ComponentView<Empty>()
         
-        private var doneStatusNode: RadialStatusNode?
+        private var doneLabel: ComponentView<Empty>?
+        private var doneSupLabel: ComponentView<Empty>?
         
         private let scrollContainerView: UIView
         
@@ -566,8 +567,17 @@ final class DataUsageScreenComponent: Component {
                 chartItems.append(PieChartComponent.ChartData.Item(id: AnyHashable(listCategory.key), displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, particle: nil, title: listCategory.key.title(strings: environment.strings), mergeable: false, mergeFactor: 1.0))
             }
             
+            var emptyValue: CGFloat = 0.0
             if totalSize == 0 {
+                for i in 0 ..< chartItems.count {
+                    chartItems[i].value = 0.0
+                }
+                emptyValue = 1.0
+            }
+            if let allStats = self.allStats, allStats.wifi.isEmpty && allStats.cellular.isEmpty {
                 chartItems.removeAll()
+            } else {
+                chartItems.append(PieChartComponent.ChartData.Item(id: "empty", displayValue: 0.0, displaySize: 0, value: emptyValue, color: UIColor(rgb: 0xC4C4C6), particle: nil, title: "", mergeable: false, mergeFactor: 1.0))
             }
             
             let totalCategories: [DataCategoriesComponent.CategoryData] = [
@@ -611,6 +621,7 @@ final class DataUsageScreenComponent: Component {
                 component: AnyComponent(PieChartComponent(
                     theme: environment.theme,
                     strings: environment.strings,
+                    emptyColor: environment.theme.list.itemAccentColor,
                     chartData: chartData
                 )),
                 environment: {},
@@ -625,42 +636,75 @@ final class DataUsageScreenComponent: Component {
                 pieChartTransition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
             }
             if let allStats = self.allStats, allStats.wifi.isEmpty && allStats.cellular.isEmpty {
-                let checkColor = UIColor(rgb: 0x34C759)
+                let checkColor = environment.theme.list.itemAccentColor
                 
-                let doneStatusNode: RadialStatusNode
-                var animateIn = false
-                if let current = self.doneStatusNode {
-                    doneStatusNode = current
+                var doneLabelTransition = transition
+                let doneLabel: ComponentView<Empty>
+                if let current = self.doneLabel {
+                    doneLabel = current
                 } else {
-                    doneStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
-                    self.doneStatusNode = doneStatusNode
-                    self.scrollView.addSubnode(doneStatusNode)
-                    animateIn = true
-                }
-                let doneSize = CGSize(width: 100.0, height: 100.0)
-                doneStatusNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - doneSize.width) / 2.0), y: contentHeight), size: doneSize)
-                
-                if animateIn {
-                    Queue.mainQueue().after(0.18, {
-                        doneStatusNode.transitionToState(.check(checkColor), animated: true)
-                    })
+                    doneLabelTransition = .immediate
+                    doneLabel = ComponentView()
+                    self.doneLabel = doneLabel
                 }
                 
-                contentHeight += doneSize.height
+                let doneSupLabel: ComponentView<Empty>
+                if let current = self.doneSupLabel {
+                    doneSupLabel = current
+                } else {
+                    doneSupLabel = ComponentView()
+                    self.doneSupLabel = doneSupLabel
+                }
+                
+                let doneLabelSize = doneLabel.update(transition: doneLabelTransition, component: AnyComponent(Text(text: "0", font: UIFont.systemFont(ofSize: 50.0, weight: UIFont.Weight(0.25)), color: checkColor)), environment: {}, containerSize: CGSize(width: 100.0, height: 100.0))
+                let doneLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - doneLabelSize.width) * 0.5), y: pieChartFrame.minY + 16.0), size: doneLabelSize)
+                if let doneLabelView = doneLabel.view {
+                    var animateIn = false
+                    if doneLabelView.superview == nil {
+                        self.scrollView.addSubview(doneLabelView)
+                        animateIn = true
+                    }
+                    doneLabelTransition.setFrame(view: doneLabelView, frame: doneLabelFrame)
+                    
+                    if animateIn {
+                        doneLabelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
+                    }
+                }
+                
+                let doneSupLabelSize = doneSupLabel.update(transition: doneLabelTransition, component: AnyComponent(Text(text: "KB", font: avatarPlaceholderFont(size: 12.0), color: checkColor)), environment: {}, containerSize: CGSize(width: 100.0, height: 100.0))
+                let doneSupLabelFrame = CGRect(origin: CGPoint(x: doneLabelFrame.maxX + 1.0, y: doneLabelFrame.minY + 10.0), size: doneSupLabelSize)
+                if let doneSupLabelView = doneSupLabel.view {
+                    var animateIn = false
+                    if doneSupLabelView.superview == nil {
+                        self.scrollView.addSubview(doneSupLabelView)
+                        animateIn = true
+                    }
+                    doneLabelTransition.setFrame(view: doneSupLabelView, frame: doneSupLabelFrame)
+                    
+                    if animateIn {
+                        doneSupLabelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
+                    }
+                }
+                
+                contentHeight += 100.0
             } else {
                 contentHeight += pieChartSize.height
                 
-                if let doneStatusNode = self.doneStatusNode {
-                    self.doneStatusNode = nil
-                    doneStatusNode.removeFromSupernode()
+                if let doneLabel = self.doneLabel {
+                    self.doneLabel = nil
+                    doneLabel.view?.removeFromSuperview()
+                }
+                if let doneSupLabel = self.doneSupLabel {
+                    self.doneSupLabel = nil
+                    doneSupLabel.view?.removeFromSuperview()
                 }
             }
             
             contentHeight += 23.0
             
             let headerText: String
-            if listCategories.isEmpty {
-                headerText = "Data Usage Reset"
+            if totalSize == 0 {
+                headerText = "No Data Used"
             } else {
                 headerText = "Data Usage"
             }
@@ -686,15 +730,19 @@ final class DataUsageScreenComponent: Component {
             let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
             
             //TODO:localize
-            
             let timestampString: String
             if let allStats = self.allStats, allStats.resetTimestamp != 0 {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "E, d MMM yyyy HH:mm"
-                let dateStringPlain = formatter.string(from: Date(timeIntervalSince1970: Double(allStats.resetTimestamp)))
-                timestampString = "Your network usage since \(dateStringPlain)"
+                let dateStringPlain = stringForFullDate(timestamp: allStats.resetTimestamp, strings: environment.strings, dateTimeFormat: PresentationDateTimeFormat())
+                switch self.selectedStats {
+                case .all:
+                    timestampString = "Your data usage since \(dateStringPlain)"
+                case .mobile:
+                    timestampString = "Your mobile data usage since \(dateStringPlain)"
+                case .wifi:
+                    timestampString = "Your Wi-Fi data usage since \(dateStringPlain)"
+                }
             } else {
-                timestampString = "Your network usage"
+                timestampString = ""
             }
             
             let totalUsageText: String = timestampString
@@ -743,8 +791,13 @@ final class DataUsageScreenComponent: Component {
                     animatedTextItems.append(AnimatedTextComponent.Item(id: "rest", isUnbreakable: true, content: .text(remainingSizeText)))
                 }
                 
+                var labelTransition = transition
+                if labelTransition.animation.isImmediate, let animationHint, animationHint.value == .modeChanged {
+                    labelTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
+                }
+                
                 let chartTotalLabelSize = self.chartTotalLabel.update(
-                    transition: transition,
+                    transition: labelTransition,
                     component: AnyComponent(AnimatedTextComponent(
                         font: Font.with(size: 20.0, design: .round, weight: .bold),
                         color: environment.theme.list.itemPrimaryTextColor,
@@ -758,8 +811,8 @@ final class DataUsageScreenComponent: Component {
                         self.scrollContainerView.addSubview(chartTotalLabelView)
                     }
                     let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
-                    transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
-                    transition.setAlpha(view: chartTotalLabelView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
+                    labelTransition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
+                    labelTransition.setAlpha(view: chartTotalLabelView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
                 }
             }
             
@@ -848,9 +901,18 @@ final class DataUsageScreenComponent: Component {
             contentHeight += 40.0
             
             //TODO:localize
+            let totalTitle: String
+            switch self.selectedStats {
+            case .all:
+                totalTitle = "TOTAL NETWORK USAGE"
+            case .mobile:
+                totalTitle = "MOBILE NETWORK USAGE"
+            case .wifi:
+                totalTitle = "WI-FI NETWORK USAGE"
+            }
             let totalCategoriesTitleSize = self.totalCategoriesTitleView.update(
                 transition: transition,
-                component: AnyComponent(MultilineTextComponent(text: .markdown(text: "TOTAL NETWORK USAGE", attributes: MarkdownAttributes(
+                component: AnyComponent(MultilineTextComponent(text: .markdown(text: totalTitle, attributes: MarkdownAttributes(
                     body: body,
                     bold: bold,
                     link: body,

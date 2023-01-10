@@ -1425,6 +1425,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
     }
     
+    public func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController {
+        return SettingsUI.makeSetupTwoFactorAuthController(context: context)
+    }
+    
     public func makeStorageManagementController(context: AccountContext) -> ViewController {
         return StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { [weak context] category in
             guard let context else {

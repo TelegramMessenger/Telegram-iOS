@@ -242,15 +242,18 @@ final class PieChartComponent: Component {
     
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let emptyColor: UIColor
     let chartData: ChartData
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        emptyColor: UIColor,
         chartData: ChartData
     ) {
         self.theme = theme
         self.strings = strings
+        self.emptyColor = emptyColor
         self.chartData = chartData
     }
     
@@ -259,6 +262,9 @@ final class PieChartComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.emptyColor != rhs.emptyColor {
             return false
         }
         if lhs.chartData != rhs.chartData {
@@ -366,6 +372,8 @@ final class PieChartComponent: Component {
                     var label: CalculatedLabel?
                     if let leftLabel = left.label, let rightLabel = right.label {
                         label = leftLabel.interpolateTo(rightLabel, amount: progress)
+                    } else {
+                        label = right.label
                     }
                     
                     self.sections.append(CalculatedSection(
@@ -385,7 +393,7 @@ final class PieChartComponent: Component {
             }
         }
         
-        init(size: CGSize, items: [ChartData.Item], selectedKey: AnyHashable?, isEmpty: Bool) {
+        init(size: CGSize, items: [ChartData.Item], selectedKey: AnyHashable?, isEmpty: Bool, emptyColor: UIColor) {
             self.size = size
             self.sections = []
             self.isEmpty = isEmpty
@@ -447,7 +455,7 @@ final class PieChartComponent: Component {
                 var arcOuterEndAngle = startAngle + angleValue - angleSpacing * 0.5 * afterSpacingFraction
                 arcOuterEndAngle = max(arcOuterEndAngle, arcOuterStartAngle)
                 
-                let itemColor: UIColor = isEmpty ? UIColor(rgb: 0x34C759) : item.color
+                let itemColor: UIColor = isEmpty ? emptyColor : item.color
                 
                 self.sections.append(CalculatedSection(
                     id: item.id,
@@ -504,15 +512,17 @@ final class PieChartComponent: Component {
             
             let fractionValue: Double = floor(displayValue * 100.0 * 10.0) / 10.0
             let fractionString: String
-            if fractionValue < 0.1 {
-                fractionString = "<0.1"
+            if fractionValue == 0.0 {
+                fractionString = ""
+            } else if fractionValue < 0.1 {
+                fractionString = "<0.1%"
             } else if abs(Double(Int(fractionValue)) - fractionValue) < 0.001 {
-                fractionString = "\(Int(fractionValue))"
+                fractionString = "\(Int(fractionValue))%"
             } else {
-                fractionString = "\(fractionValue)"
+                fractionString = "\(fractionValue)%"
             }
             
-            let labelString = NSAttributedString(string: "\(fractionString)%", font: chartLabelFont, textColor: .white)
+            let labelString = NSAttributedString(string: fractionString, font: chartLabelFont, textColor: .white)
             let labelBounds = labelString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
             let labelSize = CGSize(width: ceil(labelBounds.width), height: ceil(labelBounds.height))
             guard let labelImage = generateImage(labelSize, rotatedContext: { size, context in
@@ -922,12 +932,15 @@ final class PieChartComponent: Component {
     }
     
     private final class DoneLayer: SimpleLayer {
+        private let particleColor: UIColor
         private let maskShapeLayer: CAShapeLayer
         private var particleImage: UIImage?
         private var particleSet: ParticleSet?
         private var particleLayers: [SimpleLayer] = []
         
-        override init() {
+        init(particleColor: UIColor) {
+            self.particleColor = particleColor
+            
             self.maskShapeLayer = CAShapeLayer()
             self.maskShapeLayer.fillColor = UIColor.black.cgColor
             self.maskShapeLayer.fillRule = .evenOdd
@@ -948,6 +961,7 @@ final class PieChartComponent: Component {
         }
         
         override init(layer: Any) {
+            self.particleColor = .white
             self.maskShapeLayer = CAShapeLayer()
             
             super.init(layer: layer)
@@ -982,7 +996,7 @@ final class PieChartComponent: Component {
                     self.particleLayers.append(particleLayer)
                     self.addSublayer(particleLayer)
                     
-                    particleLayer.layerTintColor = UIColor(rgb: 0x34C759).cgColor
+                    particleLayer.layerTintColor = self.particleColor.cgColor
                 }
                 
                 particleLayer.position = particle.position
@@ -1010,6 +1024,7 @@ final class PieChartComponent: Component {
     private final class ChartDataView: UIView {
         private(set) var theme: PresentationTheme?
         private(set) var data: ChartData?
+        private var emptyColor: UIColor?
         private(set) var selectedKey: AnyHashable?
         
         private var currentAnimation: (start: CalculatedLayout, startTime: Double, duration: Double)?
@@ -1077,7 +1092,9 @@ final class PieChartComponent: Component {
             return nil
         }
         
-        func setItems(theme: PresentationTheme, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
+        func setItems(theme: PresentationTheme, emptyColor: UIColor, data: ChartData, selectedKey: AnyHashable?, animated: Bool) {
+            self.emptyColor = emptyColor
+            
             let data = processChartData(data: data)
             
             if self.theme !== theme || self.data != data || self.selectedKey != selectedKey {
@@ -1099,14 +1116,16 @@ final class PieChartComponent: Component {
                             size: CGSize(width: 200.0, height: 200.0),
                             items: previousData.items,
                             selectedKey: self.selectedKey,
-                            isEmpty: true
+                            isEmpty: true,
+                            emptyColor: emptyColor
                         )
                     } else {
                         targetLayout = CalculatedLayout(
                             size: CGSize(width: 200.0, height: 200.0),
                             items: data.items,
                             selectedKey: self.selectedKey,
-                            isEmpty: false
+                            isEmpty: false,
+                            emptyColor: emptyColor
                         )
                     }
                     
@@ -1118,14 +1137,16 @@ final class PieChartComponent: Component {
                             size: CGSize(width: 200.0, height: 200.0),
                             items: [.init(id: AnyHashable(StorageUsageScreenComponent.Category.other), displayValue: 0.0, displaySize: 0, value: 1.0, color: .green, particle: "Settings/Storage/ParticleOther", title: "", mergeable: false, mergeFactor: 1.0)],
                             selectedKey: self.selectedKey,
-                            isEmpty: true
+                            isEmpty: true,
+                            emptyColor: emptyColor
                         )
                     } else {
                         self.currentLayout = CalculatedLayout(
                             size: CGSize(width: 200.0, height: 200.0),
                             items: data.items,
                             selectedKey: self.selectedKey,
-                            isEmpty: data.items.isEmpty
+                            isEmpty: data.items.isEmpty,
+                            emptyColor: emptyColor
                         )
                     }
                 }
@@ -1140,7 +1161,7 @@ final class PieChartComponent: Component {
             self.particleSet.update(deltaTime: deltaTime)
             
             var validIds: [AnyHashable] = []
-            if let currentLayout = self.currentLayout {
+            if let currentLayout = self.currentLayout, let emptyColor = self.emptyColor {
                 var effectiveLayout = currentLayout
                 var verticalOffset: CGFloat = 0.0
                 var particleAlpha: CGFloat = 1.0
@@ -1195,7 +1216,7 @@ final class PieChartComponent: Component {
                     if let current = self.doneLayer {
                         doneLayer = current
                     } else {
-                        doneLayer = DoneLayer()
+                        doneLayer = DoneLayer(particleColor: emptyColor)
                         self.doneLayer = doneLayer
                         self.layer.insertSublayer(doneLayer, at: 0)
                     }
@@ -1269,7 +1290,7 @@ final class PieChartComponent: Component {
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 let point = recognizer.location(in: self.dataView)
-                if let key = self.dataView.sectionKey(at: point) {
+                if let key = self.dataView.sectionKey(at: point), key != AnyHashable("empty") {
                     if self.selectedKey == key {
                         self.selectedKey = nil
                     } else {
@@ -1293,7 +1314,7 @@ final class PieChartComponent: Component {
             }
             
             transition.setFrame(view: self.dataView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - 200.0) / 2.0), y: 0.0), size: CGSize(width: 200.0, height: 200.0)))
-            self.dataView.setItems(theme: component.theme, data: component.chartData, selectedKey: self.selectedKey, animated: !transition.animation.isImmediate)
+            self.dataView.setItems(theme: component.theme, emptyColor: component.emptyColor, data: component.chartData, selectedKey: self.selectedKey, animated: !transition.animation.isImmediate)
             
             if let selectedKey = self.selectedKey, let item = component.chartData.items.first(where: { $0.id == selectedKey }) {
                 let tooltip: ComponentView<Empty>

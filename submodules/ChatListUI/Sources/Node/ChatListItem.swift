@@ -2358,6 +2358,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if item.interaction.isInlineMode {
                 titleLeftCutout = 22.0
             }
+            
+            if let titleAttributedStringValue = titleAttributedString, titleAttributedStringValue.length == 0 {
+                titleAttributedString = NSAttributedString(string: " ", font: titleFont, textColor: theme.titleColor)
+            }
                         
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
             var titleCutout: TextNodeCutout?

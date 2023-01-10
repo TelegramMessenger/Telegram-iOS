@@ -13,7 +13,14 @@ typedef struct {
     NSUInteger outgoingBytes;
 } MTNetworkUsageManagerInterfaceStats;
 
-@interface MTNetworkUsageManager : NSObject
+@protocol MTNetworkUsageManagerProtocol <NSObject>
+
+- (void)addIncomingBytes:(NSUInteger)incomingBytes interface:(MTNetworkUsageManagerInterface)interface;
+- (void)addOutgoingBytes:(NSUInteger)outgoingBytes interface:(MTNetworkUsageManagerInterface)interface;
+
+@end
+
+@interface MTNetworkUsageManager : NSObject <MTNetworkUsageManagerProtocol>
 
 - (instancetype)initWithInfo:(MTNetworkUsageCalculationInfo *)info;
 

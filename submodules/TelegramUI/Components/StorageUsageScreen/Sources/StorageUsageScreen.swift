@@ -1392,6 +1392,7 @@ final class StorageUsageScreenComponent: Component {
                 component: AnyComponent(PieChartComponent(
                     theme: environment.theme,
                     strings: environment.strings,
+                    emptyColor: UIColor(rgb: 0x34C759),
                     chartData: chartData
                 )),
                 environment: {},
@@ -1404,7 +1405,6 @@ final class StorageUsageScreenComponent: Component {
                 }
                 
                 pieChartTransition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
-                //transition.setAlpha(view: pieChartComponentView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
             }
             if let _ = self.aggregatedData, listCategories.isEmpty {
                 let checkColor = UIColor(rgb: 0x34C759)
