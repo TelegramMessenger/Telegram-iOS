@@ -542,6 +542,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 } else if listNode.scroller.isDecelerating && listNode.scroller.contentOffset.y < listNode.scroller.contentInset.top {
                     return self.scrollNode.view
                 }
+            } else if let currentParent, currentParent.disablesInteractiveModalDismiss {
+                enableScrolling = false
+                break
             }
             currentParent = currentParent?.superview
         }

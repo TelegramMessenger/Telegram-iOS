@@ -54,7 +54,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         }
     }
     
-    init(content: Content) {
+    public init(content: Content) {
         self.uuid = UUID()
         self.content = content
         

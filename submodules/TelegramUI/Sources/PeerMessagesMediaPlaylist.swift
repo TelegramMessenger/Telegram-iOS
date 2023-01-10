@@ -231,21 +231,59 @@ private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: Me
 
 private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: MessageIndex, position: NavigatedMessageFromViewPosition) -> (message: Message, around: [Message], exact: Bool)? {
     var index = 0
+    
     for entry in view.entries {
         if entry.index.id == anchorIndex.id {
+            let currentGroupKey = entry.message.groupingKey
+            
             switch position {
                 case .exact:
                     return (entry.message, aroundMessagesFromView(view: view, centralIndex: entry.index), true)
                 case .later:
-                    if index + 1 < view.entries.count {
+                    if let currentGroupKey {
+                        if index - 1 > 0, view.entries[index - 1].message.groupingKey == currentGroupKey {
+                            let message = view.entries[index - 1].message
+                            return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
+                        } else {
+                            for i in index ..< view.entries.count {
+                                if view.entries[i].message.groupingKey != currentGroupKey {
+                                    let message = view.entries[i].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                }
+                            }
+                        }
+                    } else if index + 1 < view.entries.count {
                         let message = view.entries[index + 1].message
                         return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
                     } else {
                         return nil
                     }
                 case .earlier:
-                    if index != 0 {
+                    if let currentGroupKey {
+                        if index + 1 < view.entries.count, view.entries[index + 1].message.groupingKey == currentGroupKey {
+                            let message = view.entries[index + 1].message
+                            return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
+                        } else {
+                            for i in (0 ..< index).reversed() {
+                                if view.entries[i].message.groupingKey != currentGroupKey {
+                                    let message = view.entries[i].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                }
+                            }
+                        }
+                    } else if index != 0 {
                         let message = view.entries[index - 1].message
+                        if let nextGroupingKey = message.groupingKey {
+                            for i in (0 ..< index).reversed() {
+                                if view.entries[i].message.groupingKey != nextGroupingKey {
+                                    let message = view.entries[i + 1].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i + 1].index), true)
+                                } else if i == 0 {
+                                    let message = view.entries[i].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                }
+                            }
+                        }
                         return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
                     } else {
                         return nil
