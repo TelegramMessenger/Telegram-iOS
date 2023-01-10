@@ -79,8 +79,15 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     }
     
     switch inputQueryResult {
-        case let .stickers(results):
-            if !results.isEmpty {
+        case let .stickers(unfilteredResults):
+            if !unfilteredResults.isEmpty {
+                var results: [FoundStickerItem] = []
+                for result in unfilteredResults {
+                    if !results.contains(where: { $0.file.fileId == result.file.fileId }) {
+                        results.append(result)
+                    }
+                }
+                
                 let query = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.string
                 
                 if let currentPanel = currentPanel as? InlineReactionSearchPanel {

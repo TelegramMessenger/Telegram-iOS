@@ -11,15 +11,15 @@ import AppBundle
 class ChatListStorageInfoItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let sizeFraction: Double
+    let notice: ChatListNotice
     let action: () -> Void
     
     let selectable: Bool = true
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sizeFraction: Double, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, notice: ChatListNotice, action: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
-        self.sizeFraction = sizeFraction
+        self.notice = notice
         self.action = action
     }
     
@@ -117,23 +117,37 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
             let _ = baseWidth
             
             let sideInset: CGFloat = params.leftInset + 16.0
-            let height: CGFloat = 54.0
             let rightInset: CGFloat = sideInset + 24.0
+            let verticalInset: CGFloat = 8.0
+            let spacing: CGFloat = 0.0
             
             let themeUpdated = item.theme !== previousItem?.theme
             
-            let sizeString = dataSizeString(Int64(item.sizeFraction), formatting: DataSizeStringFormatting(strings: item.strings, decimalSeparator: "."))
-            let rawTitleString = item.strings.ChatList_StorageHintTitle(sizeString)
-            let titleString = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
-            if let range = rawTitleString.ranges.first {
-                titleString.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+            let titleString: NSAttributedString
+            let textString: NSAttributedString
+            
+            switch item.notice {
+            case let .clearStorage(sizeFraction):
+                let sizeString = dataSizeString(Int64(sizeFraction), formatting: DataSizeStringFormatting(strings: item.strings, decimalSeparator: "."))
+                let rawTitleString = item.strings.ChatList_StorageHintTitle(sizeString)
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                if let range = rawTitleString.ranges.first {
+                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+                }
+                titleString = titleStringValue
+                
+                textString = NSAttributedString(string: item.strings.ChatList_StorageHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case .setupPassword:
+                //TODO:localize
+                titleString = NSAttributedString(string: "Protect Your Account", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                textString = NSAttributedString(string: "Set a password that will be required each time you log in with this phone number.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
             
-            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_StorageHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: height), insets: UIEdgeInsets())
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.0.size.height + textLayout.0.size.height), insets: UIEdgeInsets())
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -148,10 +162,10 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel))
                     
                     let _ = titleLayout.1()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 9.0), size: titleLayout.0.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleLayout.0.size)
                     
                     let _ = textLayout.1()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: strongSelf.titleNode.frame.maxY - 0.0), size: textLayout.0.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
                     
                     if let image = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - image.size.width + 8.0, y: floor((layout.size.height - image.size.height) / 2.0)), size: image.size)

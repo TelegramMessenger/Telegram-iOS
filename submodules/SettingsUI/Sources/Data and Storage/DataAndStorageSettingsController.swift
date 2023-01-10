@@ -660,11 +660,18 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
             return storageUsageExceptionsScreen(context: context, category: category)
         }))
     }, openNetworkUsage: {
-        //pushControllerImpl?(networkUsageStatsController(context: context))
-        
         let _ = (accountNetworkUsageStats(account: context.account, reset: [])
         |> take(1)
         |> deliverOnMainQueue).start(next: { stats in
+            var stats = stats
+            
+            if stats.resetWifiTimestamp == 0 {
+                var value = stat()
+                if stat(context.account.basePath, &value) == 0 {
+                    stats.resetWifiTimestamp = Int32(value.st_ctimespec.tv_sec)
+                }
+            }
+            
             pushControllerImpl?(DataUsageScreen(context: context, stats: stats))
         })
     }, openProxy: {

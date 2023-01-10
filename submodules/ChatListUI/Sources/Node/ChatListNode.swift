@@ -92,6 +92,7 @@ public final class ChatListNodeInteraction {
     let present: (ViewController) -> Void
     let openForumThread: (EnginePeer.Id, Int64) -> Void
     let openStorageManagement: () -> Void
+    let openPasswordSetup: () -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -134,7 +135,8 @@ public final class ChatListNodeInteraction {
         activateChatPreview: @escaping (ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void,
         present: @escaping (ViewController) -> Void,
         openForumThread: @escaping (EnginePeer.Id, Int64) -> Void,
-        openStorageManagement: @escaping () -> Void
+        openStorageManagement: @escaping () -> Void,
+        openPasswordSetup: @escaping () -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -165,6 +167,7 @@ public final class ChatListNodeInteraction {
         self.animationRenderer = animationRenderer
         self.openForumThread = openForumThread
         self.openStorageManagement = openStorageManagement
+        self.openPasswordSetup = openPasswordSetup
     }
 }
 
@@ -570,9 +573,14 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 ), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
-            case let .StorageInfo(presentationData, sizeFraction):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, sizeFraction: sizeFraction, action: { [weak nodeInteraction] in
-                    nodeInteraction?.openStorageManagement()
+            case let .Notice(presentationData, notice):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] in
+                    switch notice {
+                    case .clearStorage:
+                        nodeInteraction?.openStorageManagement()
+                    case .setupPassword:
+                        nodeInteraction?.openPasswordSetup()
+                    }
                 }), directionHint: entry.directionHint)
         }
     }
@@ -785,9 +793,14 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 ), directionHint: entry.directionHint)
             case let .ArchiveIntro(presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
-            case let .StorageInfo(presentationData, sizeFraction):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, sizeFraction: sizeFraction, action: { [weak nodeInteraction] in
-                    nodeInteraction?.openStorageManagement()
+            case let .Notice(presentationData, notice):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] in
+                    switch notice {
+                    case .clearStorage:
+                        nodeInteraction?.openStorageManagement()
+                    case .setupPassword:
+                        nodeInteraction?.openPasswordSetup()
+                    }
                 }), directionHint: entry.directionHint)
             case .HeaderEntry:
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
@@ -1277,6 +1290,20 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makeStorageManagementController(context: self.context)
             self.push?(controller)
+        }, openPasswordSetup: { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.6, execute: { [weak self] in
+                guard let self else {
+                    return
+                }
+                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).start()
+            })
+            
+            let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
+            self.push?(controller)
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -1340,6 +1367,32 @@ public final class ChatListNode: ListView {
             }
         } else {
             displayArchiveIntro = .single(false)
+        }
+        
+        let suggestPasswordSetup: Signal<Bool, NoError>
+        if case .chatList(groupId: .root) = location, chatListFilter == nil {
+            suggestPasswordSetup = combineLatest(
+                getServerProvidedSuggestions(account: context.account),
+                context.engine.auth.twoStepVerificationConfiguration()
+            )
+            |> map { suggestions, configuration -> Bool in
+                var notSet = false
+                switch configuration {
+                case let .notSet(pendingEmail):
+                    if pendingEmail == nil {
+                        notSet = true
+                    }
+                case .set:
+                    break
+                }
+                if !notSet {
+                    return false
+                }
+                return suggestions.contains(.setupPassword)
+            }
+            |> distinctUntilChanged
+        } else {
+            suggestPasswordSetup = .single(false)
         }
         
         let storageInfo: Signal<Double?, NoError>
@@ -1431,13 +1484,13 @@ public final class ChatListNode: ListView {
         
         let currentPeerId: EnginePeer.Id = context.account.peerId
         
-        let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestPasswordSetup, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestPasswordSetup, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, storageInfo: storageInfo, mode: mode, chatListLocation: location)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, storageInfo: storageInfo, suggestPasswordSetup: suggestPasswordSetup, mode: mode, chatListLocation: location)
             let entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(peerEntry):
@@ -2467,7 +2520,7 @@ public final class ChatListNode: ListView {
                                 } else {
                                     break loop
                                 }
-                            case .ArchiveIntro, .StorageInfo, .HeaderEntry, .AdditionalCategory:
+                            case .ArchiveIntro, .Notice, .HeaderEntry, .AdditionalCategory:
                                 break
                             }
                         }

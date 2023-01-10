@@ -234,21 +234,17 @@ public struct NetworkUsageStatsConnectionsEntry: Equatable {
 }
 
 public struct NetworkUsageStats: Equatable {
-    public let generic: NetworkUsageStatsConnectionsEntry
-    public let image: NetworkUsageStatsConnectionsEntry
-    public let video: NetworkUsageStatsConnectionsEntry
-    public let audio: NetworkUsageStatsConnectionsEntry
-    public let file: NetworkUsageStatsConnectionsEntry
-    public let call: NetworkUsageStatsConnectionsEntry
-    public let sticker: NetworkUsageStatsConnectionsEntry
-    public let voiceMessage: NetworkUsageStatsConnectionsEntry
+    public var generic: NetworkUsageStatsConnectionsEntry
+    public var image: NetworkUsageStatsConnectionsEntry
+    public var video: NetworkUsageStatsConnectionsEntry
+    public var audio: NetworkUsageStatsConnectionsEntry
+    public var file: NetworkUsageStatsConnectionsEntry
+    public var call: NetworkUsageStatsConnectionsEntry
+    public var sticker: NetworkUsageStatsConnectionsEntry
+    public var voiceMessage: NetworkUsageStatsConnectionsEntry
     
-    public let resetWifiTimestamp: Int32
-    public let resetCellularTimestamp: Int32
-    
-    public static func ==(lhs: NetworkUsageStats, rhs: NetworkUsageStats) -> Bool {
-        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.call == rhs.call && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp && lhs.sticker == rhs.sticker && lhs.voiceMessage == rhs.voiceMessage
-    }
+    public var resetWifiTimestamp: Int32
+    public var resetCellularTimestamp: Int32
 }
 
 public struct ResetNetworkUsageStats: OptionSet {

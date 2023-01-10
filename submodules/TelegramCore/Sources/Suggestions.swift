@@ -8,6 +8,7 @@ public enum ServerProvidedSuggestion: String {
     case newcomerTicks = "NEWCOMER_TICKS"
     case validatePhoneNumber = "VALIDATE_PHONE_NUMBER"
     case validatePassword = "VALIDATE_PASSWORD"
+    case setupPassword = "SETUP_2FA"
 }
 
 private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
@@ -28,9 +29,17 @@ public func getServerProvidedSuggestions(account: Account) -> Signal<[ServerProv
         guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
             return []
         }
-        guard let data = appConfiguration.data, let list = data["pending_suggestions"] as? [String] else {
+        guard let data = appConfiguration.data, let listItems = data["pending_suggestions"] as? [String] else {
             return []
         }
+        
+        #if DEBUG
+        var list = listItems
+        list.append(ServerProvidedSuggestion.setupPassword.rawValue)
+        #else
+        let list = listItems
+        #endif
+        
         return list.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
         }.filter { !dismissedSuggestions.contains($0) }
