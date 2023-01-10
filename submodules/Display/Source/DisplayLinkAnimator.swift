@@ -95,7 +95,7 @@ public final class SharedDisplayLinkDriver {
     private var isInForeground: Bool = false
     
     private init() {
-        self.useNative = true
+        self.useNative = false
         
         let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
             guard let self else {
