@@ -601,7 +601,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
     
     var pushImpl: ((ViewController) -> Void)?
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filterData.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters), options: [], filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filterData.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters, chatListNodeFilter: nil, chatListNodePeersFilter: nil, omitTokenList: false, inactiveSecretChatPeerIds: nil), options: [], filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
         if count >= premiumLimit {
             let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: min(premiumLimit, count), action: {})
             pushImpl?(limitController)
@@ -723,7 +723,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         selectedCategories.insert(AdditionalExcludeCategoryId.archived.rawValue)
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filterData.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters), options: [], filters: [], alwaysEnabled: true, limit: 100))
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_ExcludeChatsTitle, selectedChats: Set(filterData.excludePeers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters, chatListNodeFilter: nil, chatListNodePeersFilter: nil, omitTokenList: false, inactiveSecretChatPeerIds: nil), options: [], filters: [], alwaysEnabled: true, limit: 100))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)

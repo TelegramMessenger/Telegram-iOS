@@ -55,6 +55,7 @@ public final class Subscriber<T, E> {
             self.next = nil
             self.error = nil
             self.completed = nil
+            self.disposable = nil
         }
         pthread_mutex_unlock(&self.lock)
     }

@@ -123,6 +123,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     deinit {
         self.scrubbingDisposable.dispose()
         self.fetchStatusDisposable.dispose()
+        self.chapterDisposable.dispose()
     }
     
     var collapsed: Bool?

@@ -486,10 +486,13 @@ public class LocalFileMediaResource: TelegramMediaResource, Codable {
     
     public let isSecretRelated: Bool
     
-    public init(fileId: Int64, size: Int64? = nil, isSecretRelated: Bool = false) {
+    public let thumbSecretChatId: PeerId.Id?
+    
+    public init(fileId: Int64, size: Int64? = nil, isSecretRelated: Bool = false, thumbSecretChatId: PeerId.Id? = nil) {
         self.fileId = fileId
         self.size = size
         self.isSecretRelated = isSecretRelated
+        self.thumbSecretChatId = thumbSecretChatId
     }
     
     public required init(decoder: PostboxDecoder) {
@@ -502,6 +505,7 @@ public class LocalFileMediaResource: TelegramMediaResource, Codable {
         } else {
             self.size = nil
         }
+        self.thumbSecretChatId = decoder.decodeOptionalInt64ForKey("tsc").flatMap(PeerId.Id._internalFromInt64Value)
     }
 
     public required init(from decoder: Decoder) throws {
@@ -514,6 +518,7 @@ public class LocalFileMediaResource: TelegramMediaResource, Codable {
         } else {
             self.size = (try container.decodeIfPresent(Int32.self, forKey: "s")).flatMap(Int64.init)
         }
+        self.thumbSecretChatId = (try container.decodeIfPresent(Int64.self, forKey: "tsc")).flatMap(PeerId.Id._internalFromInt64Value)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -524,6 +529,11 @@ public class LocalFileMediaResource: TelegramMediaResource, Codable {
         } else {
             encoder.encodeNil(forKey: "s64")
         }
+        if let thumbSecretChatId = self.thumbSecretChatId {
+            encoder.encodeInt64(thumbSecretChatId._internalGetInt64Value(), forKey: "tsc")
+        } else {
+            encoder.encodeNil(forKey: "tsc")
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -532,15 +542,19 @@ public class LocalFileMediaResource: TelegramMediaResource, Codable {
         try container.encode(self.fileId, forKey: "f")
         try container.encode(self.isSecretRelated, forKey: "sr")
         try container.encodeIfPresent(self.size, forKey: "s64")
+        try container.encodeIfPresent(self.thumbSecretChatId?._internalGetInt64Value(), forKey: "tsc")
     }
     
     public var id: MediaResourceId {
+        if let thumbSecretChatId = self.thumbSecretChatId {
+            return MediaResourceId("scthumb_\(thumbSecretChatId._internalGetInt64Value())_\(self.fileId)")
+        }
         return MediaResourceId(LocalFileMediaResourceId(fileId: self.fileId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileMediaResource {
-            return self.fileId == to.fileId && self.size == to.size && self.isSecretRelated == to.isSecretRelated
+            return self.fileId == to.fileId && self.size == to.size && self.isSecretRelated == to.isSecretRelated && self.thumbSecretChatId == to.thumbSecretChatId
         } else {
             return false
         }

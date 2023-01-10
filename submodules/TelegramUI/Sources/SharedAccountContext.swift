@@ -29,6 +29,7 @@ import PremiumUI
 import StickerPackPreviewUI
 
 import PtgSettings
+import PtgSecretPasscodes
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -166,6 +167,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let currentPtgSettings: Atomic<PtgSettings>
     private var ptgSettingsDisposable: Disposable?
     
+    private let _ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
+    public var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> {
+        return self._ptgSecretPasscodes.get()
+    }
+    public let currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes>
+    private var ptgSecretPasscodesDisposable: Disposable?
+    
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
@@ -211,6 +219,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         self.currentPtgSettings = Atomic(value: initialPresentationDataAndSettings.ptgSettings)
+        self.currentPtgSecretPasscodes = Atomic(value: initialPresentationDataAndSettings.ptgSecretPasscodes)
         
         let presentationData: Signal<PresentationData, NoError> = .single(initialPresentationDataAndSettings.presentationData)
         |> then(
@@ -359,6 +368,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.ptgSettingsDisposable = self._ptgSettings.get().start(next: { [weak self] next in
             if let strongSelf = self {
                 let _ = strongSelf.currentPtgSettings.swap(next)
+            }
+        })
+
+        self._ptgSecretPasscodes.set(.single(initialPresentationDataAndSettings.ptgSecretPasscodes)
+        |> then(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            |> map { sharedData in
+                return PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            }
+        ))
+        self.ptgSecretPasscodesDisposable = self._ptgSecretPasscodes.get().start(next: { [weak self] next in
+            if let strongSelf = self {
+                let _ = strongSelf.currentPtgSecretPasscodes.swap(next)
             }
         })
 
@@ -531,7 +552,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 assertionFailure()
                             }
 
-                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue)
+                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue, initialInactiveSecretChatPeerIds: initialPresentationDataAndSettings.ptgSecretPasscodes.inactiveSecretChatPeerIds(for: account))
 
                             self.activeAccountsValue!.accounts.append((account.id, context, accountRecord.2))
                             
@@ -846,6 +867,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callDisposable?.dispose()
         self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
+        self.managedAccountDisposables.dispose()
+        self.hasOngoingCallDisposable?.dispose()
+        self.experimentalUISettingsDisposable?.dispose()
+        self.ptgSecretPasscodesDisposable?.dispose()
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {

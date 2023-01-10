@@ -56,8 +56,6 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 
 @interface AFHTTPRequestOperation ()
 @property (readwrite, nonatomic, strong) NSError *HTTPError;
-@property (nonatomic) dispatch_once_t onceToken;
-@property (atomic) dispatch_semaphore_t dispatchSemaphore;
 @end
 
 @implementation AFHTTPRequestOperation
@@ -66,9 +64,6 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 @synthesize HTTPError = _HTTPError;
 @synthesize successCallbackQueue = _successCallbackQueue;
 @synthesize failureCallbackQueue = _failureCallbackQueue;
-@synthesize dispatchGroup = _dispatchGroup;
-@synthesize onceToken = _onceToken;
-@synthesize dispatchSemaphore = _dispatchSemaphore;
 
 
 - (id)initWithRequest:(NSURLRequest *)request {
@@ -78,8 +73,6 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
     }
     
     self.acceptableStatusCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
-    self.dispatchSemaphore = dispatch_semaphore_create(1);
-    self.completionBlock = NULL;
     
     return self;
 }
@@ -132,47 +125,6 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
     }    
 }
 
-- (void)setDispatchGroup:(dispatch_group_t)dispatchGroup {
-    dispatch_semaphore_wait(self.dispatchSemaphore, DISPATCH_TIME_FOREVER);
-    if (dispatchGroup != _dispatchGroup) {
-        if (_dispatchGroup) {
-            dispatch_group_leave(_dispatchGroup);
-            _dispatchGroup = NULL;
-        }
-        
-        if (dispatchGroup) {
-            _dispatchGroup = dispatchGroup;
-            dispatch_group_enter(_dispatchGroup);
-        }
-    } 
-    dispatch_semaphore_signal(self.dispatchSemaphore);
-}
-
-- (dispatch_group_t)dispatchGroup {
-    dispatch_semaphore_wait(self.dispatchSemaphore, DISPATCH_TIME_FOREVER);
-    if(_dispatchGroup == NULL) {
-        _dispatchGroup = dispatch_group_create();
-        dispatch_group_enter(_dispatchGroup);
-    }
-    dispatch_semaphore_signal(self.dispatchSemaphore);
-    return _dispatchGroup;
-}
-
-- (void)setCompletionBlock:(void (^)(void))block {
-     __block id _blockSelf = self;
-    dispatch_once_t *blockOnceToken = &_onceToken;
-    
-    [super setCompletionBlock:^{
-        if(block) {
-            block();
-        }
-        // Dispatch once is used to ensure that setting the block with this block will not cause multiple calls to 'dispatch_group_leave'
-        dispatch_once(blockOnceToken, ^{
-            dispatch_group_leave([_blockSelf dispatchGroup]);
-        });
-    }];
-}
-
 - (void)setCompletionBlockWithSuccess:(void (^)(NSOperation *operation, id responseObject))success
                               failure:(void (^)(NSOperation *operation, NSError *error))failure
 {
@@ -189,13 +141,13 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
         
         if (strongSelf.error) {
             if (failure) {
-                dispatch_group_async(strongSelf.dispatchGroup, strongSelf.failureCallbackQueue ? strongSelf.failureCallbackQueue : dispatch_get_main_queue(), ^{
+                dispatch_async(strongSelf.failureCallbackQueue ? strongSelf.failureCallbackQueue : dispatch_get_main_queue(), ^{
                     failure(strongSelf, strongSelf.error);
                 });
             }
         } else {
             if (success) {
-                dispatch_group_async(strongSelf.dispatchGroup, strongSelf.successCallbackQueue ? strongSelf.successCallbackQueue : dispatch_get_main_queue(), ^{
+                dispatch_async(strongSelf.successCallbackQueue ? strongSelf.successCallbackQueue : dispatch_get_main_queue(), ^{
                     success(strongSelf, strongSelf.responseData);
                 });
             }

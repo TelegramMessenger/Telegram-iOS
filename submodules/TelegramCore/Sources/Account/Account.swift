@@ -1182,7 +1182,24 @@ public class Account {
                     return
                 }
                 let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) ?? CacheStorageSettings.defaultSettings
-                mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
+                
+                // predicate to include all secret chats including archived
+                let secretChatsPredicate = ChatListFilterPredicate(includePeerIds: [], excludePeerIds: [], pinnedPeerIds: [], messageTagSummary: nil, includeAdditionalPeerGroupIds: [Namespaces.PeerGroup.archive], include: { peer, _, _, _, _ in
+                    return peer is TelegramSecretChat
+                })
+                
+                let allSecretChatIds = postbox.tailChatListView(groupId: .root, filterPredicate: secretChatsPredicate, count: 100, summaryComponents: ChatListEntrySummaryComponents(), inactiveSecretChatPeerIds: .single([]))
+                |> map { view, _ -> Set<Int64> in
+                    var allSecretChatIds = Set<Int64>()
+                    for entry in view.entries {
+                        if case let .MessageEntry(_, _, _, _, _, peer, _, _, _, _) = entry {
+                            allSecretChatIds.insert(peer.peerId.id._internalGetInt64Value())
+                        }
+                    }
+                    return allSecretChatIds
+                }
+                
+                mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes, allSecretChatIds: allSecretChatIds)
             })
         }
         
@@ -1213,6 +1230,7 @@ public class Account {
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+        self.becomeMasterDisposable.dispose()
     }
     
     private func restartConfigurationUpdates() {

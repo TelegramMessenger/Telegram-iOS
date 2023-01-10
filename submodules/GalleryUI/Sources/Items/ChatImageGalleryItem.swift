@@ -278,7 +278,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     deinit {
-        //self.fetchDisposable.dispose()
+        self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
         self.dataDisposable.dispose()
         self.recognitionDisposable.dispose()

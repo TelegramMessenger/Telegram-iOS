@@ -2,9 +2,12 @@
 
 #import "SBlockDisposable.h"
 
+#import <libkern/OSAtomic.h>
+
 @interface SSubscriberDisposable : NSObject <SDisposable>
 {
-    SSubscriber *_subscriber;
+    OSSpinLock _lock;
+    __weak SSubscriber *_subscriber;
     id<SDisposable> _disposable;
 }
 
@@ -25,8 +28,15 @@
 
 - (void)dispose
 {
+    id<SDisposable> disposable;
+    
+    OSSpinLockLock(&_lock);
+    disposable = _disposable;
+    _disposable = nil;
+    OSSpinLockUnlock(&_lock);
+    
     [_subscriber _markTerminatedWithoutDisposal];
-    [_disposable dispose];
+    [disposable dispose];
 }
 
 @end

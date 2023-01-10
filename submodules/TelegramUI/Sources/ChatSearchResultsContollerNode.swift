@@ -295,7 +295,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     private func loadMore() {
         self.isLoadingMore = true
         
-        self.loadMoreDisposable.set((self.context.engine.messages.searchMessages(location: self.location, query: self.searchQuery, state: self.searchState)
+        self.loadMoreDisposable.set((self.context.engine.messages.searchMessages(location: self.location, query: self.searchQuery, state: self.searchState, inactiveSecretChatPeerIds: self.context.currentInactiveSecretChatPeerIds.with { $0 })
         |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
         |> map { [weak self] updatedResult, updatedState -> (SearchMessagesResult, SearchMessagesState, Set<MessageId>, Bool) in
             guard let strongSelf = self else {

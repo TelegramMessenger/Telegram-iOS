@@ -741,9 +741,9 @@ public extension TelegramEngine {
             return _internal_storedMessageFromSearchPeers(account: self.account, peers: peers.map { $0._asPeer() })
         }
         
-        public func mostRecentSecretChat(id: EnginePeer.Id) -> Signal<EnginePeer.Id?, NoError> {
+        public func mostRecentSecretChat(id: EnginePeer.Id, inactiveSecretChatPeerIds: Set<PeerId>) -> Signal<EnginePeer.Id?, NoError> {
             return self.account.postbox.transaction { transaction -> EnginePeer.Id? in
-                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id)).filter { $0.namespace == Namespaces.Peer.SecretChat }
+                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)).filter { $0.namespace == Namespaces.Peer.SecretChat }
                 var activeIndices: [ChatListIndex] = []
                 for associatedId in filteredPeerIds {
                     if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {

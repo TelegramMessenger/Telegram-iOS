@@ -58,6 +58,7 @@ private final class ContactSyncManagerImpl {
     
     deinit {
         self.importableContactsDisposable.dispose()
+        self.significantStateUpdateCompletedDisposable.dispose()
     }
     
     func beginSync(importableContacts: Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError>) {

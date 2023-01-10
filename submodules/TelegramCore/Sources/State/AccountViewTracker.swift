@@ -354,6 +354,17 @@ public final class AccountViewTracker {
         self.updatedViewCountDisposables.dispose()
         self.updatedReactionsDisposables.dispose()
         self.externallyUpdatedPeerIdDisposable.dispose()
+        for (_, disposable) in self.webpageDisposables {
+            disposable.dispose()
+        }
+        for (_, disposable) in self.pollDisposables {
+            disposable.dispose()
+        }
+        for (_, disposable) in self.visibleCallListHoleDisposables {
+            disposable.dispose()
+        }
+        self.seenLiveLocationDisposables.dispose()
+        self.updatedUnsupportedMediaDisposables.dispose()
     }
     
     func reset() {
@@ -1976,7 +1987,7 @@ public final class AccountViewTracker {
         })
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
             return self.wrappedChatListView(signal: account.postbox.tailChatListView(
                 groupId: groupId,
@@ -1999,14 +2010,15 @@ public final class AccountViewTracker {
                             actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
                         )
                     ]
-                )
+                ),
+                inactiveSecretChatPeerIds: inactiveSecretChatPeerIds
             ))
         } else {
             return .never()
         }
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
             return self.wrappedChatListView(signal: account.postbox.aroundChatListView(
                 groupId: groupId,
@@ -2030,7 +2042,8 @@ public final class AccountViewTracker {
                             actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
                         )
                     ]
-                )
+                ),
+                inactiveSecretChatPeerIds: inactiveSecretChatPeerIds
             ))
         } else {
             return .never()

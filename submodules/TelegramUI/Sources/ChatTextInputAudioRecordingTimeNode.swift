@@ -103,6 +103,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
     
     deinit {
         self.stateDisposable.dispose()
+        self.durationDisposable?.dispose()
     }
     
     func updateTheme(theme: PresentationTheme) {

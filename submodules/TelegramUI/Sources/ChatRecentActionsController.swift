@@ -213,6 +213,10 @@ final class ChatRecentActionsController: TelegramBaseController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
     private func updateThemeAndStrings() {
         self.titleView.color = self.presentationData.theme.rootController.navigationBar.primaryTextColor
         self.updateTitle()

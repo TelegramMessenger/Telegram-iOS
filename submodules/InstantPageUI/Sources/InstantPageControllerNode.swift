@@ -173,6 +173,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.resolveUrlDisposable.dispose()
         self.loadWebpageDisposable.dispose()
         self.loadProgressDisposable.dispose()
+        self.updateLayoutDisposable.dispose()
     }
     
     func update(settings: InstantPagePresentationSettings, themeSettings: PresentationThemeSettings?, strings: PresentationStrings) {

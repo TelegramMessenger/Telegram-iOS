@@ -223,7 +223,7 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     
     let recentDocuments: Signal<[Message]?, NoError> = .single(nil)
     |> then(
-        context.engine.messages.searchMessages(location: .sentMedia(tags: [.file]), query: "", state: nil)
+        context.engine.messages.searchMessages(location: .sentMedia(tags: [.file]), query: "", state: nil, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
         |> map { result -> [Message]? in
             return result.0.messages
         }

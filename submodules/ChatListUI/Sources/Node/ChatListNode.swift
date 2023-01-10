@@ -722,13 +722,18 @@ public final class ChatListNode: ListView {
     
     private var ptgSettingsDisposable: Disposable?
     
-    public init(context: AccountContext, groupId: EngineChatList.Group, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    private let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
+    
+    public init(context: AccountContext, groupId: EngineChatList.Group, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>? = nil) {
         self.context = context
         self.groupId = groupId
         self.chatListFilter = chatListFilter
         self.chatListFilterValue.set(.single(chatListFilter))
         self.fillPreloadItems = fillPreloadItems
         self.mode = mode
+        
+        let inactiveSecretChatPeerIds = inactiveSecretChatPeerIds ?? context.inactiveSecretChatPeerIds
+        self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
         
         var isSelecting = false
         if case .peers(_, true, _, _) = mode {
@@ -938,7 +943,7 @@ public final class ChatListNode: ListView {
         let chatListViewUpdate = self.chatListLocation.get()
         |> distinctUntilChanged
         |> mapToSignal { location -> Signal<(ChatListNodeViewUpdate, ChatListFilter?), NoError> in
-            return chatListViewForLocation(groupId: groupId._asGroup(), location: location, account: context.account)
+            return chatListViewForLocation(groupId: groupId._asGroup(), location: location, account: context.account, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             |> map { update in
                 return (update, location.filter)
             }
@@ -993,11 +998,12 @@ public final class ChatListNode: ListView {
         
         let currentPeerId: EnginePeer.Id = context.account.peerId
         
+        let currentRecordId = self.context.account.id
         let hiddenPeerIds = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
         |> map { sharedData -> Set<EnginePeer.Id> in
             let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
             if let activeFakePasscodeSettings = fakePasscodeHolder.activeFakePasscodeSettings() {
-                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == self.context.account.peerId && $0.recordId == self.context.account.id }) {
+                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == currentPeerId && $0.recordId == currentRecordId }) {
                     return Set(accountActions.chatsToRemove.filter({ $0.removalType == .hide }).map({ $0.peerId }))
                 }
             }
@@ -1664,7 +1670,7 @@ public final class ChatListNode: ListView {
                         return filter
                     }
                 }
-                return nil
+                return chatListFilter
             }
             |> deliverOnMainQueue).start(next: { [weak self] updatedFilter in
                 guard let strongSelf = self else {
@@ -2125,7 +2131,7 @@ public final class ChatListNode: ListView {
                     guard let self = self else {
                         return
                     }
-                    let _ = (chatListViewForLocation(groupId: self.groupId._asGroup(), location: .initial(count: 10, filter: filter), account: self.context.account)
+                    let _ = (chatListViewForLocation(groupId: self.groupId._asGroup(), location: .initial(count: 10, filter: filter), account: self.context.account, inactiveSecretChatPeerIds: self.inactiveSecretChatPeerIds)
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { update in
                         let entries = update.view.entries

@@ -2026,6 +2026,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var backgroundAlpha: CGFloat = 1.0
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
+    var isExpandedForPhoneAndId: Bool = false
+    
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool) {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
@@ -2657,7 +2659,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let usernameFrame: CGRect
         let usernameSpacing: CGFloat = 4.0
         
-        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - 70.0), size: CGSize(width: width, height: 70.0)))
+        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - 70.0 - idSize.height), size: CGSize(width: width, height: 70.0 + idSize.height)))
         
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * 0.7, height: titleSize.height * 0.7)
@@ -2668,7 +2670,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             idFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0 + subtitleSize.height), size: idSize)
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
-            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 7.0 + (subtitleSize.height.isZero ? 11.0 : 0.0) + 11.0), size: titleSize)
+            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 7.0 + 11.0), size: titleSize)
                         
             let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
             if usernameSize.width == 0.0 {
@@ -2742,7 +2744,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         self.subtitleNode.update(stateFractions: [
-            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
+            TitleNodeStateRegular: self.isAvatarExpanded || (isSettings && !self.isExpandedForPhoneAndId) ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: subtitleAlpha, transition: transition)
 
@@ -2757,7 +2759,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], alpha: panelSubtitleAlpha, transition: transition)
 
         self.idNode.update(stateFractions: [
-            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
+            TitleNodeStateRegular: self.isAvatarExpanded || (isSettings && !self.isExpandedForPhoneAndId) ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: subtitleAlpha, transition: transition)
 
@@ -2871,7 +2873,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
         
-        let panelWithAvatarHeight: CGFloat = 40.0 + avatarSize + idSize.height
+        let panelWithAvatarHeight: CGFloat = 20.0 + avatarSize + (!isSettings || self.isExpandedForPhoneAndId ? subtitleSize.height + idSize.height : 0.0)
         
         let rawHeight: CGFloat
         let height: CGFloat

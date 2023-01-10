@@ -12,7 +12,6 @@ import LegacyUI
 import PeerInfoUI
 import ShareItems
 import ShareItemsImpl
-import SettingsUI
 import OpenSSLEncryptionProvider
 import AppLock
 import Intents
@@ -110,7 +109,6 @@ public class ShareRootControllerImpl {
     
     private var mainWindow: Window1?
     private var currentShareController: ShareController?
-    private var currentPasscodeController: ViewController?
     
     private var shouldBeMaster = Promise<Bool>()
     private let disposable = MetaDisposable()
@@ -119,9 +117,12 @@ public class ShareRootControllerImpl {
     
     private weak var navigationController: NavigationController?
     
-    public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?) {
+    private let isAppLocked: Bool
+    
+    public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?, isAppLocked: Bool) {
         self.initializationData = initializationData
         self.getExtensionContext = getExtensionContext
+        self.isAppLocked = isAppLocked
     }
     
     deinit {
@@ -260,7 +261,7 @@ public class ShareRootControllerImpl {
             }
             |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
-                Logger.shared.logToFile = true//loggingSettings.logToFile
+                Logger.shared.logToFile = loggingSettings.logToFile
                 Logger.shared.logToConsole = loggingSettings.logToConsole
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
@@ -1096,32 +1097,20 @@ public class ShareRootControllerImpl {
                     }
                 }
                 
-                let modalPresentation: Bool
-                if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                    modalPresentation = true
-                } else {
-                    modalPresentation = false
+                guard let strongSelf = self else {
+                    return
                 }
                 
-                let _ = passcodeEntryController(context: context, animateIn: true, modalPresentation: modalPresentation, completion: { value in
-                    if value {
-                        displayShare()
-                    } else {
-                        Queue.mainQueue().after(0.5, {
-                            self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                        })
-                    }
-                }).start(next: { controller in
-                    guard let strongSelf = self, let controller = controller else {
-                        return
-                    }
-                    
-                    if let currentPasscodeController = strongSelf.currentPasscodeController {
-                        currentPasscodeController.dismiss()
-                    }
-                    strongSelf.currentPasscodeController = controller
+                if strongSelf.isAppLocked {
+                    let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
+                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_LockedTitle, text: presentationData.strings.Share_LockedDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                        self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                    })])
                     strongSelf.mainWindow?.present(controller, on: .root)
-                })
+                    return
+                }
+                
+                displayShare()
             }
             
             self.disposable.set(applicationInterface.start(next: { _, _, _ in }, error: { [weak self] error in

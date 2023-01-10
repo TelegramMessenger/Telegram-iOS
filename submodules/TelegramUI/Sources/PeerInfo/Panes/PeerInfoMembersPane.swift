@@ -218,6 +218,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
     
     deinit {
+        self.disposable?.dispose()
     }
     
     func ensureMessageIsVisible(id: MessageId) {   

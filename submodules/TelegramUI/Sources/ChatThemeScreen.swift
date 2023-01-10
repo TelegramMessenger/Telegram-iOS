@@ -936,6 +936,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     private func enqueueTransition(_ transition: ThemeSettingsThemeItemNodeTransition) {
         self.enqueuedTransitions.append(transition)
         

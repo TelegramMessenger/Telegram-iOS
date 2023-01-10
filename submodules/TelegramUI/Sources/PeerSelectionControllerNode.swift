@@ -81,6 +81,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     
+    private let contactListNodeReadyDisposable = MetaDisposable()
+    
     init(context: AccountContext, presentationData: PresentationData, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
@@ -357,6 +359,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, statuses: nil)
         
         self.readyValue.set(self.chatListNode.ready)
+    }
+    
+    deinit {
+        self.contactListNodeReadyDisposable.dispose()
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -811,7 +817,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     if let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .immediate)
                         
-                        let _ = (contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        self.contactListNodeReadyDisposable.set((contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
                             if let strongSelf = self {
                                 if let contactListNode = strongSelf.contactListNode {
                                     strongSelf.insertSubnode(contactListNode, aboveSubnode: strongSelf.chatListNode)
@@ -819,7 +825,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 strongSelf.chatListNode.removeFromSupernode()
                                 strongSelf.recursivelyEnsureDisplaySynchronously(true)
                             }
-                        })
+                        }))
                     } else {
                         if let contactListNode = self.contactListNode {
                             self.insertSubnode(contactListNode, aboveSubnode: self.chatListNode)

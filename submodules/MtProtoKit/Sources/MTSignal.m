@@ -8,7 +8,8 @@
 
 @interface MTSubscriberDisposable : NSObject <MTDisposable>
 {
-    MTSubscriber *_subscriber;
+    OSSpinLock _lock;
+    __weak MTSubscriber *_subscriber;
     id<MTDisposable> _disposable;
 }
 
@@ -29,8 +30,15 @@
 
 - (void)dispose
 {
+    id<MTDisposable> disposable;
+    
+    OSSpinLockLock(&_lock);
+    disposable = _disposable;
+    _disposable = nil;
+    OSSpinLockUnlock(&_lock);
+    
     [_subscriber _markTerminatedWithoutDisposal];
-    [_disposable dispose];
+    [disposable dispose];
 }
 
 @end
@@ -53,13 +61,12 @@
 
 @end
 
-@interface MTSignalQueueState : NSObject <MTDisposable>
+@interface MTSignalQueueState : NSObject
 {
     OSSpinLock _lock;
     bool _executingSignal;
     bool _terminated;
     
-    id<MTDisposable> _disposable;
     MTMetaDisposable *_currentDisposable;
     MTSubscriber *_subscriber;
     
@@ -71,22 +78,17 @@
 
 @implementation MTSignalQueueState
 
-- (instancetype)initWithSubscriber:(MTSubscriber *)subscriber queueMode:(bool)queueMode
+- (instancetype)initWithSubscriber:(MTSubscriber *)subscriber queueMode:(bool)queueMode currentDisposable:(MTMetaDisposable *)currentDisposable
 {
     self = [super init];
     if (self != nil)
     {
         _subscriber = subscriber;
-        _currentDisposable = [[MTMetaDisposable alloc] init];
+        _currentDisposable = currentDisposable;
         _queuedSignals = queueMode ? [[NSMutableArray alloc] init] : nil;
         _queueMode = queueMode;
     }
     return self;
-}
-
-- (void)beginWithDisposable:(id<MTDisposable>)disposable
-{
-    _disposable = disposable;
 }
 
 - (void)enqueueSignal:(MTSignal *)signal
@@ -181,12 +183,6 @@
     
     if (!executingSignal)
         [_subscriber putCompletion];
-}
-
-- (void)dispose
-{
-    [_currentDisposable dispose];
-    [_disposable dispose];
 }
 
 @end
@@ -652,9 +648,10 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
 {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable> (MTSubscriber *subscriber)
     {
-        MTSignalQueueState *state = [[MTSignalQueueState alloc] initWithSubscriber:subscriber queueMode:false];
+        MTMetaDisposable *currentDisposable = [[MTMetaDisposable alloc] init];
+        MTSignalQueueState *state = [[MTSignalQueueState alloc] initWithSubscriber:subscriber queueMode:false currentDisposable:currentDisposable];
         
-        [state beginWithDisposable:[self startWithNext:^(id next)
+        id<MTDisposable> disposable = [self startWithNext:^(id next)
         {
             [state enqueueSignal:next];
         } error:^(id error)
@@ -663,9 +660,13 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
         } completed:^
         {
             [state beginCompletion];
-        }]];
+        }];
         
-        return state;
+        return [[MTBlockDisposable alloc] initWithBlock:^
+        {
+            [currentDisposable dispose];
+            [disposable dispose];
+        }];
     }];
 }
 

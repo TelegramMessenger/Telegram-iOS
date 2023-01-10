@@ -52,8 +52,14 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
                 limitCount = Int(limitsConfiguration.maxArchivedPinnedChatCount)
             }
             
+            let isSecretChat: Bool
+            switch itemId {
+            case let .peer(peerId):
+                isSecretChat = peerId.namespace == Namespaces.Peer.SecretChat
+            }
+            
             let count = sameKind.count + additionalCount
-            if count > limitCount, itemIds.firstIndex(of: itemId) == nil {
+            if !isSecretChat, count > limitCount, itemIds.firstIndex(of: itemId) == nil {
                 return .limitExceeded(count: sameKind.count, limit: limitCount)
             } else {
                 if let index = itemIds.firstIndex(of: itemId) {

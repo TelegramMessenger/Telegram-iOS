@@ -40,7 +40,7 @@ public final class HashtagSearchController: TelegramBaseController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         let location: SearchMessagesLocation = .general(tags: nil, minDate: nil, maxDate: nil)
-        let search = context.engine.messages.searchMessages(location: location, query: query, state: nil)
+        let search = context.engine.messages.searchMessages(location: location, query: query, state: nil, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = combineLatest(search, self.context.sharedContext.presentationData)
         |> map { result, presentationData in
             let result = result.0

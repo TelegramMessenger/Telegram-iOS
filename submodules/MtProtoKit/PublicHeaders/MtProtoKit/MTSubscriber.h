@@ -2,7 +2,7 @@
 
 #import "MTDisposable.h"
 
-@interface MTSubscriber : NSObject <MTDisposable>
+@interface MTSubscriber : NSObject
 {
 }
 

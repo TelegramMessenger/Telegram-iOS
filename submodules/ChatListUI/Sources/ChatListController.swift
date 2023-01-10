@@ -615,7 +615,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }
             
-            let displayRecentDownloads = context.account.postbox.tailChatListView(groupId: .root, filterPredicate: nil, count: 11, summaryComponents: ChatListEntrySummaryComponents(components: [:]))
+            let displayRecentDownloads = context.account.postbox.tailChatListView(groupId: .root, filterPredicate: nil, count: 11, summaryComponents: ChatListEntrySummaryComponents(components: [:]), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
             |> map { view -> Bool in
                 return view.0.entries.count >= 10
             }
@@ -2242,7 +2242,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     public private(set) var isSearchActive: Bool = false
     public func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil) {
         if self.displayNavigationBar {
-            let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(components: [:])) |> take(1))
+            let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(components: [:]), inactiveSecretChatPeerIds: self.context.inactiveSecretChatPeerIds) |> take(1))
             |> deliverOnMainQueue).start(next: { [weak self] _, chatListView in
                 guard let strongSelf = self else {
                     return

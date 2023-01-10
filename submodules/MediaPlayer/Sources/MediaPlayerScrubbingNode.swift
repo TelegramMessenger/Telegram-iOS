@@ -525,8 +525,8 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 
                 if let handleNodeContainer = node.handleNodeContainer {
                     self.addSubnode(handleNodeContainer)
-                    handleNodeContainer.highlighted = { [weak self] highlighted in
-                        if let strongSelf = self, let highlightedHandleNode = node.highlightedHandleNode, let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
+                    handleNodeContainer.highlighted = { [weak self, weak node] highlighted in
+                        if let strongSelf = self, let highlightedHandleNode = node?.highlightedHandleNode, let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
                             if highlighted {
                                 strongSelf.displayLink?.isPaused = true
                                 

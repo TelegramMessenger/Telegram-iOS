@@ -256,6 +256,9 @@ private final class FetchManagerCategoryContext {
                     |> deliverOnMainQueue).start(next: { _ in
                         Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                         entryCompleted(id)
+                    }, error: { [weak self] _ in
+                        self?.cancelEntry(id, isCompleted: false)
+                        self?.postbox.mediaBox.cancelInteractiveResourceFetch(entry.resourceReference.resource)
                     })
                 } else {
                     assertionFailure()
@@ -382,6 +385,9 @@ private final class FetchManagerCategoryContext {
                         |> deliverOnMainQueue).start(next: { _ in
                             Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                             entryCompleted(topEntryId)
+                        }, error: { [weak self] _ in
+                            self?.cancelEntry(topEntryId, isCompleted: false)
+                            self?.postbox.mediaBox.cancelInteractiveResourceFetch(entry.resourceReference.resource)
                         })
                     }
                     return true
@@ -568,6 +574,18 @@ private final class FetchManagerCategoryContext {
     var isEmpty: Bool {
         return self.entries.isEmpty && self.activeContexts.isEmpty && self.statusContexts.isEmpty
     }
+    
+    func getResources(peerIds: Set<PeerId>) -> [MediaResourceReference] {
+        var result: [MediaResourceReference] = []
+        for (id, entry) in self.entries {
+            if case let .messageId(messageId) = id.locationKey {
+                if peerIds.contains(messageId.peerId) {
+                    result.append(entry.resourceReference)
+                }
+            }
+        }
+        return result
+    }
 }
 
 public struct FetchManagerEntrySummary: Equatable {
@@ -641,12 +659,73 @@ public final class FetchManagerImpl: FetchManager {
     
     private let entriesSummaryValue = ValuePromise<[FetchManagerEntrySummary]>([], ignoreRepeated: true)
     public var entriesSummary: Signal<[FetchManagerEntrySummary], NoError> {
-        return self.entriesSummaryValue.get()
+        return combineLatest(self.entriesSummaryValue.get(), self.inactiveSecretChatPeerIds)
+        |> map { entriesSummaryValue, inactiveSecretChatPeerIds in
+            return entriesSummaryValue.filter { entry in
+                if case let .messageId(messageId) = entry.id.locationKey, inactiveSecretChatPeerIds.contains(messageId.peerId) {
+                    return false
+                }
+                return true
+            }
+        }
+        |> distinctUntilChanged
     }
     
-    public init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?) {
+    private let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
+    private var inactiveSecretChatPeerIdsDisposable: Disposable?
+    
+    public init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>, shouldClearCachedMediaResourcesOfInactiveSecretChats: Bool, engine: TelegramEngine, initialInactiveSecretChatPeerIds: Set<PeerId>? = nil) {
         self.postbox = postbox
         self.storeManager = storeManager
+        self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
+        
+        if shouldClearCachedMediaResourcesOfInactiveSecretChats {
+            var previousInactiveSecretChatPeerIds = initialInactiveSecretChatPeerIds!
+            
+            self.inactiveSecretChatPeerIdsDisposable = (self.inactiveSecretChatPeerIds
+            |> deliverOn(self.queue)).start(next: { [weak self] inactiveSecretChatPeerIds in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                // cancel downloads for hidden secret chats
+                for (_, categoryContext) in strongSelf.categoryContexts {
+                    for resourceReference in categoryContext.getResources(peerIds: inactiveSecretChatPeerIds) {
+                        strongSelf.cancelInteractiveFetches(resourceId: resourceReference.resource.id.stringRepresentation)
+                    }
+                }
+                
+                let newlyHiddenPeerIds = inactiveSecretChatPeerIds.subtracting(previousInactiveSecretChatPeerIds)
+                
+                for peerId in newlyHiddenPeerIds {
+                    let _ = engine.resources.collectCacheUsageStats(peerId: peerId).start(next: { result in
+                        guard case let .result(stats) = result, let categories = stats.media[peerId] else {
+                            return
+                        }
+                        
+                        var clearResourceIds = Set<MediaResourceId>()
+                        
+                        for (_, contents) in categories {
+                            for (mediaId, _) in contents {
+                                if let resourceIds = stats.mediaResourceIds[mediaId] {
+                                    clearResourceIds.formUnion(resourceIds)
+                                }
+                            }
+                        }
+                        
+                        if !clearResourceIds.isEmpty {
+                            let _ = engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds).start()
+                        }
+                    })
+                }
+                
+                previousInactiveSecretChatPeerIds = inactiveSecretChatPeerIds
+            })
+        }
+    }
+    
+    deinit {
+        self.inactiveSecretChatPeerIdsDisposable?.dispose()
     }
     
     private func takeNextEpisodeId() -> Int32 {

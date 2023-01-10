@@ -393,7 +393,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
             
             let signal: Signal<[Message]?, NoError> = .single(nil)
             |> then(
-                context.engine.messages.searchMessages(location: .sentMedia(tags: [.file]), query: query, state: nil)
+                context.engine.messages.searchMessages(location: .sentMedia(tags: [.file]), query: query, state: nil, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
                 |> map { result -> [Message]? in
                     return result.0.messages
                 }

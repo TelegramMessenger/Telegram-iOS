@@ -83,6 +83,7 @@ final class MultiScaleTextNode: ASDisplayNode {
         for (_, fraction) in stateFractions {
             fractionSum += fraction
         }
+        fractionSum = max(fractionSum, 0.001) // prevent division by zero when all nodes are hidden
         for (key, fraction) in stateFractions {
             if let node = self.stateNodes[key], let _ = node.currentLayout {
                 if !transition.isAnimated {

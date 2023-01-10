@@ -815,8 +815,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             return
         }
         
-        if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
-            if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
+        if parsedUrl.scheme?.lowercased() == "http" || parsedUrl.scheme?.lowercased() == "https" {
+            if parsedUrl.host?.lowercased() == "t.me" || parsedUrl.host?.lowercased() == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
                 let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
@@ -867,9 +867,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         }
     }
     
-    if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+    if parsedUrl.scheme?.lowercased() == "http" || parsedUrl.scheme?.lowercased() == "https" {
         let nativeHosts = ["t.me", "telegram.me"]
-        if let host = parsedUrl.host, nativeHosts.contains(host) {
+        if let host = parsedUrl.host?.lowercased(), nativeHosts.contains(host) {
             continueHandling()
         } else {
             context.sharedContext.applicationBindings.openUniversalUrl(url, TelegramApplicationOpenUrlCompletion(completion: { success in

@@ -337,6 +337,7 @@ private final class CallSessionContext {
     
     deinit {
         self.acknowledgeIncomingCallDisposable.dispose()
+        self.signalingDisposables.dispose()
     }
 }
 

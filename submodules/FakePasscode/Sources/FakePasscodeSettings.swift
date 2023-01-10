@@ -109,13 +109,6 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
     public func unlockedWithFakePasscode() -> Bool {
         return activeFakePasscodeUuid != nil
     }
-
-    public func correctAutolockTimeout(_ autolockTimeout: Int32?) -> Int32? {
-        if autolockTimeout == 1 && unlockedWithFakePasscode() {
-            return 1 * 60
-        }
-        return autolockTimeout
-    }
     
     public func activeFakePasscodeSettings() -> FakePasscodeSettings? {
         if let activeFakePasscodeUuid = self.activeFakePasscodeUuid {

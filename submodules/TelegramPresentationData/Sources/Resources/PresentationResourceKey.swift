@@ -278,6 +278,9 @@ public enum PresentationResourceKey: Int32 {
     case chatKeyboardActionButtonWebAppIcon
     
     case uploadToneIcon
+    
+    case enterSecretPasscodeIcon
+    case manageSecretPasscodesIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {

@@ -37,8 +37,11 @@ public func findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: [M
                         cleanedWebpageSearchedText = originalWebpageSearchedText
 
                         let searchEndIndex = contentText.index(endIndex, offsetBy: ForeignAgentNoticeLen, limitedBy: contentText.endIndex) ?? contentText.endIndex
-                        if let matchResult = foreignAgentNoticeRegEx.firstMatch(in: contentText, range: NSRange(..<searchEndIndex, in: contentText)), let matchRange = Range(matchResult.range, in: contentText) {
-                            cleanedWebpageSearchedText!.removeSubrange(matchRange.upperBound > endIndex ? matchRange.lowerBound..<endIndex : matchRange)
+                        for foreignAgentNoticeRegEx in foreignAgentNoticeRegExes {
+                            if let matchResult = foreignAgentNoticeRegEx.firstMatch(in: contentText, range: NSRange(..<searchEndIndex, in: contentText)), let matchRange = Range(matchResult.range, in: contentText) {
+                                cleanedWebpageSearchedText!.removeSubrange(matchRange.upperBound > endIndex ? matchRange.lowerBound..<endIndex : matchRange)
+                                break
+                            }
                         }
                     }
                 }

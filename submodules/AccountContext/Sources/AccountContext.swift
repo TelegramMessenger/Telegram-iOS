@@ -13,6 +13,7 @@ import TemporaryCachedPeerDataManager
 import MeshAnimationCache
 import InAppPurchaseManager
 import PtgSettings
+import PtgSecretPasscodes
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -690,6 +691,8 @@ public protocol SharedAccountContext: AnyObject {
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
     var ptgSettings: Signal<PtgSettings, NoError> { get }
     var currentPtgSettings: Atomic<PtgSettings> { get }
+    var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> { get }
+    var currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes> { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     
@@ -903,6 +906,9 @@ public protocol AccountContext: AnyObject {
     func scheduleGroupCall(peerId: PeerId)
     func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
+    
+    var inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError> { get }
+    var currentInactiveSecretChatPeerIds: Atomic<Set<PeerId>> { get }
 }
 
 public struct PremiumConfiguration {

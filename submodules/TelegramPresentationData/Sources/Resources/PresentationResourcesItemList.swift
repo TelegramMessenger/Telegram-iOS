@@ -299,4 +299,16 @@ public struct PresentationResourcesItemList {
             return generateTintedImage(image: UIImage(bundleImageName: "Settings/UploadTone"), color: theme.list.itemAccentColor)
         })
     }
+    
+    public static func enterSecretPasscodeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.enterSecretPasscodeIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Ptg/EnterSecretPasscode"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func manageSecretPasscodesIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.manageSecretPasscodesIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Ptg/ManageSecretPasscodes"), color: theme.list.itemAccentColor)
+        })
+    }
 }

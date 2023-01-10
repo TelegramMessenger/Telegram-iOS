@@ -23,7 +23,7 @@ private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)
 private let buttonFont = Font.regular(17.0)
 
-final class PasscodeEntryControllerNode: ASDisplayNode {
+public final class PasscodeEntryControllerNode: ASDisplayNode {
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private var presentationData: PresentationData
     private var theme: PresentationTheme
@@ -151,7 +151,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.view.disablesInteractiveKeyboardGestureRecognizer = true
@@ -198,23 +198,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
     }
     
-    func updateBackground() {
-        guard let validLayout = self.validLayout else {
-            return
-        }
-        
-        let size = validLayout.size
-        if let background = self.background, background.size == size {
-            return
-        }
-        
-        switch self.wallpaper {
+    public static func background(size: CGSize, wallpaper: TelegramWallpaper, theme: PresentationTheme, accountManager: AccountManager<TelegramAccountManagerTypes>) -> PasscodeBackground {
+        switch wallpaper {
             case let .color(colorValue):
                 let color = UIColor(argb: colorValue)
                 let baseColor: UIColor
                 let lightness = color.lightness
                 if lightness < 0.1 || lightness > 0.9 {
-                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill[0]
+                    baseColor = theme.chat.message.outgoing.bubble.withoutWallpaper.fill[0]
                 } else{
                     baseColor = color
                 }
@@ -223,7 +214,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 let color2: UIColor
                 let color3: UIColor
                 let color4: UIColor
-                if self.theme.overallDarkAppearance {
+                if theme.overallDarkAppearance {
                     color1 = baseColor.withMultiplied(hue: 1.034, saturation: 0.819, brightness: 0.214)
                     color2 = baseColor.withMultiplied(hue: 1.029, saturation: 0.77, brightness: 0.132)
                     color3 = color1
@@ -234,22 +225,35 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                     color3 = baseColor.withMultiplied(hue: 1.029, saturation: 0.729, brightness: 1.231)
                     color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
                 }
-                self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
+                return CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
             case let .gradient(gradient):
-                self.background = CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
+                return CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
             case .image, .file:
-                if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
-                    self.background = ImageBasedPasscodeBackground(image: image, size: size)
+                if let image = chatControllerBackgroundImage(theme: theme, wallpaper: wallpaper, mediaBox: accountManager.mediaBox, composed: false, knockoutMode: false) {
+                    return ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
-                    if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
-                        self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
+                    if case let .file(file) = wallpaper, !file.settings.colors.isEmpty {
+                        return CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
                     } else {
-                        self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
+                        return GradientPasscodeBackground(size: size, backgroundColors: theme.passcode.backgroundColors.colors, buttonColor: theme.passcode.buttonColor)
                     }
                 }
             default:
-                self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
+                return GradientPasscodeBackground(size: size, backgroundColors: theme.passcode.backgroundColors.colors, buttonColor: theme.passcode.buttonColor)
         }
+    }
+    
+    func updateBackground() {
+        guard let validLayout = self.validLayout else {
+            return
+        }
+        
+        let size = validLayout.size
+        if let background = self.background, background.size == size {
+            return
+        }
+        
+        self.background = Self.background(size: size, wallpaper: self.wallpaper, theme: self.theme, accountManager: self.accountManager)
         
         if let background = self.background {
             self.backgroundCustomNode?.removeFromSupernode()

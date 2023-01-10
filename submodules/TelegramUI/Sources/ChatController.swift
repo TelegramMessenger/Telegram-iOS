@@ -515,9 +515,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var loadMoreCounter: Int = 0
 
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = []) {
+#if DEBUG
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
+#endif
         
         self.context = context
         self.chatLocation = chatLocation
@@ -544,6 +546,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch chatLocation {
         case let .peer(peerId):
+            precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
             locationBroadcastPanelSource = .peer(peerId)
             switch subject {
             case .message, .none:
@@ -5082,9 +5085,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     deinit {
+#if DEBUG
         let _ = ChatControllerCount.modify { value in
             return value - 1
         }
+#endif
         self.historyStateDisposable?.dispose()
         self.messageIndexDisposable.dispose()
         self.navigationActionDisposable.dispose()
@@ -5157,6 +5162,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.inviteRequestsDisposable.dispose()
         self.sendAsPeersDisposable?.dispose()
         self.preloadAttachBotIconsDisposables?.dispose()
+        self.choosingStickerActivityDisposable?.dispose()
+        self.automaticMediaDownloadSettingsDisposable?.dispose()
+        self.stickerSettingsDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -7530,6 +7538,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let hasOngoingCall: Signal<Bool, NoError> = strongSelf.context.sharedContext.hasOngoingCall.get()
                 let _ = (hasOngoingCall
+                |> take(1)
                 |> deliverOnMainQueue).start(next: { hasOngoingCall in
                     guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
                         return
@@ -13681,7 +13690,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             self.searchDisposable = searchDisposable
                         }
 
-                        let search = self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: nil, limit: limit)
+                        let search = self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: nil, limit: limit, inactiveSecretChatPeerIds: self.context.currentInactiveSecretChatPeerIds.with { $0 })
                         |> delay(0.2, queue: Queue.mainQueue())
                         self.searchResult.set(search
                         |> map { (result, state) -> (SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)? in
@@ -13742,7 +13751,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             searchDisposable = MetaDisposable()
                             self.searchDisposable = searchDisposable
                         }
-                        searchDisposable.set((self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: loadMoreState, limit: limit)
+                        searchDisposable.set((self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: loadMoreState, limit: limit, inactiveSecretChatPeerIds: self.context.currentInactiveSecretChatPeerIds.with { $0 })
                         |> delay(0.2, queue: Queue.mainQueue())
                         |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                         // queue must be serial because of signal 'completed' handler

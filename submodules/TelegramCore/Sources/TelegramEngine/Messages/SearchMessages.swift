@@ -184,7 +184,7 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
     return SearchMessagesResult(messages: messages, readStates: readStates, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
 }
 
-func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100, inactiveSecretChatPeerIds: Set<PeerId>) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
         case let .peer(peerId, fromId, tags, topMsgId, minDate, maxDate):
@@ -194,7 +194,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     if let readState = transaction.getCombinedPeerReadState(peerId) {
                         readStates[peerId] = readState
                     }
-                    let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags)
+                    let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
                     return (SearchMessagesResult(messages: result, readStates: readStates, totalCount: Int32(result.count), completed: true), SearchMessagesState(main: SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true, nextRate: nil), additional: nil))
                 }
             }
@@ -363,7 +363,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
             if state?.additional == nil {
                 switch location {
                     case let .general(tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
-                        let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
+                        let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
                         var filteredMessages: [Message] = []
                         var readStates: [PeerId: CombinedPeerReadState] = [:]
                         for message in secretMessages {

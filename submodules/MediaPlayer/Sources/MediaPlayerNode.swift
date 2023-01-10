@@ -164,11 +164,12 @@ public final class MediaPlayerNode: ASDisplayNode {
                 var maxTakenTime: Double
             }
             
-            var loop: ((PollState) -> Void)?
-            let loopImpl: (PollState) -> Void = { [weak self] state in
+            weak var weakSelf = self
+            
+            func loop(_ state: PollState) {
                 assert(Queue.mainQueue().isCurrent())
                 
-                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                guard let strongSelf = weakSelf, let videoLayer = strongSelf.videoLayer else {
                     return
                 }
                 if !videoLayer.isReadyForMoreMediaData {
@@ -182,7 +183,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     switch takeFrame() {
                     case let .restoreState(frames, atTime):
                         Queue.mainQueue().async {
-                            guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                            guard let strongSelf = weakSelf, let videoLayer = strongSelf.videoLayer else {
                                 return
                             }
                             videoLayer.flush()
@@ -204,7 +205,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                                 dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString as String)
                             }
                             Queue.mainQueue().async {
-                                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                guard let strongSelf = weakSelf, let videoLayer = strongSelf.videoLayer else {
                                     return
                                 }
                                 videoLayer.enqueue(frame.sampleBuffer)
@@ -212,14 +213,14 @@ public final class MediaPlayerNode: ASDisplayNode {
                             }
                         }
                         Queue.mainQueue().async {
-                            loop?(state)
+                            loop(state)
                         }
                     case let .frame(frame):
                         state.numFrames += 1
                         let frameTime = CMTimeGetSeconds(frame.position)
                         if frame.resetDecoder {
                             Queue.mainQueue().async {
-                                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                guard let strongSelf = weakSelf, let videoLayer = strongSelf.videoLayer else {
                                     return
                                 }
                                 videoLayer.flush()
@@ -228,12 +229,12 @@ public final class MediaPlayerNode: ASDisplayNode {
                         
                         if frame.decoded && frameTime < layerTime {
                             Queue.mainQueue().async {
-                                loop?(state)
+                                loop(state)
                             }
                         } else {
                             state.maxTakenTime = frameTime
                             Queue.mainQueue().async {
-                                guard let strongSelf = self, let videoLayer = strongSelf.videoLayer else {
+                                guard let strongSelf = weakSelf, let videoLayer = strongSelf.videoLayer else {
                                     return
                                 }
                                 videoLayer.enqueue(frame.sampleBuffer)
@@ -241,12 +242,12 @@ public final class MediaPlayerNode: ASDisplayNode {
                             }
                             
                             Queue.mainQueue().async {
-                                loop?(state)
+                                loop(state)
                             }
                         }
                     case .skipFrame:
                         Queue.mainQueue().async {
-                            loop?(state)
+                            loop(state)
                         }
                     case .noFrames:
                         DispatchQueue.main.async {
@@ -259,8 +260,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     }
                 }
             }
-            loop = loopImpl
-            loop?(PollState(numFrames: 0, maxTakenTime: layerTime + 0.1))
+            loop(PollState(numFrames: 0, maxTakenTime: layerTime + 0.1))
             
             /*let layerRef = Unmanaged.passRetained(videoLayer)
             takeFrameQueue.async {

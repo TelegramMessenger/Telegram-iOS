@@ -169,8 +169,11 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             }, action: { (c, _) in
                 backAction(c)
             })))
+            
+            contextController.pushItems(items: .single(ContextController.Items(content: .list(items))))
+        } else {
+            contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
         }
-        contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
     } else {
         contextController?.dismiss(completion: nil)
         parent.view.endEditing(true)

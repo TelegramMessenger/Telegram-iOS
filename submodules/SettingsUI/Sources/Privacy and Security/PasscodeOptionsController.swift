@@ -300,12 +300,10 @@ private struct PasscodeOptionsData: Equatable {
     }
 }
 
-private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int32?) -> String {
+public func autolockStringForTimeout(strings: PresentationStrings, timeout: Int32?) -> String {
     if let timeout = timeout {
         if timeout == 10 {
-            return "If away for 10 seconds"
-        } else if timeout == 1 {
-            return strings.PasscodeSettings_AutoLock_IfAwayFor_1second
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_10seconds
         } else if timeout == 1 * 60 {
             return strings.PasscodeSettings_AutoLock_IfAwayFor_1minute
         } else if timeout == 5 * 60 {
@@ -333,7 +331,7 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
             entries.append(.togglePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_TurnPasscodeOff, true))
             entries.append(.changePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_ChangePasscode))
             entries.append(.settingInfo(presentationData.theme, presentationData.strings.PasscodeSettings_Help))
-            entries.append(.autoLock(presentationData.theme, presentationData.strings.PasscodeSettings_AutoLock, autolockStringForTimeout(strings: presentationData.strings, timeout: passcodeOptionsData.fakePasscodeHolder.correctAutolockTimeout(passcodeOptionsData.presentationSettings.autolockTimeout))))
+            entries.append(.autoLock(presentationData.theme, presentationData.strings.PasscodeSettings_AutoLock, autolockStringForTimeout(strings: presentationData.strings, timeout: passcodeOptionsData.presentationSettings.autolockTimeout)))
             if let biometricAuthentication = LocalAuth.biometricAuthentication {
                 switch biometricAuthentication {
                     case .touchId:
@@ -520,17 +518,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     }).start()
                 })
             }
-            var values: [Int32] = [0, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
-            
-            if !fakePasscodeHolder.unlockedWithFakePasscode() {
-                values.append(1)
-                values.sort()
-            }
-            
-            #if DEBUG
-                values.append(10)
-                values.sort()
-            #endif
+            let values: [Int32] = [0, 10, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
             
             for value in values {
                 var t: Int32?
@@ -636,6 +624,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
     }
     
+    controller.isSensitiveUI = true
+    
     return controller
 }
 
@@ -691,50 +681,6 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                     completion(true)
                 }
                 return succeed
-            }
-            return controller
-        }
-    }
-}
-
-public func passcodeEntryController(context: AccountContext, animateIn: Bool = true, modalPresentation: Bool = false, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
-        return transaction.getAccessChallengeData()
-    }
-    |> mapToSignal { accessChallengeData -> Signal<(PostboxAccessChallengeData, PresentationPasscodeSettings?), NoError> in
-        return context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
-            let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings)?.get(PresentationPasscodeSettings.self)
-            return (accessChallengeData, passcodeSettings)
-        }
-    }
-    |> deliverOnMainQueue
-    |> map { (challenge, passcodeSettings) -> ViewController? in
-        if case .none = challenge {
-            completion(true)
-            return nil
-        } else {
-            let biometrics: PasscodeEntryControllerBiometricsMode
-            #if targetEnvironment(simulator)
-            biometrics = .enabled(nil)
-            #else
-            if let passcodeSettings = passcodeSettings, passcodeSettings.enableBiometrics {
-                biometrics = .enabled(context.sharedContext.applicationBindings.isMainApp ? passcodeSettings.biometricsDomainState : passcodeSettings.shareBiometricsDomainState)
-            } else {
-                biometrics = .none
-            }
-            #endif
-            let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, statusBarHost: context.sharedContext.mainWindow?.statusBarHost, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
-                completion(false)
-            }, modalPresentation: modalPresentation), sharedAccountContext: context.sharedContext)
-            controller.presentationCompleted = { [weak controller] in
-                Queue.mainQueue().after(0.5, { [weak controller] in
-                    controller?.requestBiometrics()
-                })
-            }
-            controller.completed = { [weak controller] in
-                controller?.dismiss(completion: {
-                    completion(true)
-                })
             }
             return controller
         }

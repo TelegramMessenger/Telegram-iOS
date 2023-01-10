@@ -2534,6 +2534,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     
     deinit {
         self.actionDisposable.dispose()
+        self.hiddenItemDisposable.dispose()
     }
     
     private func presentAssetPicker(_ type: SecureIdAddFileTarget, replaceDocumentId: SecureIdVerificationDocumentId? = nil) {

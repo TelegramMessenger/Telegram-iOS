@@ -282,6 +282,7 @@ private class ReplyThreadHistoryContextImpl {
         self.holesDisposable?.dispose()
         self.readDisposable.dispose()
         self.updateInitialStateDisposable?.dispose()
+        self.readStateDisposable?.dispose()
     }
     
     func setCurrentHole(entry: MessageHistoryHolesViewEntry?) {

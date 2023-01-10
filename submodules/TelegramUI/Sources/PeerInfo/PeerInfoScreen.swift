@@ -71,6 +71,9 @@ import PremiumUI
 import InstantPageCache
 import FakePasscode
 import FakePasscodeUI
+import PasscodeUI
+import PtgSecretPasscodes
+import PtgSecretPasscodesUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -447,6 +450,8 @@ private enum PeerInfoSettingsSection {
     case logout
     case rememberPassword
     case cloudballon
+    case enterSecretPasscode
+    case manageSecretPasscodes
 }
 
 private final class PeerInfoInteraction {
@@ -591,6 +596,7 @@ private enum SettingsSection: Int, CaseIterable {
     case accounts
     case proxy
     case cloudballon
+    case secretPasscodes
     case shortcuts
     case advanced
     case payment
@@ -790,6 +796,13 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.cloudballon)
     }))
 
+    items[.secretPasscodes]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_EnterSecretPasscode, icon: PresentationResourcesItemList.enterSecretPasscodeIcon(presentationData.theme), action: {
+        interaction.openSettings(.enterSecretPasscode)
+    }))
+    items[.secretPasscodes]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_ManageSecretPasscodes, icon: PresentationResourcesItemList.manageSecretPasscodesIcon(presentationData.theme), action: {
+        interaction.openSettings(.manageSecretPasscodes)
+    }))
+
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in SettingsSection.allCases {
         if let sectionItems = items[section], !sectionItems.isEmpty {
@@ -911,7 +924,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     let maybeAppendIdItem: (PeerId) -> Void = { peerId in
         if data.showPeerId {
             let id = String(peerId.id._internalGetInt64Value())
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id, text: id, action: nil, longTapAction: { sourceNode in
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id.lowercased(), text: id, action: nil, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.id(id), sourceNode)
             }, requestLayout: {
                 interaction.requestLayout(false)
@@ -1769,7 +1782,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
         let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.ptgVersion).string
         self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
-        self.versionLabelNode.isHidden = true
 
         super.init()
         
@@ -3180,6 +3192,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.shareStatusDisposable?.dispose()
         self.customStatusDisposable?.dispose()
         self.refreshMessageTagStatsDisposable?.dispose()
+        self.updateAvatarDisposable.dispose()
         
         self.copyProtectionTooltipController?.dismiss()
     }
@@ -4045,13 +4058,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
 
-                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
+                    if (strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport)) || strongSelf.peerId.namespace == Namespaces.Peer.SecretChat {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_StartSecretChat, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Lock"), color: theme.contextMenu.primaryColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
 
-                            self?.openStartSecretChat()
+                            self?.openStartSecretChat(user.id)
                         })))
                     }
 
@@ -4221,8 +4234,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     } else if strongSelf.peerId.namespace == Namespaces.Peer.SecretChat && data.isContact {
                         if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
                         } else {
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor)
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.destructiveColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
@@ -4262,9 +4275,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, f in
                             self?.openReport(user: false, contextController: c, backAction: { c in
-                                if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
-                                }
+                                c.popItems()
                             })
                         })))
                     }
@@ -4477,12 +4488,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
     }
     
-    private func openStartSecretChat() {
-        let peerId = self.peerId
-
+    private func openStartSecretChat(_ peerId: PeerId) {
         let _ = (combineLatest(
-            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
-            self.context.engine.peers.mostRecentSecretChat(id: self.peerId)
+            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+            self.context.engine.peers.mostRecentSecretChat(id: peerId, inactiveSecretChatPeerIds: self.context.currentInactiveSecretChatPeerIds.with { $0 })
         )
         |> deliverOnMainQueue).start(next: { [weak self] peer, currentPeerId in
             guard let strongSelf = self else {
@@ -6434,6 +6443,150 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 push(controller)
             case .cloudballon:
                 self.controller?.push(ptgSettingsController(context: self.context))
+            
+            case .enterSecretPasscode:
+                let _ = (self.context.sharedContext.ptgSecretPasscodes
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] ptgSecretPasscodes in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    let controller = PasscodeSetupController(context: strongSelf.context, mode: .secretEntry(modal: true, .digits6))
+                    
+                    controller.check = { [weak controller] passcode in
+                        guard let strongSelf = self else {
+                            return false
+                        }
+                        
+                        if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
+                            let _ = updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
+                                var updated = current.secretPasscodes
+                                if let ind = current.secretPasscodes.firstIndex(where: { $0.passcode == passcode }) {
+                                    updated[ind] = current.secretPasscodes[ind].withUpdated(active: true)
+                                }
+                                return PtgSecretPasscodes(secretPasscodes: updated)
+                            }).start()
+                            
+                            controller?.dismiss()
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.SecretPasscodeStatus_SomeRevealed), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            
+                            return true
+                        }
+                        
+                        return false
+                    }
+                    
+                    controller.navigationPresentation = .modal
+                    strongSelf.controller?.push(controller)
+                })
+            
+            case .manageSecretPasscodes:
+                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.SecretPasscodeMenu_Add, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let _ = (strongSelf.context.sharedContext.ptgSecretPasscodes
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] ptgSecretPasscodes in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            let controller = PasscodeSetupController(context: strongSelf.context, mode: .secretSetup(.digits6))
+                            
+                            controller.validate = { newPasscode in
+                                if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == newPasscode }) {
+                                    return strongSelf.presentationData.strings.PasscodeSettings_PasscodeInUse
+                                }
+                                return nil
+                            }
+                            
+                            controller.complete = { [weak self, weak controller] newPasscode, numerical in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                let _ = (updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
+                                    let newSecretPasscode = PtgSecretPasscode(passcode: newPasscode)
+                                    return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes + [newSecretPasscode])
+                                })
+                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: newPasscode)
+                                    (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
+                                })
+                            }
+                            
+                            strongSelf.controller?.push(controller)
+                        })
+                    }),
+                    
+                    ActionSheetButtonItem(title: self.presentationData.strings.SecretPasscodeMenu_Edit, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let _ = (strongSelf.context.sharedContext.ptgSecretPasscodes
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] ptgSecretPasscodes in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            let controller = PasscodeSetupController(context: strongSelf.context, mode: .secretEntry(modal: false, .digits6))
+                            
+                            controller.check = { [weak controller] passcode in
+                                guard let strongSelf = self else {
+                                    return false
+                                }
+                                
+                                if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
+                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: passcode)
+                                    (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
+                                    
+                                    return true
+                                }
+                                
+                                return false
+                            }
+                            
+                            strongSelf.controller?.push(controller)
+                        })
+                    }),
+                    
+                    ActionSheetButtonItem(title: self.presentationData.strings.SecretPasscodeMenu_HideAllSecrets, font: .bold, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let _ = updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
+                            let updated = current.secretPasscodes.map { $0.withUpdated(active: false) }
+                            return PtgSecretPasscodes(secretPasscodes: updated)
+                        }).start()
+                        
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.SecretPasscodeStatus_AllHidden), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                
+                self.controller?.present(actionSheet, in: .window(.root))
         }
     }
 
@@ -7510,36 +7663,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if self.isSettings {
             contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
 
-            let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-                guard let strongSelf = self else {
-                    return
-                }
-
-                let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-
-                if !fakePasscodeHolder.unlockedWithFakePasscode() {
-                    strongSelf.versionLabelNode.isHidden = false
-                    let horizontalPadding = 20.0
-                    var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
-                    let size = strongSelf.versionLabelNode.updateLayout(frame.size)
-                    frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
-                    frame.size = size
-                    transition.updateFrameAdditive(node: strongSelf.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
-                    let bottomPadding = horizontalPadding
-                    contentHeight += size.height + bottomPadding
-                } else {
-                    strongSelf.versionLabelNode.isHidden = true
-                }
-
-                strongSelf.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
-                strongSelf.updateNavigation(transition: transition, additive: additive)
-            })
+            if !self.state.isEditing {
+                let horizontalPadding = 20.0
+                var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
+                let size = self.versionLabelNode.updateLayout(frame.size)
+                frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
+                frame.size = size
+                transition.updateFrameAdditive(node: self.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
+                let bottomPadding = horizontalPadding
+                contentHeight += size.height + bottomPadding
+            }
         }
-        if !self.isSettings {
-            self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
-        }
+        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
         }
@@ -7554,9 +7689,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
                 
         self.ignoreScrolling = false
-        if !self.isSettings {
-            self.updateNavigation(transition: transition, additive: additive)
-        }
+        self.updateNavigation(transition: transition, additive: additive)
         
         if !self.didSetReady && self.data != nil {
             self.didSetReady = true
@@ -7703,6 +7836,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             
             let offsetY = self.scrollNode.view.contentOffset.y
             var shouldBeExpanded: Bool?
+            var shouldBeExpandedForPhoneAndId: Bool?
             
             var isLandscape = false
             if let (layout, _) = self.validLayout, layout.size.width > layout.size.height {
@@ -7729,9 +7863,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
                 }
+                if let peer = self.data?.peer, peer.smallProfileImage == nil && self.state.updatingAvatar == nil && !isLandscape && self.isSettings {
+                    shouldBeExpandedForPhoneAndId = true
+                }
             } else if offsetY >= 1.0 {
                 shouldBeExpanded = false
                 self.canOpenAvatarByDragging = false
+                shouldBeExpandedForPhoneAndId = false
             }
             if let shouldBeExpanded = shouldBeExpanded, shouldBeExpanded != self.headerNode.isAvatarExpanded {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
@@ -7747,6 +7885,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 self.headerNode.updateIsAvatarExpanded(shouldBeExpanded, transition: transition)
                 self.updateNavigationExpansionPresentation(isExpanded: shouldBeExpanded, animated: true)
+                
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+                }
+            }
+            if let shouldBeExpandedForPhoneAndId = shouldBeExpandedForPhoneAndId, shouldBeExpandedForPhoneAndId != self.headerNode.isExpandedForPhoneAndId {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                
+                if self.hapticFeedback == nil {
+                    self.hapticFeedback = HapticFeedback()
+                }
+                if shouldBeExpandedForPhoneAndId {
+                    self.hapticFeedback?.impact()
+                } else {
+                    self.hapticFeedback?.tap()
+                }
+                
+                self.headerNode.isExpandedForPhoneAndId = shouldBeExpandedForPhoneAndId
                 
                 if let (layout, navigationHeight) = self.validLayout {
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
@@ -7922,6 +8078,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveT
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
+        precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+        
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
