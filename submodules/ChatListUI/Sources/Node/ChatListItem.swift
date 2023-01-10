@@ -411,7 +411,7 @@ private func forumGeneralRevealOptions(strings: PresentationStrings, theme: Pres
     if canOpenClose && !hiddenByDefault {
         if !isEditing {
             if !isClosed {
-//                options.append(ItemListRevealOption(key: RevealOptionKey.close.rawValue, title: strings.ChatList_CloseAction, icon: closeIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
+
             } else {
                 options.append(ItemListRevealOption(key: RevealOptionKey.open.rawValue, title: strings.ChatList_StartAction, icon: startIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             }
@@ -2358,6 +2358,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if item.interaction.isInlineMode {
                 titleLeftCutout = 22.0
             }
+            
+            if let titleAttributedStringValue = titleAttributedString, titleAttributedStringValue.length == 0 {
+                titleAttributedString = NSAttributedString(string: " ", font: titleFont, textColor: theme.titleColor)
+            }
                         
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
             var titleCutout: TextNodeCutout?
@@ -2533,8 +2537,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     strongSelf.currentOnline = online
                     
-                    if let currentHiddenOffset = currentItem?.hiddenOffset, item.hiddenOffset, currentHiddenOffset != item.hiddenOffset {
-                        strongSelf.supernode?.insertSubnode(strongSelf, at: 0)
+                    if item.hiddenOffset {
+                        strongSelf.layer.zPosition = -1.0
                     }
                                        
                     if case .groupReference = item.content {

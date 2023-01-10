@@ -244,7 +244,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
     }
 }
 
-public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], messages: [EnqueueMessage]) -> Signal<[MessageId], NoError> {
+public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], threadIds: [PeerId: Int64], messages: [EnqueueMessage]) -> Signal<[MessageId], NoError> {
     let signal: Signal<[(Bool, EnqueueMessage)], NoError>
     if let transformOutgoingMessageMedia = account.transformOutgoingMessageMedia {
         signal = opportunisticallyTransformOutgoingMedia(network: account.network, postbox: account.postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messages: messages, userInteractive: true)
@@ -256,6 +256,14 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
         return account.postbox.transaction { transaction -> [MessageId] in
             var messageIds: [MessageId] = []
             for peerId in peerIds {
+                var replyToMessageId: MessageId?
+                if let threadIds = threadIds[peerId] {
+                    replyToMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadIds))
+                }
+                var messages = messages
+                if let replyToMessageId {
+                    messages = messages.map { ($0.0, $0.1.withUpdatedReplyToMessageId(replyToMessageId)) }
+                }
                 for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages, disableAutoremove: false, transformGroupingKeysWithPeerId: true) {
                     if let id = id {
                         messageIds.append(id)

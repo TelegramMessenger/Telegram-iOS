@@ -1506,14 +1506,21 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         return UIMenu(children: actions)
     }
     
+    private var currentSpeechHolder: SpeechSynthesizerHolder?
     @objc func _accessibilitySpeak(_ sender: Any) {
         var text = ""
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        let _ = speakText(context: self.context, text: text)
-        
+        if let speechHolder = speakText(context: self.context, text: text) {
+            speechHolder.completion = { [weak self, weak speechHolder] in
+                if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
+                    strongSelf.currentSpeechHolder = nil
+                }
+            }
+            self.currentSpeechHolder = speechHolder
+        }
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()
         } else {

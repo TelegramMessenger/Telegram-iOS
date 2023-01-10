@@ -1193,6 +1193,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     let _ = extensionTextApply()
                     
                     strongSelf.currentIconImage = iconImage
+                                
+                    if let updateIconImageSignal, let iconImage, case .albumArt = iconImage {
+                        strongSelf.iconStatusNode.setBackgroundImage(updateIconImageSignal)
+                    }
                     
                     if let iconImageApply = iconImageApply {
                         if let updateImageSignal = updateIconImageSignal {

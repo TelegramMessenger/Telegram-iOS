@@ -710,19 +710,19 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.muted.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Muted"), color: .white), cornerRadius: 12.0, color: .red),
-            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Muted"), color: .white), iconScale: 0.6, cornerRadius: 11.0, circleCorners: true, color: .red),
+            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Muted"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .red),
             title: presentationData.strings.ChatListFolder_CategoryMuted
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.read.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Read"), color: .white), cornerRadius: 12.0, color: .blue),
-            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Read"), color: .white), iconScale: 0.6, cornerRadius: 11.0, circleCorners: true, color: .blue),
+            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Read"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
             title: presentationData.strings.ChatListFolder_CategoryRead
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.archived.rawValue,
             icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Archive"), color: .white), cornerRadius: 12.0, color: .yellow),
-            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Archive"), color: .white), iconScale: 0.6, cornerRadius: 11.0, circleCorners: true, color: .yellow),
+            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Archive"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
             title: presentationData.strings.ChatListFolder_CategoryArchived
         ),
     ]

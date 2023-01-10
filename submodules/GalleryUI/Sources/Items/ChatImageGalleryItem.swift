@@ -227,6 +227,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private let pagingEnabledPromise = ValuePromise<Bool>(true)
     
+    private var currentSpeechHolder: SpeechSynthesizerHolder?
+    
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
@@ -378,7 +380,14 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                             window.rootViewController?.present(controller, animated: true)
                                                         }
                                                     case .speak:
-                                                        let _ = speakText(context: strongSelf.context, text: string)
+                                                        if let speechHolder = speakText(context: strongSelf.context, text: string) {
+                                                            speechHolder.completion = { [weak self, weak speechHolder] in
+                                                                if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
+                                                                    strongSelf.currentSpeechHolder = nil
+                                                                }
+                                                            }
+                                                            strongSelf.currentSpeechHolder = speechHolder
+                                                        }
                                                     case .translate:
                                                         if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
                                                             let controller = TranslateScreen(context: strongSelf.context, text: string, canCopy: true, fromLanguage: nil)

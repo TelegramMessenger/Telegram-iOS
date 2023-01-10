@@ -539,6 +539,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return title
     }
     
+    private var currentSpeechHolder: SpeechSynthesizerHolder?
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -3534,7 +3536,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     window.rootViewController?.present(controller, animated: true)
                 }
             case .speak:
-                let _ = speakText(context: strongSelf.context, text: text.string)
+                if let speechHolder = speakText(context: strongSelf.context, text: text.string) {
+                    speechHolder.completion = { [weak self, weak speechHolder] in
+                        if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
+                            strongSelf.currentSpeechHolder = nil
+                        }
+                    }
+                    strongSelf.currentSpeechHolder = speechHolder
+                }
             case .translate:
                 strongSelf.chatDisplayNode.dismissInput()
                 let f = {
