@@ -140,7 +140,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                         if peer.id == account.peerId {
                             signals.append(.single((peer, subject, savedMessagesAvatar)))
                         } else {
-                            let peerAndAvatar = (peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil))
+                            let peerAndAvatar = (peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.smallProfileImage, clipStyle: .none) ?? .single(nil))
                             |> map { imageVersions -> (Peer, SendMessageIntentSubject, UIImage?) in
                                 var avatarImage: UIImage?
                                 if let image = imageVersions?.0 {
@@ -193,12 +193,14 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                     nameComponents.givenName = displayTitle
                 }
                 
-                let recipient = INPerson(personHandle: recipientHandle, nameComponents: nameComponents, displayName: displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peer.id.toInt64())")
+                var personImage: INImage?
+                if let avatarImage = avatarImage, let avatarImageData = avatarImage.jpegData(compressionQuality: 0.8) {
+                    personImage = INImage(imageData: avatarImageData)
+                }
+                
+                let recipient = INPerson(personHandle: recipientHandle, nameComponents: nameComponents, displayName: displayTitle, image: personImage, contactIdentifier: nil, customIdentifier: "tg\(peer.id.toInt64())")
                
                 let intent = INSendMessageIntent(recipients: [recipient], content: nil, speakableGroupName: INSpeakableString(spokenPhrase: displayTitle), conversationIdentifier: "tg\(peer.id.toInt64())", serviceName: nil, sender: nil)
-                if let avatarImage = avatarImage, let avatarImageData = avatarImage.jpegData(compressionQuality: 0.8) {
-                    intent.setImage(INImage(imageData: avatarImageData), forParameterNamed: \.groupName)
-                }
                 let interaction = INInteraction(intent: intent, response: nil)
                 interaction.direction = .outgoing
                 interaction.groupIdentifier = "sendMessage_\(peer.id.toInt64())"

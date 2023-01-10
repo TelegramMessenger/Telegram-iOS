@@ -184,7 +184,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             var currentCredibilityIconImage: UIImage?
             var highlight = true
             if let peer = peer {
-                if let channel = peer as? TelegramChannel, channel.username == nil {
+                if let channel = peer as? TelegramChannel, channel.addressName == nil {
                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                     } else if case .member = channel.participationStatus {
                     } else {
@@ -213,6 +213,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                 highlight = false
             }
             
+            //let completeString: NSString = (completeSourceString.string.replacingOccurrences(of: "\n", with: " \n")) as NSString
             let completeString: NSString = completeSourceString.string as NSString
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
             if highlight, let range = completeSourceString.ranges.first?.range {

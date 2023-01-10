@@ -24,6 +24,8 @@ import UndoUI
 import TelegramCallsUI
 import WallpaperBackgroundNode
 import BotPaymentsUI
+import ContextUI
+import Pasteboard
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -50,18 +52,20 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     private let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
     
+    private var chatPresentationData: ChatPresentationData
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
+    private var visibleAreaInset = UIEdgeInsets()
     
     private let backgroundNode: WallpaperBackgroundNode
     private let panelBackgroundNode: NavigationBackgroundNode
     private let panelSeparatorNode: ASDisplayNode
     private let panelButtonNode: HighlightableButtonNode
     
-    private let listNode: ListView
+    fileprivate let listNode: ListView
     private let loadingNode: ChatLoadingNode
     private let emptyNode: ChatRecentActionsEmptyNode
     
@@ -85,6 +89,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var adminsDisposable: Disposable?
     private var adminsState: ChannelMemberListState?
     private let banDisposables = DisposableDict<PeerId>()
+    private let reportFalsePositiveDisposables = DisposableDict<MessageId>()
+    
+    private weak var antiSpamTooltipController: UndoOverlayController?
     
     private weak var controller: ChatRecentActionsController?
     
@@ -120,6 +127,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode.alpha = 0.0
                 
+        self.chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)
         self.chatPresentationDataPromise = Promise()
         
         self.eventLogContext = self.context.engine.peers.channelAdminEventLog(peerId: self.peer.id)
@@ -221,11 +229,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, openUrl: { url in
                     self?.openUrl(url)
                 }, openPeer: { peer, navigation in
-                    self?.openPeer(peerId: peer.id, peer: peer)
+                    self?.openPeer(peer: EnginePeer(peer))
                 }, callPeer: { peerId, isVideo in
                     self?.controllerInteraction?.callPeer(peerId, isVideo)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
+                }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
                     if let strongSelf = self {
                         strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { messageId in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
@@ -248,20 +256,23 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, gallerySource: gallerySource))
             }
             return false
-        }, openPeer: { [weak self] peerId, _, message, peer in
-            if let peerId = peerId, peerId != context.account.peerId {
-                self?.openPeer(peerId: peerId, peer: peer)
+        }, openPeer: { [weak self] peer, _, message, _ in
+            if peer.id != context.account.peerId {
+                self?.openPeer(peer: peer)
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _, location in
-            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, location: location)
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
+            let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
+            let gesture: ContextGesture? = anyRecognizer as? ContextGesture
+            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, recognizer: recognizer, gesture: gesture, location: location)
         }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
+        }, navigateToThreadMessage: { _, _, _ in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -376,7 +387,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.openPeer(peerId: peerId, peer: nil)
+                                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    if let strongSelf = self, let peer = peer {
+                                        strongSelf.openPeer(peer: peer)
+                                    }
+                                })
                             }
                         }))
                         if !mention.isEmpty {
@@ -519,6 +535,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _, _ in
         }, displayPremiumStickerTooltip: { _, _ in
+        }, displayEmojiPackTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -535,9 +552,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
-        }, requestMessageUpdate: { _ in
+        }, activateAdAction: { _ in
+        }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
+        }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
@@ -616,12 +635,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.resolvePeerByNameDisposable.dispose()
         self.adminsDisposable?.dispose()
         self.banDisposables.dispose()
+        self.reportFalsePositiveDisposables.dispose()
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)))
+        self.chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)
+        self.chatPresentationDataPromise.set(.single(self.chatPresentationData))
         
         self.backgroundNode.update(wallpaper: presentationData.chatWallpaper)
         self.backgroundNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
@@ -651,6 +672,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.panelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: intrinsicPanelHeight)))
         
+        self.visibleAreaInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: panelHeight, right: 0.0)
+        
         transition.updateBounds(node: self.listNode, bounds: CGRect(origin: CGPoint(), size: layout.size))
         transition.updatePosition(node: self.listNode, position: CGRect(origin: CGPoint(), size: layout.size).center)
         
@@ -659,7 +682,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         let emptyFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - panelHeight))
         transition.updateFrame(node: self.emptyNode, frame: emptyFrame)
-        self.emptyNode.updateLayout(size: emptyFrame.size, transition: transition)
+        self.emptyNode.update(rect: emptyFrame, within: layout.size)
+        self.emptyNode.updateLayout(presentationData: self.chatPresentationData, backgroundNode: self.backgroundNode, size: emptyFrame.size, transition: transition)
         
         let contentBottomInset: CGFloat = panelHeight + 4.0
         let listInsets = UIEdgeInsets(top: contentBottomInset, left: layout.safeInsets.right, bottom: insets.top, right: layout.safeInsets.left)
@@ -761,24 +785,34 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.eventLogContext.setFilter(self.filter)
     }
     
-    private func openPeer(peerId: PeerId, peer: Peer?, peekData: ChatPeekTimeout? = nil) {
-        let peerSignal: Signal<Peer?, NoError>
-        if let peer = peer {
-            peerSignal = .single(peer)
-        } else {
-            peerSignal = self.context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
-        }
-        self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
-            if let strongSelf = self, let peer = peer {
-                if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), peekData: peekData, animated: true))
-                } else {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                        strongSelf.pushController(infoController)
+    private func openPeer(peer: EnginePeer, peekData: ChatPeekTimeout? = nil) {
+        let antiSpamBotConfiguration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        if peer.id == antiSpamBotConfiguration.antiSpamBotId {
+            self.dismissAllTooltips()
+            
+            self.presentController(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: self.presentationData.strings.Group_AdminLog_AntiSpamTitle, text: self.presentationData.strings.Group_AdminLog_AntiSpamText, customUndoText: nil), elevatedLayout: true, action: { [weak self] action in
+                if let strongSelf = self {
+                    if case .info = action {
+                        let _ = strongSelf.getNavigationController()?.popViewController(animated: true)
+                        return true
                     }
                 }
-            }
-        }))
+                return false
+            }), .window(.root), nil)
+        } else {
+            let peerSignal: Signal<Peer?, NoError> = .single(peer._asPeer())
+            self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let strongSelf = self, let peer = peer {
+                    if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), peekData: peekData, animated: true))
+                    } else {
+                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                            strongSelf.pushController(infoController)
+                        }
+                    }
+                }
+            }))
+        }
     }
     
     private func openPeerMention(_ name: String) {
@@ -795,15 +829,51 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }))
     }
     
-    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, location: CGPoint?) {
-        var actions: [ContextMenuAction] = []
+    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, location: CGPoint? = nil) {
+        guard let controller = self.controller else {
+            return
+        }
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let source: ContextContentSource
+        if let location = location {
+            source = .location(ChatMessageContextLocationContentSource(controller: controller, location: node.view.convert(node.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
+        } else {
+            source = .extracted(ChatRecentActionsMessageContextExtractedContentSource(controllerNode: self, message: message, selectAll: selectAll))
+        }
+        
+        var actions: [ContextMenuItem] = []
         if !message.text.isEmpty {
-            actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
-                UIPasteboard.general.string = message.text
-                
-                let content: UndoOverlayContent = .copy(text: self.presentationData.strings.Conversation_TextCopied)
-                self.presentController(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
-            }))
+            actions.append(
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    if let strongSelf = self {
+                        var messageEntities: [MessageTextEntity]?
+                        var restrictedText: String?
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                messageEntities = attribute.entities
+                            }
+                            if let attribute = attribute as? RestrictedContentMessageAttribute {
+                                restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                            }
+                        }
+                        
+                        if let restrictedText = restrictedText {
+                            storeMessageTextInPasteboard(restrictedText, entities: nil)
+                        } else {
+                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                        }
+                        
+                        Queue.mainQueue().after(0.2, {
+                            let content: UndoOverlayContent = .copy(text: strongSelf.presentationData.strings.Conversation_TextCopied)
+                            strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
+                        })
+                    }
+                }))
+            )
         }
         
         if let author = message.author, let adminsState = self.adminsState {
@@ -823,42 +893,53 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             
             if canBan {
-                actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuBan, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuBan), action: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
-                        |> deliverOnMainQueue).start(next: { participant in
-                            if let strongSelf = self {
-                                strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                            }
-                        }), forKey: author.id)
-                    }
-                }))
+                actions.append(
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuBan, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                        if let strongSelf = self {
+                            f(.default)
+                            strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
+                            |> deliverOnMainQueue).start(next: { participant in
+                                if let strongSelf = self {
+                                    strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                }
+                            }), forKey: author.id)
+                        }
+                    }))
+                )
             }
         }
         
-        if !actions.isEmpty {
-            let contextMenuController = ContextMenuController(actions: actions)
-            
-            self.controllerInteraction.highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
-            self.updateItemNodesHighlightedStates(animated: true)
-            
-            contextMenuController.dismissed = { [weak self] in
-                if let strongSelf = self {
-                    if strongSelf.controllerInteraction.highlightedState?.messageStableId == message.stableId {
-                        strongSelf.controllerInteraction.highlightedState = nil
-                        strongSelf.updateItemNodesHighlightedStates(animated: true)
-                    }
+        let configuration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        for peer in message.peers {
+            if peer.0 == configuration.antiSpamBotId {
+                if !actions.isEmpty {
+                    actions.insert(.separator, at: 0)
                 }
+                actions.insert(
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuReportFalsePositive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AntiSpam"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        if let strongSelf = self {
+                            strongSelf.reportFalsePositiveDisposables.set((strongSelf.context.engine.peers.reportAntiSpamFalsePositive(peerId: message.id.peerId, messageId: message.id)
+                            |> deliverOnMainQueue).start(), forKey: message.id)
+                            
+                            Queue.mainQueue().after(0.2, {
+                                strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
+                            })
+                        }
+                    })), at: 0
+                )
+                
+                break
             }
-            
-            self.presentController(contextMenuController, .window(.root), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak node] in
-                if let strongSelf = self, let node = node {
-                    return (node, frame, strongSelf, strongSelf.bounds)
-                } else {
-                    return nil
-                }
-            }))
         }
+        
+        guard !actions.isEmpty else {
+            return
+        }
+        
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(actions))), recognizer: recognizer, gesture: gesture)
+        controller.window?.presentInGlobalOverlay(contextController)
     }
     
     private func updateItemNodesHighlightedStates(animated: Bool) {
@@ -881,9 +962,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }
                     case .urlAuth:
                         break
-                    case let .peer(peerId, _):
-                        if let peerId = peerId {
-                            strongSelf.openPeer(peerId: peerId, peer: nil)
+                    case let .peer(peer, _):
+                        if let peer = peer {
+                            strongSelf.openPeer(peer: EnginePeer(peer))
                         }
                     case .inaccessiblePeer:
                         strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
@@ -891,13 +972,17 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .groupBotStart:
                         break
-                    case let .channelMessage(peerId, messageId, timecode):
+                    case let .channelMessage(peer, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
                         }
                    case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(message: replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+                        }
+                    case let .replyThread(messageId):
+                        if let navigationController = strongSelf.getNavigationController() {
+                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
                         }
                     case let .stickerPack(name, type):
                         let _ = type
@@ -930,17 +1015,17 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
-                        strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peerId, peekData in
+                        strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peer, peekData in
                             if let strongSelf = self {
-                                strongSelf.openPeer(peerId: peerId, peer: nil, peekData: peekData)
+                                strongSelf.openPeer(peer: peer, peekData: peekData)
                             }
                         }, parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), .window(.root), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:
-                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peerId, _ in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peer, _ in
                             if let strongSelf = self {
-                                strongSelf.openPeer(peerId: peerId, peer: nil)
+                                strongSelf.openPeer(peer: peer)
                             }
                         }, sendFile: nil,
                         sendSticker: nil,
@@ -955,10 +1040,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .theme:
                         break
-                    #if ENABLE_WALLET
-                    case .wallet:
-                        break
-                    #endif
                     case .settings:
                         break
                     case .premiumOffer:
@@ -1002,5 +1083,87 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         })
         self.view.endEditing(true)
         self.present(controller, in: .window(.root))*/
+    }
+    
+    private func dismissAllTooltips() {
+        self.antiSpamTooltipController?.dismiss()
+        
+        self.controller?.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.controller?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
+    }
+    
+    func frameForVisibleArea() -> CGRect {
+        let rect = CGRect(origin: CGPoint(x: self.visibleAreaInset.left, y: self.visibleAreaInset.top), size: CGSize(width: self.bounds.size.width - self.visibleAreaInset.left - self.visibleAreaInset.right, height: self.bounds.size.height - self.visibleAreaInset.top - self.visibleAreaInset.bottom))
+        
+        return rect
+    }
+}
+
+final class ChatRecentActionsMessageContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    private weak var controllerNode: ChatRecentActionsControllerNode?
+    private let message: Message
+    private let selectAll: Bool
+    
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    init(controllerNode: ChatRecentActionsControllerNode, message: Message, selectAll: Bool) {
+        self.controllerNode = controllerNode
+        self.message = message
+        self.selectAll = selectAll
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        guard let controllerNode = self.controllerNode else {
+            return nil
+        }
+        
+        var result: ContextControllerTakeViewInfo?
+        controllerNode.listNode.forEachItemNode { itemNode in
+            guard let itemNode = itemNode as? ChatMessageItemView else {
+                return
+            }
+            guard let item = itemNode.item else {
+                return
+            }
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.selectAll ? nil : self.message.stableId) {
+                result = ContextControllerTakeViewInfo(containingItem: .node(contentNode), contentAreaInScreenSpace: controllerNode.convert(controllerNode.frameForVisibleArea(), to: nil))
+            }
+        }
+        return result
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        guard let controllerNode = self.controllerNode else {
+            return nil
+        }
+        
+        var result: ContextControllerPutBackViewInfo?
+        controllerNode.listNode.forEachItemNode { itemNode in
+            guard let itemNode = itemNode as? ChatMessageItemView else {
+                return
+            }
+            guard let item = itemNode.item else {
+                return
+            }
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }) {
+                result = ContextControllerPutBackViewInfo(contentAreaInScreenSpace: controllerNode.convert(controllerNode.frameForVisibleArea(), to: nil))
+            }
+        }
+        return result
     }
 }

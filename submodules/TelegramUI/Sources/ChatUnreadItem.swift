@@ -6,18 +6,21 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import WallpaperBackgroundNode
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
 class ChatUnreadItem: ListViewItem {
     let index: MessageIndex
     let presentationData: ChatPresentationData
+    let controllerInteraction: ChatControllerInteraction
     let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, presentationData: ChatPresentationData, context: AccountContext) {
+    init(index: MessageIndex, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, context: AccountContext) {
         self.index = index
         self.presentationData = presentationData
-        self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, context: context)
+        self.controllerInteraction = controllerInteraction
+        self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context)
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -61,6 +64,11 @@ class ChatUnreadItemNode: ListViewItemNode {
     
     let activateArea: AccessibilityAreaNode
     
+    private var wallpaperBackgroundNode: WallpaperBackgroundNode?
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var absolutePosition: (CGRect, CGSize)?
+    
     private var theme: ChatPresentationThemeData?
     
     private let layoutConstants = ChatMessageItemLayoutConstants.default
@@ -101,7 +109,7 @@ class ChatUnreadItemNode: ListViewItemNode {
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
-            if let item = item as? ChatUnreadItem {
+        if let item = item as? ChatUnreadItem {
             let dateAtBottom = !chatItemsHaveCommonDateHeader(item, nextItem)
             let (layout, apply) = self.asyncLayout()(item, params, dateAtBottom)
             apply()
@@ -142,8 +150,42 @@ class ChatUnreadItemNode: ListViewItemNode {
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - size.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0)), size: size.size)
+                    
+                    if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                        if strongSelf.backgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                            backgroundContent.clipsToBounds = true
+
+                            strongSelf.backgroundContent = backgroundContent
+                            strongSelf.insertSubnode(backgroundContent, at: 0)
+                        }
+                    } else {
+                        strongSelf.backgroundContent?.removeFromSupernode()
+                        strongSelf.backgroundContent = nil
+                    }
+                    
+                    if let backgroundContent = strongSelf.backgroundContent {
+                        strongSelf.backgroundNode.isHidden = true
+                        backgroundContent.frame = strongSelf.backgroundNode.frame
+                        if let (rect, containerSize) = strongSelf.absolutePosition {
+                            strongSelf.updateAbsoluteRect(rect, within: containerSize)
+                        }
+                    } else {
+                        strongSelf.backgroundNode.isHidden = false
+                    }
                 }
             })
+        }
+    }
+    
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        super.updateAbsoluteRect(rect, within: containerSize)
+        
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += containerSize.height - rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
     }
     

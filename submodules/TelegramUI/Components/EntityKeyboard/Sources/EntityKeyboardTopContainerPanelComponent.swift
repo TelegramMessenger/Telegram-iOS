@@ -7,7 +7,7 @@ import TelegramPresentationData
 import TelegramCore
 import Postbox
 
-final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
+public final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
     let visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
     let isExpandedUpdated: (Bool, Transition) -> Void
     
@@ -19,7 +19,7 @@ final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
         self.isExpandedUpdated = isExpandedUpdated
     }
     
-    static func ==(lhs: EntityKeyboardTopContainerPanelEnvironment, rhs: EntityKeyboardTopContainerPanelEnvironment) -> Bool {
+    public static func ==(lhs: EntityKeyboardTopContainerPanelEnvironment, rhs: EntityKeyboardTopContainerPanelEnvironment) -> Bool {
         if lhs.visibilityFractionUpdated !== rhs.visibilityFractionUpdated {
             return false
         }

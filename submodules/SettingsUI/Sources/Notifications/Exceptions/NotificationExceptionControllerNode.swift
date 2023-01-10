@@ -19,6 +19,7 @@ import ChatListSearchItemHeader
 import ChatListUI
 import ItemListPeerActionItem
 import TelegramStringFormatting
+import NotificationPeerExceptionController
 
 private final class NotificationExceptionState : Equatable {
     let mode: NotificationExceptionMode
@@ -63,227 +64,6 @@ private final class NotificationExceptionState : Equatable {
     
     static func == (lhs: NotificationExceptionState, rhs: NotificationExceptionState) -> Bool {
         return lhs.mode == rhs.mode && lhs.isSearchMode == rhs.isSearchMode && lhs.revealedPeerId == rhs.revealedPeerId && lhs.editing == rhs.editing
-    }
-}
-
-public struct NotificationExceptionWrapper : Equatable {
-    let settings: TelegramPeerNotificationSettings
-    let date: TimeInterval?
-    let peer: Peer
-    init(settings: TelegramPeerNotificationSettings, peer: Peer, date: TimeInterval? = nil) {
-        self.settings = settings
-        self.date = date
-        self.peer = peer
-    }
-    
-    public static func ==(lhs: NotificationExceptionWrapper, rhs: NotificationExceptionWrapper) -> Bool {
-        return lhs.settings == rhs.settings && lhs.date == rhs.date
-    }
-    
-    func withUpdatedSettings(_ settings: TelegramPeerNotificationSettings) -> NotificationExceptionWrapper {
-        return NotificationExceptionWrapper(settings: settings, peer: self.peer, date: self.date)
-    }
-    
-    func updateSettings(_ f: (TelegramPeerNotificationSettings) -> TelegramPeerNotificationSettings) -> NotificationExceptionWrapper {
-        return NotificationExceptionWrapper(settings: f(self.settings), peer: self.peer, date: self.date)
-    }
-    
-    
-    func withUpdatedDate(_ date: TimeInterval) -> NotificationExceptionWrapper {
-        return NotificationExceptionWrapper(settings: self.settings, peer: self.peer, date: date)
-    }
-}
-
-
-
-public enum NotificationExceptionMode : Equatable {
-    fileprivate enum Mode {
-        case users
-        case groups
-        case channels
-    }
-    
-    public static func == (lhs: NotificationExceptionMode, rhs: NotificationExceptionMode) -> Bool {
-        switch lhs {
-            case let .users(lhsValue):
-                if case let .users(rhsValue) = rhs {
-                    return lhsValue == rhsValue
-                } else {
-                    return false
-                }
-            case let .groups(lhsValue):
-                if case let .groups(rhsValue) = rhs {
-                    return lhsValue == rhsValue
-                } else {
-                    return false
-                }
-            case let .channels(lhsValue):
-                if case let .channels(rhsValue) = rhs {
-                    return lhsValue == rhsValue
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    fileprivate var mode: Mode {
-        switch self {
-            case .users:
-                return .users
-            case .groups:
-                return .groups
-            case .channels:
-                return .channels
-        }
-    }
-    
-    var isEmpty: Bool {
-        switch self {
-            case let .users(value), let .groups(value), let .channels(value):
-                return value.isEmpty
-        }
-    }
-    
-    case users([PeerId : NotificationExceptionWrapper])
-    case groups([PeerId : NotificationExceptionWrapper])
-    case channels([PeerId : NotificationExceptionWrapper])
-    
-    func withUpdatedPeerSound(_ peer: Peer, _ sound: PeerMessageSound) -> NotificationExceptionMode {
-        let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerMessageSound) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, sound in
-            var values = values
-            if let value = values[peerId] {
-                switch sound {
-                    case .default:
-                        switch value.settings.muteState {
-                        case .default:
-                            values.removeValue(forKey: peerId)
-                        default:
-                            values[peerId] = value.updateSettings({$0.withUpdatedMessageSound(sound)}).withUpdatedDate(Date().timeIntervalSince1970)
-                        }
-                    default:
-                        values[peerId] = value.updateSettings({$0.withUpdatedMessageSound(sound)}).withUpdatedDate(Date().timeIntervalSince1970)
-                }
-            } else {
-                switch sound {
-                    case .default:
-                        break
-                    default:
-                        values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .default, messageSound: sound, displayPreviews: .default), peer: peer, date: Date().timeIntervalSince1970)
-                }
-            }
-            return values
-        }
-        
-        switch self {
-            case let .groups(values):
-                return .groups(apply(values, peer.id, sound))
-            case let .users(values):
-                return .users(apply(values, peer.id, sound))
-            case let .channels(values):
-                return .channels(apply(values, peer.id, sound))
-        }
-    }
-    
-    func withUpdatedPeerMuteInterval(_ peer: Peer, _ muteInterval: Int32?) -> NotificationExceptionMode {
-        let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerMuteState) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, muteState in
-            var values = values
-            if let value = values[peerId] {
-                switch muteState {
-                    case .default:
-                        switch value.settings.messageSound {
-                            case .default:
-                                values.removeValue(forKey: peerId)
-                            default:
-                                values[peerId] = value.updateSettings({$0.withUpdatedMuteState(muteState)}).withUpdatedDate(Date().timeIntervalSince1970)
-                        }
-                    default:
-                        values[peerId] = value.updateSettings({$0.withUpdatedMuteState(muteState)}).withUpdatedDate(Date().timeIntervalSince1970)
-                }
-            } else {
-                switch muteState {
-                    case .default:
-                        break
-                    default:
-                        values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: .default, displayPreviews: .default), peer: peer, date: Date().timeIntervalSince1970)
-                }
-            }
-            return values
-        }
-        
-        let muteState: PeerMuteState
-        if let muteInterval = muteInterval {
-            if muteInterval == 0 {
-                muteState = .unmuted
-            } else {
-                let absoluteUntil: Int32
-                if muteInterval == Int32.max {
-                    absoluteUntil = Int32.max
-                } else {
-                    absoluteUntil = muteInterval
-                }
-                muteState = .muted(until: absoluteUntil)
-            }
-        } else {
-            muteState = .default
-        }
-        switch self {
-            case let .groups(values):
-                return .groups(apply(values, peer.id, muteState))
-            case let .users(values):
-                return .users(apply(values, peer.id, muteState))
-            case let .channels(values):
-                return .channels(apply(values, peer.id, muteState))
-        }
-    }
-    
-    func withUpdatedPeerDisplayPreviews(_ peer: Peer, _ displayPreviews: PeerNotificationDisplayPreviews) -> NotificationExceptionMode {
-        let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerNotificationDisplayPreviews) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, displayPreviews in
-            var values = values
-            if let value = values[peerId] {
-                switch displayPreviews {
-                case .default:
-                    switch value.settings.displayPreviews {
-                    case .default:
-                        values.removeValue(forKey: peerId)
-                    default:
-                        values[peerId] = value.updateSettings({$0.withUpdatedDisplayPreviews(displayPreviews)}).withUpdatedDate(Date().timeIntervalSince1970)
-                    }
-                default:
-                    values[peerId] = value.updateSettings({$0.withUpdatedDisplayPreviews(displayPreviews)}).withUpdatedDate(Date().timeIntervalSince1970)
-                }
-            } else {
-                switch displayPreviews {
-                case .default:
-                    break
-                default:
-                    values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: displayPreviews), peer: peer, date: Date().timeIntervalSince1970)
-                }
-            }
-            return values
-        }
-        
-        switch self {
-            case let .groups(values):
-                return .groups(apply(values, peer.id, displayPreviews))
-            case let .users(values):
-                return .users(apply(values, peer.id, displayPreviews))
-            case let .channels(values):
-                return .channels(apply(values, peer.id, displayPreviews))
-        }
-    }
-    
-    var peerIds: [PeerId] {
-        switch self {
-        case let .users(settings), let .groups(settings), let .channels(settings):
-            return settings.map {$0.key}
-        }
-    }
-    
-    var settings: [PeerId : NotificationExceptionWrapper] {
-        switch self {
-        case let .users(settings), let .groups(settings), let .channels(settings):
-            return settings
-        }
     }
 }
 
@@ -781,16 +561,16 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         let presentationData = context.sharedContext.currentPresentationData.modify {$0}
         
         let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-            return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: nil, sound: sound) |> deliverOnMainQueue
         }
         
         let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-            return context.engine.peers.updatePeerMuteSetting(peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: nil, muteInterval: muteInterval) |> deliverOnMainQueue
         }
         
         let updatePeerDisplayPreviews:(PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
             peerId, displayPreviews in
-            return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: nil, displayPreviews: displayPreviews) |> deliverOnMainQueue
         }
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -803,8 +583,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         let presentPeerSettings: (PeerId, @escaping () -> Void) -> Void = { [weak self] peerId, completion in
             (self?.searchDisplayController?.contentNode as? NotificationExceptionsSearchContainerNode)?.listNode.clearHighlightAnimated(true)
             
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).start(next: { peer in
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.NotificationSettings.Global()
+            )
+            |> deliverOnMainQueue).start(next: { peer, globalSettings in
                 completion()
                 
                 guard let peer = peer else {
@@ -814,7 +597,20 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 let mode = stateValue.with { $0.mode }
                 
                 dismissInputImpl?()
-                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), mode: mode, updatePeerSound: { peerId, sound in
+                
+                let canRemove = mode.peerIds.contains(peerId)
+                
+                let defaultSound: PeerMessageSound
+                switch mode {
+                case .channels:
+                    defaultSound = globalSettings.channels.sound._asMessageSound()
+                case .groups:
+                    defaultSound = globalSettings.groupChats.sound._asMessageSound()
+                case .users:
+                    defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                }
+                
+                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), threadId: nil, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in
                         updateNotificationsDisposable.set(nil)
                         _ = combineLatest(updatePeerSound(peer.id, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
@@ -883,7 +679,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     filter.insert(.onlyChannels)
             }
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
-            controller.peerSelected = { [weak controller] peer in
+            controller.peerSelected = { [weak controller] peer, _ in
                 let peerId = peer.id
                 
                 presentPeerSettings(peerId, {

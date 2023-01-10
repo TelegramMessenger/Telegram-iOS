@@ -21,7 +21,7 @@ public enum ChatListSearchItemHeaderType {
     case chats
     case chatTypes
     case faq
-    case messages
+    case messages(location: String?)
     case groupMembers
     case activeVoiceChats
     case recentCalls
@@ -29,6 +29,7 @@ public enum ChatListSearchItemHeaderType {
     case subscribers
     case downloading
     case recentDownloads
+    case topics
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -64,8 +65,12 @@ public enum ChatListSearchItemHeaderType {
                 return strings.ChatList_ChatTypesSection
             case .faq:
                 return strings.Settings_FrequentlyAskedQuestions
-            case .messages:
-                return strings.DialogList_SearchSectionMessages
+            case let .messages(location):
+                if let location {
+                    return strings.DialogList_SearchSectionMessagesIn(location).string
+                } else {
+                    return strings.DialogList_SearchSectionMessages
+                }
             case .groupMembers:
                 return strings.Group_GroupMembersHeader
             case .activeVoiceChats:
@@ -80,6 +85,8 @@ public enum ChatListSearchItemHeaderType {
                 return strings.DownloadList_DownloadingHeader
             case .recentDownloads:
                 return strings.DownloadList_DownloadedHeader
+            case .topics:
+                return strings.DialogList_SearchSectionTopics
         }
     }
     
@@ -117,8 +124,12 @@ public enum ChatListSearchItemHeaderType {
                 return .chatTypes
             case .faq:
                 return .faq
-            case .messages:
-                return .messages
+            case let .messages(location):
+                if let _ = location {
+                    return .messagesWithLocation
+                } else {
+                    return .messages
+                }
             case .groupMembers:
                 return .groupMembers
             case .activeVoiceChats:
@@ -133,6 +144,8 @@ public enum ChatListSearchItemHeaderType {
                 return .downloading
             case .recentDownloads:
                 return .recentDownloads
+            case .topics:
+                return .topics
         }
     }
 }
@@ -155,6 +168,7 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case chatTypes
     case faq
     case messages
+    case messagesWithLocation
     case photos
     case links
     case files
@@ -166,6 +180,7 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case subscribers
     case downloading
     case recentDownloads
+    case topics
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {

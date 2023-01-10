@@ -76,7 +76,7 @@ func _internal_deleteAllMessagesWithForwardAuthor(transaction: Transaction, medi
     }
 }
 
-func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
+func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, threadId: Int64?, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         var resourceIds: [MediaResourceId] = []
         transaction.withAllMessages(peerId: peerId, { message in
@@ -87,11 +87,11 @@ func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId
             let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
         }
     }
-    transaction.clearHistory(peerId, minTimestamp: nil, maxTimestamp: nil, namespaces: namespaces, forEachMedia: { _ in
+    transaction.clearHistory(peerId, threadId: threadId, minTimestamp: nil, maxTimestamp: nil, namespaces: namespaces, forEachMedia: { _ in
     })
 }
 
-func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, minTimestamp: Int32, maxTimestamp: Int32, namespaces: MessageIdNamespaces) {
+func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, threadId: Int64?, minTimestamp: Int32, maxTimestamp: Int32, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         var resourceIds: [MediaResourceId] = []
         transaction.withAllMessages(peerId: peerId, { message in
@@ -104,7 +104,7 @@ func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox,
             let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
         }
     }
-    transaction.clearHistory(peerId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: { _ in
+    transaction.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: { _ in
     })
 }
 
@@ -190,11 +190,14 @@ func _internal_setChatMessageAutoremoveTimeoutInteractively(account: Account, pe
                             updatedTimeout = .known(nil)
                         }
                         
-                        if let current = current as? CachedUserData {
+                        if peerId.namespace == Namespaces.Peer.CloudUser {
+                            let current = (current as? CachedUserData) ?? CachedUserData()
                             return current.withUpdatedAutoremoveTimeout(updatedTimeout)
-                        } else if let current = current as? CachedGroupData {
+                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let current = (current as? CachedChannelData) ?? CachedChannelData()
                             return current.withUpdatedAutoremoveTimeout(updatedTimeout)
-                        } else if let current = current as? CachedChannelData {
+                        } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                            let current = (current as? CachedGroupData) ?? CachedGroupData()
                             return current.withUpdatedAutoremoveTimeout(updatedTimeout)
                         } else {
                             return current

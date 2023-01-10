@@ -115,6 +115,19 @@ extension Api.Message {
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
     }
+    
+    var peerId: PeerId? {
+        switch self {
+        case let .message(_, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            let peerId: PeerId = messagePeerId.peerId
+            return peerId
+        case let .messageEmpty(_, _, peerId):
+            return peerId?.peerId
+        case let .messageService(_, _, _, chatPeerId, _, _, _, _):
+            let peerId: PeerId = chatPeerId.peerId
+            return peerId
+        }
+    }
 
     var timestamp: Int32? {
         switch self {
@@ -146,7 +159,7 @@ extension Api.Chat {
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
             case let .chatForbidden(id, _):
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
-            case let .channel(_, id, _, _, _, _, _, _, _, _, _, _):
+            case let .channel(_, _, id, _, _, _, _, _, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
             case let .channelForbidden(_, id, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
@@ -157,7 +170,7 @@ extension Api.Chat {
 extension Api.User {
     var peerId: PeerId {
         switch self {
-            case .user(_, let id, _, _, _, _, _, _, _, _, _, _, _):
+            case let .user(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
             case let .userEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
@@ -181,7 +194,7 @@ extension Api.Peer {
 extension Api.Dialog {
     var peerId: PeerId? {
         switch self {
-            case let .dialog(_, peer, _, _, _, _, _, _, _, _, _, _):
+            case let .dialog(_, peer, _, _, _, _, _, _, _, _, _, _, _):
                 return peer.peerId
             case .dialogFolder:
                 return nil
@@ -296,7 +309,7 @@ extension Api.Update {
                 } else {
                     return []
                 }
-            case let .updateDraftMessage(peer: peer, draft: _):
+            case let .updateDraftMessage(_, peer, _, _):
                 return [peer.peerId]
             case let .updateNewScheduledMessage(message):
                 return apiMessagePeerIds(message)
@@ -305,7 +318,7 @@ extension Api.Update {
         }
     }
     
-    var associatedMessageIds: [MessageId]? {
+    var associatedMessageIds: (replyIds: ReferencedReplyMessageIds, generalIds: [MessageId])? {
         switch self {
             case let .updateNewMessage(message, _, _):
                 return apiMessageAssociatedMessageIds(message)

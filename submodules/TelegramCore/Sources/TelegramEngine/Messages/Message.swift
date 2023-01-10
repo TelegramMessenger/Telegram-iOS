@@ -1,6 +1,6 @@
 import Postbox
 
-public final class EngineMessage {
+public final class EngineMessage: Equatable {
     public typealias Id = MessageId
     public typealias Index = MessageIndex
     public typealias Tags = MessageTags
@@ -10,9 +10,9 @@ public final class EngineMessage {
     public typealias GlobalTags = GlobalMessageTags
     public typealias LocalTags = LocalMessageTags
     public typealias ForwardInfo = MessageForwardInfo
-
+    
     private let impl: Message
-
+    
     public var stableId: UInt32 {
         return self.impl.stableId
     }
@@ -78,6 +78,9 @@ public final class EngineMessage {
     public var associatedMedia: [MediaId: Media] {
         return self.impl.associatedMedia
     }
+    public var associatedThreadInfo: Message.AssociatedThreadInfo? {
+        return self.impl.associatedThreadInfo
+    }
     
     public var index: MessageIndex {
         return self.impl.index
@@ -104,7 +107,8 @@ public final class EngineMessage {
         peers: [EnginePeer.Id: EnginePeer],
         associatedMessages: [EngineMessage.Id: EngineMessage],
         associatedMessageIds: [EngineMessage.Id],
-        associatedMedia: [MediaId: Media]
+        associatedMedia: [MediaId: Media],
+        associatedThreadInfo: Message.AssociatedThreadInfo?
     ) {
         var mappedPeers: [PeerId: Peer] = [:]
         for (id, peer) in peers {
@@ -137,7 +141,8 @@ public final class EngineMessage {
             peers: SimpleDictionary(mappedPeers),
             associatedMessages: SimpleDictionary(mappedAssociatedMessages),
             associatedMessageIds: associatedMessageIds,
-            associatedMedia: associatedMedia
+            associatedMedia: associatedMedia,
+            associatedThreadInfo: associatedThreadInfo
         )
     }
 
@@ -147,5 +152,60 @@ public final class EngineMessage {
 
     public func _asMessage() -> Message {
         return self.impl
+    }
+    
+    public static func ==(lhs: EngineMessage, rhs: EngineMessage) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.globallyUniqueId != rhs.globallyUniqueId {
+            return false
+        }
+        if lhs.groupingKey != rhs.groupingKey {
+            return false
+        }
+        if lhs.groupInfo != rhs.groupInfo {
+            return false
+        }
+        if lhs.threadId != rhs.threadId {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.flags != rhs.flags {
+            return false
+        }
+        if lhs.tags != rhs.tags {
+            return false
+        }
+        if lhs.globalTags != rhs.globalTags {
+            return false
+        }
+        if lhs.localTags != rhs.localTags {
+            return false
+        }
+        if lhs.forwardInfo != rhs.forwardInfo {
+            return false
+        }
+        if lhs.author != rhs.author {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if !areMediaArraysEqual(lhs.media, rhs.media) {
+            return false
+        }
+        if lhs.associatedThreadInfo != rhs.associatedThreadInfo {
+            return false
+        }
+        if lhs.attributes.count != rhs.attributes.count {
+            return false
+        }
+        if lhs.stableVersion != rhs.stableVersion {
+            return false
+        }
+        return true
     }
 }

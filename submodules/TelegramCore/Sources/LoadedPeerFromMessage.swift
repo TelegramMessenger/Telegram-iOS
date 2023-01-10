@@ -38,7 +38,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                             apiUsers = users
                                         case let .messagesSlice(_, _, _, _, _, _, users):
                                             apiUsers = users
-                                        case let .channelMessages(_, _, _, _, _, _, users):
+                                        case let .channelMessages(_, _, _, _, _, _, _, users):
                                             apiUsers = users
                                         case .messagesNotModified:
                                             apiUsers = []
@@ -47,9 +47,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                     for user in apiUsers {
                                         let telegramUser = TelegramUser(user: user)
                                         if telegramUser.id == peerId, let accessHash =  telegramUser.accessHash, accessHash.value != 0 {
-                                            if let presence = TelegramUserPresence(apiUser: user) {
-                                                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: [telegramUser.id: presence])
-                                            }
+                                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: [telegramUser.id: user])
                                             
                                             updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
                                                 return updated

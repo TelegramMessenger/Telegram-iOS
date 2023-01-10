@@ -1798,7 +1798,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         var previewRepresentations: [TelegramMediaImageRepresentation] = []
                                         if let smallestRepresentation = smallestImageRepresentation(fromMedia.previewRepresentations) {
                                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), thumbSecretChatId: currentMessage.id.peerId.id)
-                                            let thumbRepresentation = TelegramMediaImageRepresentation(dimensions: smallestRepresentation.dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+                                            let thumbRepresentation = TelegramMediaImageRepresentation(dimensions: smallestRepresentation.dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
                                             previewRepresentations.append(thumbRepresentation)
                                         }
                                         let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), partialReference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: previewRepresentations, videoThumbnails: fromMedia.videoThumbnails, immediateThumbnailData: fromMedia.immediateThumbnailData, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
@@ -1808,10 +1808,10 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         var representations: [TelegramMediaImageRepresentation] = []
                                         if let smallestRepresentation = smallestImageRepresentation(fromMedia.representations), smallestRepresentation != largestRepresentation {
                                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), thumbSecretChatId: currentMessage.id.peerId.id)
-                                            let thumbRepresentation = TelegramMediaImageRepresentation(dimensions: smallestRepresentation.dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+                                            let thumbRepresentation = TelegramMediaImageRepresentation(dimensions: smallestRepresentation.dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
                                             representations.append(thumbRepresentation)
                                         }
-                                        representations.append(TelegramMediaImageRepresentation(dimensions: largestRepresentation.dimensions, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), progressiveSizes: [], immediateThumbnailData: nil))
+                                        representations.append(TelegramMediaImageRepresentation(dimensions: largestRepresentation.dimensions, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                         let updatedImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: encryptedFile.id), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                                         toMedia = updatedImage
                                         updatedMedia = [updatedImage]

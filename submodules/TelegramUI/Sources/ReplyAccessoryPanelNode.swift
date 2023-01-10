@@ -307,7 +307,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.validLayout = (size, inset, interfaceState)
         
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
-        let leftInset: CGFloat = 55.0
+        let leftInset: CGFloat = 55.0 + inset
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
@@ -350,7 +350,6 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 let dustNode = InvisibleInkDustNode(textNode: nil)
                 self.dustNode = dustNode
                 self.textNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.textNode)
-                
             }
             if let dustNode = self.dustNode {
                 dustNode.update(size: textFrame.size, color: self.theme.chat.inputPanel.secondaryTextColor, textColor: self.theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })

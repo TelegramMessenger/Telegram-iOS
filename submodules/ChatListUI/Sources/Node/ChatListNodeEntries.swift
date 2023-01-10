@@ -10,6 +10,7 @@ enum ChatListNodeEntryId: Hashable {
     case Header
     case Hole(Int64)
     case PeerId(Int64)
+    case ThreadId(Int64)
     case GroupId(EngineChatList.Group)
     case ArchiveIntro
     case additionalCategory(Int)
@@ -45,8 +46,191 @@ public enum ChatListNodeEntryPromoInfo: Equatable {
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
+    struct PeerEntryData: Equatable {
+        var index: EngineChatList.Item.Index
+        var presentationData: ChatListPresentationData
+        var messages: [EngineMessage]
+        var readState: EnginePeerReadCounters?
+        var isRemovedFromTotalUnreadCount: Bool
+        var draftState: ChatListItemContent.DraftState?
+        var peer: EngineRenderedPeer
+        var threadInfo: ChatListItemContent.ThreadInfo?
+        var presence: EnginePeer.Presence?
+        var hasUnseenMentions: Bool
+        var hasUnseenReactions: Bool
+        var editing: Bool
+        var hasActiveRevealControls: Bool
+        var selected: Bool
+        var inputActivities: [(EnginePeer, PeerInputActivity)]?
+        var promoInfo: ChatListNodeEntryPromoInfo?
+        var hasFailedMessages: Bool
+        var isContact: Bool
+        var autoremoveTimeout: Int32?
+        var forumTopicData: EngineChatList.ForumTopicData?
+        var topForumTopicItems: [EngineChatList.ForumTopicData]
+        var revealed: Bool
+        
+        init(
+            index: EngineChatList.Item.Index,
+            presentationData: ChatListPresentationData,
+            messages: [EngineMessage],
+            readState: EnginePeerReadCounters?,
+            isRemovedFromTotalUnreadCount: Bool,
+            draftState: ChatListItemContent.DraftState?,
+            peer: EngineRenderedPeer,
+            threadInfo: ChatListItemContent.ThreadInfo?,
+            presence: EnginePeer.Presence?,
+            hasUnseenMentions: Bool,
+            hasUnseenReactions: Bool,
+            editing: Bool,
+            hasActiveRevealControls: Bool,
+            selected: Bool,
+            inputActivities: [(EnginePeer, PeerInputActivity)]?,
+            promoInfo: ChatListNodeEntryPromoInfo?,
+            hasFailedMessages: Bool,
+            isContact: Bool,
+            autoremoveTimeout: Int32?,
+            forumTopicData: EngineChatList.ForumTopicData?,
+            topForumTopicItems: [EngineChatList.ForumTopicData],
+            revealed: Bool
+        ) {
+            self.index = index
+            self.presentationData = presentationData
+            self.messages = messages
+            self.readState = readState
+            self.isRemovedFromTotalUnreadCount = isRemovedFromTotalUnreadCount
+            self.draftState = draftState
+            self.peer = peer
+            self.threadInfo = threadInfo
+            self.presence = presence
+            self.hasUnseenMentions = hasUnseenMentions
+            self.hasUnseenReactions = hasUnseenReactions
+            self.editing = editing
+            self.hasActiveRevealControls = hasActiveRevealControls
+            self.selected = selected
+            self.inputActivities = inputActivities
+            self.promoInfo = promoInfo
+            self.hasFailedMessages = hasFailedMessages
+            self.isContact = isContact
+            self.autoremoveTimeout = autoremoveTimeout
+            self.forumTopicData = forumTopicData
+            self.topForumTopicItems = topForumTopicItems
+            self.revealed = revealed
+        }
+        
+        static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
+            if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.presentationData !== rhs.presentationData {
+                return false
+            }
+            if lhs.readState != rhs.readState {
+                return false
+            }
+            if lhs.messages.count != rhs.messages.count {
+                return false
+            }
+            for i in 0 ..< lhs.messages.count {
+                if lhs.messages[i].stableVersion != rhs.messages[i].stableVersion {
+                    return false
+                }
+                if lhs.messages[i].id != rhs.messages[i].id {
+                    return false
+                }
+                if lhs.messages[i].associatedMessages.count != rhs.messages[i].associatedMessages.count {
+                    return false
+                }
+                for (id, message) in lhs.messages[i].associatedMessages {
+                    if let otherMessage = rhs.messages[i].associatedMessages[id] {
+                        if message.stableVersion != otherMessage.stableVersion {
+                            return false
+                        }
+                    } else {
+                        return false
+                    }
+                }
+            }
+            if lhs.isRemovedFromTotalUnreadCount != rhs.isRemovedFromTotalUnreadCount {
+                return false
+            }
+            if let lhsPeerPresence = lhs.presence, let rhsPeerPresence = rhs.presence {
+                if lhsPeerPresence != rhsPeerPresence {
+                    return false
+                }
+            } else if (lhs.presence != nil) != (rhs.presence != nil) {
+                return false
+            }
+            if let lhsEmbeddedState = lhs.draftState, let rhsEmbeddedState = rhs.draftState {
+                if lhsEmbeddedState != rhsEmbeddedState {
+                    return false
+                }
+            } else if (lhs.draftState != nil) != (rhs.draftState != nil) {
+                return false
+            }
+            if lhs.editing != rhs.editing {
+                return false
+            }
+            if lhs.hasActiveRevealControls != rhs.hasActiveRevealControls {
+                return false
+            }
+            if lhs.selected != rhs.selected {
+                return false
+            }
+            if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.threadInfo != rhs.threadInfo {
+                return false
+            }
+            if lhs.hasUnseenMentions != rhs.hasUnseenMentions {
+                return false
+            }
+            if lhs.hasUnseenReactions != rhs.hasUnseenReactions {
+                return false
+            }
+            if let lhsInputActivities = lhs.inputActivities, let rhsInputActivities = rhs.inputActivities {
+                if lhsInputActivities.count != rhsInputActivities.count {
+                    return false
+                }
+                for i in 0 ..< lhsInputActivities.count {
+                    if lhsInputActivities[i].0 != rhsInputActivities[i].0 {
+                        return false
+                    }
+                    if lhsInputActivities[i].1 != rhsInputActivities[i].1 {
+                        return false
+                    }
+                }
+            } else if (lhs.inputActivities != nil) != (rhs.inputActivities != nil) {
+                return false
+            }
+            if lhs.promoInfo != rhs.promoInfo {
+                return false
+            }
+            if lhs.hasFailedMessages != rhs.hasFailedMessages {
+                return false
+            }
+            if lhs.isContact != rhs.isContact {
+                return false
+            }
+            if lhs.autoremoveTimeout != rhs.autoremoveTimeout {
+                return false
+            }
+            if lhs.forumTopicData != rhs.forumTopicData {
+                return false
+            }
+            if lhs.topForumTopicItems != rhs.topForumTopicItems {
+                return false
+            }
+            if lhs.revealed != rhs.revealed {
+                return false
+            }
+            return true
+        }
+    }
+    
     case HeaderEntry
-    case PeerEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, messages: [EngineMessage], readState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, draftState: ChatListItemContent.DraftState?, peer: EngineRenderedPeer, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, hasFailedMessages: Bool, isContact: Bool)
+    case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
     case GroupReferenceEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, editing: Bool, unreadCount: Int, revealed: Bool, hiddenByDefault: Bool)
     case ArchiveIntro(presentationData: ChatListPresentationData)
@@ -55,15 +239,15 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     var sortIndex: ChatListNodeEntrySortIndex {
         switch self {
         case .HeaderEntry:
-            return .index(EngineChatList.Item.Index.absoluteUpperBound)
-        case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-            return .index(index)
+            return .index(.chatList(.absoluteUpperBound))
+        case let .PeerEntry(peerEntry):
+            return .index(peerEntry.index)
         case let .HoleEntry(holeIndex, _):
-            return .index(EngineChatList.Item.Index(pinningIndex: nil, messageIndex: holeIndex))
+            return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
         case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
             return .index(index)
         case .ArchiveIntro:
-            return .index(EngineChatList.Item.Index.absoluteUpperBound.successor)
+            return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor))
         case let .AdditionalCategory(index, _, _, _, _, _, _):
             return .additionalCategory(index)
         }
@@ -73,8 +257,13 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         switch self {
         case .HeaderEntry:
             return .Header
-        case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-            return .PeerId(index.messageIndex.id.peerId.toInt64())
+        case let .PeerEntry(peerEntry):
+            switch peerEntry.index {
+            case let .chatList(index):
+                return .PeerId(index.messageIndex.id.peerId.toInt64())
+            case let .forum(_, _, threadId, _, _):
+                return .ThreadId(threadId)
+            }
         case let .HoleEntry(holeIndex, _):
             return .Hole(Int64(holeIndex.id.id))
         case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
@@ -98,103 +287,11 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .PeerEntry(lhsIndex, lhsPresentationData, lhsMessages, lhsUnreadCount, lhsIsRemovedFromTotalUnreadCount, lhsEmbeddedState, lhsPeer, lhsPresence, lhsHasUnseenMentions, lhsHasUnseenReactions, lhsEditing, lhsHasRevealControls, lhsSelected, lhsInputActivities, lhsAd, lhsHasFailedMessages, lhsIsContact):
-                switch rhs {
-                    case let .PeerEntry(rhsIndex, rhsPresentationData, rhsMessages, rhsUnreadCount, rhsIsRemovedFromTotalUnreadCount, rhsEmbeddedState, rhsPeer, rhsPresence, rhsHasUnseenMentions, rhsHasUnseenReactions, rhsEditing, rhsHasRevealControls, rhsSelected, rhsInputActivities, rhsAd, rhsHasFailedMessages, rhsIsContact):
-                        if lhsIndex != rhsIndex {
-                            return false
-                        }
-                        if lhsPresentationData !== rhsPresentationData {
-                            return false
-                        }
-                        if lhsUnreadCount != rhsUnreadCount {
-                            return false
-                        }
-                        if lhsMessages.count != rhsMessages.count {
-                            return false
-                        }
-                        for i in 0 ..< lhsMessages.count {
-                            if lhsMessages[i].stableVersion != rhsMessages[i].stableVersion {
-                                return false
-                            }
-                            if lhsMessages[i].id != rhsMessages[i].id {
-                                return false
-                            }
-                            if lhsMessages[i].associatedMessages.count != rhsMessages[i].associatedMessages.count {
-                                return false
-                            }
-                            for (id, message) in lhsMessages[i].associatedMessages {
-                                if let otherMessage = rhsMessages[i].associatedMessages[id] {
-                                    if message.stableVersion != otherMessage.stableVersion {
-                                        return false
-                                    }
-                                } else {
-                                    return false
-                                }
-                            }
-                        }
-                        if lhsIsRemovedFromTotalUnreadCount != rhsIsRemovedFromTotalUnreadCount {
-                            return false
-                        }
-                        if let lhsPeerPresence = lhsPresence, let rhsPeerPresence = rhsPresence {
-                            if lhsPeerPresence != rhsPeerPresence {
-                                return false
-                            }
-                        } else if (lhsPresence != nil) != (rhsPresence != nil) {
-                            return false
-                        }
-                        if let lhsEmbeddedState = lhsEmbeddedState, let rhsEmbeddedState = rhsEmbeddedState {
-                            if lhsEmbeddedState != rhsEmbeddedState {
-                                return false
-                            }
-                        } else if (lhsEmbeddedState != nil) != (rhsEmbeddedState != nil) {
-                            return false
-                        }
-                        if lhsEditing != rhsEditing {
-                            return false
-                        }
-                        if lhsHasRevealControls != rhsHasRevealControls {
-                            return false
-                        }
-                        if lhsSelected != rhsSelected {
-                            return false
-                        }
-                        if lhsPeer != rhsPeer {
-                            return false
-                        }
-                        if lhsHasUnseenMentions != rhsHasUnseenMentions {
-                            return false
-                        }
-                        if lhsHasUnseenReactions != rhsHasUnseenReactions {
-                            return false
-                        }
-                        if let lhsInputActivities = lhsInputActivities, let rhsInputActivities = rhsInputActivities {
-                            if lhsInputActivities.count != rhsInputActivities.count {
-                                return false
-                            }
-                            for i in 0 ..< lhsInputActivities.count {
-                                if lhsInputActivities[i].0 != rhsInputActivities[i].0 {
-                                    return false
-                                }
-                                if lhsInputActivities[i].1 != rhsInputActivities[i].1 {
-                                    return false
-                                }
-                            }
-                        } else if (lhsInputActivities != nil) != (rhsInputActivities != nil) {
-                            return false
-                        }
-                        if lhsAd != rhsAd {
-                            return false
-                        }
-                        if lhsHasFailedMessages != rhsHasFailedMessages {
-                            return false
-                        }
-                        if lhsIsContact != rhsIsContact {
-                            return false
-                        }
-                        return true
-                    default:
-                        return false
+            case let .PeerEntry(peerEntry):
+                if case .PeerEntry(peerEntry) = rhs {
+                    return true
+                } else {
+                    return false
                 }
             case let .HoleEntry(lhsHole, lhsTheme):
                 switch rhs {
@@ -277,14 +374,14 @@ enum ChatListNodeEntry: Comparable, Identifiable {
 }
 
 private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt16) -> EngineChatList.Item.Index {
-    if let pinningIndex = index.pinningIndex {
-        return EngineChatList.Item.Index(pinningIndex: pinningIndex + offset, messageIndex: index.messageIndex)
+    if case let .chatList(index) = index, let pinningIndex = index.pinningIndex {
+        return .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex + offset, messageIndex: index.messageIndex))
     } else {
         return index
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -309,20 +406,34 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
     if !view.hasLater && savedMessagesPeer == nil {
         pinnedIndexOffset += UInt16(filteredAdditionalItemEntries.count)
     }
+    
+    var hiddenGeneralThread: ChatListNodeEntry?
+    
     loop: for entry in view.items {
-        //case let .MessageEntry(index, messages, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-        if let savedMessagesPeer = savedMessagesPeer, savedMessagesPeer.id == entry.index.messageIndex.id.peerId || foundPeerIds.contains(entry.index.messageIndex.id.peerId) {
+        var peerId: EnginePeer.Id?
+        var threadId: Int64?
+        var activityItemId: ChatListNodePeerInputActivities.ItemId?
+        if case let .chatList(index) = entry.index {
+            peerId = index.messageIndex.id.peerId
+            activityItemId = ChatListNodePeerInputActivities.ItemId(peerId: index.messageIndex.id.peerId, threadId: nil)
+        } else if case let .forum(_, _, threadIdValue, _, _) = entry.index, case let .forum(peerIdValue) = chatListLocation {
+            peerId = peerIdValue
+            activityItemId = ChatListNodePeerInputActivities.ItemId(peerId: peerIdValue, threadId: threadIdValue)
+            threadId = threadIdValue
+        }
+        
+        if let savedMessagesPeer = savedMessagesPeer, let peerId = peerId, savedMessagesPeer.id == peerId || foundPeerIds.contains(peerId) {
             continue loop
         }
-        if state.pendingRemovalPeerIds.contains(entry.index.messageIndex.id.peerId) {
+        if let peerId = peerId, state.pendingRemovalItemIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {
             continue loop
         }
-        if hiddenPeerIds.contains(entry.index.messageIndex.id.peerId) {
+        if case let .chatList(chatListIndex) = entry.index, hiddenPeerIds.contains(chatListIndex.messageIndex.id.peerId) {
             continue loop
         }
         var updatedMessages = entry.messages
         var updatedCombinedReadState = entry.readCounters
-        if state.pendingClearHistoryPeerIds.contains(entry.index.messageIndex.id.peerId) {
+        if let peerId = peerId, state.pendingClearHistoryPeerIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {
             updatedMessages = []
             updatedCombinedReadState = nil
         }
@@ -331,9 +442,64 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         if let draft = entry.draft {
             draftState = ChatListItemContent.DraftState(draft: draft)
         }
+        
+        var hasActiveRevealControls = false
+        if let peerId {
+            hasActiveRevealControls = ChatListNodeState.ItemId(peerId: peerId, threadId: threadId) == state.peerIdWithRevealedOptions
+        }
+        var inputActivities: [(EnginePeer, PeerInputActivity)]?
+        if let activityItemId {
+            inputActivities = state.peerInputActivities?.activities[activityItemId]
+        }
+        
+        var isSelected = false
+        if let threadId, threadId != 0 {
+            isSelected = state.selectedThreadIds.contains(threadId)
+        } else if let peerId {
+            isSelected = state.selectedPeerIds.contains(peerId)
+        }
+        
+        var threadInfo: ChatListItemContent.ThreadInfo?
+        if let threadData = entry.threadData, let threadId = threadId {
+            threadInfo = ChatListItemContent.ThreadInfo(id: threadId, info: threadData.info, isOwnedByMe: threadData.isOwnedByMe, isClosed: threadData.isClosed, isHidden: threadData.isHidden)
+        }
 
-        result.append(.PeerEntry(index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: entry.isMuted, draftState: draftState, peer: entry.renderedPeer, presence: entry.presence, hasUnseenMentions: entry.hasUnseenMentions, hasUnseenReactions: entry.hasUnseenReactions, editing: state.editing, hasActiveRevealControls: entry.index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(entry.index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[entry.index.messageIndex.id.peerId], promoInfo: nil, hasFailedMessages: entry.hasFailed, isContact: entry.isContact))
+        let entry: ChatListNodeEntry = .PeerEntry(ChatListNodeEntry.PeerEntryData(
+            index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset),
+            presentationData: state.presentationData,
+            messages: updatedMessages,
+            readState: updatedCombinedReadState,
+            isRemovedFromTotalUnreadCount: entry.isMuted,
+            draftState: draftState,
+            peer: entry.renderedPeer,
+            threadInfo: threadInfo,
+            presence: entry.presence,
+            hasUnseenMentions: entry.hasUnseenMentions,
+            hasUnseenReactions: entry.hasUnseenReactions,
+            editing: state.editing,
+            hasActiveRevealControls: hasActiveRevealControls,
+            selected: isSelected,
+            inputActivities: inputActivities,
+            promoInfo: nil,
+            hasFailedMessages: entry.hasFailed,
+            isContact: entry.isContact,
+            autoremoveTimeout: entry.autoremoveTimeout,
+            forumTopicData: entry.forumTopicData,
+            topForumTopicItems: entry.topForumTopicItems,
+            revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
+        ))
+        
+        if let threadInfo, threadInfo.isHidden {
+            hiddenGeneralThread = entry
+        } else {
+            result.append(entry)
+        }
     }
+    
+    if let hiddenGeneralThread {
+        result.append(hiddenGeneralThread)
+    }
+    
     if !view.hasLater {
         var pinningIndex: UInt16 = UInt16(pinnedIndexOffset == 0 ? 0 : (pinnedIndexOffset - 1))
         
@@ -347,14 +513,15 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     }
                     
                     let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: peer.0.id, namespace: 0, id: 0), timestamp: 1)
-                    result.append(.PeerEntry(
-                        index: EngineChatList.Item.Index(pinningIndex: foundPinningIndex, messageIndex: messageIndex),
+                    result.append(.PeerEntry(ChatListNodeEntry.PeerEntryData(
+                        index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: foundPinningIndex, messageIndex: messageIndex)),
                         presentationData: state.presentationData,
                         messages: [],
                         readState: nil,
                         isRemovedFromTotalUnreadCount: false,
                         draftState: nil,
-                        peer: EngineRenderedPeer(peerId: peer.0.id, peers: peers),
+                        peer: EngineRenderedPeer(peerId: peer.0.id, peers: peers, associatedMedia: [:]),
+                        threadInfo: nil,
                         presence: nil,
                         hasUnseenMentions: false,
                         hasUnseenReactions: false,
@@ -364,18 +531,49 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         inputActivities: nil,
                         promoInfo: nil,
                         hasFailedMessages: false,
-                        isContact: false
-                    ))
+                        isContact: false,
+                        autoremoveTimeout: nil,
+                        forumTopicData: nil,
+                        topForumTopicItems: [],
+                        revealed: false
+                    )))
                     if foundPinningIndex != 0 {
                         foundPinningIndex -= 1
                     }
                 }
             }
             
-            result.append(.PeerEntry(index: EngineChatList.Item.Index.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, draftState: nil, peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer]), presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+            result.append(.PeerEntry(ChatListNodeEntry.PeerEntryData(
+                index: .chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.predecessor),
+                presentationData: state.presentationData,
+                messages: [],
+                readState: nil,
+                isRemovedFromTotalUnreadCount: false,
+                draftState: nil,
+                peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer], associatedMedia: [:]),
+                threadInfo: nil,
+                presence: nil,
+                hasUnseenMentions: false,
+                hasUnseenReactions: false,
+                editing: state.editing,
+                hasActiveRevealControls: false,
+                selected: state.selectedPeerIds.contains(savedMessagesPeer.id),
+                inputActivities: nil,
+                promoInfo: nil,
+                hasFailedMessages: false,
+                isContact: false,
+                autoremoveTimeout: nil,
+                forumTopicData: nil,
+                topForumTopicItems: [],
+                revealed: false
+            )))
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
                 for item in filteredAdditionalItemEntries.reversed() {
+                    guard case let .chatList(index) = item.item.index else {
+                        continue
+                    }
+                    
                     let promoInfo: ChatListNodeEntryPromoInfo
                     switch item.promoInfo.content {
                     case .proxy:
@@ -384,25 +582,41 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         promoInfo = .psa(type: type, message: message)
                     }
                     let draftState = item.item.draft.flatMap(ChatListItemContent.DraftState.init)
-                    result.append(.PeerEntry(
-                        index: EngineChatList.Item.Index(pinningIndex: pinningIndex, messageIndex: item.item.index.messageIndex),
+                    
+                    let peerId = index.messageIndex.id.peerId
+                    let isSelected = state.selectedPeerIds.contains(peerId)
+                    
+                    var threadId: Int64 = 0
+                    switch item.item.index {
+                    case let .forum(_, _, threadIdValue, _, _):
+                        threadId = threadIdValue
+                    default:
+                        break
+                    }
+                    result.append(.PeerEntry(ChatListNodeEntry.PeerEntryData(
+                        index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: index.messageIndex)),
                         presentationData: state.presentationData,
                         messages: item.item.messages,
                         readState: item.item.readCounters,
                         isRemovedFromTotalUnreadCount: item.item.isMuted,
                         draftState: draftState,
                         peer: item.item.renderedPeer,
+                        threadInfo: item.item.threadData.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwnedByMe: $0.isOwnedByMe, isClosed: $0.isClosed, isHidden: $0.isHidden) },
                         presence: item.item.presence,
                         hasUnseenMentions: item.item.hasUnseenMentions,
                         hasUnseenReactions: item.item.hasUnseenReactions,
                         editing: state.editing,
-                        hasActiveRevealControls: item.item.index.messageIndex.id.peerId == state.peerIdWithRevealedOptions,
-                        selected: state.selectedPeerIds.contains(item.item.index.messageIndex.id.peerId),
-                        inputActivities: state.peerInputActivities?.activities[item.item.index.messageIndex.id.peerId],
+                        hasActiveRevealControls: ChatListNodeState.ItemId(peerId: peerId, threadId: threadId) == state.peerIdWithRevealedOptions,
+                        selected: isSelected,
+                        inputActivities: state.peerInputActivities?.activities[ChatListNodePeerInputActivities.ItemId(peerId: peerId, threadId: nil)],
                         promoInfo: promoInfo,
                         hasFailedMessages: item.item.hasFailed,
-                        isContact: item.item.isContact
-                    ))
+                        isContact: item.item.isContact,
+                        autoremoveTimeout: item.item.autoremoveTimeout,
+                        forumTopicData: item.item.forumTopicData,
+                        topForumTopicItems: item.item.topForumTopicItems,
+                        revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing
+                    )))
                     if pinningIndex != 0 {
                         pinningIndex -= 1
                     }
@@ -414,14 +628,14 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             for groupReference in view.groupItems {
                 let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: 0, id: 0), timestamp: 1)
                 result.append(.GroupReferenceEntry(
-                    index: EngineChatList.Item.Index(pinningIndex: pinningIndex, messageIndex: messageIndex),
+                    index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: messageIndex)),
                     presentationData: state.presentationData,
                     groupId: groupReference.id,
                     peers: groupReference.items,
                     message: groupReference.topMessage,
                     editing: state.editing,
                     unreadCount: groupReference.unreadCount,
-                    revealed: state.archiveShouldBeTemporaryRevealed,
+                    revealed: state.hiddenItemShouldBeTemporaryRevealed || view.items.isEmpty,
                     hiddenByDefault: hideArchivedFolderByDefault
                 ))
                 if pinningIndex != 0 {
@@ -436,7 +650,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             result.append(.HeaderEntry)
         }
         
-        if !view.hasLater, case let .peers(_, _, additionalCategories, _) = mode {
+        if !view.hasLater, case let .peers(_, _, additionalCategories, _, _) = mode {
             var index = 0
             for category in additionalCategories.reversed(){
                 result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))

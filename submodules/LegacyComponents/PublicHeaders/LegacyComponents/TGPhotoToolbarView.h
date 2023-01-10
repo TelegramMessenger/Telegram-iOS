@@ -65,6 +65,8 @@ typedef enum
 - (void)setEditButtonsHighlighted:(TGPhotoEditorTab)buttons;
 - (void)setEditButtonsDisabled:(TGPhotoEditorTab)buttons;
 
+- (void)setAllButtonsHidden:(bool)hidden animated:(bool)animated;
+
 @property (nonatomic, readonly) TGPhotoEditorTab currentTabs;
 - (void)setToolbarTabs:(TGPhotoEditorTab)tabs animated:(bool)animated;
 

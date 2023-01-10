@@ -143,7 +143,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         super.init()
         
-        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false, addStickerPack: { _, _ in }, removeStickerPack: { _ in })
+        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false, addStickerPack: { _, _ in }, removeStickerPack: { _ in }, emojiSelected: { _, _ in }, emojiLongPressed: { _, _, _, _ in })
         
         self.backgroundColor = nil
         self.isOpaque = false

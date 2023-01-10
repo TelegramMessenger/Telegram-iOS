@@ -283,11 +283,19 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
         
     }
     
+    func updateIsLooping(_ isLooping: Bool) {
+
+    }
+    
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
         
     }
     
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool {
+        return false
+    }
+    
+    func hasExtraBubbleBackground() -> Bool {
         return false
     }
     

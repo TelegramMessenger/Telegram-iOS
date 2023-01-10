@@ -12,6 +12,8 @@ import ContextUI
 import LocalizedPeerData
 import AccountContext
 import CheckNode
+import ComponentFlow
+import EmojiStatusComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let textFont = Font.regular(11.0)
@@ -71,7 +73,9 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let avatarNode: AvatarNode
     private let onlineNode: PeerOnlineMarkerNode
     private var checkNode: CheckNode?
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
+    
+    private let iconView: ComponentView<Empty>
 
     public var toggleSelection: (() -> Void)?
     public var contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? {
@@ -113,11 +117,13 @@ public final class SelectablePeerNode: ASDisplayNode {
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 60.0, height: 60.0))
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
         self.onlineNode = PeerOnlineMarkerNode()
+        
+        self.iconView = ComponentView<Empty>()
         
         super.init()
         
@@ -137,7 +143,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
     }
     
-    public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
+    public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
@@ -145,6 +151,11 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         
         let defaultColor: UIColor = peer.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor
+        
+        var isForum = false
+        if let peer = peer.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            isForum = true
+        }
         
         let text: String
         var overrideImage: AvatarNodeImageOverride?
@@ -161,8 +172,8 @@ public final class SelectablePeerNode: ASDisplayNode {
             }
         }
         self.textNode.maximumNumberOfLines = numberOfLines
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
+        self.textNode.attributedText = NSAttributedString(string: customTitle ?? text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
         
         let onlineLayout = self.onlineNode.asyncLayout()
         let (onlineSize, onlineApply) = onlineLayout(online, false)
@@ -170,6 +181,40 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel), color: nil, transition: .immediate)
         self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)
+        
+        let iconContent: EmojiStatusComponent.Content?
+        if let fileId = iconId {
+            iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.actionSheet.disabledActionTextColor, themeColor: theme.actionSheet.primaryTextColor, loopMode: .count(2))
+        } else if let customTitle = customTitle {
+            iconContent = .topic(title: String(customTitle.prefix(1)), color: iconColor ?? 0, size: CGSize(width: 32.0, height: 32.0))
+        } else {
+            iconContent = nil
+        }
+                
+        if let iconContent = iconContent {
+            let iconSize = self.iconView.update(
+                transition: .easeInOut(duration: 0.2),
+                component: AnyComponent(EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: iconContent,
+                    isVisibleForAnimations: true,
+                    action: nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: 18.0, height: 18.0)
+            )
+            
+            if let iconComponentView = self.iconView.view {
+                if iconComponentView.superview == nil {
+                    self.view.addSubview(iconComponentView)
+                }
+                iconComponentView.frame = CGRect(origin: .zero, size: iconSize)
+            }
+        } else if let iconComponentView = self.iconView.view {
+            iconComponentView.removeFromSuperview()
+        }
         
         self.setNeedsLayout()
     }
@@ -182,16 +227,29 @@ public final class SelectablePeerNode: ASDisplayNode {
                 self.textNode.attributedText = NSAttributedString(string: attributedText.string, font: textFont, textColor: selected ? self.theme.selectedTextColor : (self.peer?.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor), paragraphAlignment: .center)
             }
             
+            var isForum = false
+            if let peer = self.peer?.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                isForum = true
+            }
+            
             if selected {
                 self.avatarNode.transform = CATransform3DMakeScale(0.866666, 0.866666, 1.0)
                 self.avatarSelectionNode.alpha = 1.0
                 self.avatarSelectionNode.image = generateImage(CGSize(width: 60.0 + 4.0, height: 60.0 + 4.0), rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(self.theme.selectedTextColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                    context.setBlendMode(.copy)
-                    context.setFillColor(UIColor.clear.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
+                    let bounds = CGRect(origin: .zero, size: size)
+                    if isForum {
+                        context.setStrokeColor(self.theme.selectedTextColor.cgColor)
+                        context.setLineWidth(2.0)
+                        context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 1.0, dy: 1.0), cornerRadius: floorToScreenPixels(bounds.size.width * 0.26)).cgPath)
+                        context.strokePath()
+                    } else {
+                        context.setFillColor(self.theme.selectedTextColor.cgColor)
+                        context.fillEllipse(in: bounds)
+                        context.setBlendMode(.copy)
+                        context.setFillColor(UIColor.clear.cgColor)
+                        context.fillEllipse(in: bounds.insetBy(dx: 2.0, dy: 2.0))
+                    }
                 })
                 if animated {
                     self.avatarNode.layer.animateScale(from: 1.0, to: 0.866666, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
@@ -226,6 +284,7 @@ public final class SelectablePeerNode: ASDisplayNode {
                 self.checkNode = nil
                 checkNode.setSelected(false, animated: animated)
             }
+            self.setNeedsLayout()
         }
     }
     
@@ -249,7 +308,18 @@ public final class SelectablePeerNode: ASDisplayNode {
         self.contextContainer.frame = bounds
         
         self.avatarNodeContainer.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
-        self.textNode.frame = CGRect(origin: CGPoint(x: 2.0, y: 4.0 + 60.0 + 4.0), size: CGSize(width: bounds.size.width - 4.0, height: 34.0))
+        
+        let iconSize = CGSize(width: 18.0, height: 18.0)
+        let textSize = self.textNode.updateLayout(bounds.size)
+        var totalWidth = textSize.width
+        var leftOrigin = floorToScreenPixels((bounds.width - textSize.width) / 2.0)
+        if let iconView = self.iconView.view, iconView.superview != nil {
+            totalWidth += iconView.frame.width + 2.0
+            leftOrigin = floorToScreenPixels((bounds.width - totalWidth) / 2.0)
+            iconView.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 4.0 + floorToScreenPixels((textSize.height - iconSize.height) / 2.0)), size: iconSize)
+            leftOrigin += iconSize.width + 2.0
+        }
+        self.textNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 4.0), size: textSize)
         
         let avatarFrame = self.avatarNode.frame
         let avatarContainerFrame = self.avatarNodeContainer.frame

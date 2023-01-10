@@ -18,8 +18,10 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
         if nsString == nil {
             nsString = text as NSString
         }
+        if range.location >= stringLength {
+            continue
+        }
         if range.location + range.length > stringLength {
-            range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }
         switch entity.type {
@@ -41,8 +43,8 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
                 string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
             case .Spoiler:
                 string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
-            case let .CustomEmoji(stickerPack, fileId):
-                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: nil), range: range)
+            case let .CustomEmoji(_, fileId):
+                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: range)
             default:
                 break
         }
@@ -75,7 +77,6 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         if range.location > stringLength {
             continue
         } else if range.location + range.length > stringLength {
-            range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }
         switch entity.type {
@@ -250,8 +251,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                         string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode), value: TelegramTimecode(time: time, text: text), range: range)
                     }
                 }
-            case let .CustomEmoji(stickerPack, fileId):
-                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: message?.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: range)
+            case let .CustomEmoji(_, fileId):
+                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message?.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: range)
             default:
                 break
         }

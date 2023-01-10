@@ -264,7 +264,9 @@ func largeEmoji(postbox: Postbox, emoji: String, outline: Bool = true) -> Signal
     return combineLatest(queue: nil, dataSignals)
     |> map { datas in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                return nil
+            }
             
             var sourceImages: [UIImage] = []
             for resourceData in datas {

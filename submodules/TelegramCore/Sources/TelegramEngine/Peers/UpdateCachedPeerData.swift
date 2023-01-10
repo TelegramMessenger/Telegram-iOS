@@ -79,7 +79,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
                 |> retryRequest
                 |> mapToSignal { peerSettings -> Signal<Bool, NoError> in
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     
                     let peerStatusSettings: PeerStatusSettings
                     switch peerSettings {
@@ -93,9 +93,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
+                                peerPresences[telegramUser.id] = user
                             }
                     }
    
@@ -198,7 +196,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                         case let .userFull(fullUser, chats, users):
                             var accountUser: Api.User?
                             var peers: [Peer] = []
-                            var peerPresences: [PeerId: PeerPresence] = [:]
+                            var peerPresences: [PeerId: Api.User] = [:]
                             for chat in chats {
                                 if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                     peers.append(peer)
@@ -207,9 +205,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
+                                peerPresences[telegramUser.id] = user
                                 if telegramUser.id == accountPeerId {
                                     accountUser = user
                                 }
@@ -271,7 +267,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         return previous.withUpdatedAbout(userFullAbout).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFullCommonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                                             .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                             .withUpdatedThemeEmoticon(userFullThemeEmoticon)
-                                            .withUpdatedPhoto(photo)
+                                            .withUpdatedPhoto(.known(photo))
                                             .withUpdatedPremiumGiftOptions(premiumGiftOptions)
                                             .withUpdatedVoiceMessagesAvailable(voiceMessagesAvailable)
                                 }
@@ -295,7 +291,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                             }
                             
                             switch fullChat {
-                            case let .chatFull(chatFullFlags, _, chatFullAbout, chatFullParticipants, chatFullChatPhoto, _, chatFullExportedInvite, chatFullBotInfo, chatFullPinnedMsgId, _, chatFullCall, _, chatFullGroupcallDefaultJoinAs, chatFullThemeEmoticon, chatFullRequestsPending, _, allowedReactions):
+                            case let .chatFull(chatFullFlags, _, chatFullAbout, chatFullParticipants, chatFullChatPhoto, _, chatFullExportedInvite, chatFullBotInfo, chatFullPinnedMsgId, _, chatFullCall, chatTtlPeriod, chatFullGroupcallDefaultJoinAs, chatFullThemeEmoticon, chatFullRequestsPending, _, allowedReactions):
                                 var botInfos: [CachedPeerBotInfo] = []
                                 for botInfo in chatFullBotInfo ?? [] {
                                     switch botInfo {
@@ -308,6 +304,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     }
                                 }
                                 let participants = CachedGroupParticipants(apiParticipants: chatFullParticipants)
+                                
+                                let autoremoveTimeout: CachedPeerAutoremoveTimeout = .known(CachedPeerAutoremoveTimeout.Value(chatTtlPeriod))
+
                                 
                                 var invitedBy: PeerId?
                                 if let participants = participants {
@@ -327,7 +326,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 let pinnedMessageId = chatFullPinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                             
                                 var peers: [Peer] = []
-                                var peerPresences: [PeerId: PeerPresence] = [:]
+                                var peerPresences: [PeerId: Api.User] = [:]
                                 for chat in chats {
                                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                         peers.append(groupOrChannel)
@@ -336,9 +335,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 for user in users {
                                     if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                         peers.append(telegramUser)
-                                        if let presence = TelegramUserPresence(apiUser: user) {
-                                            peerPresences[telegramUser.id] = presence
-                                        }
+                                        peerPresences[telegramUser.id] = user
                                     }
                                 }
                                 
@@ -376,6 +373,20 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         }
                                     }
                                     
+                                    let mappedAllowedReactions: PeerAllowedReactions
+                                    if let allowedReactions = allowedReactions {
+                                        switch allowedReactions {
+                                        case .chatReactionsAll:
+                                            mappedAllowedReactions = .all
+                                        case let .chatReactionsSome(reactions):
+                                            mappedAllowedReactions = .limited(reactions.compactMap(MessageReaction.Reaction.init(apiReaction:)))
+                                        case .chatReactionsNone:
+                                            mappedAllowedReactions = .empty
+                                        }
+                                    } else {
+                                        mappedAllowedReactions = .empty
+                                    }
+                                    
                                     return previous.withUpdatedParticipants(participants)
                                         .withUpdatedExportedInvitation(exportedInvitation)
                                         .withUpdatedBotInfos(botInfos)
@@ -389,7 +400,8 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         .withUpdatedCallJoinPeerId(groupCallDefaultJoinAs?.peerId)
                                         .withUpdatedThemeEmoticon(chatFullThemeEmoticon)
                                         .withUpdatedInviteRequestsPending(chatFullRequestsPending)
-                                        .withUpdatedAllowedReactions(allowedReactions ?? [])
+                                        .withUpdatedAutoremoveTimeout(autoremoveTimeout)
+                                        .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
                                 })
                             case .channelFull:
                                 break
@@ -450,6 +462,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             if (flags2 & (1 << 0)) != 0 {
                                                 channelFlags.insert(.canDeleteHistory)
                                             }
+                                            if (flags2 & Int32(1 << 1)) != 0 {
+                                                channelFlags.insert(.antiSpamEnabled)
+                                            }
                                         
                                             let sendAsPeerId = defaultSendAs?.peerId
                                             
@@ -501,7 +516,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             }
                                             
                                             var peers: [Peer] = []
-                                            var peerPresences: [PeerId: PeerPresence] = [:]
+                                            var peerPresences: [PeerId: Api.User] = [:]
                                             for chat in chats {
                                                 if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                                     peers.append(groupOrChannel)
@@ -510,9 +525,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             for user in users {
                                                 if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                                     peers.append(telegramUser)
-                                                    if let presence = TelegramUserPresence(apiUser: user) {
-                                                        peerPresences[telegramUser.id] = presence
-                                                    }
+                                                    peerPresences[telegramUser.id] = user
                                                 }
                                             }
                                             
@@ -522,9 +535,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     for user in users {
                                                         if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                                             peers.append(telegramUser)
-                                                            if let presence = TelegramUserPresence(apiUser: user) {
-                                                                peerPresences[telegramUser.id] = presence
-                                                            }
+                                                            peerPresences[telegramUser.id] = user
                                                         }
                                                     }
                                                     for chat in chats {
@@ -602,6 +613,20 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     }
                                                 }
                                                 
+                                                let mappedAllowedReactions: PeerAllowedReactions
+                                                if let allowedReactions = allowedReactions {
+                                                    switch allowedReactions {
+                                                    case .chatReactionsAll:
+                                                        mappedAllowedReactions = .all
+                                                    case let .chatReactionsSome(reactions):
+                                                        mappedAllowedReactions = .limited(reactions.compactMap(MessageReaction.Reaction.init(apiReaction:)))
+                                                    case .chatReactionsNone:
+                                                        mappedAllowedReactions = .empty
+                                                    }
+                                                } else {
+                                                    mappedAllowedReactions = .empty
+                                                }
+                                                
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
@@ -627,7 +652,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedThemeEmoticon(themeEmoticon)
                                                     .withUpdatedInviteRequestsPending(requestsPending)
                                                     .withUpdatedSendAsPeerId(sendAsPeerId)
-                                                    .withUpdatedAllowedReactions(allowedReactions ?? [])
+                                                    .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

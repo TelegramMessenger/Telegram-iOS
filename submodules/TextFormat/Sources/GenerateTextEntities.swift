@@ -8,7 +8,8 @@ private let whitelistedHosts: Set<String> = Set([
     "t.me",
     "telegram.me",
     "telegra.ph",
-    "telesco.pe"
+    "telesco.pe",
+    "fragment.com"
 ])
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
@@ -165,7 +166,7 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
             } else if key == ChatTextInputAttributes.spoiler {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Spoiler))
             } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .CustomEmoji(stickerPack: value.stickerPack, fileId: value.fileId)))
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .CustomEmoji(stickerPack: nil, fileId: value.fileId)))
             }
         }
     })

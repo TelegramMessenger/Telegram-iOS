@@ -198,6 +198,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
+    open var transitionNavigationBar: NavigationBar? {
+        return self.navigationBar
+    }
     public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true
@@ -209,6 +212,15 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     private weak var activeInputView: UIResponder?
     
     open var hasActiveInput: Bool = false
+    
+    open var overlayWantsToBeBelowKeyboard: Bool {
+        return false
+    }
+    
+    var internalOverlayWantsToBeBelowKeyboardUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public func overlayWantsToBeBelowKeyboardUpdated(transition: ContainedViewLayoutTransition) {
+        self.internalOverlayWantsToBeBelowKeyboardUpdated?(transition)
+    }
     
     private var navigationBarOrigin: CGFloat = 0.0
 
@@ -366,7 +378,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             }
         }
         self.navigationBar?.item = self.navigationItem
-        self.automaticallyAdjustsScrollViewInsets = false
+        //self.automaticallyAdjustsScrollViewInsets = false
         
         self.scrollToTopWithTabBar = { [weak self] in
             self?.scrollToTop?()

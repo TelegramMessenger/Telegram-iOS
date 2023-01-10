@@ -91,7 +91,7 @@
                                                    countryCode:self.country]);
 }
 
-+ (PKAddressField)applePayAddressFieldsFromBillingAddressFields:(STPBillingAddressFields)billingAddressFields {
+/*+ (PKAddressField)applePayAddressFieldsFromBillingAddressFields:(STPBillingAddressFields)billingAddressFields {
     FAUXPAS_IGNORED_IN_METHOD(APIAvailability);
     switch (billingAddressFields) {
         case STPBillingAddressFieldsNone:
@@ -100,7 +100,7 @@
         case STPBillingAddressFieldsFull:
             return PKAddressFieldPostalAddress;
     }
-}
+}*/
 
 @end
 

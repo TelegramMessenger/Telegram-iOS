@@ -360,7 +360,7 @@ public final class TextNodeLayout: NSObject {
     
     public var trailingLineWidth: CGFloat {
         if let lastLine = self.lines.last {
-            return lastLine.frame.width
+            return lastLine.frame.maxX
         } else {
             return 0.0
         }
@@ -1411,10 +1411,14 @@ open class TextNode: ASDisplayNode {
         context.setAllowsFontSubpixelQuantization(true)
         context.setShouldSubpixelQuantizeFonts(true)
         
+        var blendMode: CGBlendMode = .normal
+        
         var clearRects: [CGRect] = []
         if let layout = parameters as? TextNodeLayout {
             if !isRasterizing || layout.backgroundColor != nil {
                 context.setBlendMode(.copy)
+                blendMode = .copy
+                
                 context.setFillColor((layout.backgroundColor ?? UIColor.clear).cgColor)
                 context.fill(bounds)
             }
@@ -1426,6 +1430,8 @@ open class TextNode: ASDisplayNode {
             
             if let (textStrokeColor, textStrokeWidth) = layout.textStroke {
                 context.setBlendMode(.normal)
+                blendMode = .normal
+                
                 context.setLineCap(.round)
                 context.setLineJoin(.round)
                 context.setStrokeColor(textStrokeColor.cgColor)
@@ -1487,7 +1493,28 @@ open class TextNode: ASDisplayNode {
                         if attributes["Attribute__EmbeddedItem"] != nil {
                             continue
                         }
+                        
+                        var fixCoupleEmoji = false
+                        if glyphCount == 2, let font = attributes["NSFont"] as? UIFont, font.fontName.contains("ColorEmoji"), let string = layout.attributedString {
+                            let range = CTRunGetStringRange(run)
+                            let substring = string.attributedSubstring(from: NSMakeRange(range.location, range.length)).string
+                            
+                            let heart = Unicode.Scalar(0x2764)!
+                            let man = Unicode.Scalar(0x1F468)!
+                            let woman = Unicode.Scalar(0x1F469)!
+                            
+                            if substring.unicodeScalars.contains(heart) && (substring.unicodeScalars.contains(man) || substring.unicodeScalars.contains(woman)) {
+                                fixCoupleEmoji = true
+                            }
+                        }
+                        
+                        if fixCoupleEmoji {
+                            context.setBlendMode(.normal)
+                        }
                         CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                        if fixCoupleEmoji {
+                            context.setBlendMode(blendMode)
+                        }
                     }
                 }
                 
@@ -2136,21 +2163,21 @@ open class TextView: UIView {
                     }
                 }
                 
-                if !line.strikethroughs.isEmpty {
-                    for strikethrough in line.strikethroughs {
-                        var textColor: UIColor?
-                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
-                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
-                                textColor = color
-                            }
-                        }
-                        if let textColor = textColor {
-                            context.setFillColor(textColor.cgColor)
-                        }
-                        let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
-                        context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
-                    }
-                }
+//                if !line.strikethroughs.isEmpty {
+//                    for strikethrough in line.strikethroughs {
+//                        var textColor: UIColor?
+//                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
+//                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+//                                textColor = color
+//                            }
+//                        }
+//                        if let textColor = textColor {
+//                            context.setFillColor(textColor.cgColor)
+//                        }
+//                        let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+//                        context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
+//                    }
+//                }
                 
                 if !line.spoilers.isEmpty {
                     if layout.displaySpoilers {

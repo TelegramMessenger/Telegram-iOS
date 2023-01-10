@@ -59,7 +59,6 @@ private final class AddPaymentMethodSheetContent: CombinedComponent {
                 transition: context.transition
             )
             
-            //TODO:localize
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(string: "Payment Method", font: UIFont.boldSystemFont(ofSize: 17.0), textColor: .black)),
@@ -71,7 +70,6 @@ private final class AddPaymentMethodSheetContent: CombinedComponent {
                 transition: context.transition
             )
             
-            //TODO:localize
             let text = text.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(string: "Add your debit or credit card to buy goods and services on Telegram.", font: UIFont.systemFont(ofSize: 15.0), textColor: .gray)),
@@ -83,7 +81,6 @@ private final class AddPaymentMethodSheetContent: CombinedComponent {
                 transition: context.transition
             )
             
-            //TODO:localize
             let actionButton = actionButton.update(
                 component: SolidRoundedButtonComponent(
                     title: "Add Payment Method",
@@ -102,7 +99,6 @@ private final class AddPaymentMethodSheetContent: CombinedComponent {
                 transition: context.transition
             )
             
-            //TODO:localize
             let cancelButton = cancelButton.update(
                 component: Button(
                     content: AnyComponent(

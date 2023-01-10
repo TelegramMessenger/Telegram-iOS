@@ -4,12 +4,12 @@ import AVFoundation
 private func loadToneData(name: String, addSilenceDuration: Double = 0.0) -> Data? {
     let outputSettings: [String: Any] = [
         AVFormatIDKey: kAudioFormatLinearPCM as NSNumber,
-        AVSampleRateKey: 44100.0 as NSNumber,
+        AVSampleRateKey: 48000.0 as NSNumber,
         AVLinearPCMBitDepthKey: 16 as NSNumber,
         AVLinearPCMIsNonInterleaved: false as NSNumber,
         AVLinearPCMIsFloatKey: false as NSNumber,
         AVLinearPCMIsBigEndianKey: false as NSNumber,
-        AVNumberOfChannelsKey: 2 as NSNumber
+        AVNumberOfChannelsKey: 1 as NSNumber
     ]
     
     let nsName: NSString = name as NSString
@@ -63,9 +63,9 @@ private func loadToneData(name: String, addSilenceDuration: Double = 0.0) -> Dat
     }
     
     if !addSilenceDuration.isZero {
-        let sampleRate = 44100
+        let sampleRate = 48000
         let numberOfSamples = Int(Double(sampleRate) * addSilenceDuration)
-        let numberOfChannels = 2
+        let numberOfChannels = 1
         let numberOfBytes = numberOfSamples * 2 * numberOfChannels
         
         data.append(Data(count: numberOfBytes))

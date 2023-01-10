@@ -347,12 +347,12 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         self.messagesLocation = location
         
         switch self.messagesLocation {
-            case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, messageId, _):
-                self.loadItem(anchor: .messageId(messageId), navigation: .later)
-            case let .recentActions(message):
-                self.loadingItem = false
-                self.currentItem = (message, [])
-                self.updateState()
+        case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, messageId, _):
+            self.loadItem(anchor: .messageId(messageId), navigation: .later)
+        case let .recentActions(message):
+            self.loadingItem = false
+            self.currentItem = (message, [])
+            self.updateState()
         }
     }
     

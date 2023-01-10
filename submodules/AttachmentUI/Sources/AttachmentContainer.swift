@@ -75,7 +75,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         self.clipNode = ASDisplayNode()
         
         var controllerRemovedImpl: ((ViewController) -> Void)?
-        self.container = NavigationContainer(controllerRemoved: { c in
+        self.container = NavigationContainer(isFlat: false, controllerRemoved: { c in
             controllerRemovedImpl?(c)
         })
         self.container.clipsToBounds = true

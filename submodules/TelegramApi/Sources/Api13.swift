@@ -1,16 +1,16 @@
 public extension Api {
     enum MessagePeerReaction: TypeConstructorDescription {
-        case messagePeerReaction(flags: Int32, peerId: Api.Peer, reaction: String)
+        case messagePeerReaction(flags: Int32, peerId: Api.Peer, reaction: Api.Reaction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messagePeerReaction(let flags, let peerId, let reaction):
                     if boxed {
-                        buffer.appendInt32(1370914559)
+                        buffer.appendInt32(-1319698788)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peerId.serialize(buffer, true)
-                    serializeString(reaction, buffer: buffer, boxed: false)
+                    reaction.serialize(buffer, true)
                     break
     }
     }
@@ -29,8 +29,10 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _3: String?
-            _3 = parseString(reader)
+            var _3: Api.Reaction?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -768,6 +770,7 @@ public extension Api {
     enum NotifyPeer: TypeConstructorDescription {
         case notifyBroadcasts
         case notifyChats
+        case notifyForumTopic(peer: Api.Peer, topMsgId: Int32)
         case notifyPeer(peer: Api.Peer)
         case notifyUsers
     
@@ -784,6 +787,13 @@ public extension Api {
                         buffer.appendInt32(-1073230141)
                     }
                     
+                    break
+                case .notifyForumTopic(let peer, let topMsgId):
+                    if boxed {
+                        buffer.appendInt32(577659656)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(topMsgId, buffer: buffer, boxed: false)
                     break
                 case .notifyPeer(let peer):
                     if boxed {
@@ -806,6 +816,8 @@ public extension Api {
                 return ("notifyBroadcasts", [])
                 case .notifyChats:
                 return ("notifyChats", [])
+                case .notifyForumTopic(let peer, let topMsgId):
+                return ("notifyForumTopic", [("peer", String(describing: peer)), ("topMsgId", String(describing: topMsgId))])
                 case .notifyPeer(let peer):
                 return ("notifyPeer", [("peer", String(describing: peer))])
                 case .notifyUsers:
@@ -818,6 +830,22 @@ public extension Api {
         }
         public static func parse_notifyChats(_ reader: BufferReader) -> NotifyPeer? {
             return Api.NotifyPeer.notifyChats
+        }
+        public static func parse_notifyForumTopic(_ reader: BufferReader) -> NotifyPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.NotifyPeer.notifyForumTopic(peer: _1!, topMsgId: _2!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
             var _1: Api.Peer?

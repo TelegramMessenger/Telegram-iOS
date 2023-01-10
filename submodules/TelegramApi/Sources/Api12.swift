@@ -1,5 +1,5 @@
 public extension Api {
-    enum MessageEntity: TypeConstructorDescription {
+    indirect enum MessageEntity: TypeConstructorDescription {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
         case messageEntityBankCard(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
@@ -541,6 +541,82 @@ public extension Api {
     }
 }
 public extension Api {
+    indirect enum MessageExtendedMedia: TypeConstructorDescription {
+        case messageExtendedMedia(media: Api.MessageMedia)
+        case messageExtendedMediaPreview(flags: Int32, w: Int32?, h: Int32?, thumb: Api.PhotoSize?, videoDuration: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageExtendedMedia(let media):
+                    if boxed {
+                        buffer.appendInt32(-297296796)
+                    }
+                    media.serialize(buffer, true)
+                    break
+                case .messageExtendedMediaPreview(let flags, let w, let h, let thumb, let videoDuration):
+                    if boxed {
+                        buffer.appendInt32(-1386050360)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(w!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(h!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {thumb!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(videoDuration!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageExtendedMedia(let media):
+                return ("messageExtendedMedia", [("media", String(describing: media))])
+                case .messageExtendedMediaPreview(let flags, let w, let h, let thumb, let videoDuration):
+                return ("messageExtendedMediaPreview", [("flags", String(describing: flags)), ("w", String(describing: w)), ("h", String(describing: h)), ("thumb", String(describing: thumb)), ("videoDuration", String(describing: videoDuration))])
+    }
+    }
+    
+        public static func parse_messageExtendedMedia(_ reader: BufferReader) -> MessageExtendedMedia? {
+            var _1: Api.MessageMedia?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageExtendedMedia.messageExtendedMedia(media: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageExtendedMediaPreview(_ reader: BufferReader) -> MessageExtendedMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: Api.PhotoSize?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.PhotoSize
+            } }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageExtendedMedia.messageExtendedMediaPreview(flags: _1!, w: _2, h: _3, thumb: _4, videoDuration: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum MessageFwdHeader: TypeConstructorDescription {
         case messageFwdHeader(flags: Int32, fromId: Api.Peer?, fromName: String?, date: Int32, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?, psaType: String?)
     
@@ -657,7 +733,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum MessageMedia: TypeConstructorDescription {
+    indirect enum MessageMedia: TypeConstructorDescription {
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int64)
         case messageMediaDice(value: Int32, emoticon: String)
         case messageMediaDocument(flags: Int32, document: Api.Document?, ttlSeconds: Int32?)
@@ -665,7 +741,7 @@ public extension Api {
         case messageMediaGame(game: Api.Game)
         case messageMediaGeo(geo: Api.GeoPoint)
         case messageMediaGeoLive(flags: Int32, geo: Api.GeoPoint, heading: Int32?, period: Int32, proximityNotificationRadius: Int32?)
-        case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String)
+        case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: Api.MessageExtendedMedia?)
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
         case messageMediaUnsupported
@@ -727,9 +803,9 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(proximityNotificationRadius!, buffer: buffer, boxed: false)}
                     break
-                case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam):
+                case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
                     if boxed {
-                        buffer.appendInt32(-2074799289)
+                        buffer.appendInt32(-156940077)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -739,6 +815,7 @@ public extension Api {
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(totalAmount, buffer: buffer, boxed: false)
                     serializeString(startParam, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {extendedMedia!.serialize(buffer, true)}
                     break
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
                     if boxed {
@@ -797,8 +874,8 @@ public extension Api {
                 return ("messageMediaGeo", [("geo", String(describing: geo))])
                 case .messageMediaGeoLive(let flags, let geo, let heading, let period, let proximityNotificationRadius):
                 return ("messageMediaGeoLive", [("flags", String(describing: flags)), ("geo", String(describing: geo)), ("heading", String(describing: heading)), ("period", String(describing: period)), ("proximityNotificationRadius", String(describing: proximityNotificationRadius))])
-                case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam):
-                return ("messageMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("receiptMsgId", String(describing: receiptMsgId)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("startParam", String(describing: startParam))])
+                case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
+                return ("messageMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("receiptMsgId", String(describing: receiptMsgId)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("startParam", String(describing: startParam)), ("extendedMedia", String(describing: extendedMedia))])
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
                 return ("messageMediaPhoto", [("flags", String(describing: flags)), ("photo", String(describing: photo)), ("ttlSeconds", String(describing: ttlSeconds))])
                 case .messageMediaPoll(let poll, let results):
@@ -941,6 +1018,10 @@ public extension Api {
             _7 = reader.readInt64()
             var _8: String?
             _8 = parseString(reader)
+            var _9: Api.MessageExtendedMedia?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.MessageExtendedMedia
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -949,8 +1030,9 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.MessageMedia.messageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, receiptMsgId: _5, currency: _6!, totalAmount: _7!, startParam: _8!)
+            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.MessageMedia.messageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, receiptMsgId: _5, currency: _6!, totalAmount: _7!, startParam: _8!, extendedMedia: _9)
             }
             else {
                 return nil

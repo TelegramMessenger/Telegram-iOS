@@ -284,7 +284,7 @@ public final class EmojiSuggestionsComponent: Component {
                         itemLayer = InlineStickerItemLayer(
                             context: component.context,
                             attemptSynchronousLoad: synchronousLoad,
-                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: item.fileId.id, file: item),
+                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: item.fileId.id, file: item),
                             file: item,
                             cache: component.animationCache,
                             renderer: component.animationRenderer,

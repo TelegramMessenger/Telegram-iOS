@@ -193,14 +193,16 @@ public final class ChatTextInputTextUrlAttribute: NSObject {
 }
 
 public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
-    public let stickerPack: StickerPackReference?
+    public let interactivelySelectedFromPackId: ItemCollectionId?
     public let fileId: Int64
+    public let topicInfo: (Int64, EngineMessageHistoryThread.Info)?
     public let file: TelegramMediaFile?
     
-    public init(stickerPack: StickerPackReference?, fileId: Int64, file: TelegramMediaFile?) {
-        self.stickerPack = stickerPack
+    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, topicInfo: (Int64, EngineMessageHistoryThread.Info)? = nil) {
+        self.interactivelySelectedFromPackId = interactivelySelectedFromPackId
         self.fileId = fileId
         self.file = file
+        self.topicInfo = topicInfo
         
         super.init()
     }

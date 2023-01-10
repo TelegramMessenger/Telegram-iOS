@@ -13,180 +13,7 @@ import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
 import DeviceProximity
-
-final class PresentationCallToneRenderer {
-    let queue: Queue
-    
-    let tone: PresentationCallTone
-    
-    private let toneRenderer: MediaPlayerAudioRenderer
-    private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
-    private var toneRendererAudioSessionActivated = false
-    private let audioLevelPipe = ValuePipe<Float>()
-    
-    init(tone: PresentationCallTone, completed: (() -> Void)? = nil) {
-        let queue = Queue.mainQueue()
-        self.queue = queue
-        
-        self.tone = tone
-        
-        var controlImpl: ((MediaPlayerAudioSessionCustomControl) -> Disposable)?
-        
-        self.toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ control in
-            return controlImpl?(control) ?? EmptyDisposable
-        }), playAndRecord: false, useVoiceProcessingMode: true, ambient: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: self.audioLevelPipe, updatedRate: {}, audioPaused: {})
-        
-        controlImpl = { [weak self] control in
-            queue.async {
-                if let strongSelf = self {
-                    strongSelf.toneRendererAudioSession = control
-                    if strongSelf.toneRendererAudioSessionActivated {
-                        control.activate()
-                    }
-                }
-            }
-            return ActionDisposable {
-            }
-        }
-        
-        let toneDataOffset = Atomic<Int>(value: 0)
-        
-        let toneData = Atomic<Data?>(value: nil)
-        let reportedCompletion = Atomic<Bool>(value: false)
-        
-        self.toneRenderer.beginRequestingFrames(queue: DispatchQueue.global(), takeFrame: {
-            var data = toneData.with { $0 }
-            if data == nil {
-                data = presentationCallToneData(tone)
-                if data != nil {
-                    let _ = toneData.swap(data)
-                }
-            }
-            
-            guard let toneData = data else {
-                if !reportedCompletion.swap(true) {
-                    completed?()
-                }
-                return .finished
-            }
-            
-            let toneDataMaxOffset: Int?
-            if let loopCount = tone.loopCount {
-                toneDataMaxOffset = (data?.count ?? 0) * loopCount
-            } else {
-                toneDataMaxOffset = nil
-            }
-            
-            let frameSize = 44100
-            
-            var takeOffset: Int?
-            let _ = toneDataOffset.modify { current in
-                takeOffset = current
-                return current + frameSize
-            }
-            
-            if let takeOffset = takeOffset {
-                if let toneDataMaxOffset = toneDataMaxOffset, takeOffset >= toneDataMaxOffset {
-                    if !reportedCompletion.swap(true) {
-                        Queue.mainQueue().after(1.0, {
-                            completed?()
-                        })
-                    }
-                    return .finished
-                }
-                
-                var blockBuffer: CMBlockBuffer?
-                
-                let bytes = malloc(frameSize)!
-                toneData.withUnsafeBytes { dataBuffer -> Void in
-                    guard let dataBytes = dataBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
-                        return
-                    }
-                    var takenCount = 0
-                    while takenCount < frameSize {
-                        let dataOffset = (takeOffset + takenCount) % toneData.count
-                        let dataCount = min(frameSize - takenCount, toneData.count - dataOffset)
-                        //print("take from \(dataOffset) count: \(dataCount)")
-                        memcpy(bytes.advanced(by: takenCount), dataBytes.advanced(by: dataOffset), dataCount)
-                        takenCount += dataCount
-                        
-                        if let toneDataMaxOffset = toneDataMaxOffset, takeOffset + takenCount >= toneDataMaxOffset {
-                            break
-                        }
-                    }
-                    
-                    if takenCount < frameSize {
-                        //print("fill with zeros from \(takenCount) count: \(frameSize - takenCount)")
-                        memset(bytes.advanced(by: takenCount), 0, frameSize - takenCount)
-                    }
-                }
-                
-                /*if let toneDataMaxOffset = toneDataMaxOffset, takeOffset + frameSize > toneDataMaxOffset {
-                    let validCount = max(0, toneDataMaxOffset - takeOffset)
-                    memset(bytes.advanced(by: validCount), 0, frameSize - validCount)
-                    print("clear from \(validCount) count: \(frameSize - validCount)")
-                }*/
-                
-                let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: frameSize, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: frameSize, flags: 0, blockBufferOut: &blockBuffer)
-                if status != noErr {
-                    if !reportedCompletion.swap(true) {
-                        completed?()
-                    }
-                    return .finished
-                }
-                
-                let sampleCount = frameSize / 2
-                
-                let pts = CMTime(value: Int64(takeOffset / 2), timescale: 44100)
-                var timingInfo = CMSampleTimingInfo(duration: CMTime(value: Int64(sampleCount), timescale: 44100), presentationTimeStamp: pts, decodeTimeStamp: pts)
-                var sampleBuffer: CMSampleBuffer?
-                var sampleSize = frameSize
-                guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
-                    if !reportedCompletion.swap(true) {
-                        completed?()
-                    }
-                    return .finished
-                }
-                
-                if let sampleBuffer = sampleBuffer {
-                    return .frame(MediaTrackFrame(type: .audio, sampleBuffer: sampleBuffer, resetDecoder: false, decoded: true))
-                } else {
-                    if !reportedCompletion.swap(true) {
-                        completed?()
-                    }
-                    return .finished
-                }
-            } else {
-                if !reportedCompletion.swap(true) {
-                    completed?()
-                }
-                return .finished
-            }
-        })
-        self.toneRenderer.start()
-        self.toneRenderer.setRate(1.0)
-    }
-    
-    deinit {
-        assert(self.queue.isCurrent())
-        self.toneRenderer.stop()
-    }
-    
-    func setAudioSessionActive(_ value: Bool) {
-        if self.toneRendererAudioSessionActivated != value {
-            self.toneRendererAudioSessionActivated = value
-            if let control = self.toneRendererAudioSession {
-                if value {
-                    self.toneRenderer.setRate(1.0)
-                    control.activate()
-                } else {
-                    self.toneRenderer.setRate(0.0)
-                    control.deactivate()
-                }
-            }
-        }
-    }
-}
+import PhoneNumberFormat
 
 public final class PresentationCallImpl: PresentationCall {
     public let context: AccountContext
@@ -220,6 +47,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var callContextState: OngoingCallContextState?
     private var ongoingContext: OngoingCallContext?
     private var ongoingContextStateDisposable: Disposable?
+    private var sharedAudioDevice: OngoingCallContext.AudioDevice?
     private var requestedVideoAspect: Float?
     private var reception: Int32?
     private var receptionDisposable: Disposable?
@@ -281,7 +109,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var audioSessionActiveDisposable: Disposable?
     private var isAudioSessionActive = false
     
-    private var toneRenderer: PresentationCallToneRenderer?
+    private var currentTone: PresentationCallTone?
     
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
@@ -412,6 +240,9 @@ public final class PresentationCallImpl: PresentationCall {
                     return
                 }
                 strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
+                if let currentOutput = currentOutput {
+                    strongSelf.currentAudioOutputValue = currentOutput
+                }
                 
                 var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
                 if !didReceiveAudioOutputs {
@@ -436,7 +267,7 @@ public final class PresentationCallImpl: PresentationCall {
                         let audioSessionActive: Signal<Bool, NoError>
                         if let callKitIntegration = strongSelf.callKitIntegration {
                             audioSessionActive = callKitIntegration.audioSessionActive
-                            |> filter { $0 }
+                            /*|> filter { $0 }
                             |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
                                 if let strongSelf = self, let _ = strongSelf.audioSessionControl {
                                     //audioSessionControl.activate({ _ in })
@@ -444,7 +275,7 @@ public final class PresentationCallImpl: PresentationCall {
                                 subscriber.putNext(true)
                                 subscriber.putCompletion()
                                 return EmptyDisposable
-                            })
+                            })*/
                         } else {
                             audioSessionControl.activate({ _ in })
                             audioSessionActive = .single(true)
@@ -458,6 +289,12 @@ public final class PresentationCallImpl: PresentationCall {
                 }
             }
         })
+        
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
+            self.sharedAudioDevice = nil
+        } else {
+            self.sharedAudioDevice = OngoingCallContext.AudioDevice.create()
+        }
         
         self.audioSessionActiveDisposable = (self.audioSessionActive.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -533,8 +370,12 @@ public final class PresentationCallImpl: PresentationCall {
         }
         
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
-            audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
-            audioSessionControl.setup(synchronous: true)
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+                audioSessionControl.setup(synchronous: true)
+            }
         }
         
         let mappedVideoState: PresentationCallState.VideoState
@@ -607,10 +448,15 @@ public final class PresentationCallImpl: PresentationCall {
                 if previous == nil || previousControl == nil {
                     if !self.reportedIncomingCall, let stableId = sessionState.stableId {
                         self.reportedIncomingCall = true
+                        var phoneNumber: String?
+                        if let peer = self.peer as? TelegramUser, let phone = peer.phone {
+                            phoneNumber = formatPhoneNumber(context: self.context, number: phone)
+                        }
                         self.callKitIntegration?.reportIncomingCall(
                             uuid: self.internalId,
                             stableId: stableId,
                             handle: "\(self.peerId.id._internalGetInt64Value())",
+                            phoneNumber: phoneNumber,
                             isVideo: sessionState.type == .video,
                             displayTitle: self.peer?.debugDisplayTitle ?? "Unknown",
                             completion: { [weak self] error in
@@ -689,7 +535,7 @@ public final class PresentationCallImpl: PresentationCall {
 
                     let updatedConnections = connections
                     
-                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
+                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec, audioDevice: self.sharedAudioDevice)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     if let requestedVideoAspect = self.requestedVideoAspect {
@@ -851,25 +697,26 @@ public final class PresentationCallImpl: PresentationCall {
                     break
             }
         }
-        if tone != self.toneRenderer?.tone {
-            if let tone = tone {
-                let toneRenderer = PresentationCallToneRenderer(tone: tone)
-                self.toneRenderer = toneRenderer
-                toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
-            } else {
-                self.toneRenderer = nil
-            }
+        if tone != self.currentTone {
+            self.currentTone = tone
+            self.sharedAudioDevice?.setTone(tone: tone.flatMap(presentationCallToneData).flatMap { data in
+                return OngoingCallContext.Tone(samples: data, sampleRate: 48000, loopCount: tone?.loopCount ?? 1000000)
+            })
         }
     }
     
     private func updateIsAudioSessionActive(_ value: Bool) {
         if self.isAudioSessionActive != value {
             self.isAudioSessionActive = value
-            self.toneRenderer?.setAudioSessionActive(value)
         }
+        self.sharedAudioDevice?.setIsAudioSessionActive(value)
     }
     
     public func answer() {
+        self.answer(fromCallKitAction: false)
+    }
+        
+    func answer(fromCallKitAction: Bool) {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
@@ -892,14 +739,18 @@ public final class PresentationCallImpl: PresentationCall {
                         }
                         if value {
                             strongSelf.callSessionManager.accept(internalId: strongSelf.internalId)
-                            strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                            if !fromCallKitAction {
+                                strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                            }
                         } else {
                             let _ = strongSelf.hangUp().start()
                         }
                     })
                 } else {
                     strongSelf.callSessionManager.accept(internalId: strongSelf.internalId)
-                    strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                    if !fromCallKitAction {
+                        strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                    }
                 }
             } else {
                 let _ = strongSelf.hangUp().start()
@@ -1025,7 +876,11 @@ public final class PresentationCallImpl: PresentationCall {
         ))
         
         if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setOutputMode(.custom(output))
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(output))
+            }
         }
     }
     

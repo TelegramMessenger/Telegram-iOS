@@ -11,18 +11,23 @@ import ContextUI
 import TelegramStringFormatting
 import AvatarNode
 import AccountContext
+import UndoUI
 
 final class ChatSendAsPeerListContextItem: ContextMenuCustomItem {
     let context: AccountContext
     let chatPeerId: PeerId
-    let peers: [FoundPeer]
+    let peers: [SendAsPeer]
     let selectedPeerId: PeerId?
+    let isPremium: Bool
+    let presentToast: (EnginePeer) -> Void
     
-    init(context: AccountContext, chatPeerId: PeerId, peers: [FoundPeer], selectedPeerId: PeerId?) {
+    init(context: AccountContext, chatPeerId: PeerId, peers: [SendAsPeer], selectedPeerId: PeerId?, isPremium: Bool, presentToast: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.chatPeerId = chatPeerId
         self.peers = peers
         self.selectedPeerId = selectedPeerId
+        self.isPremium = isPremium
+        self.presentToast = presentToast
     }
     
     func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
@@ -99,9 +104,16 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
                 }
             }
             
-            let action = ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { _, f in
+            let action = ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), textIcon: { theme in
+                return !item.isPremium && peer.isPremiumRequired ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.badgeInactiveFillColor) : nil
+            }, action: { _, f in
                 f(.default)
 
+                if !item.isPremium && peer.isPremiumRequired {
+                    item.presentToast(EnginePeer(peer.peer))
+                    return
+                }
+                
                 if peer.peer.id != item.selectedPeerId {
                     let _ = item.context.engine.peers.updatePeerSendAsPeer(peerId: item.chatPeerId, sendAs: peer.peer.id).start()
                 }

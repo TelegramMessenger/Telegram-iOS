@@ -239,7 +239,7 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
                         parsedFlags.insert(.shippingAddressRequested)
                     }
                     
-                    return TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: 0, startParam: "", flags: parsedFlags)
+                    return TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: 0, startParam: "", extendedMedia: nil, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -491,7 +491,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                     account.stateManager.addUpdates(updates)
                     var receiptMessageId: MessageId?
                     for apiMessage in updates.messages {
-                        if let message = StoreMessage(apiMessage: apiMessage) {
+                        if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: false) {
                             for media in message.media {
                                 if let action = media as? TelegramMediaAction {
                                     if case .paymentSent = action.action {
@@ -612,7 +612,9 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
                         currency: currency,
                         totalAmount: totalAmount,
                         startParam: "",
-                        flags: []
+                        extendedMedia: nil,
+                        flags: [],
+                        version: TelegramMediaInvoice.lastVersion
                     )
                     
                     let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))

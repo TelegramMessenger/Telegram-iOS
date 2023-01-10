@@ -28,7 +28,7 @@ public extension Peer {
         
         if let restrictionInfo = restrictionInfo {
             for rule in restrictionInfo.rules {
-                if rule.platform == "all" || rule.platform == platform {
+                if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                         return rule.text
                     }
@@ -39,15 +39,41 @@ public extension Peer {
             return nil
         }
     }
-    
+        
     var addressName: String? {
         switch self {
         case let user as TelegramUser:
-            return user.username
+            return user.usernames.first(where: { $0.isActive }).map { $0.username } ?? user.username
         case _ as TelegramGroup:
             return nil
         case let channel as TelegramChannel:
-            return channel.username
+            return channel.usernames.first(where: { $0.isActive }).map { $0.username } ?? channel.username
+        default:
+            return nil
+        }
+    }
+    
+    var usernames: [TelegramPeerUsername] {
+        switch self {
+        case let user as TelegramUser:
+            return user.usernames
+        case _ as TelegramGroup:
+            return []
+        case let channel as TelegramChannel:
+            return channel.usernames
+        default:
+            return []
+        }
+    }
+    
+    var editableUsername: String? {
+        switch self {
+        case let user as TelegramUser:
+            return user.usernames.first(where: { $0.flags.contains(.isEditable) }).map { $0.username } ?? user.username
+        case _ as TelegramGroup:
+            return nil
+        case let channel as TelegramChannel:
+            return channel.usernames.first(where: { $0.flags.contains(.isEditable) }).map { $0.username } ?? channel.username
         default:
             return nil
         }
@@ -173,6 +199,20 @@ public extension Peer {
             return false
         }
     }
+    
+    var isForum: Bool {
+        if let channel = self as? TelegramChannel {
+            return channel.flags.contains(.isForum)
+        } else {
+            return false
+        }
+    }
+}
+
+public extension TelegramPeerUsername {
+    var isActive: Bool {
+        return self.flags.contains(.isActive) || self.flags.contains(.isEditable)
+    }
 }
 
 public extension PeerId {
@@ -250,7 +290,7 @@ public extension RenderedPeer {
                 }
             }
         }
-        self.init(peerId: message.id.peerId, peers: peers)
+        self.init(peerId: message.id.peerId, peers: peers, associatedMedia: [:])
     }
     
     var chatMainPeer: Peer? {

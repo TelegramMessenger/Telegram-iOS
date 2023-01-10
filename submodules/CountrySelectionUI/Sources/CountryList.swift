@@ -6,7 +6,9 @@ public func emojiFlagForISOCountryCode(_ countryCode: String) -> String {
         return ""
     }
     
-    if countryCode == "XG" {
+    if countryCode == "FT" {
+        return "🏴‍☠️"
+    } else if countryCode == "XG" {
         return "🛰️"
     } else if countryCode == "XV" {
         return "🌍"
@@ -57,9 +59,13 @@ private func loadCountriesInfo() -> [(Int, String, String)] {
         
         let countryId = String(data[codeRange.upperBound ..< idRange.lowerBound])
         
+        guard let patternRange = data.range(of: delimiter, options: [], range: idRange.upperBound ..< data.endIndex) else {
+            break
+        }
+                        
         let countryName: String
-        let nameRange1 = data.range(of: endOfLine1, options: [], range: idRange.upperBound ..< data.endIndex)
-        let nameRange2 = data.range(of: endOfLine2, options: [], range: idRange.upperBound ..< data.endIndex)
+        let nameRange1 = data.range(of: endOfLine1, options: [], range: patternRange.upperBound ..< data.endIndex)
+        let nameRange2 = data.range(of: endOfLine2, options: [], range: patternRange.upperBound ..< data.endIndex)
         var nameRange: Range<String.Index>?
         if let nameRange1 = nameRange1, let nameRange2 = nameRange2 {
             if nameRange1.lowerBound < nameRange2.lowerBound {
@@ -71,10 +77,10 @@ private func loadCountriesInfo() -> [(Int, String, String)] {
             nameRange = nameRange1 ?? nameRange2
         }
         if let nameRange = nameRange {
-            countryName = String(data[idRange.upperBound ..< nameRange.lowerBound])
+            countryName = String(data[patternRange.upperBound ..< nameRange.lowerBound])
             currentLocation = nameRange.upperBound
         } else {
-            countryName = String(data[idRange.upperBound ..< data.index(data.endIndex, offsetBy: -1)])
+            countryName = String(data[patternRange.upperBound ..< data.index(data.endIndex, offsetBy: -1)])
         }
         
         array.append((countryCode, countryId, countryName))

@@ -205,7 +205,7 @@ private func getSecretChatEntries(currentContext: AccountContext, secretChats: S
     return _getAccountsIncludingHiddenOnes(context: currentContext)
     |> mapToSignal { accountsAndPeers in
         let accounts = Dictionary(uniqueKeysWithValues: accountsAndPeers.1.map { ($0.0.account.id, ($0.0, $0.1)) })
-        return combineLatest(secretChats.filter({ accounts[$0.accountRecordId] != nil }).map { secretChatId -> Signal<(PtgSecretChatId, EngineRenderedPeer?, ChatListIndex?), NoError> in
+        return combineLatest(secretChats.filter({ accounts[$0.accountRecordId] != nil }).map { secretChatId -> Signal<(PtgSecretChatId, EngineRenderedPeer?, EngineChatList.Item.Index?), NoError> in
             let context = accounts[secretChatId.accountRecordId]!.0
             return combineLatest(
                 context.engine.data.get(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: secretChatId.peerId)),
@@ -215,6 +215,9 @@ private func getSecretChatEntries(currentContext: AccountContext, secretChats: S
         |> map { chatPeersAndIndices in
             return chatPeersAndIndices.compactMap { (secretChatId, peer, index) -> (PtgSecretChatId, EngineRenderedPeer, ChatListIndex?)? in
                 guard let peer = peer else {
+                    return nil
+                }
+                guard case let .chatList(index) = index else {
                     return nil
                 }
                 return (secretChatId, peer, index)
@@ -371,7 +374,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                 // this filter enables selection of archived chats
                 let chatListFilter: ChatListFilter = .filter(id: -1, title: "", emoticon: nil, data: ChatListFilterData(categories: [.contacts, .nonContacts], excludeMuted: false, excludeRead: false, excludeArchived: false, includePeers: ChatListFilterIncludePeers(), excludePeers: []))
                 
-                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.SecretPasscode_SecretChatsSelectionTitle, selectedChats: selectedChats, additionalCategories: nil, chatListFilters: chatListFilters, chatListNodeFilter: chatListFilter, chatListNodePeersFilter: [.excludeUsers, .excludeGroups, .excludeChannels, .excludeBots, .excludeSavedMessages], omitTokenList: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds), options: [], filters: [], alwaysEnabled: true))
+                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(title: presentationData.strings.SecretPasscode_SecretChatsSelectionTitle, searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsTitle, selectedChats: selectedChats, additionalCategories: nil, chatListFilters: chatListFilters, chatListNodeFilter: chatListFilter, chatListNodePeersFilter: [.excludeUsers, .excludeGroups, .excludeChannels, .excludeBots, .excludeSavedMessages], omitTokenList: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)), options: [], filters: [], alwaysEnabled: true))
 
                 controller.isSensitiveUI = true
 

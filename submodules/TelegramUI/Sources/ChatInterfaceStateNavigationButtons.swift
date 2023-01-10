@@ -76,7 +76,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
     return nil
 }
 
-func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
         if case .forwardedMessages = presentationInterfaceState.subject {
             return nil
@@ -87,6 +87,16 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
             let buttonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: target, action: selector)
             buttonItem.accessibilityLabel = strings.Common_Cancel
             return ChatNavigationButton(action: .cancelMessageSelection, buttonItem: buttonItem)
+        }
+    }
+    
+    if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), let moreInfoNavigationButton = moreInfoNavigationButton {
+        if case .replyThread = presentationInterfaceState.chatLocation {
+        } else {
+            if case .pinnedMessages = presentationInterfaceState.subject {
+            } else {
+                return moreInfoNavigationButton
+            }
         }
     }
     
@@ -106,7 +116,8 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
     }
     
     if case .replyThread = presentationInterfaceState.chatLocation {
-        if hasMessages {
+        if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        } else if hasMessages {
             if case .search = currentButton?.action {
                 return currentButton
             } else {

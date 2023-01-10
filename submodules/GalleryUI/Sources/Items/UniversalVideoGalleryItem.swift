@@ -290,7 +290,7 @@ func optionsBackgroundImage(dark: Bool) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 14, topCapHeight: 14)
 }
 
-private func optionsCircleImage(dark: Bool) -> UIImage? {
+func optionsCircleImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
 
@@ -339,7 +339,7 @@ private func optionsRateImage(rate: String, isLarge: Bool, color: UIColor = .whi
     })
 }
 
-private final class MoreHeaderButton: HighlightableButtonNode {
+final class MoreHeaderButton: HighlightableButtonNode {
     enum Content {
         case image(UIImage?)
         case more(UIImage?)
@@ -517,7 +517,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
             guard let status = self.status else {
                 return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)))
             }
-            return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
+            return CMTimeRange(start: CMTime(seconds: status.timestamp, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
         }
 
         public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
@@ -814,6 +814,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
 
+        self.clipsToBounds = true
+        
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         
         self.footerContentNode.interacting = { [weak self] value in
@@ -967,6 +969,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._ready.get()
     }
     
+    
+    override func screenFrameUpdated(_ frame: CGRect) {
+        let center = frame.midX - self.frame.width / 2.0
+        self.subnodeTransform = CATransform3DMakeTranslation(-center * 0.16, 0.0, 0.0)
+    }
+    
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         if let _ = self.customUnembedWhenPortrait, layout.size.width < layout.size.height {
             self.expandIntoCustomPiP()
@@ -1007,11 +1015,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
             func parseChapters(_ string: NSAttributedString) -> [MediaPlayerScrubbingChapter] {
+                var existingTimecodes = Set<Double>()
                 var timecodeRanges: [(NSRange, TelegramTimecode)] = []
                 var lineRanges: [NSRange] = []
                 string.enumerateAttributes(in: NSMakeRange(0, string.length), options: [], using: { attributes, range, _ in
                     if let timecode = attributes[NSAttributedString.Key(TelegramTextAttributes.Timecode)] as? TelegramTimecode {
-                        timecodeRanges.append((range, timecode))
+                        if !existingTimecodes.contains(timecode.time) {
+                            timecodeRanges.append((range, timecode))
+                            existingTimecodes.insert(timecode.time)
+                        }
                     }
                 })
                 (string.string as NSString).enumerateSubstrings(in: NSMakeRange(0, string.length), options: .byLines, using: { _, range, _, _ in
@@ -1022,7 +1034,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 for (timecodeRange, timecode) in timecodeRanges {
                     inner: for lineRange in lineRanges {
                         if lineRange.contains(timecodeRange.location) {
-                            if lineRange.length > timecodeRange.length {
+                            if lineRange.length > timecodeRange.length && timecodeRange.location < lineRange.location + 4 {
                                 var title = ((string.string as NSString).substring(with: lineRange) as NSString).replacingCharacters(in: NSMakeRange(timecodeRange.location - lineRange.location, timecodeRange.length), with: "")
                                 title = title.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
                                 chapters.append(MediaPlayerScrubbingChapter(title: title, start: timecode.time))
@@ -1031,6 +1043,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 }
+                
                 return chapters
             }
             
@@ -1407,7 +1420,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     if isAnimated || disablePlayerControls {
                         strongSelf.footerContentNode.content = .info
-                    } else if isPaused && !strongSelf.ignorePauseStatus {
+                    } else if isPaused && !strongSelf.ignorePauseStatus && strongSelf.isCentral == true {
                         if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
@@ -2463,6 +2476,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
 
             var items: [ContextMenuItem] = []
+            
+            if let (message, _, _) = strongSelf.contentInfo() {
+                let context = strongSelf.context
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        guard let strongSelf = self, let peer = peer else {
+                            return
+                        }
+                        if let navigationController = strongSelf.baseNavigationController() {
+                            strongSelf.beginCustomDismiss(true)
+                            
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: true, timecode: nil)))
+                            
+                            Queue.mainQueue().after(0.3) {
+                                strongSelf.completeCustomDismiss()
+                            }
+                        }
+                        f(.default)
+                    })
+                })))
+            }
 
             var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
             var speedIconText: String = "1x"
@@ -2792,7 +2828,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
 }
 
-private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceNode: ContextReferenceContentNode
 

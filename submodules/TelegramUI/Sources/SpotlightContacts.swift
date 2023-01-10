@@ -134,16 +134,17 @@ private final class SpotlightIndexStorage {
                     
                     if let updatedAvatarSourcePathValue = updatedAvatarSourcePath, let avatarData = try? Data(contentsOf: URL(fileURLWithPath: self.appBasePath + "/" + updatedAvatarSourcePathValue)), let image = UIImage(data: avatarData) {
                         let size = CGSize(width: 120.0, height: 120.0)
-                        let context = DrawingContext(size: size, scale: 1.0, clear: true)
-                        context.withFlippedContext { c in
-                            c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                            c.setBlendMode(.destinationOut)
-                            c.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                        }
-                        if let resultImage = context.generateImage(), let resultData = resultImage.pngData(), let _ = try? resultData.write(to: URL(fileURLWithPath: avatarPath)) {
-                            resolvedAvatarPath = avatarPath
-                        } else {
-                            updatedAvatarSourcePath = nil
+                        if let context = DrawingContext(size: size, scale: 1.0, clear: true) {
+                            context.withFlippedContext { c in
+                                c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                                c.setBlendMode(.destinationOut)
+                                c.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                            }
+                            if let resultImage = context.generateImage(), let resultData = resultImage.pngData(), let _ = try? resultData.write(to: URL(fileURLWithPath: avatarPath)) {
+                                resolvedAvatarPath = avatarPath
+                            } else {
+                                updatedAvatarSourcePath = nil
+                            }
                         }
                     }
                 }

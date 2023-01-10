@@ -89,11 +89,15 @@ public final class TelegramGroup: Peer, Equatable {
     public let version: Int
     
     public var indexName: PeerIndexNameRepresentation {
-        return .title(title: self.title, addressName: nil)
+        return .title(title: self.title, addressNames: [])
     }
+    
+    public var associatedMediaIds: [MediaId]? { return nil }
     
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
+    
+    public var timeoutAttribute: UInt32? { return nil }
     
     public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, defaultBannedRights: TelegramChatBannedRights?, migrationReference: TelegramGroupToChannelMigrationReference?, creationDate: Int32, version: Int) {
         self.id = id

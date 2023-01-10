@@ -228,7 +228,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     }, addPeer: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent, .doNotSearchMessages], title: presentationData.strings.BlockedUsers_SelectUserTitle))
-        controller.peerSelected = { [weak controller] peer in
+        controller.peerSelected = { [weak controller] peer, _ in
             let peerId = peer.id
             
             guard let strongController = controller else {

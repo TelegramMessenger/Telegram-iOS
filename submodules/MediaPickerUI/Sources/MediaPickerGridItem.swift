@@ -15,6 +15,7 @@ import PhotoResources
 
 enum MediaPickerGridItemContent: Equatable {
     case asset(PHFetchResult<PHAsset>, Int)
+    case media(MediaPickerScreen.Subject.Media, Int)
 }
 
 final class MediaPickerGridItem: GridItem {
@@ -32,21 +33,31 @@ final class MediaPickerGridItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         switch self.content {
-            case let .asset(fetchResult, index):
-                let node = MediaPickerGridItemNode()
-                node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme)
-                return node
+        case let .asset(fetchResult, index):
+            let node = MediaPickerGridItemNode()
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme)
+            return node
+        case let .media(media, index):
+            let node = MediaPickerGridItemNode()
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme)
+            return node
         }
     }
     
     func update(node: GridItemNode) {
         switch self.content {
-            case let .asset(fetchResult, index):
-                guard let node = node as? MediaPickerGridItemNode else {
-                    assertionFailure()
-                    return
-                }
-                node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme)
+        case let .asset(fetchResult, index):
+            guard let node = node as? MediaPickerGridItemNode else {
+                assertionFailure()
+                return
+            }
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme)
+        case let .media(media, index):
+            guard let node = node as? MediaPickerGridItemNode else {
+                assertionFailure()
+                return
+            }
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme)
         }
     }
 }
@@ -65,6 +76,7 @@ private let maskImage = generateImage(CGSize(width: 1.0, height: 24.0), opaque: 
 })
 
 final class MediaPickerGridItemNode: GridItemNode {
+    var currentMediaState: (TGMediaSelectableItem, Int)?
     var currentState: (PHFetchResult<PHAsset>, Int)?
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
@@ -103,12 +115,14 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
 
     var identifier: String {
-        return self.asset?.localIdentifier ?? ""
+        return self.selectableItem?.uniqueIdentifier ?? ""
     }
     
-    var asset: PHAsset? {
-        if let (fetchResult, index) = self.currentState {
-            return fetchResult[index]
+    var selectableItem: TGMediaSelectableItem? {
+        if let (media, _) = self.currentMediaState {
+            return media
+        } else if let (fetchResult, index) = self.currentState {
+            return TGMediaAsset(phAsset: fetchResult[index])
         } else {
             return nil
         }
@@ -116,25 +130,23 @@ final class MediaPickerGridItemNode: GridItemNode {
     
     var _cachedTag: Int32?
     var tag: Int32? {
-        if let tag = self._cachedTag {
-            return tag
-        } else if let asset = self.asset, let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
-            let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
-            self._cachedTag = tag
-            return tag
-        } else {
+//        if let tag = self._cachedTag {
+//            return tag
+//        } else if let asset = self.asset, let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
+//            let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
+//            self._cachedTag = tag
+//            return tag
+//        } else {
             return nil
-        }
+//        }
     }
     
     func updateSelectionState(animated: Bool = false) {
         if self.checkNode == nil, let _ = self.interaction?.selectionState, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
-                if let strongSelf = self, let asset = strongSelf.asset, let interaction = strongSelf.interaction {
-                    if let legacyAsset = TGMediaAsset(phAsset: asset) {
-                        interaction.toggleSelection(legacyAsset, value, false)
-                    }
+                if let strongSelf = self, let interaction = strongSelf.interaction, let selectableItem = strongSelf.selectableItem {
+                    interaction.toggleSelection(selectableItem, value, false)
                 }
             }
             self.addSubnode(checkNode)
@@ -142,10 +154,10 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.setNeedsLayout()
         }
 
-        if let asset = self.asset, let interaction = self.interaction, let selectionState = interaction.selectionState  {
-            let selected = selectionState.isIdentifierSelected(asset.localIdentifier)
-            if let legacyAsset = TGMediaAsset(phAsset: asset) {
-                let index = selectionState.index(of: legacyAsset)
+        if let interaction = self.interaction, let selectionState = interaction.selectionState  {
+            let selected = selectionState.isIdentifierSelected(self.identifier)
+            if let selectableItem = self.selectableItem {
+                let index = selectionState.index(of: selectableItem)
                 if index != NSNotFound {
                     self.checkNode?.content = .counter(Int(index))
                 }
@@ -155,12 +167,10 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
     
     func updateHiddenMedia() {
-        if let asset = self.asset {
-            let wasHidden = self.isHidden
-            self.isHidden = self.interaction?.hiddenMediaId == asset.localIdentifier
-            if !self.isHidden && wasHidden {
-                self.animateFadeIn(animateCheckNode: true)
-            }
+        let wasHidden = self.isHidden
+        self.isHidden = self.interaction?.hiddenMediaId == self.identifier
+        if !self.isHidden && wasHidden {
+            self.animateFadeIn(animateCheckNode: true)
         }
     }
     
@@ -177,6 +187,73 @@ final class MediaPickerGridItemNode: GridItemNode {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+    }
+    
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme) {
+        self.interaction = interaction
+        self.theme = theme
+        
+        self.backgroundColor = theme.list.mediaPlaceholderColor
+        
+        if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentState!.1 != index {
+//            let editingContext = interaction.editingState
+//            let asset = media.asset as? TGMediaEditableItem
+//
+//            let editedSignal = Signal<UIImage?, NoError> { subscriber in
+//                if let signal = editingContext.thumbnailImageSignal(forIdentifier: media.identifier) {
+//                    let disposable = signal.start(next: { next in
+//                        if let image = next as? UIImage {
+//                            subscriber.putNext(image)
+//                        } else {
+//                            subscriber.putNext(nil)
+//                        }
+//                    }, error: { _ in
+//                    }, completed: nil)!
+//
+//                    return ActionDisposable {
+//                        disposable.dispose()
+//                    }
+//                } else {
+//                    return EmptyDisposable
+//                }
+//            }
+//
+//            let originalImageSignal = Signal<UIImage?, NoError> { subscriber in
+//                if let signal = asset?.thumbnailImageSignal?()
+//            }
+//
+//            let scale = min(2.0, UIScreenScale)
+//            let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
+//            let originalSignal: Signal<UIImage, NoError> = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false)
+//            let imageSignal: Signal<UIImage?, NoError> = editedSignal
+//            |> mapToSignal { result in
+//                if let result = result {
+//                    return .single(result)
+//                } else {
+//                    return originalSignal
+//                }
+//            }
+//            self.imageNode.setSignal(imageSignal)
+//
+//            if case .video = media, let asset = media.asset as? TGCameraCapturedVideo {
+//                self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
+//
+//                if self.typeIconNode.supernode == nil {
+//                    self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.videoDuration)), font: Font.semibold(12.0), textColor: .white)
+//
+//                    self.addSubnode(self.gradientNode)
+//                    self.addSubnode(self.typeIconNode)
+//                    self.addSubnode(self.durationNode)
+//                    self.setNeedsLayout()
+//                }
+//            }
+//
+            self.currentMediaState = (media.asset, index)
+            self.setNeedsLayout()
+        }
+        
+        self.updateSelectionState()
+        self.updateHiddenMedia()
     }
         
     func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme) {

@@ -45,7 +45,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
     
     case adminsTitle(PresentationTheme, String)
     case allAdmins(PresentationTheme, String, Bool)
-    case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int32, RenderedChannelParticipant, Bool)
+    case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int32, RenderedChannelParticipant, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -68,7 +68,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 return .index(200)
             case .allAdmins:
                 return .index(201)
-            case let .adminPeerItem(_, _, _, _, _, participant, _):
+            case let .adminPeerItem(_, _, _, _, _, participant, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -105,8 +105,8 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adminPeerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameDisplayOrder, lhsIndex, lhsParticipant, lhsChecked):
-                if case let .adminPeerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameDisplayOrder, rhsIndex, rhsParticipant, rhsChecked) = rhs {
+            case let .adminPeerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameDisplayOrder, lhsIndex, lhsParticipant, lhsIsAntiSpam, lhsChecked):
+                if case let .adminPeerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameDisplayOrder, rhsIndex, rhsParticipant, rhsIsAntiSpam, rhsChecked) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -123,6 +123,9 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsParticipant != rhsParticipant {
+                        return false
+                    }
+                    if lhsIsAntiSpam != rhsIsAntiSpam {
                         return false
                     }
                     if lhsChecked != rhsChecked {
@@ -169,9 +172,9 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                     default:
                         return false
                 }
-            case let .adminPeerItem(_, _, _, _, lhsIndex, _, _):
+            case let .adminPeerItem(_, _, _, _, lhsIndex, _, _, _):
                 switch rhs {
-                    case let .adminPeerItem(_, _, _, _, rhsIndex, _, _):
+                    case let .adminPeerItem(_, _, _, _, rhsIndex, _, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return false
@@ -198,13 +201,17 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAllAdmins(value)
                 })
-            case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, checked):
-                let peerText: String
-                switch participant.participant {
+            case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, participant, isAntiSpam, checked):
+                var peerText: String = ""
+                if isAntiSpam {
+                    peerText = strings.Group_Management_AntiSpamMagic
+                } else {
+                    switch participant.participant {
                     case .creator:
-                        peerText = strings.Channel_Management_LabelOwner
+                        peerText = strings.Channel_Management_LabelOwner.lowercased()
                     case .member:
-                        peerText = strings.ChatAdmins_AdminLabel.capitalized
+                        peerText = strings.ChatAdmins_AdminLabel.lowercased()
+                    }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: .text(peerText, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.toggleAdmin(participant.peer.id)
@@ -247,7 +254,7 @@ private struct ChatRecentActionsFilterControllerState: Equatable {
     }
 }
 
-private func channelRecentActionsFilterControllerEntries(presentationData: PresentationData, accountPeerId: PeerId, peer: Peer, state: ChatRecentActionsFilterControllerState, participants: [RenderedChannelParticipant]?) -> [ChatRecentActionsFilterEntry] {
+private func channelRecentActionsFilterControllerEntries(presentationData: PresentationData, accountPeerId: PeerId, peer: Peer, antiSpamBotId: PeerId?, state: ChatRecentActionsFilterControllerState, participants: [RenderedChannelParticipant]?) -> [ChatRecentActionsFilterEntry] {
     var isGroup = true
     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
         isGroup = false
@@ -335,7 +342,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
             } else {
                 adminSelected = true
             }
-            entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, participant, adminSelected))
+            entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, participant, participant.peer.id == antiSpamBotId, adminSelected))
             index += 1
         }
     }
@@ -353,7 +360,7 @@ public func channelRecentActionsFilterController(context: AccountContext, update
     var dismissImpl: (() -> Void)?
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
-        
+
     let actionsDisposable = DisposableSet()
     
     let arguments = ChatRecentActionsFilterControllerArguments(context: context, toggleAllActions: { value in
@@ -429,12 +436,25 @@ public func channelRecentActionsFilterController(context: AccountContext, update
     }
     actionsDisposable.add(membersDisposable)
     
+    let antiSpamBotConfiguration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    let antiSpamBotPeerPromise = Promise<RenderedChannelParticipant?>(nil)
+    if let antiSpamBotId = antiSpamBotConfiguration.antiSpamBotId {
+        antiSpamBotPeerPromise.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: antiSpamBotId))
+        |> map { peer in
+            if let peer = peer, case let .user(user) = peer {
+                return RenderedChannelParticipant(participant: .member(id: user.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: user)
+            } else {
+                return nil
+            }
+        })
+    }
+    
     var previousPeers: [RenderedChannelParticipant]?
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, statePromise.get(), adminsPromise.get() |> deliverOnMainQueue)
+    let signal = combineLatest(presentationData, statePromise.get(), adminsPromise.get(), antiSpamBotPeerPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, admins, antiSpamBot -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
@@ -456,6 +476,9 @@ public func channelRecentActionsFilterController(context: AccountContext, update
         var sortedAdmins: [RenderedChannelParticipant]?
         if let admins = admins {
             sortedAdmins = admins.filter { $0.peer.id == context.account.peerId } + admins.filter({ $0.peer.id != context.account.peerId })
+            if let antiSpamBot = antiSpamBot {
+                sortedAdmins?.insert(antiSpamBot, at: 0)
+            }
         } else {
             sortedAdmins = nil
         }
@@ -464,7 +487,7 @@ public func channelRecentActionsFilterController(context: AccountContext, update
         previousPeers = sortedAdmins
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatAdmins_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelRecentActionsFilterControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, peer: peer, state: state, participants: sortedAdmins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= sortedAdmins!.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelRecentActionsFilterControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, peer: peer, antiSpamBotId: antiSpamBotConfiguration.antiSpamBotId, state: state, participants: sortedAdmins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= sortedAdmins!.count)
         
         return (controllerState, (listState, arguments))
     }

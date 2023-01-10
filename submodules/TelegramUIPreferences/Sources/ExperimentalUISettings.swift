@@ -6,11 +6,11 @@ import SwiftSignalKit
 public struct ExperimentalUISettings: Codable, Equatable {
     public struct AccountReactionOverrides: Equatable, Codable {
         public struct Item: Equatable, Codable {
-            public var key: String
+            public var key: MessageReaction.Reaction
             public var messageId: MessageId
             public var mediaId: MediaId
             
-            public init(key: String, messageId: MessageId, mediaId: MediaId) {
+            public init(key: MessageReaction.Reaction, messageId: MessageId, mediaId: MediaId) {
                 self.key = key
                 self.messageId = messageId
                 self.mediaId = mediaId
@@ -45,6 +45,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var inlineStickers: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
+    public var inlineForums: Bool
     public var accountReactionEffectOverrides: [AccountReactionOverrides]
     public var accountStickerEffectOverrides: [AccountReactionOverrides]
     
@@ -69,6 +70,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             inlineStickers: false,
             localTranscription: true,
             enableReactionOverrides: false,
+            inlineForums: false,
             accountReactionEffectOverrides: [],
             accountStickerEffectOverrides: []
         )
@@ -94,6 +96,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         inlineStickers: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
+        inlineForums: Bool,
         accountReactionEffectOverrides: [AccountReactionOverrides],
         accountStickerEffectOverrides: [AccountReactionOverrides]
     ) {
@@ -116,6 +119,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
+        self.inlineForums = inlineForums
         self.accountReactionEffectOverrides = accountReactionEffectOverrides
         self.accountStickerEffectOverrides = accountStickerEffectOverrides
     }
@@ -142,8 +146,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 1) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
-        self.accountReactionEffectOverrides = (try container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
-        self.accountStickerEffectOverrides = (try container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
+        self.inlineForums = try container.decodeIfPresent(Bool.self, forKey: "inlineForums") ?? false
+        self.accountReactionEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
+        self.accountStickerEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -168,6 +173,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
+        try container.encode(self.inlineForums, forKey: "inlineForums")
         try container.encode(self.accountReactionEffectOverrides, forKey: "accountReactionEffectOverrides")
         try container.encode(self.accountStickerEffectOverrides, forKey: "accountStickerEffectOverrides")
     }

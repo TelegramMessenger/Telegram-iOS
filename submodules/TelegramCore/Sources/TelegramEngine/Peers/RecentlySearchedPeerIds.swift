@@ -49,7 +49,7 @@ func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearch
             }
         }
         var keys: [PostboxViewKey] = []
-        let unreadCountsKey: PostboxViewKey = .unreadCounts(items: peerIds.map(UnreadMessageCountsItem.peer))
+        let unreadCountsKey: PostboxViewKey = .unreadCounts(items: peerIds.map { UnreadMessageCountsItem.peer(id: $0, handleThreads: true) })
         keys.append(unreadCountsKey)
         keys.append(contentsOf: peerIds.map({ .peer(peerId: $0, components: .all) }))
         
@@ -90,7 +90,7 @@ func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearch
                         subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
                     }
                     
-                    result.append(RecentlySearchedPeer(peer: RenderedPeer(peerId: peerId, peers: SimpleDictionary(peerView.peers)), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary))
+                    result.append(RecentlySearchedPeer(peer: RenderedPeer(peerId: peerId, peers: SimpleDictionary(peerView.peers), associatedMedia: peerView.media), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary))
                 }
             }
             

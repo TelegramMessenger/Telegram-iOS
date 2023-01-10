@@ -41,8 +41,6 @@ extension SettingsSearchableItemIcon {
                 return PresentationResourcesSettings.watch
             case .passport:
                 return PresentationResourcesSettings.passport
-            case .wallet:
-                return PresentationResourcesSettings.wallet
             case .support:
                 return PresentationResourcesSettings.support
             case .faq:
@@ -51,6 +49,10 @@ extension SettingsSearchableItemIcon {
                 return PresentationResourcesSettings.chatFolders
             case .deleteAccount:
                 return PresentationResourcesSettings.deleteAccount
+            case .devices:
+                return PresentationResourcesSettings.devices
+            case .premium:
+                return PresentationResourcesSettings.premium
         }
     }
 }

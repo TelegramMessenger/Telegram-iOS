@@ -7,12 +7,14 @@ import MtProtoKit
 
 func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
-        return (network.request(Api.functions.help.getConfig())
-        |> retryRequest
-        |> mapToSignal { result -> Signal<Void, NoError> in
+        return (combineLatest(
+            network.request(Api.functions.help.getConfig()) |> retryRequest,
+            network.request(Api.functions.messages.getDefaultHistoryTTL()) |> retryRequest
+        )
+        |> mapToSignal { result, defaultHistoryTtl -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
-                case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, stickersFavedLimit, _, _, pinnedDialogsCountMax, pinnedInfolderCountMax, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, captionLengthMax, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion):
+                case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, stickersFavedLimit, _, _, pinnedDialogsCountMax, pinnedInfolderCountMax, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, captionLengthMax, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion, defaultReaction):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
                         for option in dcOptions {
                             switch option {
@@ -62,6 +64,29 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxPinnedChatCount: pinnedDialogsCountMax, maxArchivedPinnedChatCount: pinnedInfolderCountMax, maxGroupMemberCount: chatSizeMax, maxSupergroupMemberCount: megagroupSizeMax, maxMessageForwardBatchSize: forwardedCountMax, maxSavedGifCount: savedGifsLimit, maxRecentStickerCount: stickersRecentLimit, maxFavedStickerCount: stickersFavedLimit, maxMessageEditingInterval: editTimeLimit, maxMediaCaptionLength: captionLengthMax, canRemoveIncomingMessagesInPrivateChats: (flags & (1 << 6)) != 0, maxMessageRevokeInterval: revokeTimeLimit, maxMessageRevokeIntervalInPrivateChats: revokePmTimeLimit))
                         
                         updateSearchBotsConfiguration(transaction: transaction, configuration: SearchBotsConfiguration(imageBotUsername: imgSearchUsername, gifBotUsername: gifSearchUsername, venueBotUsername: venueSearchUsername))
+                    
+                        if let defaultReaction = defaultReaction, let reaction = MessageReaction.Reaction(apiReaction: defaultReaction) {
+                            updateReactionSettings(transaction: transaction, { settings in
+                                var settings = settings
+                                settings.quickReaction = reaction
+                                return settings
+                            })
+                        }
+                    
+                        let messageAutoremoveSeconds: Int32?
+                        switch defaultHistoryTtl {
+                        case let .defaultHistoryTTL(period):
+                            if period != 0 {
+                                messageAutoremoveSeconds = period
+                            } else {
+                                messageAutoremoveSeconds = nil
+                            }
+                        }
+                        updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
+                            var settings = settings
+                            settings.messageAutoremoveTimeout = messageAutoremoveSeconds
+                            return settings
+                        })
                     
                         return accountManager.transaction { transaction -> Signal<Void, NoError> in
                             let (primary, secondary) = getLocalization(transaction)

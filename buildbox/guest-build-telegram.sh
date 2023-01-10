@@ -101,7 +101,8 @@ python3 build-system/Make/Make.py \
     --configurationPath="$HOME/telegram-configuration" \
     --buildNumber="$BUILD_NUMBER" \
     --disableParallelSwiftmoduleGeneration \
-    --configuration="$APP_CONFIGURATION"
+    --configuration="$APP_CONFIGURATION" \
+    --apsEnvironment=production
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"

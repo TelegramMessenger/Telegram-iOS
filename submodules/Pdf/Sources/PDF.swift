@@ -12,7 +12,9 @@ public func generatePdfPreviewImage(data: Data, size: CGSize) -> UIImage? {
     guard let document = CGPDFDocument(provider) else { return nil }
     guard let firstPage = document.page(at: 1) else { return nil }
     
-    let context = DrawingContext(size: size)
+    guard let context = DrawingContext(size: size) else {
+        return nil
+    }
     context.withContext { c in
         var pageRect = firstPage.getBoxRect(.mediaBox)
         let pdfScale = 320.0 / pageRect.size.width

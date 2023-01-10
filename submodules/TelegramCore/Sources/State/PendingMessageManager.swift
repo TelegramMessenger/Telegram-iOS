@@ -96,9 +96,9 @@ private func uploadActivityTypeForMessage(_ message: Message) -> PeerInputActivi
         } else if let file = media as? TelegramMediaFile {
             if file.isInstantVideo {
                 return .uploadingInstantVideo(progress: 0)
-            } else if file.isVideo && !file.isAnimated {
+            } else if file.isVideo && !file.isAnimated && !file.isVideoEmoji && !file.isVideoSticker {
                 return .uploadingVideo(progress: 0)
-            } else if !file.isSticker && !file.isVoice && !file.isAnimated {
+            } else if !file.isSticker && !file.isCustomEmoji && !file.isVoice && !file.isAnimated {
                 return .uploadingFile(progress: 0)
             }
         }
@@ -737,7 +737,7 @@ public final class PendingMessageManager {
                 let sendMessageRequest: Signal<Api.Updates, MTRpcError>
                 if isForward {
                     if messages.contains(where: { $0.0.groupingKey != nil }) {
-                        flags |= (1 << 9)
+                        flags |= (1 << 8)
                     }
                     if hideSendersNames {
                         flags |= (1 << 11)
@@ -774,6 +774,13 @@ public final class PendingMessageManager {
                             return .complete()
                         }
                     }
+                    
+                    var topMsgId: Int32?
+                    if let threadId = messages[0].0.threadId {
+                        flags |= Int32(1 << 9)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
@@ -781,7 +788,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -798,12 +805,17 @@ public final class PendingMessageManager {
                         flags |= (1 << 13)
                     }
                     
+                    var bubbleUpEmojiOrStickersets = false
+                    
                     var singleMedias: [Api.InputSingleMedia] = []
                     for (message, content) in messages {
                         var uniqueId: Int64?
                         inner: for attribute in message.attributes {
                             if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                                 uniqueId = outgoingInfo.uniqueId
+                                if !outgoingInfo.bubbleUpEmojiOrStickersets.isEmpty {
+                                    bubbleUpEmojiOrStickersets = true
+                                }
                                 break inner
                             }
                         }
@@ -831,7 +843,17 @@ public final class PendingMessageManager {
                         }
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    if bubbleUpEmojiOrStickersets {
+                        flags |= Int32(1 << 15)
+                    }
+                    
+                    var topMsgId: Int32?
+                    if let threadId = messages[0].0.threadId {
+                        flags |= Int32(1 << 9)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                 }
                 
                 return sendMessageRequest
@@ -928,7 +950,7 @@ public final class PendingMessageManager {
             var sentAsAction = false
             for media in message.media {
                 if let media = media as? TelegramMediaAction {
-                    if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
+                    if case let .messageAutoremoveTimeoutUpdated(value, _) = media.action {
                         sentAsAction = true
                         let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
                         if updatedState != state {
@@ -1002,6 +1024,7 @@ public final class PendingMessageManager {
                 var replyMessageId: Int32?
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
+                var bubbleUpEmojiOrStickersets = false
                 
                 var flags: Int32 = 0
         
@@ -1010,6 +1033,7 @@ public final class PendingMessageManager {
                         replyMessageId = replyAttribute.messageId.id
                     } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                         uniqueId = outgoingInfo.uniqueId
+                        bubbleUpEmojiOrStickersets = !outgoingInfo.bubbleUpEmojiOrStickersets.isEmpty
                     } else if let attribute = attribute as? ForwardSourceInfoAttribute {
                         forwardSourceInfoAttribute = attribute
                     } else if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -1053,13 +1077,39 @@ public final class PendingMessageManager {
                 let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
                 switch content.content {
                     case .text:
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
+                        if bubbleUpEmojiOrStickersets {
+                            flags |= Int32(1 << 15)
+                        }
+                    
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 9)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                    
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                        if bubbleUpEmojiOrStickersets {
+                            flags |= Int32(1 << 15)
+                        }
+                    
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 9)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                        
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 9)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                    
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -1068,7 +1118,14 @@ public final class PendingMessageManager {
                         if chatContextResult.hideVia {
                             flags |= Int32(1 << 11)
                         }
-                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 9)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                    
+                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
                         sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyToMsgId: replyMessageId ?? 0, randomId: uniqueId))

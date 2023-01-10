@@ -13,6 +13,8 @@ import UniversalMediaPlayer
 import GalleryUI
 import HierarchyTrackingLayer
 import AccountContext
+import ComponentFlow
+import EmojiStatusComponent
 
 private let normalFont = avatarPlaceholderFont(size: 16.0)
 private let smallFont = avatarPlaceholderFont(size: 12.0)
@@ -25,6 +27,8 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     private let containerNode: ContextControllerSourceNode
     let avatarNode: AvatarNode
     private var videoNode: UniversalVideoNode?
+    
+    let statusView: ComponentView<Empty>
     
     private var videoContent: NativeVideoContent?
     private let playbackStartDisposable = MetaDisposable()
@@ -43,7 +47,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
-    var contextActionIsEnabled: Bool = true {
+    var contextActionIsEnabled: Bool = false {
         didSet {
             if self.contextActionIsEnabled != oldValue {
                 self.containerNode.isGestureEnabled = self.contextActionIsEnabled
@@ -53,7 +57,9 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         
     override init() {
         self.containerNode = ContextControllerSourceNode()
+        self.containerNode.isGestureEnabled = false
         self.avatarNode = AvatarNode(font: normalFont)
+        self.statusView = ComponentView()
         
         super.init()
         
@@ -81,6 +87,31 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         self.view.isOpaque = false
     }
     
+    public func setStatus(context: AccountContext, content: EmojiStatusComponent.Content) {
+        let statusSize = self.statusView.update(
+            transition: .immediate,
+            component: AnyComponent(EmojiStatusComponent(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                content: content,
+                isVisibleForAnimations: true,
+                action: nil
+            )),
+            environment: {},
+            containerSize: CGSize(width: 32.0, height: 32.0)
+        )
+        if let statusComponentView = self.statusView.view {
+            if statusComponentView.superview == nil {
+                self.containerNode.view.addSubview(statusComponentView)
+            }
+            
+            statusComponentView.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - statusSize.width) / 2.0), y: floor((self.containerNode.bounds.height - statusSize.height) / 2.0)), size: statusSize)
+        }
+        
+        self.avatarNode.isHidden = true
+    }
+    
     public func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false) {
         self.context = context
         self.avatarNode.setPeer(context: context, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: displayDimensions, storeUnrounded: storeUnrounded)
@@ -92,8 +123,8 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
                     return
                 }
                 let cachedPeerData = peerView.cachedData
-                if let cachedPeerData = cachedPeerData as? CachedUserData {
-                    if let photo = cachedPeerData.photo, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
+                if let cachedPeerData = cachedPeerData as? CachedUserData, case let .known(maybePhoto) = cachedPeerData.photo {
+                    if let photo = maybePhoto, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
                         let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
                         let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
                         let videoContent = NativeVideoContent(id: .profileVideo(videoId, "header"), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)

@@ -184,19 +184,19 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             if let _ = peer as? TelegramUser {
                                 status = .presence(presence ?? EnginePeer.Presence(status: .longTimeAgo, lastActivity: 0), dateTimeFormat)
                             } else if let group = peer as? TelegramGroup {
-                                status = .custom(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), multiline: false)
+                                status = .custom(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), multiline: false, isActive: false, icon: nil)
                             } else if let channel = peer as? TelegramChannel {
                                 if case .group = channel.info {
                                     if let participantCount = participantCount, participantCount != 0 {
-                                        status = .custom(string: strings.Conversation_StatusMembers(participantCount), multiline: false)
+                                        status = .custom(string: strings.Conversation_StatusMembers(participantCount), multiline: false, isActive: false, icon: nil)
                                     } else {
-                                        status = .custom(string: strings.Group_Status, multiline: false)
+                                        status = .custom(string: strings.Group_Status, multiline: false, isActive: false, icon: nil)
                                     }
                                 } else {
                                     if let participantCount = participantCount, participantCount != 0 {
-                                        status = .custom(string: strings.Conversation_StatusSubscribers(participantCount), multiline: false)
+                                        status = .custom(string: strings.Conversation_StatusSubscribers(participantCount), multiline: false, isActive: false, icon: nil)
                                     } else {
-                                        status = .custom(string: strings.Channel_Status, multiline: false)
+                                        status = .custom(string: strings.Channel_Status, multiline: false, isActive: false, icon: nil)
                                     }
                                 }
                             } else {
@@ -220,6 +220,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                                 contextAction(peer, node, gesture, location)
                             }
                         case .deviceContact:
+                            break
+                        case .thread:
                             break
                         }
                     }
@@ -880,12 +882,15 @@ public final class ContactListNode: ASDisplayNode {
     
     public var multipleSelection = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
+    private let isPeerEnabled: ((EnginePeer) -> Bool)?
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], isPeerEnabled: ((EnginePeer) -> Bool)? = nil, selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         self.contextAction = contextAction
         self.multipleSelection = multipleSelection
+        self.isPeerEnabled = isPeerEnabled
         
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
@@ -1067,7 +1072,13 @@ public final class ContactListNode: ASDisplayNode {
                                     }
                                 }
                                 if let mainPeer = peer.chatMainPeer {
-                                    resultPeers.append(FoundPeer(peer: mainPeer, subscribers: nil))
+                                    var matches = true
+                                    if let isPeerEnabled = isPeerEnabled {
+                                        matches = isPeerEnabled(EnginePeer(mainPeer))
+                                    }
+                                    if matches {
+                                        resultPeers.append(FoundPeer(peer: mainPeer, subscribers: nil))
+                                    }
                                 }
                             }
                             
@@ -1265,7 +1276,7 @@ public final class ContactListNode: ASDisplayNode {
                         return context.engine.data.get(EngineDataMap(
                             view.entries.compactMap { entry -> EnginePeer.Id? in
                                 switch entry {
-                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _, _, _, _):
                                     if let peer = renderedPeer.peer {
                                         if let channel = peer as? TelegramChannel, case .group = channel.info {
                                             return peer.id
@@ -1281,7 +1292,7 @@ public final class ContactListNode: ASDisplayNode {
                             var peers: [(EnginePeer, Int32)] = []
                             for entry in view.entries {
                                 switch entry {
-                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _, _, _, _):
                                     if let peer = renderedPeer.peer {
                                         if peer is TelegramGroup {
                                             peers.append((EnginePeer(peer), 0))

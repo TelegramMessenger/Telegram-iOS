@@ -20,6 +20,10 @@ swift_library(
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

@@ -44,7 +44,7 @@ private func cornerContext(_ corner: Corner) -> DrawingContext {
     if let cached = cached {
         return cached
     } else {
-        let context = DrawingContext(size: CGSize(width: CGFloat(corner.radius), height: CGFloat(corner.radius)), clear: true)
+        let context = DrawingContext(size: CGSize(width: CGFloat(corner.radius), height: CGFloat(corner.radius)), clear: true)!
         
         context.withContext { c in
             c.clear(CGRect(origin: CGPoint(), size: CGSize(width: CGFloat(corner.radius), height: CGFloat(corner.radius))))

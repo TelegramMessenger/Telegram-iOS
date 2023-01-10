@@ -17,7 +17,7 @@ final class CameraDevice {
     func configure(for session: AVCaptureSession, position: Camera.Position) {
         self.position = position
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            self.videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDuoCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
+            self.videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
         } else {
             self.videoDevice = AVCaptureDevice.devices(for: .video).filter { $0.position == position }.first
         }
@@ -61,7 +61,7 @@ final class CameraDevice {
         }
     }
     
-    var isFlashActive: Signal<Bool, NoError> {
+    /*var isFlashActive: Signal<Bool, NoError> {
         return self.videoDevicePromise.get()
         |> mapToSignal { device -> Signal<Bool, NoError> in
             return Signal { subscriber in
@@ -75,7 +75,7 @@ final class CameraDevice {
             }
             |> distinctUntilChanged
         }
-    }
+    }*/
     
     var isFlashAvailable: Signal<Bool, NoError> {
         return self.videoDevicePromise.get()

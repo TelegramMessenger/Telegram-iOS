@@ -76,21 +76,6 @@ private func cleanSuffix(_ text: String) -> String {
     return result
 }
 
-extension String {
-    func applyPatternOnNumbers(pattern: String, replacementCharacter: Character) -> String {
-        let pattern = pattern.replacingOccurrences( of: "[0-9]", with: "X", options: .regularExpression)
-        var pureNumber = self.replacingOccurrences( of: "[^0-9]", with: "", options: .regularExpression)
-        for index in 0 ..< pattern.count {
-            guard index < pureNumber.count else { return pureNumber }
-            let stringIndex = pattern.index(pattern.startIndex, offsetBy: index)
-            let patternCharacter = pattern[stringIndex]
-            guard patternCharacter != replacementCharacter else { continue }
-            pureNumber.insert(patternCharacter, at: stringIndex)
-        }
-        return pureNumber
-    }
-}
-
 public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     public let countryCodeField: TextFieldNode
     public let numberField: TextFieldNode
@@ -132,6 +117,10 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     
     private var countryNameForCode: (Int32, String)?
     
+    public var formattedCodeAndNumber: (String, String) {
+        return (self.countryCodeField.textField.text ?? "", self.numberField.textField.text ?? "")
+    }
+    
     public var codeAndNumber: (Int32?, String?, String) {
         get {
             var code: Int32?
@@ -163,6 +152,8 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     public var countryCodeTextUpdated: ((String) -> Void)?
     public var numberTextUpdated: ((String) -> Void)?
     
+    public var keyPressed: ((Int) -> Void)?
+    
     public var returnAction: (() -> Void)?
     
     private let phoneFormatter = InteractivePhoneFormatter()
@@ -174,10 +165,11 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    private var didSetupPlaceholder = false
     private func updatePlaceholder() {
         if let mask = self.mask {
             let mutableMask = NSMutableAttributedString(attributedString: mask)
-            mutableMask.replaceCharacters(in: NSRange(location: 0, length: mask.string.count), with: mask.string.replacingOccurrences(of: "X", with: "–"))
+            mutableMask.replaceCharacters(in: NSRange(location: 0, length: mask.string.count), with: mask.string.replacingOccurrences(of: "X", with: "0"))
             if let text = self.numberField.textField.text {
                 mutableMask.replaceCharacters(in: NSRange(location: 0, length: min(text.count, mask.string.count)), with: text)
             }
@@ -187,7 +179,10 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         } else {
             self.placeholderNode.attributedText = NSAttributedString(string: "")
         }
-        let _ = self.placeholderNode.updateLayout(CGSize(width: self.frame.size.width, height: CGFloat.greatestFiniteMagnitude))
+        if !self.frame.size.width.isZero {
+            self.didSetupPlaceholder = true
+            let _ = self.placeholderNode.updateLayout(CGSize(width: self.frame.size.width, height: CGFloat.greatestFiniteMagnitude))
+        }
     }
     
     private let fontSize: CGFloat
@@ -203,7 +198,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.countryCodeField.textField.returnKeyType = .next
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.countryCodeField.textField.keyboardType = .asciiCapableNumberPad
-            self.countryCodeField.textField.textContentType = .telephoneNumber
+//            self.countryCodeField.textField.textContentType = .telephoneNumber
         } else {
             self.countryCodeField.textField.keyboardType = .numberPad
         }
@@ -214,7 +209,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.numberField.textField.font = font
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.numberField.textField.keyboardType = .asciiCapableNumberPad
-            self.numberField.textField.textContentType = .telephoneNumber
+//            self.numberField.textField.textContentType = .telephoneNumber
         } else {
             self.numberField.textField.keyboardType = .numberPad
         }
@@ -241,7 +236,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     @objc private func numberTextChanged(_ textField: UITextField) {
         self.updateNumberFromTextFields()
     }
-    
+        
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if !self.enableEditing {
             return false
@@ -250,6 +245,11 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
             self.updateNumber(cleanPhoneNumber(string), tryRestoringInputPosition: false)
             return false
         }
+        
+        if string.count == 1, let num = Int(string) {
+            self.keyPressed?(num)
+        }
+        
         return true
     }
     
@@ -293,7 +293,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         if let mask = self.mask {
-            numberText = numberText.applyPatternOnNumbers(pattern: mask.string, replacementCharacter: "X")
+            numberText = formatPhoneNumberToMask(numberText, mask: mask.string)
         }
         
         var focusOnNumber = false
@@ -355,5 +355,13 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         self.updatePlaceholder()
+    }
+    
+    public override func layout() {
+        super.layout()
+        
+        if !self.didSetupPlaceholder, self.frame.width > 0.0 {
+            self.updatePlaceholder()
+        }
     }
 }

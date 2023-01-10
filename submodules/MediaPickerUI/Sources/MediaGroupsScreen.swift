@@ -283,8 +283,6 @@ public final class MediaGroupsScreen: ViewController {
         
         func updatePresentationData(_ presentationData: PresentationData) {
             self.presentationData = presentationData
-            
-            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         
         private func enqueueTransaction(_ transaction: MediaGroupsTransition) {

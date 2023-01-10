@@ -22,7 +22,7 @@ private let maxUsersDisplayedHighLimit: Int32 = 12
 private final class GroupStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
-    let openPeer: (PeerId) -> Void
+    let openPeer: (EnginePeer) -> Void
     let openPeerHistory: (PeerId) -> Void
     let openPeerAdminActions: (PeerId) -> Void
     let promotePeer: (PeerId) -> Void
@@ -33,7 +33,7 @@ private final class GroupStatsControllerArguments {
     let setAdminsPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let setInvitersPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPeer: @escaping (PeerId) -> Void, openPeerHistory: @escaping (PeerId) -> Void, openPeerAdminActions: @escaping (PeerId) -> Void, promotePeer: @escaping (PeerId) -> Void, expandTopPosters: @escaping () -> Void, expandTopAdmins: @escaping () -> Void, expandTopInviters: @escaping () -> Void, setPostersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setAdminsPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setInvitersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPeer: @escaping (EnginePeer) -> Void, openPeerHistory: @escaping (PeerId) -> Void, openPeerAdminActions: @escaping (PeerId) -> Void, promotePeer: @escaping (PeerId) -> Void, expandTopPosters: @escaping () -> Void, expandTopAdmins: @escaping () -> Void, expandTopInviters: @escaping () -> Void, setPostersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setAdminsPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setInvitersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPeer = openPeer
@@ -412,7 +412,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
-                    arguments.openPeer(peer.id)
+                    arguments.openPeer(EnginePeer(peer))
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setPostersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
@@ -443,7 +443,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
-                    arguments.openPeer(peer.id)
+                    arguments.openPeer(EnginePeer(peer))
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setAdminsPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
@@ -466,7 +466,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
-                    arguments.openPeer(peer.id)
+                    arguments.openPeer(EnginePeer(peer))
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setInvitersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
@@ -721,7 +721,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     
     let datacenterId: Int32 = statsDatacenterId ?? 0
     
-    var openPeerImpl: ((PeerId) -> Void)?
+    var openPeerImpl: ((EnginePeer) -> Void)?
     var openPeerHistoryImpl: ((PeerId) -> Void)?
     var openPeerAdminActionsImpl: ((PeerId) -> Void)?
     var promotePeerImpl: ((PeerId) -> Void)?
@@ -779,8 +779,8 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     
     let arguments = GroupStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return statsContext.loadDetailedGraph(graph, x: x)
-    }, openPeer: { peerId in
-        openPeerImpl?(peerId)
+    }, openPeer: { peer in
+        openPeerImpl?(peer)
     }, openPeerHistory: { peerId in
         openPeerHistoryImpl?(peerId)
     }, openPeerAdminActions: { peerId in
@@ -864,9 +864,9 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }
-    openPeerImpl = { [weak controller] peerId in
+    openPeerImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController {
-            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+            let _ = (context.account.postbox.loadedPeerWithId(peer.id)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
                 if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
@@ -877,10 +877,15 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     }
     openPeerHistoryImpl = { [weak controller] participantPeerId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            let _ = (context.account.postbox.loadedPeerWithId(participantPeerId)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { peer in
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: (.member(peer), ""), animated: true))
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: participantPeerId)
+            )
+            |> deliverOnMainQueue).start(next: { chatPeer, peer in
+                guard let chatPeer, let peer else {
+                    return
+                }
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(chatPeer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: (.member(peer._asPeer()), ""), animated: true))
             })
         }
     }

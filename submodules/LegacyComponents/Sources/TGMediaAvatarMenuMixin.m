@@ -26,6 +26,7 @@
     bool _saveEditedPhotos;
     bool _signup;
     bool _isVideo;
+    bool _forum;
 }
 @end
 
@@ -38,10 +39,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
+    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false forum: false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum
 {
     self = [super init];
     if (self != nil)
@@ -56,6 +57,7 @@
         _personalPhoto = personalPhoto;
         _isVideo = isVideo;
         _signup = signup;
+        _forum = forum;
     }
     return self;
 }
@@ -91,6 +93,7 @@
     NSMutableArray *itemViews = [[NSMutableArray alloc] init];
     
     TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:_signup ? TGMediaAssetPhotoType : TGMediaAssetAnyType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
+    carouselItem.forum = _forum;
     carouselItem.stickersContext = _stickersContext;
     carouselItem.parentController = _parentController;
     carouselItem.openEditor = true;
@@ -228,41 +231,6 @@
     [controller setItemViews:itemViews];
     [controller presentInViewController:_parentController sourceView:nil animated:true];
     return controller;
-}
-
-- (TGMenuSheetController *)_presentLegacyAvatarMenu
-{
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    
-    if ([PGCamera cameraAvailable]) {
-        [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.TakePhoto") action:@"camera"]];
-    }
-    
-    [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.ChoosePhoto") action:@"choosePhoto"]];
-    
-    if (_hasDeleteButton)
-    {
-        [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"GroupInfo.SetGroupPhotoDelete") action:@"delete" type:LegacyComponentsActionSheetActionTypeDestructive]];
-    }
-    
-    [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.Cancel") action:@"cancel" type:LegacyComponentsActionSheetActionTypeCancel]];
-    
-    __weak TGMediaAvatarMenuMixin *weakSelf = self;
-    [_context presentActionSheet:actions view:_parentController.view sourceRect:self.sourceRect completion:^(LegacyComponentsActionSheetAction *actionData) {
-        __strong TGMediaAvatarMenuMixin *controller = weakSelf;
-        if (controller != nil) {
-            NSString *action = actionData.action;
-            if ([action isEqualToString:@"camera"])
-                [controller _displayCameraWithView:nil menuController:nil];
-            else if ([action isEqualToString:@"choosePhoto"])
-                [controller _displayMediaPicker];
-            else if ([action isEqualToString:@"delete"])
-                [controller _performDelete];
-            else if ([action isEqualToString:@"cancel"] && controller.didDismiss != nil)
-                controller.didDismiss();
-        }
-    }];
-    return nil;
 }
 
 - (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController

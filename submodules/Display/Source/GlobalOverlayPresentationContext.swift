@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
+public func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
     guard let window = view.window else {
         return false
     }

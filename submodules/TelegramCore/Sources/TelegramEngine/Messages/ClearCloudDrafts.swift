@@ -9,11 +9,15 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
     |> retryRequest
     |> mapToSignal { updates -> Signal<Void, NoError> in
         return postbox.transaction { transaction -> Signal<Void, NoError> in
-            var peerIds = Set<PeerId>()
+            struct Key: Hashable {
+                var peerId: PeerId
+                var threadId: Int64?
+            }
+            var keys = Set<Key>()
             switch updates {
                 case let .updates(updates, users, chats, _, _):
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     for chat in chats {
                         if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                             peers.append(groupOrChannel)
@@ -22,14 +26,16 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                     for user in users {
                         let telegramUser = TelegramUser(user: user)
                         peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
+                        peerPresences[telegramUser.id] = user
                     }
                     for update in updates {
                         switch update {
-                            case let .updateDraftMessage(peer, _):
-                                peerIds.insert(peer.peerId)
+                            case let .updateDraftMessage(_, peer, topMsgId, _):
+                                var threadId: Int64?
+                                if let topMsgId = topMsgId {
+                                    threadId = Int64(topMsgId)
+                                }
+                                keys.insert(Key(peerId: peer.peerId, threadId: threadId))
                             default:
                                 break
                         }
@@ -40,11 +46,17 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                     
                     updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     var signals: [Signal<Void, NoError>] = []
-                    for peerId in peerIds {
-                        _internal_updateChatInputState(transaction: transaction, peerId: peerId, inputState: nil)
+                    for key in keys {
+                        _internal_updateChatInputState(transaction: transaction, peerId: key.peerId, threadId: key.threadId,  inputState: nil)
                         
-                        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                            signals.append(network.request(Api.functions.messages.saveDraft(flags: 0, replyToMsgId: nil, peer: inputPeer, message: "", entities: nil))
+                        if let peer = transaction.getPeer(key.peerId), let inputPeer = apiInputPeer(peer) {
+                            var flags: Int32 = 0
+                            var topMsgId: Int32?
+                            if let threadId = key.threadId {
+                                flags |= (1 << 2)
+                                topMsgId = Int32(clamping: threadId)
+                            }
+                            signals.append(network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: nil, topMsgId: topMsgId, peer: inputPeer, message: "", entities: nil))
                             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                 return .single(.boolFalse)
                             }

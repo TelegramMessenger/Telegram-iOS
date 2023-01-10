@@ -10,6 +10,9 @@ build --per_file_copt="submodules/LottieMeshSwift/LottieMeshBinding/Sources/.*\.
 
 build --swiftcopt=-whole-module-optimization
 
+build --per_file_copt=".*\.m$","@-fno-objc-msgsend-selector-stubs"
+build --per_file_copt=".*\.mm$","@-fno-objc-msgsend-selector-stubs"
+
 # Uncomment for address sanitizer
 #build --swiftcopt=-sanitize=address
 #build --copt=-fsanitize=address
@@ -32,5 +35,6 @@ build --spawn_strategy=standalone
 build --strategy=SwiftCompile=standalone
 build --define RULES_SWIFT_BUILD_DUMMY_WORKER=1
 
+#build --linkopt=-fuse-ld=/Users/ali/Downloads/ld64.lld
 #build --linkopt=-fuse-ld=/Users/ali/build/zld/build/Build/Products/Release/zld
 #build --linkopt=-Wl,-zld_original_ld_path,__BAZEL_XCODE_DEVELOPER_DIR__/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld

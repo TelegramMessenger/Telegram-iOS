@@ -545,11 +545,11 @@ private final class MultipartFetchManager {
             }
         })
         
-        self.markSpeedRecord()
+        /*self.markSpeedRecord()
         self.speedTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
             self?.markSpeedRecord()
         }, queue: self.queue)
-        self.speedTimer?.start()
+        self.speedTimer?.start()*/
     }
     
     deinit {
@@ -715,6 +715,7 @@ private final class MultipartFetchManager {
             }
             
             let part = self.source.request(offset: downloadRange.lowerBound, limit: downloadRange.upperBound - downloadRange.lowerBound, tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
+            //|> delay(5.0, queue: self.queue)
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = (Int64(downloadRange.count), partDisposable)
@@ -848,7 +849,12 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
                             } else {
                                 return .revalidate
                             }
-                        case .messageAuthorAvatar:
+                        case let .messageAuthorAvatar(message, _):
+                            if let peer = message.author {
+                                if let location =                         resource.apiInputLocation(peerReference: peer) {
+                                    return .location(location)
+                                }
+                            }
                             return .revalidate
                         default:
                             return .none

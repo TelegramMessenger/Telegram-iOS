@@ -496,7 +496,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
     open func animateRevealOptionsFill(completion: (() -> Void)? = nil) {
         if let validLayout = self.validLayout {
             self.layer.allowsGroupOpacity = true
-            self.updateRevealOffsetInternal(offset: -validLayout.0.width - 74.0, transition: .animated(duration: 0.2, curve: .spring), completion: {
+            self.updateRevealOffsetInternal(offset: -validLayout.0.width - 74.0, transition: .animated(duration: 0.3, curve: .spring), completion: {
                 self.layer.allowsGroupOpacity = false
                 completion?()
             })

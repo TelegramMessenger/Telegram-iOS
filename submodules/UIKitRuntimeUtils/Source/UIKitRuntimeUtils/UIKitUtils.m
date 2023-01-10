@@ -169,7 +169,7 @@ void applySmoothRoundedCornersImpl(CALayer * _Nonnull layer) {
     }
 }
 
-UIView<UIKitPortalViewProtocol> * _Nullable makePortalView() {
+UIView<UIKitPortalViewProtocol> * _Nullable makePortalView(bool matchPosition) {
     if (@available(iOS 12.0, *)) {
         static Class portalViewClass = nil;
         static dispatch_once_t onceToken;
@@ -187,10 +187,12 @@ UIView<UIKitPortalViewProtocol> * _Nullable makePortalView() {
         if (@available(iOS 13.0, *)) {
             view.forwardsClientHitTestingToSourceView = false;
         }
-        view.matchesPosition = true;
-        view.matchesTransform = true;
+        view.matchesPosition = matchPosition;
+        view.matchesTransform = matchPosition;
         view.matchesAlpha = false;
-        view.allowsHitTesting = false;
+        if (@available(iOS 13.0, *)) {
+            view.allowsHitTesting = false;
+        }
         
         return view;
     } else {

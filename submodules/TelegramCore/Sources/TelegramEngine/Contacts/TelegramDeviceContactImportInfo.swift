@@ -53,7 +53,7 @@ func _internal_deviceContactsImportedByCount(postbox: Postbox, contacts: [(Strin
         for (id, numbers) in contacts {
             var maxCount: Int32 = 0
             for number in numbers {
-                if let value = transaction.getDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(number).key) as? TelegramDeviceContactImportedData, case let .imported(_, importedByCount) = value {
+                if let value = transaction.getDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(number).key) as? TelegramDeviceContactImportedData, case let .imported(_, importedByCount, _) = value {
                     maxCount = max(maxCount, importedByCount)
                 }
             }

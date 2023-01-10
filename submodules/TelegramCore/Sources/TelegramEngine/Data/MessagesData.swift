@@ -20,14 +20,22 @@ public extension EngineTotalReadCounters {
 }
 
 public struct EnginePeerReadCounters: Equatable {
-    fileprivate let state: CombinedPeerReadState?
+    fileprivate var state: CombinedPeerReadState?
+    public var isMuted: Bool
 
-    public init(state: CombinedPeerReadState?) {
+    public init(state: CombinedPeerReadState?, isMuted: Bool) {
         self.state = state
+        self.isMuted = isMuted
+    }
+    
+    public init(state: ChatListViewReadState?) {
+        self.state = state?.state
+        self.isMuted = state?.isMuted ?? false
     }
 
     public init() {
         self.state = CombinedPeerReadState(states: [])
+        self.isMuted = false
     }
 
     public var count: Int32 {
@@ -50,6 +58,23 @@ public struct EnginePeerReadCounters: Equatable {
         }
         return state.isUnread
     }
+    
+    public var hasEverRead: Bool {
+        guard let state = self.state else {
+            return false
+        }
+        for (_, state) in state.states {
+            switch state {
+            case let .idBased(maxIncomingReadId, _, _, _, _):
+                if maxIncomingReadId != 0 {
+                    return true
+                }
+            case .indexBased:
+                return true
+            }
+        }
+        return false
+    }
 
     public func isOutgoingMessageIndexRead(_ index: EngineMessage.Index) -> Bool {
         guard let state = self.state else {
@@ -68,7 +93,7 @@ public struct EnginePeerReadCounters: Equatable {
 
 public extension EnginePeerReadCounters {
     init(incomingReadId: EngineMessage.Id.Id, outgoingReadId: EngineMessage.Id.Id, count: Int32, markedUnread: Bool) {
-        self.init(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: incomingReadId, maxOutgoingReadId: outgoingReadId, maxKnownId: max(incomingReadId, outgoingReadId), count: count, markedUnread: markedUnread))]))
+        self.init(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: incomingReadId, maxOutgoingReadId: outgoingReadId, maxKnownId: max(incomingReadId, outgoingReadId), count: count, markedUnread: markedUnread))]), isMuted: false)
     }
     
     func _asReadCounters() -> CombinedPeerReadState? {
@@ -161,7 +186,7 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .combinedReadState(peerId: self.id)
+                return .combinedReadState(peerId: self.id, handleThreads: true)
             }
 
             public init(id: EnginePeer.Id) {
@@ -173,7 +198,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
 
-                return EnginePeerReadCounters(state: view.state)
+                return EnginePeerReadCounters(state: view.state, isMuted: false)
             }
         }
 
@@ -186,7 +211,7 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .unreadCounts(items: [.peer(self.id)])
+                return .unreadCounts(items: [.peer(id: self.id, handleThreads: true)])
             }
 
             public init(id: EnginePeer.Id) {
@@ -198,7 +223,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
 
-                return Int(view.count(for: .peer(self.id)) ?? 0)
+                return Int(view.count(for: .peer(id: self.id, handleThreads: true)) ?? 0)
             }
         }
 
@@ -243,7 +268,7 @@ public extension TelegramEngine.EngineData.Item {
                 guard let view = view as? ChatListIndexView else {
                     preconditionFailure()
                 }
-                return view.chatListIndex
+                return view.chatListIndex.flatMap(EngineChatList.Item.Index.chatList)
             }
         }
         
@@ -275,23 +300,26 @@ public extension TelegramEngine.EngineData.Item {
             public struct ItemKey: Hashable {
                 public var peerId: EnginePeer.Id
                 public var tag: MessageTags
+                public var threadId: Int64?
             }
             
             public typealias Result = Int?
             
             fileprivate var peerId: EnginePeer.Id
             fileprivate var tag: MessageTags
+            fileprivate var threadId: Int64?
             public var mapKey: ItemKey {
-                return ItemKey(peerId: self.peerId, tag: self.tag)
+                return ItemKey(peerId: self.peerId, tag: self.tag, threadId: self.threadId)
             }
             
-            public init(peerId: EnginePeer.Id, tag: MessageTags) {
+            public init(peerId: EnginePeer.Id, threadId: Int64?, tag: MessageTags) {
                 self.peerId = peerId
+                self.threadId = threadId
                 self.tag = tag
             }
 
             var key: PostboxViewKey {
-                return .historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
+                return .historyTagSummaryView(tag: self.tag, peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud)
             }
 
             func extract(view: PostboxView) -> Result {

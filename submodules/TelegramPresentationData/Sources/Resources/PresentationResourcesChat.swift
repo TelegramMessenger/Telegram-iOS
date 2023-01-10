@@ -45,15 +45,19 @@ private func generateActionPhotoBackground(fillColor: UIColor, strokeColor: UICo
     })
 }
 
-private func generateInputPanelButtonBackgroundImage(fillColor: UIColor, strokeColor: UIColor) -> UIImage? {
-    let radius: CGFloat = 5.0
-    let shadowSize: CGFloat = 1.0
-    return generateImage(CGSize(width: radius * 2.0, height: radius * 2.0 + shadowSize), contextGenerator: { size, context in
+private func generateInputPanelButtonStrokeImage(color: UIColor, offset: CGFloat) -> UIImage? {
+    let radius: CGFloat = 4.0
+    return generateImage(CGSize(width: radius * 2.0 + 1.0, height: radius * 2.0 + 1.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(strokeColor.cgColor)
-        context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: radius * 2.0, height: radius * 2.0))
-        context.setFillColor(fillColor.cgColor)
-        context.fillEllipse(in: CGRect(x: 0.0, y: shadowSize, width: radius * 2.0, height: radius * 2.0))
+        
+        var path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width, height: size.height)), cornerRadius: radius)
+        context.addPath(path.cgPath)
+        context.setFillColor(color.cgColor)
+        context.fillPath()
+        path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize(width: size.width, height: size.height)), cornerRadius: radius)
+        context.setBlendMode(.clear)
+        context.addPath(path.cgPath)
+        context.fillPath()
     })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
 }
 
@@ -72,6 +76,12 @@ public struct PresentationResourcesChat {
                 let _ = try? drawSvgPath(context, path: "M4.5,0.600000024 C5.88071187,0.600000024 7,1.88484952 7,3.46979169 L7,7.39687502 C7,8.9818172 5.88071187,10.2666667 4.5,10.2666667 C3.11928813,10.2666667 2,8.9818172 2,7.39687502 L2,3.46979169 C2,1.88484952 3.11928813,0.600000024 4.5,0.600000024 S ")
                 let _ = try? drawSvgPath(context, path: "M1.32,5.65999985 L7.68,5.65999985 C8.40901587,5.65999985 9,6.25098398 9,6.97999985 L9,10.6733332 C9,11.4023491 8.40901587,11.9933332 7.68,11.9933332 L1.32,11.9933332 C0.59098413,11.9933332 1.11022302e-16,11.4023491 0,10.6733332 L2.22044605e-16,6.97999985 C1.11022302e-16,6.25098398 0.59098413,5.65999985 1.32,5.65999985 Z ")
             })
+        })
+    }
+    
+    public static func chatPanelLockIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatPanelLockIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.rootController.navigationBar.controlColor)
         })
     }
     
@@ -113,6 +123,28 @@ public struct PresentationResourcesChat {
     public static func chatBubbleVerticalLineOutgoingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineOutgoingImage.rawValue, { theme in
             return generateLineImage(color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleArrowImage(color: UIColor) -> UIImage? {
+        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: color)
+    }
+    
+    public static func chatBubbleArrowFreeImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleArrowFreeImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: UIColor(white: 1.0, alpha: 0.3))
+        })
+    }
+    
+    public static func chatBubbleArrowIncomingImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleArrowIncomingImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: theme.chat.message.incoming.accentTextColor.withAlphaComponent(0.3))
+        })
+    }
+    
+    public static func chatBubbleArrowOutgoingImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleArrowOutgoingImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: theme.chat.message.outgoing.accentTextColor.withAlphaComponent(0.3))
         })
     }
     
@@ -180,7 +212,7 @@ public struct PresentationResourcesChat {
             })?.stretchableImage(withLeftCapWidth: 1, topCapHeight: 4)
         })
     }
-        
+    
     public static func chatInfoItemBackgroundImageWithoutWallpaper(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInfoItemBackgroundImageWithoutWallpaper.rawValue, { theme in
             return messageSingleBubbleLikeImage(fillColor: theme.chat.message.incoming.bubble.withoutWallpaper.fill[0], strokeColor: theme.chat.message.incoming.bubble.withoutWallpaper.stroke)
@@ -312,7 +344,7 @@ public struct PresentationResourcesChat {
                     ]
                     var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
                     let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
-
+                    
                     context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
                 }
             })
@@ -377,15 +409,15 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatInputButtonPanelButtonImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonImage.rawValue, { theme in
-            return generateInputPanelButtonBackgroundImage(fillColor: theme.chat.inputButtonPanel.buttonFillColor, strokeColor: theme.chat.inputButtonPanel.buttonStrokeColor)
+    public static func chatInputButtonPanelButtonHighlightImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonHighlightImage.rawValue, { theme in
+            return generateInputPanelButtonStrokeImage(color: theme.chat.inputButtonPanel.buttonHighlightColor, offset: -1.0)
         })
     }
     
-    public static func chatInputButtonPanelButtonHighlightedImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonHighlightedImage.rawValue, { theme in
-            return generateInputPanelButtonBackgroundImage(fillColor: theme.chat.inputButtonPanel.buttonHighlightedFillColor, strokeColor: theme.chat.inputButtonPanel.buttonHighlightedStrokeColor)
+    public static func chatInputButtonPanelButtonShadowImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonShadowImage.rawValue, { theme in
+            return generateInputPanelButtonStrokeImage(color: theme.chat.inputButtonPanel.buttonStrokeColor, offset: 1.0)
         })
     }
     
@@ -396,7 +428,7 @@ public struct PresentationResourcesChat {
             let context = UIGraphicsGetCurrentContext()!
             context.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
             context.fill(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
-           
+            
             context.setBlendMode(.clear)
             context.setFillColor(UIColor.clear.cgColor)
             context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
@@ -1021,7 +1053,7 @@ public struct PresentationResourcesChat {
             })
         })
     }
-        
+    
     public static func chatBubbleFileCloudFetchMediaIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleFileCloudFetchMediaIcon.rawValue, { theme in
             guard let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.chat.message.mediaOverlayControlColors.foregroundColor) else {
@@ -1215,13 +1247,13 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FreeRepliesIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
         })
     }
-
+    
     public static func chatFreeNavigateButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
         return theme.image(PresentationResourceKey.chatFreeNavigateButtonIcon.rawValue, { _ in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
         })
     }
-
+    
     public static func chatFreeShareButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
         return theme.image(PresentationResourceKey.chatFreeShareButtonIcon.rawValue, { _ in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ShareIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
@@ -1285,6 +1317,30 @@ public struct PresentationResourcesChat {
     public static func chatEntityKeyboardLock(_ theme: PresentationTheme, color: UIColor) -> UIImage? {
         return theme.image(PresentationResourceParameterKey.chatEntityKeyboardLock(color: color.argb), { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelSectionLockIcon"), color: color)
+        })
+    }
+
+    public static func chatGeneralThreadIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/GeneralIcon"), color: theme.rootController.navigationBar.controlColor)
+        })
+    }
+    
+    public static func chatGeneralThreadIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.incoming.accentTextColor)
+        })
+    }
+    
+    public static func chatGeneralThreadOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatGeneralThreadFreeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadFreeIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.mediaOverlayControlColors.foregroundColor)
         })
     }
 }

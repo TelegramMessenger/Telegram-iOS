@@ -424,6 +424,11 @@ extension CoreAnimationLayer: RootAnimationLayer {
     LottieLogger.shared.assertionFailure("`AnimationKeypath`s are currently unsupported")
     return nil
   }
+    
+    func allLayers(for keypath: AnimationKeypath) -> [CALayer] {
+        LottieLogger.shared.assertionFailure("`AnimationKeypath`s are currently unsupported")
+        return []
+    }
 
   func animatorNodes(for _: AnimationKeypath) -> [AnimatorNode]? {
     LottieLogger.shared.assertionFailure("`AnimatorNode`s are not used in this rendering implementation")

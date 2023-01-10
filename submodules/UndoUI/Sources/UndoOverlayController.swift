@@ -22,7 +22,7 @@ public enum UndoOverlayContent {
     case chatRemovedFromFolder(chatTitle: String, folderTitle: String)
     case messagesUnpinned(title: String, text: String, undo: Bool, isHidden: Bool)
     case setProximityAlert(title: String, text: String, cancelled: Bool)
-    case invitedToVoiceChat(context: AccountContext, peer: EnginePeer, text: String)
+    case invitedToVoiceChat(context: AccountContext, peer: EnginePeer, text: String, action: String?)
     case linkCopied(text: String)
     case banned(text: String)
     case importedMessage(text: String)
@@ -39,9 +39,10 @@ public enum UndoOverlayContent {
     case mediaSaved(text: String)
     case paymentSent(currencyValue: String, itemTitle: String)
     case inviteRequestSent(title: String, text: String)
-    case image(image: UIImage, text: String)
+    case image(image: UIImage, title: String?, text: String, undo: Bool)
     case notificationSoundAdded(title: String, text: String, action: (() -> Void)?)
-    case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String)
+    case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String, customUndoText: String?)
+    case peers(context: AccountContext, peers: [EnginePeer], title: String?, text: String, customUndoText: String?)
 }
 
 public enum UndoOverlayAction {
@@ -51,6 +52,11 @@ public enum UndoOverlayAction {
 }
 
 public final class UndoOverlayController: ViewController {
+    public enum Position {
+        case top
+        case bottom
+    }
+    
     private let presentationData: PresentationData
     public var content: UndoOverlayContent {
         didSet {
@@ -58,6 +64,7 @@ public final class UndoOverlayController: ViewController {
         }
     }
     private let elevatedLayout: Bool
+    private let position: Position
     private let animateInAsReplacement: Bool
     private var action: (UndoOverlayAction) -> Bool
     
@@ -66,10 +73,11 @@ public final class UndoOverlayController: ViewController {
     
     public var keepOnParentDismissal = false
     
-    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
+    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData
         self.content = content
         self.elevatedLayout = elevatedLayout
+        self.position = position
         self.animateInAsReplacement = animateInAsReplacement
         self.action = action
         
@@ -83,7 +91,7 @@ public final class UndoOverlayController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, action: { [weak self] value in
+        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, action: { [weak self] value in
             return self?.action(value) ?? false
         }, dismiss: { [weak self] in
             self?.dismiss()

@@ -85,7 +85,11 @@ private func actionForPeer(peer: Peer, interfaceState: ChatPresentationInterface
                         if channel.flags.contains(.requestToJoin) {
                             return .applyToJoin
                         } else {
-                            return .joinGroup
+                            if channel.flags.contains(.isForum) {
+                                return .join
+                            } else {
+                                return .joinGroup
+                            }
                         }
                     } else {
                         return .join
@@ -252,7 +256,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             break
         case .muteNotifications, .unmuteNotifications:
             if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
-                self.actionDisposable.set(context.engine.peers.togglePeerMuted(peerId: peer.id).start())
+                self.actionDisposable.set(context.engine.peers.togglePeerMuted(peerId: peer.id, threadId: nil).start())
             }
         case .hidePinnedMessages, .unpinMessages:
             self.interfaceInteraction?.unpinAllMessages()

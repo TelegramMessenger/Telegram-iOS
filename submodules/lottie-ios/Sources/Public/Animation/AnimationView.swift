@@ -659,6 +659,10 @@ final public class AnimationView: AnimationViewBase {
       sublayer.addSublayer(subViewLayer)
     }
   }
+    
+    public func allLayers(forKeypath keypath: AnimationKeypath) -> [CALayer] {
+        return animationLayer?.allLayers(for: keypath) ?? []
+    }
 
   /// Converts a CGRect from the AnimationView's coordinate space into the
   /// coordinate space of the layer found at Keypath.

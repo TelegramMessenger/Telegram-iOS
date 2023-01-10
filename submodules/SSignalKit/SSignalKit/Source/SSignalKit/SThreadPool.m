@@ -1,6 +1,6 @@
 #import "SThreadPool.h"
 
-#import <libkern/OSAtomic.h>
+#import <os/lock.h>
 #import <pthread.h>
 #import "SQueue.h"
 

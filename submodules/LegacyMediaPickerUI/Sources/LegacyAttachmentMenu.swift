@@ -58,7 +58,7 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -85,7 +85,16 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let recipientName: String
+        if let threadTitle {
+            recipientName = threadTitle
+        } else {
+            if peer.id == context.account.peerId {
+                recipientName = presentationData.strings.DialogList_SavedMessages
+            } else {
+                recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            }
+        }
         
         let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
         legacyController.blocksBackgroundWhenInOverlay = true
@@ -123,11 +132,22 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
     })
 }
     
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitle: String?, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
     let presentationData = updatedPresentationData.initial
+    let recipientName: String
+    if let threadTitle {
+        recipientName = threadTitle
+    } else {
+        if peer.id == context.account.peerId {
+            recipientName = presentationData.strings.DialogList_SavedMessages
+        } else {
+            recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        }
+    }
+    
     let actionSheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
     let fontSize = floor(actionSheetTheme.baseFontSize * 20.0 / 17.0)
     
@@ -187,7 +207,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false, selectionLimit: selectionLimit)!
         carouselItemView = carouselItem
         carouselItem.stickersContext = paintStickersContext
-        carouselItem.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        carouselItem.recipientName = recipientName
         var openedCamera = false
         controller.willDismiss = { [weak carouselItem] _ in
             if let carouselItem = carouselItem, !openedCamera {
@@ -444,78 +464,4 @@ public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme, forceDark: Bo
         sheetTheme = theme.actionSheet
     }
     return TGMenuSheetPallete(dark: forceDark || theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
-}
-
-public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), images: [UIImage], presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
-    let defaultVideoPreset = defaultVideoPresetForContext(context)
-    UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
-    
-    let presentationData = updatedPresentationData.initial
-    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: initialLayout)
-    legacyController.statusBar.statusBarStyle = .Ignore
-    legacyController.controllerLoaded = { [weak legacyController] in
-        legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
-    }
-    
-    let emptyController = LegacyEmptyController(context: legacyController.context)!
-    let navigationController = makeLegacyNavigationController(rootController: emptyController)
-    navigationController.setNavigationBarHidden(true, animated: false)
-    legacyController.bind(controller: navigationController)
-    
-    var hasTimer = false
-    var hasSilentPosting = false
-    if peer.id != context.account.peerId {
-        if peer is TelegramUser {
-            hasTimer = true
-        }
-        hasSilentPosting = true
-    }
-    let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-    
-    legacyController.enableSizeClassSignal = true
-    
-    let paintStickersContext = LegacyPaintStickersContext(context: context)
-    paintStickersContext.captionPanelView = {
-        return getCaptionPanelView()
-    }
-    paintStickersContext.presentStickersController = { completion in
-        return presentStickers({ file, animated, view, rect in
-            let coder = PostboxEncoder()
-            coder.encodeRootObject(file)
-            completion?(coder.makeData(), animated, view, rect)
-        })
-    }
-
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, allowGrouping: allowGrouping, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, stickersContext: paintStickersContext, presentScheduleController: { done in
-        presentSchedulePicker { time in
-            done?(time)
-        }
-    }, presentTimerController: { done in
-        presentTimerPicker { time in
-            done?(time)
-        }
-    }, completed: { selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
-        let nativeGenerator = legacyAssetPickerItemGenerator()
-        let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: { _1, _2, _3 in
-            nativeGenerator(_1, _2, _3, nil)
-        })
-        sendMessagesWithSignals(signals, silentPosting, scheduleTime)
-    }, dismissed: { [weak legacyController] in
-        legacyController?.dismiss()
-    }, sourceView: emptyController.view, sourceRect: nil)!
-    controller.customRemoveFromParentViewController = { [weak legacyController] in
-        legacyController?.dismiss()
-    }
-    
-    let presentationDisposable = updatedPresentationData.signal.start(next: { [weak legacyController] presentationData in
-        if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
-            controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme, forceDark: false)
-        }
-    })
-    legacyController.disposables.add(presentationDisposable)
-    
-    present(legacyController, nil)
-    controller.present(in: emptyController, sourceView: nil, animated: true)
-    
-    return legacyController
 }

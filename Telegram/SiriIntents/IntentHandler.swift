@@ -116,7 +116,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let logsPath = rootPath + "/logs/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
-        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        setupSharedLogger(rootPath: logsPath, path: logsPath)
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
@@ -790,7 +790,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
-                        if let username = peer.username, !username.isEmpty {
+                        if let username = peer.addressName, !username.isEmpty {
                             accountTitle = "@\(username)"
                         } else {
                             accountTitle = peer.debugDisplayTitle
@@ -963,7 +963,7 @@ private final class WidgetIntentHandler {
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
-                        if let username = peer.username, !username.isEmpty {
+                        if let username = peer.addressName, !username.isEmpty {
                             accountTitle = "@\(username)"
                         } else {
                             accountTitle = peer.debugDisplayTitle
@@ -1129,12 +1129,21 @@ class AvatarsIntentHandler: NSObject, SelectAvatarFriendsIntentHandling {
     }
 }
 
-private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+enum AvatarClipStyle {
+    case round
+    case roundedRect
+}
+private func avatarRoundImage(size: CGSize, source: UIImage, style: AvatarClipStyle) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     let context = UIGraphicsGetCurrentContext()
     
     context?.beginPath()
-    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    switch style {
+    case .round:
+        context?.addEllipse(in: CGRect(origin: .zero, size: size))
+    case .roundedRect:
+        context?.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: size.width * 0.25).cgPath)
+    }
     context?.clip()
     
     source.draw(in: CGRect(origin: CGPoint(), size: size))
@@ -1214,8 +1223,8 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
     return image
 }
 
-private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize) -> UIImage {
-    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize, style: AvatarClipStyle) -> UIImage {
+    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image, style: style) {
         return roundImage
     } else {
         return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
@@ -1297,6 +1306,11 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
         autoreleasepool {
             var profileImage: INImage?
             
+            var isForum = false
+            if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+                isForum = true
+            }
+            
             if peer.id == accountPeerId {
                 let cachedPath = mediaBox.cachedRepresentationPathForId("savedMessagesAvatar50x50", representationId: "intents.png", keepDuration: .shortLived)
                 if let _ = fileSize(cachedPath) {
@@ -1325,7 +1339,7 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
                     } catch {
                     }
                 } else {
-                    let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                    let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), style: isForum ? .roundedRect : .round)
                     if let data = image.pngData() {
                         let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
                     }
@@ -1345,7 +1359,7 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
                     } catch {
                     }
                 } else {
-                    let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+                    let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), style: isForum ? .roundedRect : .round)
                     if let data = image.pngData() {
                         let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
                     }

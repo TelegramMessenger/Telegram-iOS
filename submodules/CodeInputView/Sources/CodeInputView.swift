@@ -2,23 +2,30 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import PhoneNumberFormat
 
 public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     public struct Theme: Equatable {
         public var inactiveBorder: UInt32
         public var activeBorder: UInt32
+        public var succeedBorder: UInt32
+        public var failedBorder: UInt32
         public var foreground: UInt32
         public var isDark: Bool
         
         public init(
             inactiveBorder: UInt32,
             activeBorder: UInt32,
+            succeedBorder: UInt32,
+            failedBorder: UInt32,
             foreground: UInt32,
             isDark: Bool
         ) {
             self.inactiveBorder = inactiveBorder
             self.activeBorder = activeBorder
+            self.succeedBorder = succeedBorder
+            self.failedBorder = failedBorder
             self.foreground = foreground
             self.isDark = isDark
         }
@@ -48,40 +55,49 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             fatalError("init(coder:) has not been implemented")
         }
         
+        override func didLoad() {
+            super.didLoad()
+            
+            self.textNode.layer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
+        }
+        
         func update(borderColor: UInt32, isHighlighted: Bool) {
             if self.borderColorValue != borderColor {
                 self.borderColorValue = borderColor
                 
                 let previousColor = self.backgroundView.layer.borderColor
-                self.backgroundView.layer.cornerRadius = 5.0
                 self.backgroundView.layer.borderColor = UIColor(argb: borderColor).cgColor
-                self.backgroundView.layer.borderWidth = 1.0
+                self.backgroundView.layer.borderWidth = 1.0 + UIScreenPixel
                 if let previousColor = previousColor {
                     self.backgroundView.layer.animate(from: previousColor, to: UIColor(argb: borderColor).cgColor, keyPath: "borderColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15)
                 }
             }
         }
         
-        func update(textColor: UInt32, text: String, size: CGSize, animated: Bool) {
+        func update(textColor: UInt32, text: String, size: CGSize, fontSize: CGFloat, animated: Bool, delay: Double? = nil) {
             let previousText = self.text
             self.text = text
             
             if animated && previousText.isEmpty != text.isEmpty {
                 if !text.isEmpty {
-                    self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.textNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: size.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, additive: true)
+                    self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    self.textNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: size.height * 0.35)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 70.0, additive: true)
+                    self.textNode.layer.animateScaleY(from: 0.01, to: 1.0, duration: 0.25)
                 } else {
                     if let copyView = self.textNode.view.snapshotContentTree() {
                         self.view.insertSubview(copyView, at: 0)
-                        copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
+                        copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: delay ?? 0.0, removeOnCompletion: false, completion: { [weak copyView] _ in
                             copyView?.removeFromSuperview()
                         })
-                        copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: size.height / 2.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                        copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: size.height / 2.0), duration: 0.2, delay: delay ?? 0.0, removeOnCompletion: false, additive: true)
                     }
                 }
             }
             
-            let fontSize: CGFloat = floor(21.0 * size.height / 28.0)
+            self.backgroundView.layer.cornerRadius = size.height == 28.0 ? 12.0 : 15.0
+            if #available(iOS 13.0, *) {
+                self.backgroundView.layer.cornerCurve = .continuous
+            }
             
             if #available(iOS 13.0, *) {
                 self.textNode.attributedText = NSAttributedString(string: text, font: UIFont.monospacedSystemFont(ofSize: fontSize, weight: .regular), textColor: UIColor(argb: textColor))
@@ -105,6 +121,8 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     
     private var theme: Theme?
     private var count: Int?
+    private var prefix: String = ""
+    private var compact = false
     
     private var textValue: String = ""
     public var text: String {
@@ -151,6 +169,28 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    private var isSucceed = false
+    private var isFailed = false
+    private var isResetting = false
+    public func animateError() {
+        self.isFailed = true
+        self.updateItemViews(animated: true)
+        Queue.mainQueue().after(0.85, {
+            self.textValue = ""
+            self.isResetting = true
+            self.updateItemViews(animated: true)
+            self.isResetting = false
+            self.textField.text = ""
+            self.isFailed = false
+            self.updateItemViews(animated: true)
+        })
+    }
+    
+    public func animateSuccess() {
+        self.isSucceed = true
+        self.updateItemViews(animated: true)
+    }
+    
     @objc func textFieldChanged(_ textField: UITextField) {
         self.textValue = textField.text ?? ""
         self.updateItemViews(animated: true)
@@ -161,6 +201,11 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         guard let count = self.count else {
             return false
         }
+        
+        guard !self.isFailed else {
+            return false
+        }
+        
         var text = textField.text ?? ""
         guard let stringRange = Range(range, in: text) else {
             return false
@@ -211,24 +256,48 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             return
         }
         
+        var delay: Double = 0.0
         for i in 0 ..< self.itemViews.count {
             let itemView = self.itemViews[i]
             let itemSize = itemView.bounds.size
             
-            itemView.update(borderColor: self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder, isHighlighted: self.focusIndex == i)
+            let fontSize: CGFloat
+            if self.prefix.isEmpty {
+                let height: CGFloat = self.compact ? 44.0 : 51.0
+                fontSize = floor(13.0 * height / 28.0)
+            } else {
+                let height: CGFloat = 28.0
+                fontSize = floor(21.0 * height / 28.0)
+            }
+            
+            let borderColor: UInt32
+            if self.isSucceed {
+                borderColor = theme.succeedBorder
+            } else if self.isFailed {
+                borderColor = theme.failedBorder
+            } else {
+                borderColor = self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder
+            }
+            
+            itemView.update(borderColor: borderColor, isHighlighted: self.focusIndex == i)
             let itemText: String
             if i < self.textValue.count {
                 itemText = String(self.textValue[self.textValue.index(self.textValue.startIndex, offsetBy: i)])
             } else {
                 itemText = ""
             }
-            itemView.update(textColor: theme.foreground, text: itemText, size: itemSize, animated: animated)
+            itemView.update(textColor: theme.foreground, text: itemText, size: itemSize, fontSize: fontSize, animated: animated, delay: delay)
+            if self.isResetting {
+                delay += 0.05
+            }
         }
     }
     
-    public func update(theme: Theme, prefix: String, count: Int, width: CGFloat) -> CGSize {
+    public func update(theme: Theme, prefix: String, count: Int, width: CGFloat, compact: Bool) -> CGSize {
         self.theme = theme
         self.count = count
+        self.prefix = prefix
+        self.compact = compact
         
         if theme.isDark {
             self.textField.keyboardAppearance = .dark
@@ -236,11 +305,14 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             self.textField.keyboardAppearance = .light
         }
         
+        let fontSize: CGFloat
         let height: CGFloat
         if prefix.isEmpty {
-            height = 40.0
+            height = compact ? 44.0 : 51.0
+            fontSize = floor(13.0 * height / 28.0)
         } else {
             height = 28.0
+            fontSize = floor(21.0 * height / 28.0)
         }
         
         if #available(iOS 13.0, *) {
@@ -251,8 +323,8 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: width, height: 100.0))
         let prefixSpacing: CGFloat = prefix.isEmpty ? 0.0 : 8.0
         
-        let itemSize = CGSize(width: floor(25.0 * height / 28.0), height: height)
-        let itemSpacing: CGFloat = 5.0
+        let itemSize = CGSize(width: floor(24.0 * height / 28.0), height: height)
+        let itemSpacing: CGFloat = prefix.isEmpty ? 15.0 : 5.0
         let itemsWidth: CGFloat = itemSize.width * CGFloat(count) + itemSpacing * CGFloat(count - 1)
         
         let contentWidth: CGFloat = prefixSize.width + prefixSpacing + itemsWidth
@@ -269,14 +341,24 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
                 self.itemViews.append(itemView)
                 self.addSubnode(itemView)
             }
-            itemView.update(borderColor: self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder, isHighlighted: self.focusIndex == i)
+            
+            let borderColor: UInt32
+            if self.isSucceed {
+                borderColor = theme.succeedBorder
+            } else if self.isFailed {
+                borderColor = theme.failedBorder
+            } else {
+                borderColor = self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder
+            }
+            
+            itemView.update(borderColor: borderColor, isHighlighted: self.focusIndex == i)
             let itemText: String
             if i < self.textValue.count {
                 itemText = String(self.textValue[self.textValue.index(self.textValue.startIndex, offsetBy: i)])
             } else {
                 itemText = ""
             }
-            itemView.update(textColor: theme.foreground, text: itemText, size: itemSize, animated: false)
+            itemView.update(textColor: theme.foreground, text: itemText, size: itemSize, fontSize: fontSize, animated: false)
             itemView.frame = CGRect(origin: CGPoint(x: contentOriginX + prefixSize.width + prefixSpacing + CGFloat(i) * (itemSize.width + itemSpacing), y: 0.0), size: itemSize)
         }
         if self.itemViews.count > count {

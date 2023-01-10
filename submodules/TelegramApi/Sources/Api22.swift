@@ -345,14 +345,134 @@ public extension Api.account {
     }
 }
 public extension Api.account {
-    enum Password: TypeConstructorDescription {
-        case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?)
+    enum EmailVerified: TypeConstructorDescription {
+        case emailVerified(email: String)
+        case emailVerifiedLogin(email: String, sentCode: Api.auth.SentCode)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate):
+                case .emailVerified(let email):
                     if boxed {
-                        buffer.appendInt32(408623183)
+                        buffer.appendInt32(731303195)
+                    }
+                    serializeString(email, buffer: buffer, boxed: false)
+                    break
+                case .emailVerifiedLogin(let email, let sentCode):
+                    if boxed {
+                        buffer.appendInt32(-507835039)
+                    }
+                    serializeString(email, buffer: buffer, boxed: false)
+                    sentCode.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emailVerified(let email):
+                return ("emailVerified", [("email", String(describing: email))])
+                case .emailVerifiedLogin(let email, let sentCode):
+                return ("emailVerifiedLogin", [("email", String(describing: email)), ("sentCode", String(describing: sentCode))])
+    }
+    }
+    
+        public static func parse_emailVerified(_ reader: BufferReader) -> EmailVerified? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.account.EmailVerified.emailVerified(email: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emailVerifiedLogin(_ reader: BufferReader) -> EmailVerified? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.auth.SentCode?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.auth.SentCode
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.EmailVerified.emailVerifiedLogin(email: _1!, sentCode: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.account {
+    enum EmojiStatuses: TypeConstructorDescription {
+        case emojiStatuses(hash: Int64, statuses: [Api.EmojiStatus])
+        case emojiStatusesNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiStatuses(let hash, let statuses):
+                    if boxed {
+                        buffer.appendInt32(-1866176559)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(statuses.count))
+                    for item in statuses {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .emojiStatusesNotModified:
+                    if boxed {
+                        buffer.appendInt32(-796072379)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiStatuses(let hash, let statuses):
+                return ("emojiStatuses", [("hash", String(describing: hash)), ("statuses", String(describing: statuses))])
+                case .emojiStatusesNotModified:
+                return ("emojiStatusesNotModified", [])
+    }
+    }
+    
+        public static func parse_emojiStatuses(_ reader: BufferReader) -> EmojiStatuses? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.EmojiStatus]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiStatus.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.EmojiStatuses.emojiStatuses(hash: _1!, statuses: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiStatusesNotModified(_ reader: BufferReader) -> EmojiStatuses? {
+            return Api.account.EmojiStatuses.emojiStatusesNotModified
+        }
+    
+    }
+}
+public extension Api.account {
+    enum Password: TypeConstructorDescription {
+        case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?, loginEmailPattern: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate, let loginEmailPattern):
+                    if boxed {
+                        buffer.appendInt32(-1787080453)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {currentAlgo!.serialize(buffer, true)}
@@ -364,14 +484,15 @@ public extension Api.account {
                     newSecureAlgo.serialize(buffer, true)
                     serializeBytes(secureRandom, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 5) != 0 {serializeInt32(pendingResetDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeString(loginEmailPattern!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate):
-                return ("password", [("flags", String(describing: flags)), ("currentAlgo", String(describing: currentAlgo)), ("srpB", String(describing: srpB)), ("srpId", String(describing: srpId)), ("hint", String(describing: hint)), ("emailUnconfirmedPattern", String(describing: emailUnconfirmedPattern)), ("newAlgo", String(describing: newAlgo)), ("newSecureAlgo", String(describing: newSecureAlgo)), ("secureRandom", String(describing: secureRandom)), ("pendingResetDate", String(describing: pendingResetDate))])
+                case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate, let loginEmailPattern):
+                return ("password", [("flags", String(describing: flags)), ("currentAlgo", String(describing: currentAlgo)), ("srpB", String(describing: srpB)), ("srpId", String(describing: srpId)), ("hint", String(describing: hint)), ("emailUnconfirmedPattern", String(describing: emailUnconfirmedPattern)), ("newAlgo", String(describing: newAlgo)), ("newSecureAlgo", String(describing: newSecureAlgo)), ("secureRandom", String(describing: secureRandom)), ("pendingResetDate", String(describing: pendingResetDate)), ("loginEmailPattern", String(describing: loginEmailPattern))])
     }
     }
     
@@ -402,6 +523,8 @@ public extension Api.account {
             _9 = parseBytes(reader)
             var _10: Int32?
             if Int(_1!) & Int(1 << 5) != 0 {_10 = reader.readInt32() }
+            var _11: String?
+            if Int(_1!) & Int(1 << 6) != 0 {_11 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
@@ -412,8 +535,9 @@ public extension Api.account {
             let _c8 = _8 != nil
             let _c9 = _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 5) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.account.Password.password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!, pendingResetDate: _10)
+            let _c11 = (Int(_1!) & Int(1 << 6) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.account.Password.password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!, pendingResetDate: _10, loginEmailPattern: _11)
             }
             else {
                 return nil
@@ -1122,70 +1246,6 @@ public extension Api.auth {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.auth {
-    enum CodeType: TypeConstructorDescription {
-        case codeTypeCall
-        case codeTypeFlashCall
-        case codeTypeMissedCall
-        case codeTypeSms
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .codeTypeCall:
-                    if boxed {
-                        buffer.appendInt32(1948046307)
-                    }
-                    
-                    break
-                case .codeTypeFlashCall:
-                    if boxed {
-                        buffer.appendInt32(577556219)
-                    }
-                    
-                    break
-                case .codeTypeMissedCall:
-                    if boxed {
-                        buffer.appendInt32(-702884114)
-                    }
-                    
-                    break
-                case .codeTypeSms:
-                    if boxed {
-                        buffer.appendInt32(1923290508)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .codeTypeCall:
-                return ("codeTypeCall", [])
-                case .codeTypeFlashCall:
-                return ("codeTypeFlashCall", [])
-                case .codeTypeMissedCall:
-                return ("codeTypeMissedCall", [])
-                case .codeTypeSms:
-                return ("codeTypeSms", [])
-    }
-    }
-    
-        public static func parse_codeTypeCall(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeCall
-        }
-        public static func parse_codeTypeFlashCall(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeFlashCall
-        }
-        public static func parse_codeTypeMissedCall(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeMissedCall
-        }
-        public static func parse_codeTypeSms(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeSms
         }
     
     }

@@ -12,6 +12,7 @@ import PhotoResources
 import AccountContext
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
+import WallpaperBackgroundNode
 
 private let messageFont = Font.regular(17.0)
 private let messageBoldFont = Font.semibold(17.0)
@@ -98,6 +99,11 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     
     private var theme: ChatPresentationThemeData?
     
+    private var wallpaperBackgroundNode: WallpaperBackgroundNode?
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var absolutePosition: (CGRect, CGSize)?
+    
     private var item: ChatBotInfoItem?
     
     init() {
@@ -145,7 +151,8 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         videoNode.canAttachContent = true
         self.videoNode = videoNode
         
-        (videoNode.decoration as? VideoDecoration)?.updateCorners(ImageCorners(topLeft: .Corner(17.0), topRight: .Corner(17.0), bottomLeft: .Corner(0.0), bottomRight: .Corner(0.0)))
+        let cornerRadius = (self.item?.presentationData.chatBubbleCorners.mainRadius ?? 17.0)
+        (videoNode.decoration as? VideoDecoration)?.updateCorners(ImageCorners(topLeft: .Corner(cornerRadius), topRight: .Corner(cornerRadius), bottomLeft: .Corner(0.0), bottomRight: .Corner(0.0)))
         
         self.offsetContainer.addSubnode(videoNode)
         
@@ -164,7 +171,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         break
                     case .ignore:
                         return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji:
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
                         return .waitForSingleTap
                 }
             }
@@ -177,6 +184,18 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             }
         }
         self.view.addGestureRecognizer(recognizer)
+    }
+    
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        super.updateAbsoluteRect(rect, within: containerSize)
+        
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += containerSize.height - rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+        }
     }
     
     func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -291,6 +310,32 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                     strongSelf.backgroundNode.frame = backgroundFrame
                     strongSelf.titleNode.frame = titleFrame
                     strongSelf.textNode.frame = textFrame
+                    
+                    if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                        if strongSelf.backgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                            backgroundContent.clipsToBounds = true
+
+                            strongSelf.backgroundContent = backgroundContent
+                            strongSelf.offsetContainer.insertSubnode(backgroundContent, at: 0)
+                        }
+                    } else {
+                        strongSelf.backgroundContent?.removeFromSupernode()
+                        strongSelf.backgroundContent = nil
+                    }
+                    
+                    if let backgroundContent = strongSelf.backgroundContent {
+                        strongSelf.backgroundNode.isHidden = true
+                        backgroundContent.cornerRadius = item.presentationData.chatBubbleCorners.mainRadius
+                        backgroundContent.frame = backgroundFrame
+                        if let (rect, containerSize) = strongSelf.absolutePosition {
+                            var backgroundFrame = backgroundContent.frame
+                            backgroundFrame.origin.x += rect.minX
+                            backgroundFrame.origin.y += containerSize.height - rect.minY
+                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+                        }
+                    } else {
+                        strongSelf.backgroundNode.isHidden = false
+                    }
                     
                     strongSelf.setup(context: item.context, videoFile: item.video)
                     if let videoNode = strongSelf.videoNode {
@@ -408,7 +453,14 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                 case let .url(url, concealed):
                                     self.item?.controllerInteraction.openUrl(url, concealed, nil, nil)
                                 case let .peerMention(peerId, _):
-                                    self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
+                                    if let item = self.item {
+                                        let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                            if let peer = peer {
+                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                            }
+                                        })
+                                    }
                                 case let .textMention(name):
                                     self.item?.controllerInteraction.openPeerMention(name)
                                 case let .botCommand(command):
@@ -492,7 +544,9 @@ private final class VideoDecoration: UniversalVideoDecoration {
             let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
             let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
             let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
-            let context = DrawingContext(size: size, clear: true)
+            guard let context = DrawingContext(size: size, clear: true) else {
+                return
+            }
             context.withContext { ctx in
                 ctx.setFillColor(UIColor.black.cgColor)
                 ctx.fill(arguments.drawingRect)

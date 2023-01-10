@@ -426,14 +426,18 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     
     public func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
        if action == makeSelectorFromString("_showTextStyleOptions:") {
-            if case .general = self.inputMenu.state {
-                if self.textNode.attributedText == nil || self.textNode.attributedText!.length == 0 || self.textNode.selectedRange.length == 0 {
-                    return ASEditableTextNodeTargetForAction(target: nil)
-                }
-                return ASEditableTextNodeTargetForAction(target: self)
-            } else {
-                return ASEditableTextNodeTargetForAction(target: nil)
-            }
+           if #available(iOS 16.0, *) {
+               return ASEditableTextNodeTargetForAction(target: nil)
+           } else {
+               if case .general = self.inputMenu.state {
+                   if self.textNode.attributedText == nil || self.textNode.attributedText!.length == 0 || self.textNode.selectedRange.length == 0 {
+                       return ASEditableTextNodeTargetForAction(target: nil)
+                   }
+                   return ASEditableTextNodeTargetForAction(target: self)
+               } else {
+                   return ASEditableTextNodeTargetForAction(target: nil)
+               }
+           }
         } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) {
             if case .format = self.inputMenu.state {
                 return ASEditableTextNodeTargetForAction(target: self)
@@ -449,6 +453,58 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     
     @objc func _showTextStyleOptions(_ sender: Any) {
         self.inputMenu.format(view: self.textNode.view, rect: self.textNode.selectionRect.offsetBy(dx: 0.0, dy: -self.textNode.textView.contentOffset.y).insetBy(dx: 0.0, dy: -1.0))
+    }
+    
+    @available(iOS 16.0, *)
+    public func editableTextNodeMenu(_ editableTextNode: ASEditableTextNode, forTextRange textRange: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu {
+        var actions = suggestedActions
+        
+        if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
+            
+        } else if let strings = self.item?.presentationData.strings {
+            let children: [UIAction] = [
+                UIAction(title: strings.TextFormat_Bold, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesBold(strongSelf)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Italic, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesItalic(strongSelf)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Monospace, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesMonospace(strongSelf)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Link, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesLink(strongSelf)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Strikethrough, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesStrikethrough(strongSelf)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Underline, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesUnderline(strongSelf)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Spoiler, image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesSpoiler(strongSelf)
+                    }
+                }
+            ]
+            
+            let formatMenu = UIMenu(title: strings.TextFormat_Format, image: nil, children: children)
+            actions.insert(formatMenu, at: 3)
+        }
+        
+        return UIMenu(children: actions)
     }
     
     @objc func formatAttributesBold(_ sender: Any) {
@@ -488,6 +544,13 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
         self.inputMenu.back()
         if let item = self.item {
             chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.underline)
+        }
+    }
+    
+    @objc func formatAttributesSpoiler(_ sender: Any) {
+        self.inputMenu.back()
+        if let item = self.item {
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.spoiler)
         }
     }
     

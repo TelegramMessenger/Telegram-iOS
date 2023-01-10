@@ -62,6 +62,32 @@ private func gallerySelectionItems(item: TGMediaSelectableItem, selectionContext
                     }
                     focusItem = galleryItem
                 }
+            } else if let asset = selectedItem as? UIImage {
+                let galleryItem: (TGModernGallerySelectableItem & TGModernGalleryEditableItem) = TGMediaPickerGalleryPhotoItem(asset: asset)
+                galleryItem.selectionContext = selectionContext
+                galleryItem.editingContext = editingContext
+                galleryItem.stickersContext = stickersContext
+                galleryItems.append(galleryItem)
+                
+                if selectedItem.uniqueIdentifier == item.uniqueIdentifier {
+                    if let galleryItem = galleryItem as? TGMediaPickerGalleryItem {
+                        galleryItem.immediateThumbnailImage = immediateThumbnail
+                    }
+                    focusItem = galleryItem
+                }
+            } else if let asset = selectedItem as? TGCameraCapturedVideo {
+                let galleryItem: (TGModernGallerySelectableItem & TGModernGalleryEditableItem) = TGMediaPickerGalleryVideoItem(asset: asset)
+                galleryItem.selectionContext = selectionContext
+                galleryItem.editingContext = editingContext
+                galleryItem.stickersContext = stickersContext
+                galleryItems.append(galleryItem)
+                
+                if selectedItem.uniqueIdentifier == item.uniqueIdentifier {
+                    if let galleryItem = galleryItem as? TGMediaPickerGalleryItem {
+                        galleryItem.immediateThumbnailImage = immediateThumbnail
+                    }
+                    focusItem = galleryItem
+                }
             }
         }
     }
@@ -74,7 +100,7 @@ enum LegacyMediaPickerGallerySource {
     case selection(item: TGMediaSelectableItem)
 }
 
-func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?, chatLocation: ChatLocation?, presentationData: PresentationData, source: LegacyMediaPickerGallerySource, immediateThumbnail: UIImage?, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, hasSilentPosting: Bool, hasSchedule: Bool, hasTimer: Bool, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (String) -> UIView?, completed: @escaping (TGMediaSelectableItem & TGMediaEditableItem, Bool, Int32?, @escaping () -> Void) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void, finishedTransitionIn: @escaping () -> Void, willTransitionOut: @escaping () -> Void, dismissAll: @escaping () -> Void) -> TGModernGalleryController {
+func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?, threadTitle: String?, chatLocation: ChatLocation?, presentationData: PresentationData, source: LegacyMediaPickerGallerySource, immediateThumbnail: UIImage?, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, hasSilentPosting: Bool, hasSchedule: Bool, hasTimer: Bool, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (String) -> UIView?, completed: @escaping (TGMediaSelectableItem & TGMediaEditableItem, Bool, Int32?, @escaping () -> Void) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void, finishedTransitionIn: @escaping () -> Void, willTransitionOut: @escaping () -> Void, dismissAll: @escaping () -> Void) -> TGModernGalleryController {
     let reminder = peer?.id == context.account.peerId
     let hasSilentPosting = hasSilentPosting && peer?.id != context.account.peerId
     
@@ -110,10 +136,14 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     }
     
     let recipientName: String?
-    if peer?.id == context.account.peerId {
-        recipientName = presentationData.strings.DialogList_SavedMessages
+    if let threadTitle {
+        recipientName = threadTitle
     } else {
-        recipientName = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        if peer?.id == context.account.peerId {
+            recipientName = presentationData.strings.DialogList_SavedMessages
+        } else {
+            recipientName = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        }
     }
     
     let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: true, allowCaptionEntities: true, hasTimer: hasTimer, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: true, hasCamera: false, recipientName: recipientName)!
@@ -267,7 +297,7 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     model.interfaceView.setThumbnailSignalForItem { item in
         let imageSignal = SSignal(generator: { subscriber in
             var asset: PHAsset?
-            if let item = item as? TGCameraCapturedVideo {
+            if let item = item as? TGCameraCapturedVideo, item.originalAsset != nil {
                 asset = item.originalAsset.backingAsset
             } else if let item = item as? TGMediaAsset {
                 asset = item.backingAsset

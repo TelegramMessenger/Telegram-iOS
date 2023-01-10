@@ -123,13 +123,9 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
             self.pinnedPeers.insert(peerId, at: 0)
             return true
         } else {
-            if self.peers.count < 100 {
-                self.peers.insert(peerId, at: 0)
-                self.pinnedPeers.insert(peerId, at: 0)
-                return true
-            } else {
-                return false
-            }
+            self.peers.insert(peerId, at: 0)
+            self.pinnedPeers.insert(peerId, at: 0)
+            return true
         }
     }
     
@@ -217,10 +213,7 @@ public struct ChatListFilterData: Equatable, Hashable {
         if self.excludePeers.contains(peerId) {
             return false
         }
-        if self.excludePeers.count >= 100 {
-            return false
-        }
-        
+ 
         let _ = self.includePeers.removePeer(peerId)
         self.excludePeers.append(peerId)
         
@@ -640,8 +633,9 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
         
         return postbox.transaction { transaction -> Void in
             var peers: [Peer] = []
-            var peerPresences: [PeerId: PeerPresence] = [:]
+            var peerPresences: [PeerId: Api.User] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+            var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
             var channelStates: [PeerId: Int32] = [:]
             
             switch result {
@@ -654,16 +648,14 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
+                    peerPresences[telegramUser.id] = user
                 }
                 
                 var topMessageIds = Set<MessageId>()
                 
                 for dialog in dialogs {
                     switch dialog {
-                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId):
+                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId, ttlPeriod):
                         let peerId = peer.peerId
                         
                         if topMessage != 0 {
@@ -717,10 +709,12 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                         
                         notificationSettings[peer.peerId] = TelegramPeerNotificationSettings(apiSettings: notifySettings)
                         
+                        ttlPeriods[peer.peerId] = .known(ttlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
+                        
                         transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: false)]])
                         
-                        transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
-                        transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
+                        transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
+                        transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
                         
                         if let pts = pts {
                             if transaction.getPeerChatState(peerId) == nil {
@@ -734,9 +728,18 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                     }
                 }
                 
+                var peerMap: [PeerId: Peer] = [:]
+                for peer in peers {
+                    peerMap[peer.id] = peer
+                }
+                
                 var storeMessages: [StoreMessage] = []
                 for message in messages {
-                    if let storeMessage = StoreMessage(apiMessage: message) {
+                    var peerIsForum = false
+                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                        peerIsForum = true
+                    }
+                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                         var updatedStoreMessage = storeMessage
                         if case let .Id(id) = storeMessage.id {
                             if let channelPts = channelStates[id.peerId] {
@@ -763,6 +766,23 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
             
             transaction.updateCurrentPeerNotificationSettings(notificationSettings)
+            
+            for (peerId, autoremoveValue) in ttlPeriods {
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        let current = (current as? CachedUserData) ?? CachedUserData()
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let current = (current as? CachedChannelData) ?? CachedChannelData()
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let current = (current as? CachedGroupData) ?? CachedGroupData()
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else {
+                        return current
+                    }
+                })
+            }
         }
         |> ignoreValues
     }

@@ -19,7 +19,7 @@ private func roundUp(_ numToRound: Int, multiple: Int) -> Int {
 }
 
 public func cacheVideoAnimation(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter, firstFrameOnly: Bool) {
-    writer.queue.async {
+    let work: () -> Void = {
         guard let frameSource = makeVideoStickerDirectFrameSource(queue: writer.queue, path: path, width: roundUp(width, multiple: 16), height: roundUp(height, multiple: 16), cachePathPrefix: nil, unpremultiplyAlpha: false) else {
             return
         }
@@ -60,4 +60,6 @@ public func cacheVideoAnimation(path: String, width: Int, height: Int, writer: A
         
         writer.finish()
     }
+    
+    writer.queue.async(work)
 }

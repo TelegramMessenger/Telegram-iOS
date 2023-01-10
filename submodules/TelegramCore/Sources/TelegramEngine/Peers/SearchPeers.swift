@@ -44,7 +44,7 @@ func _internal_searchPeers(account: Account, query: String) -> Signal<([FoundPee
                             peers[groupOrChannel.id] = groupOrChannel
                             switch chat {
                                 /*feed*/
-                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
                                     if let participantsCount = participantsCount {
                                         subscribers[groupOrChannel.id] = participantsCount
                                     }

@@ -227,7 +227,7 @@ func parsePreviewStickerSet(_ set: Api.StickerSetCovered, namespace: ItemCollect
             }
         }
         return (info, items)
-    case let .stickerSetFullCovered(set, packs, documents):
+    case let .stickerSetFullCovered(set, packs, keywords, documents):
         var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
         for pack in packs {
             switch pack {
@@ -242,6 +242,20 @@ func parsePreviewStickerSet(_ set: Api.StickerSetCovered, namespace: ItemCollect
                     }
                 }
                 break
+            }
+        }
+        for keyword in keywords {
+            switch keyword {
+            case let .stickerKeyword(documentId, texts):
+                for text in texts {
+                    let key = ValueBoxKey(text).toMemoryBuffer()
+                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: documentId)
+                    if indexKeysByFile[mediaId] == nil {
+                        indexKeysByFile[mediaId] = [key]
+                    } else {
+                        indexKeysByFile[mediaId]!.append(key)
+                    }
+                }
             }
         }
         

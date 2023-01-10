@@ -73,6 +73,7 @@ swift_library(
         "//submodules/HexColor:HexColor",
         "//submodules/QrCode:QrCode",
         "//submodules/WallpaperResources:WallpaperResources",
+        "//submodules/AuthorizationUtils:AuthorizationUtils",
         "//submodules/AuthorizationUI:AuthorizationUI",
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/CheckNode:CheckNode",
@@ -103,6 +104,11 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/HorizontalPeerItem:HorizontalPeerItem",
+        "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
+        "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
+        "//submodules/TelegramUI/Components/ChatTimerScreen",
+        
         "//submodules/FakePasscodeUI:FakePasscodeUI",
     ],
     visibility = [

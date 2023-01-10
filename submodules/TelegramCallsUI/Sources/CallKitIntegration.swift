@@ -8,6 +8,8 @@ import TelegramCore
 import SwiftSignalKit
 import AppBundle
 import AccountContext
+import TelegramAudio
+import TelegramVoip
 
 private let sharedProviderDelegate: AnyObject? = {
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -41,7 +43,7 @@ public final class CallKitIntegration {
     }
 
     func setup(
-        startCall: @escaping (AccountContext, UUID, String, Bool) -> Signal<Bool, NoError>,
+        startCall: @escaping (AccountContext, UUID, EnginePeer.Id?, String, Bool) -> Signal<Bool, NoError>,
         answerCall: @escaping (UUID) -> Void,
         endCall: @escaping (UUID) -> Signal<Bool, NoError>,
         setCallMuted: @escaping (UUID, Bool) -> Void,
@@ -56,22 +58,17 @@ public final class CallKitIntegration {
         if !CallKitIntegration.isAvailable {
             return nil
         }
-    
-        #if targetEnvironment(simulator)
-        return nil
-        #else
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         } else {
             return nil
         }
-        #endif
     }
     
-    func startCall(context: AccountContext, peerId: PeerId, isVideo: Bool, displayTitle: String) {
+    func startCall(context: AccountContext, peerId: PeerId, phoneNumber: String?, localContactId: String?, isVideo: Bool, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(context: context, peerId: peerId, isVideo: isVideo, displayTitle: displayTitle)
-            self.donateIntent(peerId: peerId, displayTitle: displayTitle)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle)
+            self.donateIntent(peerId: peerId, displayTitle: displayTitle, localContactId: localContactId)
         }
     }
     
@@ -87,9 +84,9 @@ public final class CallKitIntegration {
         }
     }
     
-    public func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
+    public func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, phoneNumber: String?, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, stableId: stableId, handle: handle, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, stableId: stableId, handle: handle, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
         }
     }
     
@@ -99,18 +96,22 @@ public final class CallKitIntegration {
         }
     }
     
-    private func donateIntent(peerId: PeerId, displayTitle: String) {
+    private func donateIntent(peerId: PeerId, displayTitle: String, localContactId: String?) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            let handle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
-            let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peerId.id)")
+            let handle = INPersonHandle(value: "tg\(peerId.id._internalGetInt64Value())", type: .unknown)
+            let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: localContactId, customIdentifier: "tg\(peerId.id._internalGetInt64Value())")
         
-            let intent = INStartAudioCallIntent(contacts: [contact])
+            let intent = INStartAudioCallIntent(destinationType: .normal, contacts: [contact])
             
             let interaction = INInteraction(intent: intent, response: nil)
             interaction.direction = .outgoing
             interaction.donate { _ in
             }
         }
+    }
+    
+    public func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
+        (sharedProviderDelegate as? CallKitProviderDelegate)?.applyVoiceChatOutputMode(outputMode: outputMode)
     }
 }
 
@@ -122,12 +123,16 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private var currentStartCallAccount: (UUID, AccountContext)?
 
     private var alreadyReportedIncomingCalls = Set<UUID>()
+    private var uuidToPeerIdMapping: [UUID: EnginePeer.Id] = [:]
     
-    private var startCall: ((AccountContext, UUID, String, Bool) -> Signal<Bool, NoError>)?
+    private var startCall: ((AccountContext, UUID, EnginePeer.Id?, String, Bool) -> Signal<Bool, NoError>)?
     private var answerCall: ((UUID) -> Void)?
     private var endCall: ((UUID) -> Signal<Bool, NoError>)?
     private var setCallMuted: ((UUID, Bool) -> Void)?
     private var audioSessionActivationChanged: ((Bool) -> Void)?
+    
+    private var isAudioSessionActive: Bool = false
+    private var pendingVoiceChatOutputMode: AudioSessionOutputMode?
     
     private let disposableSet = DisposableSet()
     
@@ -141,7 +146,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.provider.setDelegate(self, queue: nil)
     }
     
-    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (AccountContext, UUID, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (AccountContext, UUID, EnginePeer.Id?, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         self.audioSessionActivePromise = audioSessionActivePromise
         self.startCall = startCall
         self.answerCall = answerCall
@@ -165,39 +170,56 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     private func requestTransaction(_ transaction: CXTransaction, completion: ((Bool) -> Void)? = nil) {
+        Logger.shared.log("CallKitIntegration", "requestTransaction \(transaction)")
         self.callController.request(transaction) { error in
             if let error = error {
-                print("Error requesting transaction: \(error)")
+                Logger.shared.log("CallKitIntegration", "error in requestTransaction \(transaction): \(error)")
             }
             completion?(error == nil)
         }
     }
     
     func endCall(uuid: UUID) {
+        Logger.shared.log("CallKitIntegration", "endCall \(uuid)")
+        
         let endCallAction = CXEndCallAction(call: uuid)
         let transaction = CXTransaction(action: endCallAction)
         self.requestTransaction(transaction)
     }
     
     func dropCall(uuid: UUID) {
+        Logger.shared.log("CallKitIntegration", "report call ended \(uuid)")
+        
         self.provider.reportCall(with: uuid, endedAt: nil, reason: CXCallEndedReason.remoteEnded)
     }
     
     func answerCall(uuid: UUID) {
+        Logger.shared.log("CallKitIntegration", "answer call \(uuid)")
+        
         let answerCallAction = CXAnswerCallAction(call: uuid)
         let transaction = CXTransaction(action: answerCallAction)
         self.requestTransaction(transaction)
     }
     
-    func startCall(context: AccountContext, peerId: PeerId, isVideo: Bool, displayTitle: String) {
+    func startCall(context: AccountContext, peerId: PeerId, phoneNumber: String?, isVideo: Bool, displayTitle: String) {
         let uuid = UUID()
         self.currentStartCallAccount = (uuid, context)
-        let handle = CXHandle(type: .generic, value: "\(peerId.id._internalGetInt64Value())")
+        let handle: CXHandle
+        if let phoneNumber = phoneNumber {
+            handle = CXHandle(type: .phoneNumber, value: phoneNumber)
+        } else {
+            handle = CXHandle(type: .generic, value: "\(peerId.id._internalGetInt64Value())")
+        }
+        
+        self.uuidToPeerIdMapping[uuid] = peerId
+        
         let startCallAction = CXStartCallAction(call: uuid, handle: handle)
         startCallAction.contactIdentifier = displayTitle
 
         startCallAction.isVideo = isVideo
         let transaction = CXTransaction(action: startCallAction)
+        
+        Logger.shared.log("CallKitIntegration", "initiate call \(uuid)")
         
         self.requestTransaction(transaction, completion: { _ in
             let update = CXCallUpdate()
@@ -212,7 +234,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         })
     }
     
-    func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
+    func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, phoneNumber: String?, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
         if self.alreadyReportedIncomingCalls.contains(uuid) {
             completion?(nil)
             return
@@ -220,7 +242,13 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.alreadyReportedIncomingCalls.insert(uuid)
 
         let update = CXCallUpdate()
-        update.remoteHandle = CXHandle(type: .generic, value: handle)
+        let nativeHandle: CXHandle
+        if let phoneNumber = phoneNumber {
+            nativeHandle = CXHandle(type: .phoneNumber, value: phoneNumber)
+        } else {
+            nativeHandle = CXHandle(type: .generic, value: handle)
+        }
+        update.remoteHandle = nativeHandle
         update.localizedCallerName = displayTitle
         update.supportsHolding = false
         update.supportsGrouping = false
@@ -228,23 +256,34 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         update.supportsDTMF = false
         update.hasVideo = isVideo
         
+        Logger.shared.log("CallKitIntegration", "report incoming call \(uuid)")
+        
+        OngoingCallContext.setupAudioSession()
+        
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in
             completion?(error as NSError?)
         })
     }
     
     func reportOutgoingCallConnecting(uuid: UUID, at date: Date) {
+        Logger.shared.log("CallKitIntegration", "report outgoing call connecting \(uuid)")
+        
         self.provider.reportOutgoingCall(with: uuid, startedConnectingAt: date)
     }
     
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
+        Logger.shared.log("CallKitIntegration", "report call connected \(uuid)")
+        
         self.provider.reportOutgoingCall(with: uuid, connectedAt: date)
     }
     
     func providerDidReset(_ provider: CXProvider) {
+        Logger.shared.log("CallKitIntegration", "providerDidReset")
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform start call action \(action)")
+        
         guard let startCall = self.startCall, let (uuid, context) = self.currentStartCallAccount, uuid == action.callUUID else {
             action.fail()
             return
@@ -252,7 +291,10 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.currentStartCallAccount = nil
         let disposable = MetaDisposable()
         self.disposableSet.add(disposable)
-        disposable.set((startCall(context, action.callUUID, action.handle.value, action.isVideo)
+        
+        let peerId = self.uuidToPeerIdMapping[action.callUUID]
+        
+        disposable.set((startCall(context, action.callUUID, peerId, action.handle.value, action.isVideo)
         |> deliverOnMainQueue
         |> afterDisposed { [weak self, weak disposable] in
             if let strongSelf = self, let disposable = disposable {
@@ -268,6 +310,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform answer call action \(action)")
+        
         guard let answerCall = self.answerCall else {
             action.fail()
             return
@@ -277,6 +321,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform end call action \(action)")
+        
         guard let endCall = self.endCall else {
             action.fail()
             return
@@ -299,6 +345,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
+        Logger.shared.log("CallKitIntegration", "provider perform mute call action \(action)")
+        
         guard let setCallMuted = self.setCallMuted else {
             action.fail()
             return
@@ -308,13 +356,29 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        Logger.shared.log("CallKitIntegration", "provider didActivate audio session")
+        self.isAudioSessionActive = true
         self.audioSessionActivationChanged?(true)
         self.audioSessionActivePromise?.set(true)
+        
+        if let outputMode = self.pendingVoiceChatOutputMode {
+            self.pendingVoiceChatOutputMode = nil
+            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
+        }
     }
     
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        Logger.shared.log("CallKitIntegration", "provider didDeactivate audio session")
+        self.isAudioSessionActive = false
         self.audioSessionActivationChanged?(false)
         self.audioSessionActivePromise?.set(false)
     }
+    
+    func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
+        if self.isAudioSessionActive {
+            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
+        } else {
+            self.pendingVoiceChatOutputMode = outputMode
+        }
+    }
 }
-

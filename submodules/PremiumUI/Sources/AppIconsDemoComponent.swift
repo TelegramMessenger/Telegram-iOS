@@ -104,7 +104,9 @@ final class AppIconsDemoComponent: Component {
                         position = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
                 }
                 
-                view.center = position.offsetBy(dx: availableSize.width / 2.0, dy: 0.0)
+                if !self.animating {
+                    view.center = position.offsetBy(dx: availableSize.width / 2.0, dy: 0.0)
+                }
                 
                 i += 1
             }
@@ -126,7 +128,10 @@ final class AppIconsDemoComponent: Component {
             return availableSize
         }
         
+        private var animating = false
         func animateIn(availableSize: CGSize) {
+            self.animating = true
+            
             var i = 0
             for view in self.imageViews {
                 let from: CGPoint
@@ -145,8 +150,19 @@ final class AppIconsDemoComponent: Component {
                         from = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
                         delay = 0.0
                 }
-                view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
-                view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                
+                let initialPosition = view.layer.position
+                view.layer.position = initialPosition.offsetBy(dx: from.x, dy: from.y)
+                
+                Queue.mainQueue().after(delay) {
+                    view.layer.position = initialPosition
+                    view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring)
+                    view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    
+                    if i == 2 {
+                        self.animating = false
+                    }
+                }
                 
                 i += 1
             }

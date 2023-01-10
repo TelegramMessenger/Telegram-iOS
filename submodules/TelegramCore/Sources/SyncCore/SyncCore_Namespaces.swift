@@ -48,6 +48,9 @@ public struct Namespaces {
         public static let CloudAnimatedEmojiReactions: Int32 = 6
         public static let CloudPremiumGifts: Int32 = 7
         public static let CloudEmojiPacks: Int32 = 8
+        public static let CloudEmojiGenericAnimations: Int32 = 9
+        public static let CloudIconStatusEmoji: Int32 = 10
+        public static let CloudIconTopicEmoji: Int32 = 11
     }
     
     public struct OrderedItemList {
@@ -68,6 +71,10 @@ public struct Namespaces {
         public static let LocalRecentEmoji: Int32 = 14
         public static let CloudFeaturedEmojiPacks: Int32 = 15
         public static let CloudAllPremiumStickers: Int32 = 16
+        public static let CloudRecentStatusEmoji: Int32 = 17
+        public static let CloudFeaturedStatusEmoji: Int32 = 18
+        public static let CloudRecentReactions: Int32 = 19
+        public static let CloudTopReactions: Int32 = 20
     }
     
     public struct CachedItemCollection {
@@ -232,7 +239,6 @@ private enum PreferencesKeyValues: Int32 {
     case appConfiguration = 14
     case searchBotsConfiguration = 15
     case contactsSettings = 16
-    case walletCollection = 18
     case contentSettings = 19
     case chatListFilters = 20
     case peersNearby = 21
@@ -240,6 +246,7 @@ private enum PreferencesKeyValues: Int32 {
     case secretChatSettings = 23
     case reactionSettings = 24
     case premiumPromo = 26
+    case globalMessageAutoremoveTimeoutSettings = 27
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -332,13 +339,7 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.secretChatSettings.rawValue)
         return key
     }()
-    
-    public static let walletCollection: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.walletCollection.rawValue)
-        return key
-    }()
-    
+        
     public static let contentSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.contentSettings.rawValue)
@@ -372,6 +373,12 @@ public struct PreferencesKeys {
     public static let premiumPromo: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.premiumPromo.rawValue)
+        return key
+    }()
+    
+    public static let globalMessageAutoremoveTimeoutSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.globalMessageAutoremoveTimeoutSettings.rawValue)
         return key
     }()
 }

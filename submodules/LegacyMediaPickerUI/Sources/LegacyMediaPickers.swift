@@ -125,8 +125,19 @@ public class LegacyAssetPickerContext: AttachmentMediaPickerContext {
     }
 }
 
-public func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+public func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, threadTitle: String?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     let isSecretChat = (peer?.id.namespace._internalGetInt32Value() ?? 0) == Namespaces.Peer.SecretChat._internalGetInt32Value()
+    
+    let recipientName: String?
+    if let threadTitle {
+        recipientName = threadTitle
+    } else {
+        if peer?.id == context.account.peerId {
+            recipientName = presentationData.strings.DialogList_SavedMessages
+        } else {
+            recipientName = peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        }
+    }
     
     return Signal { subscriber in
         let intent = fileMode ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
@@ -146,7 +157,7 @@ public func legacyAssetPicker(context: AccountContext, presentationData: Present
                     } else {
                         Queue.mainQueue().async {
                             subscriber.putNext({ context in
-                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
+                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: recipientName, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
                                 return controller!
                             })
                             subscriber.putCompletion()
@@ -155,7 +166,7 @@ public func legacyAssetPicker(context: AccountContext, presentationData: Present
                 })
             } else {
                 subscriber.putNext({ context in
-                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
+                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: recipientName, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
                     return controller!
                 })
                 subscriber.putCompletion()
@@ -326,7 +337,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data, correlationId:
             if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                 account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
             }
             
             var randomId: Int64 = 0
@@ -347,7 +358,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data, correlationId:
             fileAttributes.append(.Animated)
             
             let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
-            subscriber.putNext(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId))
+            subscriber.putNext(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: []))
             subscriber.putCompletion()
         } else {
             subscriber.putError(Void())
@@ -368,7 +379,7 @@ public func legacyEnqueueVideoMessage(account: Account, data: Data, correlationI
             if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                 account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
             }
             
             var randomId: Int64 = 0
@@ -389,7 +400,7 @@ public func legacyEnqueueVideoMessage(account: Account, data: Data, correlationI
             fileAttributes.append(.Animated)
             
             let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
-            subscriber.putNext(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId))
+            subscriber.putNext(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: []))
             subscriber.putCompletion()
         } else {
             subscriber.putError(Void())
@@ -421,7 +432,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 }
                             }
                             switch data {
@@ -435,7 +446,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
 
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                             
                                             var imageFlags: TelegramMediaImageFlags = []
                                                                                         
@@ -462,8 +473,27 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             if !entities.isEmpty {
                                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                             }
-                                            
-                                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: false))
+                                            var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                            text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                                if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                                    if let file = value.file {
+                                                        if let packId = value.interactivelySelectedFromPackId {
+                                                            bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                        }
+                                                    }
+                                                }
+                                            })
+                                            var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                            for entity in entities {
+                                                if case let .CustomEmoji(_, fileId) = entity.type {
+                                                    if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                        if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                            bubbleUpEmojiOrStickersets.append(packId)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: false))
                                         }
                                     }
                                 case let .asset(asset):
@@ -472,7 +502,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                                     let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max))
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                     
                                     let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                                     var attributes: [MessageAttribute] = []
@@ -485,8 +515,29 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     if !entities.isEmpty {
                                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                     }
+                                
+                                    var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                    text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                            if let file = value.file {
+                                                if let packId = value.interactivelySelectedFromPackId {
+                                                    bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                }
+                                            }
+                                        }
+                                    })
+                                    var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                    for entity in entities {
+                                        if case let .CustomEmoji(_, fileId) = entity.type {
+                                            if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                    bubbleUpEmojiOrStickersets.append(packId)
+                                                }
+                                            }
+                                        }
+                                    }
                                     
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: false))
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: false))
                                 case .tempFile:
                                     break
                             }
@@ -500,7 +551,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                         let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                         if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                             account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                         }
                                     }
                                     
@@ -515,8 +566,29 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     if !entities.isEmpty {
                                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                     }
+                                
+                                    var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                    text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                            if let file = value.file {
+                                                if let packId = value.interactivelySelectedFromPackId {
+                                                    bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                }
+                                            }
+                                        }
+                                    })
+                                    var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                    for entity in entities {
+                                        if case let .CustomEmoji(_, fileId) = entity.type {
+                                            if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                    bubbleUpEmojiOrStickersets.append(packId)
+                                                }
+                                            }
+                                        }
+                                    }
                                     
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: true))
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: true))
                                 case let .asset(asset):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
@@ -529,8 +601,29 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     if !entities.isEmpty {
                                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                     }
+                                
+                                    var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                    text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                            if let file = value.file {
+                                                if let packId = value.interactivelySelectedFromPackId {
+                                                    bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                }
+                                            }
+                                        }
+                                    })
+                                    var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                    for entity in entities {
+                                        if case let .CustomEmoji(_, fileId) = entity.type {
+                                            if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                    bubbleUpEmojiOrStickersets.append(packId)
+                                                }
+                                            }
+                                        }
+                                    }
                                     
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: true))
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: true))
                                 default:
                                     break
                             }
@@ -573,7 +666,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 }
                             }
                             
@@ -664,8 +757,29 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
+                        
+                            var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                            text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                    if let file = value.file {
+                                        if let packId = value.interactivelySelectedFromPackId {
+                                            bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                        }
+                                    }
+                                }
+                            })
+                            var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                            for entity in entities {
+                                if case let .CustomEmoji(_, fileId) = entity.type {
+                                    if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                        if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                            bubbleUpEmojiOrStickersets.append(packId)
+                                        }
+                                    }
+                                }
+                            }
                             
-                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: asFile))
+                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: asFile))
                     }
                 }
             }

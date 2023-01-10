@@ -130,10 +130,10 @@ final class WebSearchItemNode: GridItemNode {
             
             var representations: [TelegramMediaImageRepresentation] = []
             if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
+                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
             }
             if let imageResource = imageResource, let imageDimensions = imageDimensions {
-                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil))
+                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
             }
             if !representations.isEmpty {
                 let tmpImage = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
@@ -167,7 +167,9 @@ final class WebSearchItemNode: GridItemNode {
                 |> map { image in
                     if let image = image {
                         return { arguments in
-                            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                            guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                                return nil
+                            }
                             let drawingRect = arguments.drawingRect
                             let imageSize = image.size
                             let fittedSize = imageSize.aspectFilled(arguments.boundingSize).fitted(imageSize)

@@ -16,15 +16,27 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
     let voiceMessagesPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyVoiceMessages))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
     let globalPrivacySettings = account.network.request(Api.functions.account.getGlobalPrivacySettings())
-    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, autoremoveTimeout, globalPrivacySettings)
+    let messageAutoremoveTimeout = account.network.request(Api.functions.messages.getDefaultHistoryTTL())
+    
+    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, autoremoveTimeout, globalPrivacySettings, messageAutoremoveTimeout)
     |> `catch` { _ in
         return .complete()
     }
-    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, autoremoveTimeout, globalPrivacySettings -> Signal<AccountPrivacySettings, NoError> in
+    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, autoremoveTimeout, globalPrivacySettings, messageAutoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
         let accountTimeoutSeconds: Int32
         switch autoremoveTimeout {
             case let .accountDaysTTL(days):
                 accountTimeoutSeconds = days * 24 * 60 * 60
+        }
+        
+        let messageAutoremoveSeconds: Int32?
+        switch messageAutoremoveTimeout {
+        case let .defaultHistoryTTL(period):
+            if period != 0 {
+                messageAutoremoveSeconds = period
+            } else {
+                messageAutoremoveSeconds = nil
+            }
         }
         
         let lastSeenRules: [Api.PrivacyRule]
@@ -115,7 +127,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
             if let peer = parseTelegramGroupOrChannel(chat: chat) {
                 var participantCount: Int32? = nil
                 switch chat {
-                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCountValue):
+                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCountValue, _):
                         participantCount = participantsCountValue
                     default:
                         break
@@ -143,7 +155,13 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 return updated
             })
             
-            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap), automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds)
+            updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
+                var settings = settings
+                settings.messageAutoremoveTimeout = messageAutoremoveSeconds
+                return settings
+            })
+            
+            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap), automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds, messageAutoremoveTimeout: messageAutoremoveSeconds)
         }
     }
 }
@@ -162,6 +180,24 @@ func _internal_updateAccountRemovalTimeout(account: Account, timeout: Int32) -> 
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return .complete()
         }
+}
+
+func _internal_updateMessageRemovalTimeout(account: Account, timeout: Int32?) -> Signal<Void, NoError> {
+    let _ = account.postbox.transaction({ transaction -> Void in
+        updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
+            var settings = settings
+            settings.messageAutoremoveTimeout = timeout
+            return settings
+        })
+    }).start()
+    
+    return account.network.request(Api.functions.messages.setDefaultHistoryTTL(period: timeout ?? 0))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
 }
 
 func _internal_updatePhoneNumberDiscovery(account: Account, value: Bool) -> Signal<Void, NoError> {

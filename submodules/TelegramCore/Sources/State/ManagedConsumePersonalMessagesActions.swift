@@ -93,7 +93,7 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
         let actionsKey = PostboxViewKey.pendingMessageActions(type: .consumeUnseenPersonalMessage)
-        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
         let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
             var entries: [PendingMessageActionsEntry] = []
             var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
@@ -156,7 +156,7 @@ func managedReadReactionActions(postbox: Postbox, network: Network, stateManager
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
         let actionsKey = PostboxViewKey.pendingMessageActions(type: .readReaction)
-        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
         let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
             var entries: [PendingMessageActionsEntry] = []
             var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
@@ -367,7 +367,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     let apiTopMessage: Int32
                                     let apiUnreadMentionsCount: Int32
                                     switch dialog {
-                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _, _, _):
+                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadMentionsCount = unreadMentionsCount
                                         
@@ -377,7 +377,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     }
                                     
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()
@@ -409,7 +409,7 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                     let apiTopMessage: Int32
                                     let apiUnreadReactionsCount: Int32
                                     switch dialog {
-                                        case let .dialog(_, _, topMessage, _, _, _, _, unreadReactionsCount, _, _, _, _):
+                                        case let .dialog(_, _, topMessage, _, _, _, _, unreadReactionsCount, _, _, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadReactionsCount = unreadReactionsCount
                                         
@@ -419,7 +419,7 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                     }
                                     
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadReactionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadReactionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()
@@ -433,4 +433,76 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
             return .complete()
         }
     } |> switchToLatest
+}
+
+func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
+        
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: peerId, threadId: threadId, tagMask: MessageTags(rawValue: 0), namespace: Namespaces.Message.Cloud)
+        let disposable = postbox.combinedView(keys: [invalidateKey]).start(next: { view in
+            var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+            if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
+                invalidateEntries = v.entries
+            }
+            
+            let (disposeOperations, _, beginValidateOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) in
+                return helper.update(entries: [], invalidateEntries: invalidateEntries)
+            }
+            
+            for disposable in disposeOperations {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in beginValidateOperations {
+                let signal = synchronizeMessageHistoryTagSummary(postbox: postbox, network: network, entry: entry)
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                })
+                disposable.set(signal.start())
+            }
+        })
+        
+        return ActionDisposable {
+            let disposables = helper.with { helper -> [Disposable] in
+                return helper.reset()
+            }
+            for disposable in disposables {
+                disposable.dispose()
+            }
+            disposable.dispose()
+        }
+    }
+}
+
+private func synchronizeMessageHistoryTagSummary(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        guard let threadId = entry.key.threadId else {
+            return .complete()
+        }
+        if let peer = transaction.getPeer(entry.key.peerId) as? TelegramChannel, peer.flags.contains(.isForum), let inputPeer = apiInputPeer(peer) {
+            return network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: threadId), offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                guard let result = result else {
+                    return .complete()
+                }
+                return postbox.transaction { transaction -> Void in
+                    switch result {
+                    case let .channelMessages(_, _, count, _, messages, _, _, _):
+                        let topId: Int32 = messages.first?.id(namespace: Namespaces.Message.Cloud)?.id ?? 1
+                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: threadId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: count, maxId: topId)
+                    default:
+                        break
+                    }
+                }
+            }
+        } else {
+            return .complete()
+        }
+    }
+    |> switchToLatest
 }

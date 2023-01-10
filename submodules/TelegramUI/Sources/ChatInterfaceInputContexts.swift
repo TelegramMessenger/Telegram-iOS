@@ -212,7 +212,7 @@ func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatP
                                 if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                                     if value.fileId == id {
                                         text.removeAttribute(ChatTextInputAttributes.customEmoji, range: range)
-                                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: file.fileId.id, file: file), range: range)
+                                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file), range: range)
                                     }
                                 }
                             })
@@ -295,19 +295,15 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
             canSetupAutoremoveTimeout = true
         }
     } else if let group = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-        if case .creator = group.role {
+        if !group.hasBannedPermission(.banChangeInfo) {
             canSetupAutoremoveTimeout = true
-        } else if case let .admin(rights, _) = group.role {
-            if rights.rights.contains(.canDeleteMessages) {
-                canSetupAutoremoveTimeout = true
-            }
         }
     } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
         if user.botInfo == nil {
             canSetupAutoremoveTimeout = true
         }
     } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-        if channel.hasPermission(.deleteAllMessages) {
+        if channel.hasPermission(.changeInfo) {
             canSetupAutoremoveTimeout = true
         }
     }

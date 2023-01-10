@@ -32,6 +32,18 @@ public struct AdminLogEventsResult {
 }
 
 public enum AdminLogEventAction {
+    public struct ForumTopicInfo {
+        public var info: EngineMessageHistoryThread.Info
+        public var isClosed: Bool
+        public var isHidden: Bool
+        
+        public init(info: EngineMessageHistoryThread.Info, isClosed: Bool, isHidden: Bool) {
+            self.info = info
+            self.isClosed = isClosed
+            self.isHidden = isHidden
+        }
+    }
+    
     case changeTitle(prev: String, new: String)
     case changeAbout(prev: String, new: String)
     case changeUsername(prev: String, new: String)
@@ -67,7 +79,13 @@ public enum AdminLogEventAction {
     case participantJoinByRequest(invitation: ExportedInvitation, approvedBy: PeerId)
     case toggleCopyProtection(Bool)
     case sendMessage(Message)
-    case changeAvailableReactions(previousValue: [String], updatedValue: [String])
+    case changeAvailableReactions(previousValue: PeerAllowedReactions, updatedValue: PeerAllowedReactions)
+    case changeUsernames(prev: [String], new: [String])
+    case createTopic(info: EngineMessageHistoryThread.Info)
+    case deleteTopic(info: EngineMessageHistoryThread.Info)
+    case editTopic(prevInfo: ForumTopicInfo, newInfo: ForumTopicInfo)
+    case pinTopic(prevInfo: EngineMessageHistoryThread.Info?, newInfo: EngineMessageHistoryThread.Info?)
+    case toggleForum(isForum: Bool)
 }
 
 public enum ChannelAdminLogEventError {
@@ -101,12 +119,13 @@ public struct AdminLogEventsFlags: OptionSet {
     public static let calls = AdminLogEventsFlags(rawValue: 1 << 14)
     public static let invites = AdminLogEventsFlags(rawValue: 1 << 15)
     public static let sendMessages = AdminLogEventsFlags(rawValue: 1 << 16)
+    public static let forums = AdminLogEventsFlags(rawValue: 1 << 17)
 
     public static var all: AdminLogEventsFlags {
-        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites, .forums]
     }
     public static var flags: AdminLogEventsFlags {
-        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites, .forums]
     }
 }
 
@@ -178,16 +197,16 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         case .messageEmpty:
                                             action = .updatePinned(nil)
                                         default:
-                                            if let message = StoreMessage(apiMessage: new), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            if let message = StoreMessage(apiMessage: new, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                                 action = .updatePinned(rendered)
                                             }
                                         }
                                     case let .channelAdminLogEventActionEditMessage(prev, new):
-                                        if let prev = StoreMessage(apiMessage: prev), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
+                                        if let prev = StoreMessage(apiMessage: prev, peerIsForum: peer.isForum), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new, peerIsForum: peer.isForum), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
                                             action = .editMessage(prev: prevRendered, new: newRendered)
                                         }
                                     case let .channelAdminLogEventActionDeleteMessage(message):
-                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .deleteMessage(rendered)
                                         }
                                     case .channelAdminLogEventActionParticipantJoin:
@@ -221,7 +240,7 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                     case let .channelAdminLogEventActionDefaultBannedRights(prevBannedRights, newBannedRights):
                                         action = .updateDefaultBannedRights(prev: TelegramChatBannedRights(apiBannedRights: prevBannedRights), new: TelegramChatBannedRights(apiBannedRights: newBannedRights))
                                     case let .channelAdminLogEventActionStopPoll(message):
-                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .pollStopped(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
@@ -260,11 +279,69 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                     case let .channelAdminLogEventActionToggleNoForwards(new):
                                         action = .toggleCopyProtection(boolFromApiValue(new))
                                     case let .channelAdminLogEventActionSendMessage(message):
-                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .sendMessage(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeAvailableReactions(prevValue, newValue):
-                                        action = .changeAvailableReactions(previousValue: prevValue, updatedValue: newValue)
+                                        action = .changeAvailableReactions(previousValue: PeerAllowedReactions(apiReactions: prevValue), updatedValue: PeerAllowedReactions(apiReactions: newValue))
+                                    case let .channelAdminLogEventActionChangeUsernames(prevValue, newValue):
+                                        action = .changeUsernames(prev: prevValue, new: newValue)
+                                    case let .channelAdminLogEventActionCreateTopic(topic):
+                                        switch topic {
+                                        case let .forumTopic(_, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                                            action = .createTopic(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor))
+                                        case .forumTopicDeleted:
+                                            action = .createTopic(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0))
+                                        }
+                                    case let .channelAdminLogEventActionDeleteTopic(topic):
+                                        switch topic {
+                                        case let .forumTopic(_, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                                            action = .deleteTopic(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor))
+                                        case .forumTopicDeleted:
+                                            action = .deleteTopic(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0))
+                                        }
+                                    case let .channelAdminLogEventActionEditTopic(prevTopic, newTopic):
+                                        let prevInfo: AdminLogEventAction.ForumTopicInfo
+                                        switch prevTopic {
+                                        case let .forumTopic(flags, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                                            prevInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor), isClosed: (flags & (1 << 2)) != 0, isHidden: (flags & (1 << 6)) != 0)
+                                        case .forumTopicDeleted:
+                                            prevInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0), isClosed: false, isHidden: false)
+                                        }
+                                    
+                                        let newInfo: AdminLogEventAction.ForumTopicInfo
+                                        switch newTopic {
+                                        case let .forumTopic(flags, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                                            newInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor), isClosed: (flags & (1 << 2)) != 0, isHidden: (flags & (1 << 6)) != 0)
+                                        case .forumTopicDeleted:
+                                            newInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0), isClosed: false, isHidden: false)
+                                        }
+                                    
+                                        action = .editTopic(prevInfo: prevInfo, newInfo: newInfo)
+                                    case let .channelAdminLogEventActionPinTopic(_, prevTopic, newTopic):
+                                        let prevInfo: EngineMessageHistoryThread.Info?
+                                        switch prevTopic {
+                                        case let .forumTopic(_, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                                            prevInfo = EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor)
+                                        case .forumTopicDeleted:
+                                            prevInfo = EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0)
+                                        case .none:
+                                            prevInfo = nil
+                                        }
+                                    
+                                        let newInfo: EngineMessageHistoryThread.Info?
+                                        switch newTopic {
+                                        case let .forumTopic(_, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                                            newInfo = EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor)
+                                        case .forumTopicDeleted:
+                                            newInfo = EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0)
+                                        case .none:
+                                            newInfo = nil
+                                        }
+                                    
+                                        action = .pinTopic(prevInfo: prevInfo, newInfo: newInfo)
+                                    case let .channelAdminLogEventActionToggleForum(newValue):
+                                        action = .toggleForum(isForum: newValue == .boolTrue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

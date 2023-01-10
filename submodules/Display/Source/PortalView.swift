@@ -4,8 +4,8 @@ import UIKitRuntimeUtils
 public class PortalView {
     public let view: UIView & UIKitPortalViewProtocol
     
-    public init?() {
-        guard let view = makePortalView() else {
+    public init?(matchPosition: Bool = true) {
+        guard let view = makePortalView(matchPosition) else {
             return nil
         }
         self.view = view

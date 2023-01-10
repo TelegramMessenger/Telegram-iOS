@@ -156,7 +156,18 @@ func messagesIdsGroupedByPeerId(_ ids: [MessageId]) -> [PeerId: [MessageId]] {
     return dict
 }
 
-func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Message? {
+func messagesIdsGroupedByPeerId(_ ids: ReferencedReplyMessageIds) -> [PeerId: ReferencedReplyMessageIds] {
+    var dict: [PeerId: ReferencedReplyMessageIds] = [:]
+    
+    for (targetId, sourceId) in ids.targetIdsBySourceId {
+        let peerId = sourceId.peerId
+        dict[peerId, default: ReferencedReplyMessageIds()].add(sourceId: sourceId, targetId: targetId)
+    }
+    
+    return dict
+}
+
+func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associatedThreadInfo: Message.AssociatedThreadInfo? = nil) -> Message? {
     guard case let .Id(id) = message.id else {
         return nil
     }
@@ -208,8 +219,8 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
     let first = UInt32((hashValue >> 32) & 0xffffffff)
     let second = UInt32(hashValue & 0xffffffff)
     let stableId = first &+ second
-    
-    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+        
+    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo)
 }
 
 public extension Message {
@@ -322,6 +333,17 @@ public extension Message {
         }
         return nil
     }
+    var effectiveReactions: [MessageReaction]? {
+        if !self.hasReactions {
+            return nil
+        }
+        
+        if let result = mergedMessageReactions(attributes: self.attributes) {
+            return result.reactions
+        } else {
+            return nil
+        }
+    }
     var hasReactions: Bool {
         for attribute in self.attributes {
             if let attribute = attribute as? ReactionsMessageAttribute {
@@ -330,7 +352,7 @@ public extension Message {
         }
         for attribute in self.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
-                return attribute.value != nil
+                return !attribute.reactions.isEmpty
             }
         }
         return false
@@ -339,6 +361,15 @@ public extension Message {
     var textEntitiesAttribute: TextEntitiesMessageAttribute? {
         for attribute in self.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
+    var restrictedContentAttribute: RestrictedContentMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? RestrictedContentMessageAttribute {
                 return attribute
             }
         }

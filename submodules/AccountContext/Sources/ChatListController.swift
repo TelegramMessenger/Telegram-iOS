@@ -4,6 +4,11 @@ import Postbox
 import Display
 import TelegramCore
 
+public enum ChatListControllerLocation: Equatable {
+    case chatList(groupId: EngineChatList.Group)
+    case forum(peerId: PeerId)
+}
+
 public protocol ChatListController: ViewController {
     var context: AccountContext { get }
     var lockViewFrame: CGRect? { get }
@@ -13,4 +18,6 @@ public protocol ChatListController: ViewController {
     func deactivateSearch(animated: Bool)
     func activateCompose()
     func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool, deleteGloballyIfPossible: Bool, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void)
+    
+    func playSignUpCompletedAnimation()
 }

@@ -32,7 +32,7 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
     let imageSize = CGSize(width: radius + 7.0, height: 8.0)
     let fixedMainDiameter: CGFloat = 33.0
     
-    let formContext = DrawingContext(size: imageSize)
+    let formContext = DrawingContext(size: imageSize)!
     formContext.withFlippedContext { context in
         context.clear(CGRect(origin: CGPoint(), size: imageSize))
         context.translateBy(x: imageSize.width / 2.0, y: imageSize.height / 2.0)
@@ -82,6 +82,65 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
 public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
     let bubbleColors = incoming ? theme.message.incoming : theme.message.outgoing
     return messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: incoming, fillColor: fillColor, strokeColor: strokeColor, neighbors: neighbors, shadow: bubbleColors.bubble.withWallpaper.shadow, wallpaper: wallpaper, knockout: knockoutValue, mask: mask, extendedEdges: extendedEdges, onlyOutline: onlyOutline, onlyShadow: onlyShadow, alwaysFillColor: alwaysFillColor)
+}
+
+public func messageBubbleArguments(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, neighbors: MessageBubbleImageNeighbors) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool) {
+    var topLeftRadius: CGFloat
+    var topRightRadius: CGFloat
+    var bottomLeftRadius: CGFloat
+    var bottomRightRadius: CGFloat
+    var drawTail: Bool
+    
+    switch neighbors {
+    case .none:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = true
+    case .both:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = minCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case .bottom:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = minCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = true
+    case .side:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = minCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case let .top(side):
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = side ? minCornerRadius : maxCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case .extracted:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = false
+    }
+    
+    if incoming {
+        var tmp = topRightRadius
+        topRightRadius = topLeftRadius
+        topLeftRadius = tmp
+        
+        tmp = bottomRightRadius
+        bottomRightRadius = bottomLeftRadius
+        bottomLeftRadius = tmp
+    }
+    
+    return (topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, drawTail)
 }
 
 public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, shadow: PresentationThemeBubbleShadow?, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
@@ -146,7 +205,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     let bottomEllipse = CGRect(origin: CGPoint(x: 24.0, y: 16.0), size: CGSize(width: 27.0, height: 17.0))
     let topEllipse = CGRect(origin: CGPoint(x: 33.0, y: 14.0), size: CGSize(width: 23.0, height: 21.0))
     
-    let formContext = DrawingContext(size: imageSize)
+    let formContext = DrawingContext(size: imageSize)!
     formContext.withFlippedContext { context in
         context.clear(CGRect(origin: CGPoint(), size: rawSize))
         context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
@@ -181,7 +240,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     }
     let formImage = formContext.generateImage()!
     
-    let outlineContext = DrawingContext(size: imageSize)
+    let outlineContext = DrawingContext(size: imageSize)!
     outlineContext.withFlippedContext { context in
         context.clear(CGRect(origin: CGPoint(), size: rawSize))
         context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
@@ -239,7 +298,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             context.addLine(to: CGPoint(x: fixedMainDiameter + borderOffset, y: outlineBottomEllipse.midY))
             context.strokePath()
             
-            let bubbleTailContext = DrawingContext(size: imageSize)
+            let bubbleTailContext = DrawingContext(size: imageSize)!
             bubbleTailContext.withFlippedContext { context in
                 context.clear(CGRect(origin: CGPoint(), size: rawSize))
                 context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
@@ -299,7 +358,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
     })!
     
-    let drawingContext = DrawingContext(size: imageSize)
+    let drawingContext = DrawingContext(size: imageSize)!
     drawingContext.withFlippedContext { context in
         if onlyShadow {
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
