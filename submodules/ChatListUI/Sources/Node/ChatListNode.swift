@@ -1371,7 +1371,7 @@ public final class ChatListNode: ListView {
         
         let suggestPasswordSetup: Signal<Bool, NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
-            suggestPasswordSetup = combineLatest(
+            suggestPasswordSetup = .single(false) |> then(combineLatest(
                 getServerProvidedSuggestions(account: context.account),
                 context.engine.auth.twoStepVerificationConfiguration()
             )
@@ -1389,7 +1389,7 @@ public final class ChatListNode: ListView {
                     return false
                 }
                 return suggestions.contains(.setupPassword)
-            }
+            })
             |> distinctUntilChanged
         } else {
             suggestPasswordSetup = .single(false)
