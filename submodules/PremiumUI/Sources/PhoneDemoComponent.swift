@@ -141,7 +141,7 @@ private final class PhoneView: UIView {
         self.frontShimmerView.mask = self.shimmerMaskView
         self.frontShimmerView.addSubview(self.shimmerEffectView)
         
-        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.35), gradientSize: 60.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
+        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.45), gradientSize: 32.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
         self.backShimmerEffectView.layer.compositingFilter = "overlayBlendMode"
         
         self.shimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.5), gradientSize: 16.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
@@ -280,8 +280,8 @@ private final class PhoneView: UIView {
             self.shimmerMaskView.frame = phoneBounds
             self.shimmerBorderView.frame = phoneBounds
             
-            self.backShimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 12.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 25.0, height: phoneBounds.height))
-            self.shimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 12.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 25.0, height: phoneBounds.height))
+            self.backShimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 8.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 17.0, height: phoneBounds.height))
+            self.shimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 8.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 17.0, height: phoneBounds.height))
             
             let notchHeight: CGFloat = 20.0
             if let starImage = self.shimmerStarView.image {

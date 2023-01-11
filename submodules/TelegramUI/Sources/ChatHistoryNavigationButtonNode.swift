@@ -183,7 +183,12 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
             let badgeSize = self.badgeTextNode.updateLayout(size: CGSize(width: 200.0, height: 100.0), animated: true)
             let backgroundSize = CGSize(width: self.badge.count == 1 ? 18.0 : max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
             let backgroundFrame = CGRect(origin: CGPoint(x: floor((38.0 - backgroundSize.width) / 2.0), y: -9.0), size: backgroundSize)
-            self.badgeBackgroundNode.frame = backgroundFrame
+            if backgroundFrame.width < self.badgeBackgroundNode.frame.width {
+                self.badgeBackgroundNode.layer.animateFrame(from: self.badgeBackgroundNode.frame, to: backgroundFrame, duration: 0.2)
+                self.badgeBackgroundNode.frame = backgroundFrame
+            } else {
+                self.badgeBackgroundNode.frame = backgroundFrame
+            }
             self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundFrame.width - badgeSize.width) / 2.0), y: 1.0), size: badgeSize)
             
             if self.badgeBackgroundNode.alpha < 1.0 {

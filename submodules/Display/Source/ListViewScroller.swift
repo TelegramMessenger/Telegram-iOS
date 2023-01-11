@@ -42,4 +42,9 @@ public final class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
     override public func touchesShouldCancel(in view: UIView) -> Bool {
         return true
     }
+    
+    var forceDecelerating = false
+    public override var isDecelerating: Bool {
+        return self.forceDecelerating || super.isDecelerating
+    }
 }

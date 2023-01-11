@@ -362,9 +362,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     
     private var extendedMediaOverlayNode: ExtendedMediaOverlayNode?
-    
-    //private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
-    
+        
     private var context: AccountContext?
     private var message: Message?
     private var attributes: ChatMessageEntryAttributes?
@@ -548,18 +546,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     override func didLoad() {
         super.didLoad()
         
-        let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:)))
-        /*recognizer.tapActionAtPoint = { [weak self] point in
-            guard let strongSelf = self else {
-                return .fail
-            }
-            if !strongSelf.imageNode.bounds.contains(point) {
-                return .fail
-            }
-            return .waitForDoubleTap
-        }*/
-        self.imageNode.view.addGestureRecognizer(recognizer)
-        //self.tapRecognizer = recognizer
+        self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:))))
     }
     
     private func progressPressed(canActivate: Bool) {
@@ -645,35 +632,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 }
             }
         }
-        /*if case .ended = recognizer.state {
-            if let (gesture, point) = recognizer.lastRecognizedGestureAndLocation, let message = self.message {
-                if case .doubleTap = gesture {
-                    if canAddMessageReactions(message: message) {
-                        self.updateMessageReaction?(message, .default)
-                    }
-                } else {
-                    if let _ = self.attributes?.updatingMedia {
-                        if let statusNode = self.statusNode, statusNode.frame.contains(point) {
-                            self.progressPressed(canActivate: true)
-                        }
-                    } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
-                        var videoContentMatch = true
-                        if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
-                            videoContentMatch = self.message?.stableId == stableId && self.media?.id == mediaId
-                        }
-                        self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
-                    } else {
-                        if let message = self.message, message.flags.isSending {
-                            if let statusNode = self.statusNode, statusNode.frame.contains(point) {
-                                self.progressPressed(canActivate: true)
-                            }
-                        } else {
-                            self.progressPressed(canActivate: true)
-                        }
-                    }
-                }
-            }
-        }*/
     }
     
     func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData,  _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {

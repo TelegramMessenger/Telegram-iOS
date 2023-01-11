@@ -437,8 +437,16 @@ public final class SparseItemGrid: ASDisplayNode {
         }
 
         let zoomLevel: ZoomLevel
+        
+        class ScrollView: UIScrollView {
+            var forceDecelerating = false
+            
+            override var isDecelerating: Bool {
+                return self.forceDecelerating || super.isDecelerating
+            }
+        }
 
-        let scrollView: UIScrollView
+        let scrollView: ScrollView
         private let shimmer: Shimmer
 
         var theme: PresentationTheme
@@ -468,7 +476,7 @@ public final class SparseItemGrid: ASDisplayNode {
             self.maybeLoadHoleAnchor = maybeLoadHoleAnchor
             self.coveringOffsetUpdated = coveringOffsetUpdated
 
-            self.scrollView = UIScrollView()
+            self.scrollView = ScrollView()
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
             }
@@ -502,6 +510,7 @@ public final class SparseItemGrid: ASDisplayNode {
         @objc func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.items?.itemBinding.didScroll()
             if let decelerationAnimator = self.decelerationAnimator {
+                self.scrollView.forceDecelerating = false
                 self.decelerationAnimator = nil
                 decelerationAnimator.invalidate()
             }
@@ -803,6 +812,7 @@ public final class SparseItemGrid: ASDisplayNode {
             let startTime = CACurrentMediaTime()
             var currentOffset = self.scrollView.contentOffset
             let decelerationRate: CGFloat = 0.998
+            self.scrollView.forceDecelerating = true
             self.scrollViewDidEndDragging(self.scrollView, willDecelerate: true)
             self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
                 guard let strongSelf = self else {
@@ -833,6 +843,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 strongSelf.scrollViewDidScroll(strongSelf.scrollView)
                 if didEnd {
                     strongSelf.scrollViewDidEndDecelerating(strongSelf.scrollView)
+                    strongSelf.scrollView.forceDecelerating = false
                 }
             })
             self.decelerationAnimator?.isPaused = false
@@ -1045,6 +1056,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         return nil
                     }
                     if let decelerationAnimator = strongSelf.decelerationAnimator {
+                        strongSelf.scrollView.forceDecelerating = false
                         strongSelf.decelerationAnimator = nil
                         decelerationAnimator.invalidate()
                     }
