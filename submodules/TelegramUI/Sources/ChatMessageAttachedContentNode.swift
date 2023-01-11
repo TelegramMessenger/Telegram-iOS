@@ -85,7 +85,13 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
                     strongSelf.iconNode.image = strongSelf.highlightedIconImage
                     strongSelf.textNode.isHidden = true
                     strongSelf.highlightedTextNode.isHidden = false
+                    
+                    let scale = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
+                    strongSelf.layer.animateScale(from: 1.0, to: scale, duration: 0.15, removeOnCompletion: false)
                 } else {
+                    if let presentationLayer = strongSelf.layer.presentation() {
+                        strongSelf.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                    }
                     UIView.transition(with: strongSelf.view, duration: 0.2, options: [.transitionCrossDissolve], animations: {
                         strongSelf.backgroundNode.image = strongSelf.regularImage
                         strongSelf.iconNode.image = strongSelf.regularIconImage
