@@ -53,18 +53,37 @@ python3 build-system/Make/Make.py \
 python3 build-system/Make/Make.py \
     --cacheDir="$HOME/telegram-bazel-cache" \
     generateProject \
-    --configurationPath="$HOME/telegram-configuration" \
+    --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
     --disableExtensions
 ```
 
 It is possible to generate a project that does not require any codesigning certificates to be installed: add `--disableProvisioningProfiles` flag:
-```
+```shell
 python3 build-system/Make/Make.py \
     --cacheDir="$HOME/telegram-bazel-cache" \
     generateProject \
-    --configurationPath="$HOME/telegram-configuration" \
+    --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
     --disableExtensions \
-    --disableProvisioningProfiles
+    --disableProvisioningProfiles \
+    --noCodesigning true
+```
+
+**appstore-configuration.json
+```javascript
+{
+	"bundle_id": "ph.telegra.Telegraph",
+	"api_id": "8",
+	"api_hash": "7245de8e747a0d6fbe11f7cc14fcc0bb",
+	"team_id": "C67CF9S4VU",
+	"app_center_id": "0",
+	"is_internal_build": "false",
+	"is_appstore_build": "true",
+	"appstore_id": "686449807",
+	"app_specific_url_scheme": "tg",
+	"premium_iap_product_id": "org.telegram.telegramPremium.monthly",
+	"enable_siri": true,
+	"enable_icloud": true
+}
 ```
 
 
