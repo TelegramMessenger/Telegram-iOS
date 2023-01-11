@@ -861,6 +861,8 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                     })
                 case let .openWebView(url, simple):
                     item.controllerInteraction.openWebView(button.title, url, simple, false)
+                case .requestPeer:
+                    break
             }
         }
     }

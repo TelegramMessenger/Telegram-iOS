@@ -211,6 +211,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
     dict[-1275374751] = { return Api.EmojiLanguage.parse_emojiLanguage($0) }
+    dict[2048790993] = { return Api.EmojiList.parse_emojiList($0) }
+    dict[1209970170] = { return Api.EmojiList.parse_emojiListNotModified($0) }
     dict[-1835310691] = { return Api.EmojiStatus.parse_emojiStatus($0) }
     dict[769727150] = { return Api.EmojiStatus.parse_emojiStatusEmpty($0) }
     dict[-97474361] = { return Api.EmojiStatus.parse_emojiStatusUntil($0) }
@@ -408,6 +410,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[901503851] = { return Api.KeyboardButton.parse_keyboardButtonCallback($0) }
     dict[1358175439] = { return Api.KeyboardButton.parse_keyboardButtonGame($0) }
     dict[-59151553] = { return Api.KeyboardButton.parse_keyboardButtonRequestGeoLocation($0) }
+    dict[218842764] = { return Api.KeyboardButton.parse_keyboardButtonRequestPeer($0) }
     dict[-1318425559] = { return Api.KeyboardButton.parse_keyboardButtonRequestPhone($0) }
     dict[-1144565411] = { return Api.KeyboardButton.parse_keyboardButtonRequestPoll($0) }
     dict[-1598009252] = { return Api.KeyboardButton.parse_keyboardButtonSimpleWebView($0) }
@@ -454,6 +457,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1892568281] = { return Api.MessageAction.parse_messageActionPaymentSentMe($0) }
     dict[-2132731265] = { return Api.MessageAction.parse_messageActionPhoneCall($0) }
     dict[-1799538451] = { return Api.MessageAction.parse_messageActionPinMessage($0) }
+    dict[-25742243] = { return Api.MessageAction.parse_messageActionRequestedPeer($0) }
     dict[1200788123] = { return Api.MessageAction.parse_messageActionScreenshotTaken($0) }
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
@@ -660,6 +664,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[777640226] = { return Api.ReportReason.parse_inputReportReasonPornography($0) }
     dict[1490799288] = { return Api.ReportReason.parse_inputReportReasonSpam($0) }
     dict[505595789] = { return Api.ReportReason.parse_inputReportReasonViolence($0) }
+    dict[401534846] = { return Api.RequestPeerType.parse_requestPeerTypeBroadcast($0) }
+    dict[-54345306] = { return Api.RequestPeerType.parse_requestPeerTypeChat($0) }
+    dict[1597737472] = { return Api.RequestPeerType.parse_requestPeerTypeUser($0) }
     dict[-797791052] = { return Api.RestrictionReason.parse_restrictionReason($0) }
     dict[894777186] = { return Api.RichText.parse_textAnchor($0) }
     dict[1730456516] = { return Api.RichText.parse_textBold($0) }
@@ -1290,6 +1297,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiLanguage:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.EmojiList:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiStatus:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiURL:
@@ -1559,6 +1568,8 @@ public extension Api {
             case let _1 as Api.ReplyMarkup:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReportReason:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.RequestPeerType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.RestrictionReason:
                 _1.serialize(buffer, boxed)

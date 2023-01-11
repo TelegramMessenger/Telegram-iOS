@@ -833,6 +833,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .attachMenuBotAllowed:
                 attributedString = NSAttributedString(string: strings.Notification_BotWriteAllowed, font: titleFont, textColor: primaryTextColor)
+            case let .requestedPeer(_, peerId):
+                //TODO:localize
+                let _ = peerId
+                attributedString = NSAttributedString(string: "Requested Chat", font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }
