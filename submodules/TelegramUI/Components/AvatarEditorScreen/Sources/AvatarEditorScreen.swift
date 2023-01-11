@@ -1,0 +1,1204 @@
+import Foundation
+import UIKit
+import Display
+import AsyncDisplayKit
+import ComponentFlow
+import SwiftSignalKit
+import ViewControllerComponent
+import ComponentDisplayAdapters
+import TelegramPresentationData
+import AccountContext
+import TelegramCore
+import MultilineTextComponent
+import EmojiStatusComponent
+import Postbox
+import TelegramStringFormatting
+import TelegramNotices
+import EntityKeyboard
+import PagerComponent
+import Markdown
+import GradientBackground
+import LegacyComponents
+import DrawingUI
+import SolidRoundedButtonComponent
+
+enum AvatarBackground: Equatable {
+    case gradient([UInt32])
+    
+    var colors: [UInt32] {
+        switch self {
+        case let .gradient(colors):
+            return colors
+        }
+    }
+    
+    func generateImage(size: CGSize) -> UIImage {
+        switch self {
+            case let .gradient(colors):
+                if colors.count == 1 {
+                    return generateSingleColorImage(size: size, color: UIColor(rgb: colors.first!))!
+                } else if colors.count == 2 {
+                    return generateGradientImage(size: size, colors: colors.map { UIColor(rgb: $0) }, locations: [0.0, 1.0])!
+                } else {
+                    return GradientBackgroundNode.generatePreview(size: size, colors: colors.map { UIColor(rgb: $0) })
+                }
+        }
+    }
+}
+
+private let defaultBackgrounds: [AvatarBackground] = [
+    .gradient([0x72d5fd, 0x2a9ef1]),
+    .gradient([0xff885e, 0xff516a]),
+    .gradient([0xffcd6a, 0xffa85c]),
+    .gradient([0xa0de7e, 0x54cb68]),
+    .gradient([0x00fcfd, 0x4acccd]),
+    .gradient([0xe0a2f3, 0xd669ed]),
+    .gradient([0x82b1ff, 0x665fff]),
+]
+
+private struct KeyboardInputData: Equatable {
+    var emoji: EmojiPagerContentComponent
+    var stickers: EmojiPagerContentComponent?
+    
+    init(
+        emoji: EmojiPagerContentComponent,
+        stickers: EmojiPagerContentComponent?
+    ) {
+        self.emoji = emoji
+        self.stickers = stickers
+    }
+}
+
+final class AvatarEditorScreenComponent: Component {
+    typealias EnvironmentType = ViewControllerComponentContainer.Environment
+    
+    let context: AccountContext
+    let ready: Promise<Bool>
+    
+    init(
+        context: AccountContext,
+        ready: Promise<Bool>
+    ) {
+        self.context = context
+        self.ready = ready
+    }
+    
+    static func ==(lhs: AvatarEditorScreenComponent, rhs: AvatarEditorScreenComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        return true
+    }
+
+    final class State: ComponentState {
+        let context: AccountContext
+                
+        var selectedBackground: AvatarBackground
+        var selectedItem: EmojiPagerContentComponent.Item?
+        
+        var keyboardContentId: AnyHashable = "emoji"
+        var expanded: Bool = false
+        var editingColor: Bool = false
+        var previousColor: AvatarBackground
+        
+        var isSearchActive: Bool = false
+        
+        init(context: AccountContext) {
+            self.context = context
+            
+            self.selectedBackground = defaultBackgrounds.first!
+            self.previousColor = self.selectedBackground
+        }
+    }
+    
+    func makeState() -> State {
+        return State(
+            context: self.context
+        )
+    }
+    
+    class View: UIView, UIScrollViewDelegate {
+        private let navigationCancelButton = ComponentView<Empty>()
+        private let navigationDoneButton = ComponentView<Empty>()
+                
+        private let previewContainerView: UIView
+        private let previewView = ComponentView<Empty>()
+        
+        private let backgroundContainerView: UIView
+        private let backgroundTitleView = ComponentView<Empty>()
+        private let backgroundView = ComponentView<Empty>()
+        private let colorPickerView = ComponentView<Empty>()
+        
+        private let keyboardContainerView: UIView
+        private let keyboardTitleView = ComponentView<Empty>()
+        private let keyboardSwitchView = ComponentView<Empty>()
+        private let keyboardView = ComponentView<Empty>()
+        private let panelBackgroundView: BlurredBackgroundView
+        private let panelHostView: PagerExternalTopPanelContainer
+        private let panelSeparatorView: UIView
+    
+        private let buttonView = ComponentView<Empty>()
+        
+        private var component: AvatarEditorScreenComponent?
+        private weak var state: State?
+        
+        private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
+        private var controller: (() -> AvatarEditorScreen?)?
+        
+        private var dataDisposable: Disposable?
+        private var data: KeyboardInputData?
+
+        private let emojiSearchDisposable = MetaDisposable()
+        private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+        
+        private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
+        
+        override init(frame: CGRect) {
+            self.previewContainerView = UIView()
+            self.previewContainerView.clipsToBounds = true
+            if #available(iOS 13.0, *) {
+                self.previewContainerView.layer.cornerCurve = .circular
+            }
+            
+            self.backgroundContainerView = UIView()
+            self.backgroundContainerView.clipsToBounds = true
+            self.backgroundContainerView.layer.cornerRadius = 10.0
+            
+            self.keyboardContainerView = UIView()
+            self.keyboardContainerView.clipsToBounds = true
+            self.keyboardContainerView.layer.cornerRadius = 10.0
+            
+            self.panelBackgroundView = BlurredBackgroundView(color: .white)
+            self.panelHostView = PagerExternalTopPanelContainer()
+            self.panelSeparatorView = UIView()
+                        
+            super.init(frame: frame)
+    
+            self.addSubview(self.previewContainerView)
+            self.addSubview(self.backgroundContainerView)
+            self.addSubview(self.keyboardContainerView)
+            self.keyboardContainerView.addSubview(self.panelBackgroundView)
+            self.keyboardContainerView.addSubview(self.panelHostView)
+            self.keyboardContainerView.addSubview(self.panelSeparatorView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.dataDisposable?.dispose()
+            self.emojiSearchDisposable.dispose()
+        }
+        
+        private func updateData(_ data: KeyboardInputData) {
+            self.data = data
+            
+            self.state?.selectedItem = data.emoji.itemGroups.first?.items.first
+            self.state?.updated(transition: .immediate)
+            
+            let updateSearchQuery: (String, String) -> Void = { [weak self] rawQuery, languageCode in
+                guard let strongSelf = self, let context = strongSelf.state?.context else {
+                    return
+                }
+                
+                let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                if query.isEmpty {
+                    strongSelf.emojiSearchDisposable.set(nil)
+                    strongSelf.emojiSearchResult.set(.single(nil))
+                } else {
+                    var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
+                    if !languageCode.lowercased().hasPrefix("en") {
+                        signal = signal
+                        |> mapToSignal { keywords in
+                            return .single(keywords)
+                            |> then(
+                                context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
+                                |> map { englishKeywords in
+                                    return keywords + englishKeywords
+                                }
+                            )
+                        }
+                    }
+                
+                    let resultSignal = signal
+                    |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                        return combineLatest(
+                            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
+                            combineLatest(keywords.map { context.engine.stickers.searchStickers(query: $0.emoticons.first!) })
+                        )
+                        |> map { view, stickers -> [EmojiPagerContentComponent.ItemGroup] in
+                            let hasPremium = true
+                            
+                            var emojis: [(String, TelegramMediaFile?, String)] = []
+                            
+                            var existingEmoticons = Set<String>()
+                            var allEmoticons: [String: String] = [:]
+                            for keyword in keywords {
+                                for emoticon in keyword.emoticons {
+                                    allEmoticons[emoticon] = keyword.keyword
+                                    
+                                    if !existingEmoticons.contains(emoticon) {
+                                        existingEmoticons.insert(emoticon)
+                                    }
+                                }
+                            }
+                            
+                            for entry in view.entries {
+                                guard let item = entry.item as? StickerPackItem else {
+                                    continue
+                                }
+                                for attribute in item.file.attributes {
+                                    switch attribute {
+                                    case let .CustomEmoji(_, _, alt, _):
+                                        if !item.file.isPremiumEmoji || hasPremium {
+                                            if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                                emojis.append((alt, item.file, keyword))
+                                            } else if alt == query {
+                                                emojis.append((alt, item.file, alt))
+                                            }
+                                        }
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
+                            
+                            var emojiItems: [EmojiPagerContentComponent.Item] = []
+                            var existingIds = Set<MediaId>()
+                            for item in emojis {
+                                if let itemFile = item.1 {
+                                    if existingIds.contains(itemFile.fileId) {
+                                        continue
+                                    }
+                                    existingIds.insert(itemFile.fileId)
+                                    let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                    let item = EmojiPagerContentComponent.Item(
+                                        animationData: animationData,
+                                        content: .animation(animationData),
+                                        itemFile: itemFile,
+                                        subgroupId: nil,
+                                        icon: .none,
+                                        tintMode: animationData.isTemplate ? .primary : .none
+                                    )
+                                    emojiItems.append(item)
+                                }
+                            }
+                            
+                            var stickerItems: [EmojiPagerContentComponent.Item] = []
+                            for stickerResult in stickers {
+                                for sticker in stickerResult {
+                                    if existingIds.contains(sticker.file.fileId) {
+                                        continue
+                                    }
+                                    
+                                    existingIds.insert(sticker.file.fileId)
+                                    let animationData = EntityKeyboardAnimationData(file: sticker.file)
+                                    let item = EmojiPagerContentComponent.Item(
+                                        animationData: animationData,
+                                        content: .animation(animationData),
+                                        itemFile: sticker.file,
+                                        subgroupId: nil,
+                                        icon: .none,
+                                        tintMode: .none
+                                    )
+                                    stickerItems.append(item)
+                                }
+                            }
+                            
+                            var result: [EmojiPagerContentComponent.ItemGroup] = []
+                            if !emojiItems.isEmpty {
+                                result.append(
+                                    EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "emoji",
+                                        title: "Emoji",
+                                        subtitle: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        items: emojiItems
+                                    )
+                                )
+                            }
+                            if !stickerItems.isEmpty {
+                                result.append(
+                                    EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "stickers",
+                                        title: "Stickers",
+                                        subtitle: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        items: stickerItems
+                                    )
+                                )
+                            }
+                            return result
+                        }
+                    }
+                    
+                    strongSelf.emojiSearchDisposable.set((resultSignal
+                    |> delay(0.15, queue: .mainQueue())
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query))))
+                    }))
+                }
+            }
+            
+            data.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+                performItemAction: { [weak self] _, item, _, _, _, _ in
+                    guard let self, let _ = item.itemFile else {
+                        return
+                    }
+                    self.state?.selectedItem = item
+                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                },
+                deleteBackwards: nil,
+                openStickerSettings: nil,
+                openFeatured: nil,
+                openSearch: {
+                },
+                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                    guard let strongSelf = self, let controller = strongSelf.controller?(), let collectionId = groupId.base as? ItemCollectionId else {
+                        return
+                    }
+                    let context = controller.context
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { views in
+                        guard let view = views.views[viewKey] as? OrderedItemListView else {
+                            return
+                        }
+                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            if featuredStickerPack.info.id == collectionId {
+                                let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
+                                |> mapToSignal { result -> Signal<Void, NoError> in
+                                    switch result {
+                                    case let .result(info, items, installed):
+                                        if installed {
+                                            return .complete()
+                                        } else {
+                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                        }
+                                    case .fetching:
+                                        break
+                                    case .none:
+                                        break
+                                    }
+                                    return .complete()
+                                }
+                                |> deliverOnMainQueue).start(completed: {
+                                })
+                                
+                                break
+                            }
+                        }
+                    })
+                },
+                clearGroup: { [weak self] groupId in
+                    guard let strongSelf = self, let controller = strongSelf.controller?() else {
+                        return
+                    }
+                    if groupId == AnyHashable("popular") {
+                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                        var items: [ActionSheetItem] = []
+                        let context = controller.context
+                        items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupRemoved(id: "popular"))
+                            let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    }
+                },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
+                navigationController: { [weak self] in
+                    return self?.controller?()?.navigationController as? NavigationController
+                },
+                requestUpdate: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !transition.animation.isImmediate {
+                        strongSelf.state?.updated(transition: transition)
+                    }
+                },
+                updateSearchQuery: { rawQuery, languageCode in
+                    updateSearchQuery(rawQuery, languageCode)
+                },
+                updateScrollingToItemGroup: {
+                },
+                chatPeerId: nil,
+                peekBehavior: nil,
+                customLayout: nil,
+                externalBackground: nil,
+                externalExpansionView: nil,
+                useOpaqueTheme: false,
+                hideBackground: true
+            )
+            
+//            var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
+//            if let controller = self.controller {
+//                stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
+//                    context: controller.context,
+//                    interaction: nil,
+//                    chatPeerId: nil,
+//                    present: { [weak controller] c, a in
+//                        controller?.presentInGlobalOverlay(c, with: a)
+//                    }
+//                )
+//            }
+            
+            data.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+                performItemAction: { [weak self] _, item, _, _, _, _ in
+                    guard let self, let _ = item.itemFile else {
+                        return
+                    }
+                    self.state?.selectedItem = item
+                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                },
+                deleteBackwards: nil,
+                openStickerSettings: nil,
+                openFeatured: nil,
+                openSearch: {
+                },
+                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                    guard let strongSelf = self, let controller = strongSelf.controller?(), let collectionId = groupId.base as? ItemCollectionId else {
+                        return
+                    }
+                    let context = controller.context
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { views in
+                        guard let view = views.views[viewKey] as? OrderedItemListView else {
+                            return
+                        }
+                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            if featuredStickerPack.info.id == collectionId {
+                                let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
+                                |> mapToSignal { result -> Signal<Void, NoError> in
+                                    switch result {
+                                    case let .result(info, items, installed):
+                                        if installed {
+                                            return .complete()
+                                        } else {
+                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                        }
+                                    case .fetching:
+                                        break
+                                    case .none:
+                                        break
+                                    }
+                                    return .complete()
+                                }
+                                |> deliverOnMainQueue).start(completed: {
+                                })
+                                
+                                break
+                            }
+                        }
+                    })
+                },
+                clearGroup: { [weak self] groupId in
+                    guard let strongSelf = self, let controller = strongSelf.controller?() else {
+                        return
+                    }
+                    let context = controller.context
+                    if groupId == AnyHashable("recent") {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    } else if groupId == AnyHashable("featuredTop") {
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                        let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { views in
+                            guard let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            var stickerPackIds: [Int64] = []
+                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                stickerPackIds.append(featuredStickerPack.info.id.id)
+                            }
+                            let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: stickerPackIds).start()
+                        })
+                    } else if groupId == AnyHashable("peerSpecific") {
+                    }
+                },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
+                navigationController: { [weak self] in
+                    return self?.controller?()?.navigationController as? NavigationController
+                },
+                requestUpdate: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !transition.animation.isImmediate {
+                        strongSelf.state?.updated(transition: transition)
+                    }
+                },
+                updateSearchQuery: { rawQuery, languageCode in
+                    updateSearchQuery(rawQuery, languageCode)
+                },
+                updateScrollingToItemGroup: {
+                },
+                chatPeerId: nil,
+                peekBehavior: nil,
+                customLayout: nil,
+                externalBackground: nil,
+                externalExpansionView: nil,
+                useOpaqueTheme: false,
+                hideBackground: true
+            )
+        }
+        
+        private var isExpanded = false
+        
+        func update(component: AvatarEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            
+            let controller = environment.controller
+            self.controller = {
+                return controller() as? AvatarEditorScreen
+            }
+            self.navigationMetrics = (environment.navigationHeight, environment.statusBarHeight)
+            
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            
+            let effectiveIsExpanded = state.expanded || state.editingColor
+            
+            if self.isExpanded != effectiveIsExpanded {
+                self.isExpanded = effectiveIsExpanded
+                
+                if let snapshotView = self.navigationCancelButton.view?.snapshotContentTree() {
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    self.addSubview(snapshotView)
+                }
+            }
+            
+            let navigationCancelButtonSize = self.navigationCancelButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: state.expanded ? .white : environment.theme.rootController.navigationBar.accentTextColor)),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.controller?()?.dismiss()
+                    }
+                ).minSize(CGSize(width: 16.0, height: environment.navigationHeight - environment.statusBarHeight))),
+                environment: {},
+                containerSize: CGSize(width: 150.0, height: environment.navigationHeight - environment.statusBarHeight)
+            )
+            if let navigationCancelButtonView = self.navigationCancelButton.view {
+                if navigationCancelButtonView.superview == nil {
+                    self.addSubview(navigationCancelButtonView)
+                }
+                transition.setFrame(view: navigationCancelButtonView, frame: CGRect(origin: CGPoint(x: 16.0 + environment.safeInsets.left, y: environment.statusBarHeight), size: navigationCancelButtonSize))
+                transition.setAlpha(view: navigationCancelButtonView, alpha: !state.editingColor ? 1.0 : 0.0)
+            }
+            
+            let navigationDoneButtonSize = self.navigationDoneButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(Text(text: "Set", font: Font.semibold(17.0), color: state.isSearchActive ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.complete()
+                    }
+                ).minSize(CGSize(width: 16.0, height: environment.navigationHeight - environment.statusBarHeight))),
+                environment: {},
+                containerSize: CGSize(width: 150.0, height: environment.navigationHeight - environment.statusBarHeight)
+            )
+            if let navigationDoneButtonView = self.navigationDoneButton.view {
+                if navigationDoneButtonView.superview == nil {
+                    self.addSubview(navigationDoneButtonView)
+                }
+                transition.setFrame(view: navigationDoneButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - navigationDoneButtonSize.width, y: environment.statusBarHeight), size: navigationDoneButtonSize))
+                transition.setAlpha(view: navigationDoneButtonView, alpha: (state.expanded || state.isSearchActive) && !state.editingColor ? 1.0 : 0.0)
+            }
+                        
+            self.backgroundColor = environment.theme.list.blocksBackgroundColor
+            self.backgroundContainerView.backgroundColor = environment.theme.list.plainBackgroundColor
+            self.keyboardContainerView.backgroundColor = environment.theme.list.plainBackgroundColor
+            self.panelSeparatorView.backgroundColor = environment.theme.list.itemPlainSeparatorColor
+                        
+            if self.dataDisposable == nil {
+                let context = component.context
+                let emojiItems = EmojiPagerContentComponent.emojiInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    isStandalone: false,
+                    isStatusSelection: false,
+                    isReactionSelection: false,
+                    isEmojiSelection: false,
+                    isProfilePhotoEmojiSelection: true,
+                    topReactionItems: [],
+                    areUnicodeEmojiEnabled: false,
+                    areCustomEmojiEnabled: true,
+                    chatPeerId: context.account.peerId,
+                    hasSearch: true,
+                    forceHasPremium: true
+                )
+                
+                let stickerItems = EmojiPagerContentComponent.stickerInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
+                    stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
+                    chatPeerId: context.account.peerId,
+                    hasSearch: true,
+                    hasTrending: false,
+                    forceHasPremium: true,
+                    searchIsPlaceholderOnly: false
+                )
+                
+                let signal = combineLatest(queue: .mainQueue(),
+                    emojiItems,
+                    stickerItems,
+                    self.emojiSearchResult.get()
+                ) |> map { emoji, stickers, searchResult -> (KeyboardInputData, (groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?) in
+                    return (KeyboardInputData(emoji: emoji, stickers: stickers), searchResult)
+                }
+                self.dataDisposable = (signal
+                |> deliverOnMainQueue
+                ).start(next: { [weak self, weak state] data, searchResult in
+                    if let self {
+                        var data = data
+
+                        if let searchResult = searchResult {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                            if !searchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                                emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                                    text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
+                                    iconFile: nil
+                                )
+                            }
+                            
+                            if state?.keyboardContentId == AnyHashable("emoji") {
+                                data.emoji = data.emoji.withUpdatedItemGroups(itemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults)
+                            } else {
+                                data.stickers = data.stickers?.withUpdatedItemGroups(itemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults)
+                            }
+                        }
+                        
+                        self.updateData(data)
+                        state?.updated(transition: .immediate)
+                    }
+                })
+            }
+                      
+            var contentHeight: CGFloat = 0.0
+            
+            let collapsedAvatarSize = CGSize(width: 100.0, height: 100.0)
+            let avatarPreviewSize = self.previewView.update(
+                transition: transition,
+                component: AnyComponent(
+                    AvatarPreviewComponent(
+                        context: component.context,
+                        background: state.selectedBackground,
+                        file: state.selectedItem?.itemFile,
+                        tapped: { [weak state] in
+                            if let state, !state.editingColor {
+                                state.expanded = !state.expanded
+                                state.updated(transition: .easeInOut(duration: 0.3))
+                            }
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: availableSize.width)
+            )
+            if let previewView = self.previewView.view {
+                if previewView.superview == nil {
+                    self.previewContainerView.addSubview(previewView)
+                }
+                
+                let previewScale = effectiveIsExpanded ? 1.0 : collapsedAvatarSize.width / avatarPreviewSize.width
+                let cornerRadius = effectiveIsExpanded ? 0.0 : availableSize.width / 2.0
+                let position = effectiveIsExpanded ? avatarPreviewSize.height / 2.0 : environment.navigationHeight + 10.0
+                                
+                transition.setBounds(view: previewView, bounds: CGRect(origin: .zero, size: avatarPreviewSize))
+                transition.setPosition(view: previewView, position: CGPoint(x: avatarPreviewSize.width / 2.0, y: avatarPreviewSize.height / 2.0))
+                
+                transition.setBounds(view: self.previewContainerView, bounds: CGRect(origin: .zero, size: avatarPreviewSize))
+                transition.setPosition(view: self.previewContainerView, position: CGPoint(x: availableSize.width / 2.0, y: position))
+                transition.setTransform(view: self.previewContainerView, transform: CATransform3DMakeScale(previewScale, previewScale, 1.0))
+                transition.setCornerRadius(layer: self.previewContainerView.layer, cornerRadius: cornerRadius)
+                
+                contentHeight += effectiveIsExpanded ? avatarPreviewSize.height : environment.navigationHeight + collapsedAvatarSize.height - 41.0
+            }
+            contentHeight += 17.0
+            
+            let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
+            let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor)
+            
+            let backgroundTitleSize = self.backgroundTitleView.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .markdown(
+                        text: "Background".uppercased(), attributes: MarkdownAttributes(
+                            body: body,
+                            bold: bold,
+                            link: body,
+                            linkAttribute: { _ in nil }
+                        )
+                    ),
+                    maximumNumberOfLines: 0
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: .greatestFiniteMagnitude)
+            )
+            let backgroundTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: backgroundTitleSize)
+            if let backgroundTitleView = self.backgroundTitleView.view {
+                if backgroundTitleView.superview == nil {
+                    self.addSubview(backgroundTitleView)
+                }
+                transition.setFrame(view: backgroundTitleView, frame: backgroundTitleFrame)
+            }
+            contentHeight += backgroundTitleSize.height
+            contentHeight += 8.0
+            
+            let backgroundSize = self.backgroundView.update(
+                transition: transition,
+                component: AnyComponent(BackgroundColorComponent(
+                    theme: environment.theme,
+                    values: defaultBackgrounds,
+                    selectedValue: state.selectedBackground,
+                    updateValue: { [weak state] value in
+                        if let state {
+                            state.selectedBackground = value
+                            state.updated(transition: .easeInOut(duration: 0.2))
+                        }
+                    },
+                    openColorPicker: { [weak state] in
+                        if let state {
+                            state.editingColor = true
+                            state.previousColor = state.selectedBackground
+                            state.updated(transition: .easeInOut(duration: 0.3))
+                        }
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+            )
+            let backgroundFrame = CGRect(origin: .zero, size: backgroundSize)
+            if let backgroundView = self.backgroundView.view {
+                if backgroundView.superview == nil {
+                    self.backgroundContainerView.addSubview(backgroundView)
+                }
+                transition.setFrame(view: backgroundView, frame: backgroundFrame)
+                transition.setAlpha(view: backgroundView, alpha: state.editingColor ? 0.0 : 1.0)
+            }
+            
+            let colorPickerSize = self.colorPickerView.update(
+                transition: transition,
+                component: AnyComponent(
+                    ColorPickerComponent(
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        colors: state.selectedBackground.colors,
+                        colorsChanged: { [weak state] colors in
+                            if let state {
+                                state.selectedBackground = .gradient(colors)
+                                state.updated(transition: .immediate)
+                            }
+                        },
+                        cancel: { [weak state] in
+                            if let state {
+                                state.selectedBackground = state.previousColor
+                                state.editingColor = false
+                                state.updated(transition: .easeInOut(duration: 0.3))
+                            }
+                        },
+                        done: { [weak state] in
+                            if let state {
+                                state.editingColor = false
+                                state.updated(transition: .easeInOut(duration: 0.3))
+                            }
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+            )
+            let colorPickerFrame = CGRect(origin: .zero, size: colorPickerSize)
+            if let colorPickerView = self.colorPickerView.view {
+                if colorPickerView.superview == nil {
+                    self.backgroundContainerView.addSubview(colorPickerView)
+                }
+                transition.setFrame(view: colorPickerView, frame: colorPickerFrame)
+                transition.setAlpha(view: colorPickerView, alpha: state.editingColor ? 1.0 : 0.0)
+            }
+            
+            let backgroundContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: state.editingColor ? colorPickerSize : backgroundSize)
+            transition.setFrame(view: self.backgroundContainerView, frame: backgroundContainerFrame)
+            
+            contentHeight += backgroundContainerFrame.height
+            contentHeight += 24.0
+            
+            let keyboardTitle: String
+            let keyboardSwitchTitle: String
+            
+            if state.isSearchActive {
+                keyboardTitle = "Emoji or Sticker"
+                keyboardSwitchTitle = " "
+            } else if state.keyboardContentId == AnyHashable("emoji") {
+                keyboardTitle = "Emoji"
+                keyboardSwitchTitle = "Switch to Stickers"
+            } else if state.keyboardContentId == AnyHashable("stickers") {
+                keyboardTitle = "Stickers"
+                keyboardSwitchTitle = "Switch to Emoji"
+            } else {
+                keyboardTitle = " "
+                keyboardSwitchTitle = " "
+            }
+            
+            let keyboardTitleSize = self.keyboardTitleView.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .markdown(
+                        text: keyboardTitle.uppercased(), attributes: MarkdownAttributes(
+                            body: body,
+                            bold: bold,
+                            link: body,
+                            linkAttribute: { _ in nil }
+                        )
+                    ),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: .greatestFiniteMagnitude)
+            )
+            let keyboardTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keyboardTitleSize)
+            if let keyboardTitleView = self.keyboardTitleView.view {
+                if keyboardTitleView.superview == nil {
+                    self.addSubview(keyboardTitleView)
+                }
+                keyboardTitleView.bounds = CGRect(origin: .zero, size: keyboardTitleFrame.size)
+                if keyboardTitleFrame.center.y == keyboardTitleView.center.y {
+                    keyboardTitleView.center = keyboardTitleFrame.center
+                } else {
+                    transition.setPosition(view: keyboardTitleView, position: keyboardTitleFrame.center)
+                }
+                transition.setAlpha(view: keyboardTitleView, alpha: state.editingColor ? 0.0 : 1.0)
+            }
+            
+            let keyboardSwitchSize = self.keyboardSwitchView.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    Button(
+                        content: AnyComponent(
+                            MultilineTextComponent(
+                                text: .markdown(
+                                    text: keyboardSwitchTitle.uppercased(), attributes: MarkdownAttributes(
+                                        body: link,
+                                        bold: link,
+                                        link: link,
+                                        linkAttribute: { _ in nil }
+                                    )
+                                ),
+                                maximumNumberOfLines: 1
+                            )
+                        ), action: { [weak self] in
+                            if let strongSelf = self, let state = strongSelf.state {
+                                if let strongSelf = self, let pagerView = strongSelf.keyboardView.view as? EntityKeyboardComponent.View {
+                                    let targetContentId: AnyHashable
+                                    if state.keyboardContentId == AnyHashable("emoji") {
+                                        targetContentId = AnyHashable("stickers")
+                                    } else {
+                                        targetContentId = AnyHashable("emoji")
+                                    }
+                                    pagerView.scrollToContentId(targetContentId)
+                                }
+                            }
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: .greatestFiniteMagnitude)
+            )
+            let keyboardSwitchFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - 15.0 - keyboardSwitchSize.width, y: contentHeight), size: keyboardSwitchSize)
+            if let keyboardSwitchView = self.keyboardSwitchView.view {
+                if keyboardSwitchView.superview == nil {
+                    self.addSubview(keyboardSwitchView)
+                }
+                keyboardSwitchView.bounds = CGRect(origin: .zero, size: keyboardSwitchFrame.size)
+                if keyboardSwitchFrame.center.y == keyboardSwitchView.center.y {
+                    keyboardSwitchView.center = keyboardSwitchFrame.center
+                } else {
+                    transition.setPosition(view: keyboardSwitchView, position: keyboardSwitchFrame.center)
+                }
+                transition.setAlpha(view: keyboardSwitchView, alpha: state.editingColor ? 0.0 : 1.0)
+            }
+            contentHeight += keyboardTitleSize.height
+            contentHeight += 8.0
+            
+            var bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom : 16.0
+            if !effectiveIsExpanded {
+                bottomInset += 50.0 + 16.0
+            }
+            
+            let keyboardContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height - contentHeight - bottomInset))
+            transition.setFrame(view: self.keyboardContainerView, frame: keyboardContainerFrame)
+            transition.setAlpha(view: self.keyboardContainerView, alpha: state.editingColor ? 0.0 : 1.0)
+            
+            let isSearchActive = state.isSearchActive
+            let topPanelHeight: CGFloat = isSearchActive ? 0.0 : 42.0
+
+            if let data = self.data {
+                let keyboardSize = self.keyboardView.update(
+                    transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
+                    component: AnyComponent(EntityKeyboardComponent(
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        isContentInFocus: false,
+                        containerInsets: UIEdgeInsets(),
+                        topPanelInsets: UIEdgeInsets(top: 0.0, left: topPanelHeight - 34.0, bottom: 0.0, right: 4.0),
+                        emojiContent: data.emoji,
+                        stickerContent: data.stickers,
+                        maskContent: nil,
+                        gifContent: nil,
+                        hasRecentGifs: false,
+                        availableGifSearchEmojies: [],
+                        defaultToEmojiTab: true,
+                        externalTopPanelContainer: self.panelHostView,
+                        externalBottomPanelContainer: nil,
+                        displayTopPanelBackground: true,
+                        topPanelExtensionUpdated: { _, _ in },
+                        hideInputUpdated: { _, _, _ in },
+                        hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
+                            if let strongSelf = self {
+                                strongSelf.state?.isSearchActive = hideTopPanel
+                                strongSelf.state?.updated(transition: transition)
+                            }
+                        },
+                        switchToTextInput: {},
+                        switchToGifSubject: { _ in },
+                        reorderItems: { _, _ in },
+                        makeSearchContainerNode: { _ in return nil },
+                        contentIdUpdated: { [weak self] contentId in
+                            if let strongSelf = self {
+                                strongSelf.state?.keyboardContentId = contentId
+                                strongSelf.state?.updated(transition: .immediate)
+                            }
+                        },
+                        deviceMetrics: environment.deviceMetrics,
+                        hiddenInputHeight: 0.0,
+                        inputHeight: 0.0,
+                        displayBottomPanel: false,
+                        isExpanded: true,
+                        clipContentToTopPanel: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: keyboardContainerFrame.size.width, height: keyboardContainerFrame.size.height - 6.0 + (isSearchActive ? 40.0 : 0.0))
+                )
+                if let keyboardComponentView = self.keyboardView.view {
+                    if keyboardComponentView.superview == nil {
+                        self.keyboardContainerView.insertSubview(keyboardComponentView, at: 0)
+                    }
+                    
+                    self.panelBackgroundView.update(size: CGSize(width: keyboardSize.width, height: 42.0), transition: .immediate)
+                    self.panelBackgroundView.updateColor(color: environment.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.8), transition: .immediate)
+                    
+                    transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isSearchActive ? -42.0 : 0.0), size: CGSize(width: keyboardSize.width, height: 42.0)))
+                    transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
+                    transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - 34.0), size: keyboardSize))
+                    
+                    transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: isSearchActive ? -UIScreenPixel : topPanelHeight), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+                    transition.setAlpha(view: self.panelSeparatorView, alpha: isSearchActive ? 0.0 : 1.0)
+                }
+            }
+            
+            contentHeight += keyboardContainerFrame.height
+            
+            if effectiveIsExpanded {
+                contentHeight += bottomInset
+            } else {
+                contentHeight += 16.0
+            }
+            
+            let buttonSize = self.buttonView.update(
+                transition: transition,
+                component: AnyComponent(
+                    SolidRoundedButtonComponent(
+                        title: "Set Video",
+                        theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 10.0,
+                        action: { [weak self] in
+                            self?.complete()
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: environment.navigationHeight - environment.statusBarHeight)
+            )
+            if let buttonView = self.buttonView.view {
+                if buttonView.superview == nil {
+                    self.addSubview(buttonView)
+                }
+                transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: buttonSize))
+            }
+          
+            return availableSize
+        }
+        
+        func complete() {
+            guard let state = self.state, let item = state.selectedItem, let itemFile = item.itemFile, let previewView = self.previewView.view else {
+                return
+            }
+            let size = CGSize(width: 1920.0, height: 1920.0)
+            let image = state.selectedBackground.generateImage(size: size)
+            let tempPath = NSTemporaryDirectory() + "/\(UInt64.random(in: 0 ... UInt64.max)).jpg"
+            let tempUrl = NSURL(fileURLWithPath: tempPath) as URL
+            try? image.jpegData(compressionQuality: 1.0)?.write(to: tempUrl)
+            
+            let entity = DrawingStickerEntity(content: .file(itemFile))
+            entity.referenceDrawingSize = size
+            entity.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            entity.scale = 3.3
+            
+            let entitiesData = DrawingEntitiesView.encodeEntities([entity])
+         
+            let paintingData = TGPaintingData(
+                drawing: nil,
+                entitiesData: entitiesData,
+                image: nil,
+                stillImage: nil,
+                hasAnimation: true,
+                stickers: []
+            )
+            
+            let adjustments = PGPhotoEditorValues(
+                originalSize: size,
+                cropRect: CGRect(origin: .zero, size: size),
+                cropRotation: 0.0,
+                cropOrientation: .up,
+                cropLockedAspectRatio: 1.0,
+                cropMirrored: false,
+                toolValues: [:],
+                paintingData: paintingData,
+                sendAsGif: true
+            )
+            let preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetProfileHigh
+            
+            let combinedImage = generateImage(previewView.bounds.size, contextGenerator: { size, context in
+                let bounds = CGRect(origin: .zero, size: size)
+                if let cgImage = image.cgImage {
+                    context.draw(cgImage, in: bounds)
+                }
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                
+                previewView.layer.render(in: context)
+            }, opaque: false)!
+            
+            self.controller?()?.completion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset), { [weak self] in
+                self?.controller?()?.dismiss()
+            })
+        }
+    }
+        
+        
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+public final class AvatarEditorScreen: ViewControllerComponentContainer {
+    fileprivate let context: AccountContext
+    
+    private let readyValue = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self.readyValue
+    }
+    
+    public var completion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
+        
+    public init(context: AccountContext) {
+        self.context = context
+        
+        let componentReady = Promise<Bool>()
+        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady), navigationBarAppearance: .transparent)
+        self.navigationPresentation = .modal
+            
+        self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func viewDidLoad() {
+        super.viewDidLoad()
+    }
+}

@@ -195,8 +195,8 @@ final class DrawingStickerEntityView: DrawingEntityView {
                             
                             if let animationNode = animationNode {
                                 let _ = (animationNode.status
-                                         |> take(1)
-                                         |> deliverOnMainQueue).start(next: { [weak self] status in
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak self] status in
                                     self?.started?(status.duration)
                                 })
                             }
@@ -273,7 +273,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
                     self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                     
                     self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
-                                               |> deliverOn(Queue.concurrentDefaultQueue())).start())
+                    |> deliverOn(Queue.concurrentDefaultQueue())).start())
                 }
             }
             self.animationNode?.visibility = isPlaying

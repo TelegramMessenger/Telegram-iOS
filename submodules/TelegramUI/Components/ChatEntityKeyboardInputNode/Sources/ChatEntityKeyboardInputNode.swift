@@ -1495,6 +1495,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                     )
                 },
+                contentIdUpdated: { _ in },
                 deviceMetrics: deviceMetrics,
                 hiddenInputHeight: hiddenInputHeight,
                 inputHeight: inputHeight,

@@ -185,6 +185,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
                     makeSearchContainerNode: { _ in return nil },
+                    contentIdUpdated: { _ in },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,

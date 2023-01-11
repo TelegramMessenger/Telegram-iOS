@@ -108,6 +108,7 @@ public final class EntityKeyboardComponent: Component {
     public let switchToGifSubject: (GifPagerContentComponent.Subject) -> Void
     public let reorderItems: (ReorderCategory, [EntityKeyboardTopPanelComponent.Item]) -> Void
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode?
+    public let contentIdUpdated: (AnyHashable) -> Void
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
     public let inputHeight: CGFloat
@@ -138,6 +139,7 @@ public final class EntityKeyboardComponent: Component {
         switchToGifSubject: @escaping (GifPagerContentComponent.Subject) -> Void,
         reorderItems: @escaping (ReorderCategory, [EntityKeyboardTopPanelComponent.Item]) -> Void,
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode?,
+        contentIdUpdated: @escaping (AnyHashable) -> Void,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
         inputHeight: CGFloat,
@@ -167,6 +169,7 @@ public final class EntityKeyboardComponent: Component {
         self.switchToGifSubject = switchToGifSubject
         self.reorderItems = reorderItems
         self.makeSearchContainerNode = makeSearchContainerNode
+        self.contentIdUpdated = contentIdUpdated
         self.deviceMetrics = deviceMetrics
         self.hiddenInputHeight = hiddenInputHeight
         self.inputHeight = inputHeight
@@ -744,6 +747,12 @@ public final class EntityKeyboardComponent: Component {
                         }
                         strongSelf.isTopPanelHiddenUpdated(isTopPanelHidden: isTopPanelHidden, transition: transition)
                     },
+                    contentIdUpdated: { [weak self] id in
+                        guard let strongSelf = self, let component = strongSelf.component else {
+                            return
+                        }
+                        component.contentIdUpdated(id)
+                    },
                     panelHideBehavior: panelHideBehavior,
                     clipContentToTopPanel: component.clipContentToTopPanel
                 )),
@@ -860,6 +869,15 @@ public final class EntityKeyboardComponent: Component {
             }
             
             component.hideTopPanelUpdated(self.isTopPanelHidden, transition)
+        }
+        
+        public func scrollToContentId(_ contentId: AnyHashable) {
+            guard let _ = self.component else {
+                return
+            }
+            if let pagerView = self.pagerView.findTaggedView(tag: PagerComponentViewTag()) as? PagerComponent<EntityKeyboardChildEnvironment, EntityKeyboardTopContainerPanelEnvironment>.View {
+                pagerView.navigateToContentId(contentId)
+            }
         }
         
         public func openSearch() {
