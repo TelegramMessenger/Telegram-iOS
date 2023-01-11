@@ -1434,7 +1434,10 @@ private final class NotificationServiceHandler {
                                                         switch state {
                                                         case let .idBased(maxIncomingReadId, _, _, _, _):
                                                             if maxIncomingReadId >= messageId.id {
+                                                                Logger.shared.log("NotificationService \(episode)", "maxIncomingReadId: \(maxIncomingReadId), messageId: \(messageId.id), skipping")
                                                                 content = NotificationContent(isLockedMessage: nil)
+                                                            } else {
+                                                                Logger.shared.log("NotificationService \(episode)", "maxIncomingReadId: \(maxIncomingReadId), messageId: \(messageId.id), not skipping")
                                                             }
                                                         case .indexBased:
                                                             break
