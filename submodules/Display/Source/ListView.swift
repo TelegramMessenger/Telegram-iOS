@@ -67,6 +67,7 @@ public final class ListViewBackingView: UIView {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.isHidden, let target = self.target {
             if target.bounds.contains(point) {
+                target.scroller.forceDecelerating = false
                 if target.decelerationAnimator != nil {
                     target.decelerationAnimator?.isPaused = true
                     target.decelerationAnimator = nil
@@ -854,6 +855,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.decelerationAnimator?.isPaused = true
         let startTime = CACurrentMediaTime()
         let decelerationRate: CGFloat = 0.998
+        self.scroller.forceDecelerating = true
         self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -879,6 +881,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
             
             if abs(currentVelocity) < 0.1 {
+                strongSelf.scroller.forceDecelerating = false
                 strongSelf.decelerationAnimator?.isPaused = true
                 strongSelf.decelerationAnimator = nil
             }
