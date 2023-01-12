@@ -229,3 +229,37 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
     return signal
     |> switchToLatest
 }
+
+
+public enum SendBotRequestedPeerError {
+    case generic
+}
+
+func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId: MessageId, buttonId: Int32, requestedPeerId: PeerId) -> Signal<Void, SendBotRequestedPeerError> {
+    let signal = account.postbox.transaction { transaction -> Signal<Void, SendBotRequestedPeerError> in
+        
+        
+        if let peer = transaction.getPeer(peerId), let requestedPeer = transaction.getPeer(requestedPeerId) {
+            
+            let inputPeer = apiInputPeer(peer)
+            let inputRequestedPeer = apiInputPeer(requestedPeer)
+
+            if let inputPeer = inputPeer, let inputRequestedPeer = inputRequestedPeer {
+                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(peer: inputPeer, msgId: messageId.id, buttonId: buttonId, requestedPeer: inputRequestedPeer))
+                |> mapError { error -> SendBotRequestedPeerError in
+                    return .generic
+                }
+                |> map { result in
+                    account.stateManager.addUpdates(result)
+                }
+                return signal
+            }
+            
+        }
+        return .single(Void())
+    }
+    |> castError(SendBotRequestedPeerError.self)
+    
+    return signal
+    |> switchToLatest
+}

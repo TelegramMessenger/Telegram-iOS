@@ -439,6 +439,10 @@ public extension TelegramEngine {
         public func addChannelMember(peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
             return _internal_addChannelMember(account: self.account, peerId: peerId, memberId: memberId)
         }
+        
+        public func sendBotRequestedPeer(messageId: MessageId, buttonId: Int32, requestedPeerId: PeerId) -> Signal<Void, SendBotRequestedPeerError> {
+            return _internal_sendBotRequestedPeer(account: self.account, peerId: messageId.peerId, messageId: messageId, buttonId: buttonId, requestedPeerId: requestedPeerId)
+        }
 
         public func addChannelMembers(peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
             return _internal_addChannelMembers(account: self.account, peerId: peerId, memberIds: memberIds)

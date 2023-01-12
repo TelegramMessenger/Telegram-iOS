@@ -489,26 +489,37 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
         private var statusDisposable: Disposable?
         private var status: MediaPlayerStatus?
         weak var pictureInPictureController: AVPictureInPictureController?
-
+        
+        private var previousIsPlaying = false
         init(node: UniversalVideoNode) {
             self.node = node
 
             super.init()
 
+            var invalidatedStateOnce = false
             self.statusDisposable = (self.node.status
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.status = status
-                strongSelf.pictureInPictureController?.invalidatePlaybackState()
+                if let status {
+                    let isPlaying = status.status == .playing
+                    if !invalidatedStateOnce {
+                        invalidatedStateOnce = true
+                        strongSelf.pictureInPictureController?.invalidatePlaybackState()
+                    } else if strongSelf.previousIsPlaying != isPlaying {
+                        strongSelf.previousIsPlaying = isPlaying
+                        strongSelf.pictureInPictureController?.invalidatePlaybackState()
+                    }
+                }
             })
         }
 
         deinit {
             self.statusDisposable?.dispose()
         }
-
+        
         public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
             self.node.togglePlayPause()
         }
@@ -517,7 +528,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
             guard let status = self.status else {
                 return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)))
             }
-            return CMTimeRange(start: CMTime(seconds: status.timestamp, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
+            return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration - status.timestamp, preferredTimescale: CMTimeScale(30.0)))
         }
 
         public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
@@ -652,6 +663,11 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
     }
+    
+    func invalidatePlaybackState() {
+        self.pictureInPictureController?.invalidatePlaybackState()
+    }
+
 
     var videoNode: ASDisplayNode {
         return self.node
@@ -675,6 +691,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
+        print(error)
     }
 
     public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
@@ -1444,7 +1461,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.playbackCompleted = { [weak self, weak videoNode] in
                 Queue.mainQueue().async {
                     item.playbackCompleted()
+                                        
                     if let strongSelf = self, !isAnimated {
+                        if #available(iOS 15.0, *) {
+                            if let pictureInPictureContent = strongSelf.pictureInPictureContent as? PictureInPictureContentImpl {
+                                pictureInPictureContent.invalidatePlaybackState()
+                            }
+                        }
+                        
                         if let snapshotView = videoNode?.view.snapshotView(afterScreenUpdates: false) {
                             videoNode?.view.addSubview(snapshotView)
                             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
