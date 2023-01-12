@@ -752,6 +752,9 @@ public protocol SharedAccountContext: AnyObject {
     
     var applicationBindings: TelegramApplicationBindings { get }
     
+    var authorizationPushConfiguration: Signal<AuthorizationCodePushNotificationConfiguration?, NoError> { get }
+    var firebaseSecretStream: Signal<[String: String], NoError> { get }
+    
     var mediaManager: MediaManager { get }
     var locationManager: DeviceLocationManager? { get }
     var callManager: PresentationCallManager? { get }

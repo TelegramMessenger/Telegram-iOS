@@ -54,18 +54,18 @@ extension ReplyMarkupButton {
                         isBot: bot.flatMap({ $0 == .boolTrue }),
                         isPremium: premium.flatMap({ $0 == .boolTrue })
                     ))
-                case let .requestPeerTypeChat(flags, creator, hasUsername, forum, userAdminRights, botAdminRights):
+                case let .requestPeerTypeChat(flags, hasUsername, forum, userAdminRights, botAdminRights):
                     mappedPeerType = .group(ReplyMarkupButtonRequestPeerType.Group(
-                        isCreator: creator.flatMap({ $0 == .boolTrue }),
+                        isCreator: (flags & (1 << 0)) != 0,
                         hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
                         isForum: forum.flatMap({ $0 == .boolTrue }),
                         botParticipant: (flags & (1 << 5)) != 0,
                         userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
                         botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
                     ))
-                case let .requestPeerTypeBroadcast(_, creator, hasUsername, userAdminRights, botAdminRights):
+                case let .requestPeerTypeBroadcast(flags, hasUsername, userAdminRights, botAdminRights):
                     mappedPeerType = .channel(ReplyMarkupButtonRequestPeerType.Channel(
-                        isCreator: creator.flatMap({ $0 == .boolTrue }),
+                        isCreator: (flags & (1 << 0)) != 0,
                         hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
                         userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
                         botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))

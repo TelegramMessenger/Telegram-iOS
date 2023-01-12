@@ -9,6 +9,7 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case email = 5
     case emailSetupRequired = 6
     case fragment = 7
+    case firebase = 8
 }
 
 public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
@@ -20,6 +21,7 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case email(emailPattern: String, length: Int32, nextPhoneLoginDate: Int32?, appleSignInAllowed: Bool, setup: Bool)
     case emailSetupRequired(appleSignInAllowed: Bool)
     case fragment(url: String, length: Int32)
+    case firebase(pushTimeout: Int32?, length: Int32)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -39,6 +41,8 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 self = .emailSetupRequired(appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0)
             case SentAuthorizationCodeTypeValue.fragment.rawValue:
                 self = .fragment(url: decoder.decodeStringForKey("u", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
+            case SentAuthorizationCodeTypeValue.firebase.rawValue:
+                self = .firebase(pushTimeout: decoder.decodeOptionalInt32ForKey("pushTimeout"), length: decoder.decodeInt32ForKey("length", orElse: 0))
             default:
                 preconditionFailure()
         }
@@ -80,6 +84,14 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
             encoder.encodeInt32(SentAuthorizationCodeTypeValue.fragment.rawValue, forKey: "v")
             encoder.encodeString(url, forKey: "u")
             encoder.encodeInt32(length, forKey: "l")
+        case let .firebase(pushTimeout, length):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.firebase.rawValue, forKey: "v")
+            if let pushTimeout = pushTimeout {
+                encoder.encodeInt32(pushTimeout, forKey: "pushTimeout")
+            } else {
+                encoder.encodeNil(forKey: "pushTimeout")
+            }
+            encoder.encodeInt32(length, forKey: "length")
         }
     }
 }

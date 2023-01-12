@@ -257,6 +257,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
     
+    private var firebaseSecrets: [String: String] = [:] {
+        didSet {
+            if self.firebaseSecrets != oldValue {
+                self.firebaseSecretStream.set(.single(self.firebaseSecrets))
+            }
+        }
+    }
+    private let firebaseSecretStream = Promise<[String: String]>([:])
+    
     private var notificationTokenPromise: Promise<Data> {
         if let current = self._notificationTokenPromise {
             return current
@@ -799,7 +808,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), firebaseSecretStream: self.firebaseSecretStream.get(), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: nil, messageId: messageId)
@@ -1517,6 +1526,30 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
+        
+        /*
+         [AnyHashable("aps"): [AnyHashable("content-available"): 1], AnyHashable("com.google.firebase.auth"): {"receipt":"AEFDNu9IxcZSaYU0IPE23FIO_XQrbKCJJHw3zGFWxvhIBq_pF5OdcfY8Ij0HMnRuo6Es17Xv4UW9nbYJ1ZtPtZPt3_LrKjaAFr-t03BcZoVO7AtYcWYwaPlZyDyaZNCLa0VhK8ZXvw","secret":"vMcf7FRTiM9pr0CK"}, AnyHashable("gcm.message_id"): 1673550604893425, AnyHashable("google.c.sender.id"): 604544722005, AnyHashable("google.c.fid"): fq7N94bg_oA]
+         */
+        
+        if let firebaseAuth = redactedPayload["com.google.firebase.auth"] as? String {
+            guard let firebaseAuthData = firebaseAuth.data(using: .utf8), let firebaseJson = try? JSONSerialization.jsonObject(with: firebaseAuthData) else {
+                completionHandler(.newData)
+                return
+            }
+            guard let firebaseDict = firebaseJson as? [String: Any] else {
+                completionHandler(.newData)
+                return
+            }
+            
+            if let receipt = firebaseDict["receipt"] as? String, let secret = firebaseDict["secret"] as? String {
+                var firebaseSecrets = self.firebaseSecrets
+                firebaseSecrets[receipt] = secret
+                self.firebaseSecrets = firebaseSecrets
+            }
+            
+            completionHandler(.newData)
+            return
+        }
 
         if userInfo["p"] == nil {
             completionHandler(.noData)

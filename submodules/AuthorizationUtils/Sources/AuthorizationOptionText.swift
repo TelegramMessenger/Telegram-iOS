@@ -43,6 +43,8 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         return mutableString
     case .fragment:
         return parseMarkdownIntoAttributedString(strings.Login_EnterCodeFragmentText(phoneNumber).string, attributes: attributes, textAlignment: .center)
+    case .firebase:
+        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeSMSText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     }
 }
 

@@ -550,28 +550,26 @@ public extension Api {
 }
 public extension Api {
     enum RequestPeerType: TypeConstructorDescription {
-        case requestPeerTypeBroadcast(flags: Int32, creator: Api.Bool?, hasUsername: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?)
-        case requestPeerTypeChat(flags: Int32, creator: Api.Bool?, hasUsername: Api.Bool?, forum: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?)
+        case requestPeerTypeBroadcast(flags: Int32, hasUsername: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?)
+        case requestPeerTypeChat(flags: Int32, hasUsername: Api.Bool?, forum: Api.Bool?, userAdminRights: Api.ChatAdminRights?, botAdminRights: Api.ChatAdminRights?)
         case requestPeerTypeUser(flags: Int32, bot: Api.Bool?, premium: Api.Bool?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .requestPeerTypeBroadcast(let flags, let creator, let hasUsername, let userAdminRights, let botAdminRights):
+                case .requestPeerTypeBroadcast(let flags, let hasUsername, let userAdminRights, let botAdminRights):
                     if boxed {
-                        buffer.appendInt32(401534846)
+                        buffer.appendInt32(865857388)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {creator!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {hasUsername!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {userAdminRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {botAdminRights!.serialize(buffer, true)}
                     break
-                case .requestPeerTypeChat(let flags, let creator, let hasUsername, let forum, let userAdminRights, let botAdminRights):
+                case .requestPeerTypeChat(let flags, let hasUsername, let forum, let userAdminRights, let botAdminRights):
                     if boxed {
-                        buffer.appendInt32(-54345306)
+                        buffer.appendInt32(-906990053)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {creator!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {hasUsername!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 4) != 0 {forum!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {userAdminRights!.serialize(buffer, true)}
@@ -590,10 +588,10 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .requestPeerTypeBroadcast(let flags, let creator, let hasUsername, let userAdminRights, let botAdminRights):
-                return ("requestPeerTypeBroadcast", [("flags", flags as Any), ("creator", creator as Any), ("hasUsername", hasUsername as Any), ("userAdminRights", userAdminRights as Any), ("botAdminRights", botAdminRights as Any)])
-                case .requestPeerTypeChat(let flags, let creator, let hasUsername, let forum, let userAdminRights, let botAdminRights):
-                return ("requestPeerTypeChat", [("flags", flags as Any), ("creator", creator as Any), ("hasUsername", hasUsername as Any), ("forum", forum as Any), ("userAdminRights", userAdminRights as Any), ("botAdminRights", botAdminRights as Any)])
+                case .requestPeerTypeBroadcast(let flags, let hasUsername, let userAdminRights, let botAdminRights):
+                return ("requestPeerTypeBroadcast", [("flags", flags as Any), ("hasUsername", hasUsername as Any), ("userAdminRights", userAdminRights as Any), ("botAdminRights", botAdminRights as Any)])
+                case .requestPeerTypeChat(let flags, let hasUsername, let forum, let userAdminRights, let botAdminRights):
+                return ("requestPeerTypeChat", [("flags", flags as Any), ("hasUsername", hasUsername as Any), ("forum", forum as Any), ("userAdminRights", userAdminRights as Any), ("botAdminRights", botAdminRights as Any)])
                 case .requestPeerTypeUser(let flags, let bot, let premium):
                 return ("requestPeerTypeUser", [("flags", flags as Any), ("bot", bot as Any), ("premium", premium as Any)])
     }
@@ -603,11 +601,37 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Bool?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _3: Api.ChatAdminRights?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
+            } }
+            var _4: Api.ChatAdminRights?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.RequestPeerType.requestPeerTypeBroadcast(flags: _1!, hasUsername: _2, userAdminRights: _3, botAdminRights: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_requestPeerTypeChat(_ reader: BufferReader) -> RequestPeerType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Bool
             } }
             var _3: Api.Bool?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.Bool
             } }
             var _4: Api.ChatAdminRights?
@@ -619,48 +643,12 @@ public extension Api {
                 _5 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
             } }
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 4) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.RequestPeerType.requestPeerTypeBroadcast(flags: _1!, creator: _2, hasUsername: _3, userAdminRights: _4, botAdminRights: _5)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_requestPeerTypeChat(_ reader: BufferReader) -> RequestPeerType? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Bool?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Bool
-            } }
-            var _3: Api.Bool?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Bool
-            } }
-            var _4: Api.Bool?
-            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Bool
-            } }
-            var _5: Api.ChatAdminRights?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
-            } }
-            var _6: Api.ChatAdminRights?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.RequestPeerType.requestPeerTypeChat(flags: _1!, creator: _2, hasUsername: _3, forum: _4, userAdminRights: _5, botAdminRights: _6)
+                return Api.RequestPeerType.requestPeerTypeChat(flags: _1!, hasUsername: _2, forum: _3, userAdminRights: _4, botAdminRights: _5)
             }
             else {
                 return nil
