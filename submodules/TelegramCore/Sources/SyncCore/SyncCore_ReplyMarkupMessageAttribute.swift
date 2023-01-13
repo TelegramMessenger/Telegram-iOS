@@ -79,7 +79,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            self.isCreator = try container.decodeIfPresent(Bool.self, forKey: .isCreator) ?? false
+            self.isCreator = try container.decode(Bool.self, forKey: .isCreator)
             self.hasUsername = try container.decodeIfPresent(Bool.self, forKey: .hasUsername)
             self.isForum = try container.decodeIfPresent(Bool.self, forKey: .isForum)
             self.botParticipant = try container.decode(Bool.self, forKey: .botParticipant)
@@ -127,7 +127,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            self.isCreator = try container.decodeIfPresent(Bool.self, forKey: .isCreator) ?? false
+            self.isCreator = try container.decode(Bool.self, forKey: .isCreator)
             self.hasUsername = try container.decodeIfPresent(Bool.self, forKey: .hasUsername)
             self.userAdminRights = try container.decodeIfPresent(TelegramChatAdminRights.self, forKey: .userAdminRights)
             self.botAdminRights = try container.decodeIfPresent(TelegramChatAdminRights.self, forKey: .botAdminRights)

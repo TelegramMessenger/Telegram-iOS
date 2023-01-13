@@ -357,6 +357,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return [from, to]
         case let .inviteToGroupPhoneCall(_, _, peerIds):
             return peerIds
+        case let .requestedPeer(_, peerId):
+            return [peerId]
         default:
             return []
         }
