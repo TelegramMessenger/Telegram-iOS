@@ -147,7 +147,8 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             enableSound: false,
             fetchAutomatically: true,
             onlyFullSizeThumbnail: false,
-            continuePlayingWithoutSoundOnLostAudioSession: false
+            continuePlayingWithoutSoundOnLostAudioSession: false,
+            storeAfterDownload: nil
         )
         let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
         videoNode.canAttachContent = true
@@ -297,7 +298,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         if let updatedImageSignal = updatedImageSignal {
                             strongSelf.imageNode.setSignal(updatedImageSignal)
                             if let image = item.photo {
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).start())
                             }
                         }
                         strongSelf.imageNode.isHidden = false

@@ -193,7 +193,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
             case let .sizeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .sizeItem(theme, strings, decimalSeparator, text, value):
-                return AutodownloadSizeLimitItem(theme: theme, strings: strings, decimalSeparator: decimalSeparator, text: text, value: value, sectionId: self.section, updated: { value in
+                return AutodownloadSizeLimitItem(theme: theme, strings: strings, decimalSeparator: decimalSeparator, text: text, value: value, range: nil, sectionId: self.section, updated: { value in
                     arguments.adjustSize(value)
                 })
             case let .sizePreload(_, text, value, enabled):

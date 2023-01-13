@@ -510,7 +510,7 @@ public class ItemListExpandableSwitchItemNode: ListViewItemNode, ItemListItemNod
                         strongSelf.expandArrowNode.position = CGPoint(x: strongSelf.titleValueNode.frame.maxX + 9.0, y: strongSelf.titleValueNode.frame.midY)
                         let scaleFactor: CGFloat = 0.8
                         strongSelf.expandArrowNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: image.size.width * scaleFactor, height: image.size.height * scaleFactor))
-                        transition.updateTransformRotation(node: strongSelf.expandArrowNode, angle: item.isExpanded ? CGFloat.pi * 0.5 : -CGFloat.pi * 0.5)
+                        transition.updateTransformRotation(node: strongSelf.expandArrowNode, angle: item.isExpanded ? CGFloat.pi * -0.5 : CGFloat.pi * 0.5)
                     }
                     
                     if let switchView = strongSelf.switchNode.view as? UISwitch {

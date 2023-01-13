@@ -1819,7 +1819,7 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, userL
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(context: AccountContext, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Never, NoError> {
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerId: EnginePeer.Id?) -> Signal<Never, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
         if let displayAtSize = displayAtSize, let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
@@ -1828,8 +1828,8 @@ public func chatMessagePhotoInteractiveFetched(context: AccountContext, userLoca
 
         return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: photoReference.resourceReference(largestRepresentation.resource), range: fetchRange, statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
-            if case .remote = type, let peerType = storeToDownloadsPeerType {
-                return storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
+            if case .remote = type, let peerId = storeToDownloadsPeerId {
+                return storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: photoReference.abstract, peerId: peerId)
                 |> castError(FetchResourceError.self)
                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                 }

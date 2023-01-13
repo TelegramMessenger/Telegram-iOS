@@ -80,6 +80,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let preferSoftwareDecoding: Bool
     private let fetchAutomatically: Bool
     private let maximumFetchSize: Int?
+    private let storeAfterDownload: (() -> Void)?
     
     private let taskQueue: ThreadTaskQueue
     private let thread: Thread
@@ -100,7 +101,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    public init(queue: Queue, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
+    public init(queue: Queue, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0, storeAfterDownload: (() -> Void)? = nil) {
         self.queue = queue
         self.postbox = postbox
         self.userLocation = userLocation
@@ -115,6 +116,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         self.stallDuration = stallDuration
         self.lowWaterDuration = lowWaterDuration
         self.highWaterDuration = highWaterDuration
+        self.storeAfterDownload = storeAfterDownload
         
         self.taskQueue = ThreadTaskQueue()
         
@@ -190,9 +192,10 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         let preferSoftwareDecoding = self.preferSoftwareDecoding
         let fetchAutomatically = self.fetchAutomatically
         let maximumFetchSize = self.maximumFetchSize
+        let storeAfterDownload = self.storeAfterDownload
         
         self.performWithContext { [weak self] context in
-            context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
+            context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize, storeAfterDownload: storeAfterDownload)
             
             let (frames, endOfStream) = context.takeFrames(until: timestamp)
             
@@ -241,6 +244,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             let preferSoftwareDecoding = self.preferSoftwareDecoding
             let fetchAutomatically = self.fetchAutomatically
             let maximumFetchSize = self.maximumFetchSize
+            let storeAfterDownload = self.storeAfterDownload
             
             let currentSemaphore = Atomic<Atomic<DispatchSemaphore?>?>(value: nil)
             
@@ -251,7 +255,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             self.performWithContext { [weak self] context in
                 let _ = currentSemaphore.swap(context.currentSemaphore)
                 
-                context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
+                context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize, storeAfterDownload: storeAfterDownload)
                 
                 context.seek(timestamp: timestamp, completed: { streamDescriptionsAndTimestamp in
                     queue.async {
