@@ -288,12 +288,12 @@ public extension TelegramEngine {
             return _internal_updateDefaultChannelMemberBannedRights(account: self.account, peerId: peerId, rights: rights)
         }
 
-        public func createChannel(title: String, description: String?) -> Signal<PeerId, CreateChannelError> {
-            return _internal_createChannel(account: self.account, title: title, description: description)
+        public func createChannel(title: String, description: String?, username: String? = nil) -> Signal<PeerId, CreateChannelError> {
+            return _internal_createChannel(account: self.account, title: title, description: description, username: username)
         }
 
-        public func createSupergroup(title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForum: Bool = false, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
-            return _internal_createSupergroup(account: self.account, title: title, description: description, location: location, isForum: isForum, isForHistoryImport: isForHistoryImport)
+        public func createSupergroup(title: String, description: String?, username: String? = nil, isForum: Bool = false, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+            return _internal_createSupergroup(account: self.account, title: title, description: description, username: username, isForum: isForum, location: location, isForHistoryImport: isForHistoryImport)
         }
 
         public func deleteChannel(peerId: PeerId) -> Signal<Void, DeleteChannelError> {

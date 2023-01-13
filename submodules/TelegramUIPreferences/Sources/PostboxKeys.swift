@@ -7,6 +7,7 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case chatArchiveSettings = 17
     case chatListFilterSettings = 18
     case widgetSettings = 19
+    case mediaAutoSaveSettings = 20
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -14,6 +15,7 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let chatArchiveSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatArchiveSettings.rawValue)
     public static let chatListFilterSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatListFilterSettings.rawValue)
     public static let widgetSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.widgetSettings.rawValue)
+    public static let mediaAutoSaveSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.mediaAutoSaveSettings.rawValue)
 }
 
 private enum ApplicationSpecificSharedDataKeyValues: Int32 {

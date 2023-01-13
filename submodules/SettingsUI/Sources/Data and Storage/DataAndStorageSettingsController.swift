@@ -14,6 +14,12 @@ import OpenInExternalAppUI
 import ItemListPeerActionItem
 import StorageUsageScreen
 
+public enum AutomaticSaveIncomingPeerType {
+    case privateChats
+    case groups
+    case channels
+}
+
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
     let openNetworkUsage: () -> Void
@@ -21,7 +27,7 @@ private final class DataAndStorageControllerArguments {
     let openAutomaticDownloadConnectionType: (AutomaticDownloadConnectionType) -> Void
     let resetAutomaticDownload: () -> Void
     let toggleVoiceUseLessData: (Bool) -> Void
-    let openSaveIncomingPhotos: () -> Void
+    let openSaveIncoming: (AutomaticSaveIncomingPeerType) -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
     let toggleAutoplayGifs: (Bool) -> Void
     let toggleAutoplayVideos: (Bool) -> Void
@@ -30,14 +36,14 @@ private final class DataAndStorageControllerArguments {
     let openIntents: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
         self.openAutomaticDownloadConnectionType = openAutomaticDownloadConnectionType
         self.resetAutomaticDownload = resetAutomaticDownload
         self.toggleVoiceUseLessData = toggleVoiceUseLessData
-        self.openSaveIncomingPhotos = openSaveIncomingPhotos
+        self.openSaveIncoming = openSaveIncoming
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
         self.toggleAutoplayGifs = toggleAutoplayGifs
         self.toggleAutoplayVideos = toggleAutoplayVideos
@@ -51,6 +57,7 @@ private final class DataAndStorageControllerArguments {
 private enum DataAndStorageSection: Int32 {
     case usage
     case autoDownload
+    case autoSave
     case backgroundDownload
     case autoPlay
     case voiceCalls
@@ -59,12 +66,13 @@ private enum DataAndStorageSection: Int32 {
     case enableSensitiveContent
 }
 
-public enum DataAndStorageEntryTag: ItemListItemTag {
+public enum DataAndStorageEntryTag: ItemListItemTag, Equatable {
     case automaticDownloadReset
     case autoplayGifs
     case autoplayVideos
     case saveEditedPhotos
     case downloadInBackground
+    case autoSave(AutomaticSaveIncomingPeerType)
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? DataAndStorageEntryTag, self == other {
@@ -82,6 +90,11 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case automaticDownloadCellular(PresentationTheme, String, String)
     case automaticDownloadWifi(PresentationTheme, String, String)
     case automaticDownloadReset(PresentationTheme, String, Bool)
+    
+    case autoSaveHeader(String)
+    case autoSaveItem(index: Int, type: AutomaticSaveIncomingPeerType, title: String, label: String, value: String)
+    case autoSaveInfo(String)
+    
     case downloadInBackground(PresentationTheme, String, Bool)
     case downloadInBackgroundInfo(PresentationTheme, String)
     
@@ -92,7 +105,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case useLessVoiceDataInfo(PresentationTheme, String)
     case otherHeader(PresentationTheme, String)
     case shareSheet(PresentationTheme, String)
-    case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
     case openLinksIn(PresentationTheme, String, String)
 
@@ -106,13 +118,15 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.usage.rawValue
             case .automaticDownloadHeader, .automaticDownloadCellular, .automaticDownloadWifi, .automaticDownloadReset:
                 return DataAndStorageSection.autoDownload.rawValue
+            case .autoSaveHeader, .autoSaveItem, .autoSaveInfo:
+                return DataAndStorageSection.autoSave.rawValue
             case .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.backgroundDownload.rawValue
             case .useLessVoiceData, .useLessVoiceDataInfo:
                 return DataAndStorageSection.voiceCalls.rawValue
             case .autoplayHeader, .autoplayGifs, .autoplayVideos:
                 return DataAndStorageSection.autoPlay.rawValue
-            case .otherHeader, .shareSheet, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn:
+            case .otherHeader, .shareSheet, .saveEditedPhotos, .openLinksIn:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -135,36 +149,42 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 4
             case .automaticDownloadReset:
                 return 5
-            case .downloadInBackground:
+            
+            case .autoSaveHeader:
                 return 6
-            case .downloadInBackgroundInfo:
-                return 7
-            case .useLessVoiceData:
-                return 8
-            case .useLessVoiceDataInfo:
-                return 9
-            case .autoplayHeader:
-                return 10
-            case .autoplayGifs:
-                return 11
-            case .autoplayVideos:
-                return 12
-            case .otherHeader:
-                return 13
-            case .shareSheet:
-                return 14
-            case .saveIncomingPhotos:
-                return 15
-            case .saveEditedPhotos:
-                return 16
-            case .openLinksIn:
-                return 17
-            case .connectionHeader:
-                return 18
-            case .connectionProxy:
-                return 19
-            case .enableSensitiveContent:
+            case let .autoSaveItem(index, _, _, _, _):
+                return 7 + Int32(index)
+            case .autoSaveInfo:
                 return 20
+            
+            case .downloadInBackground:
+                return 21
+            case .downloadInBackgroundInfo:
+                return 22
+            case .useLessVoiceData:
+                return 23
+            case .useLessVoiceDataInfo:
+                return 24
+            case .autoplayHeader:
+                return 25
+            case .autoplayGifs:
+                return 26
+            case .autoplayVideos:
+                return 27
+            case .otherHeader:
+                return 28
+            case .shareSheet:
+                return 29
+            case .saveEditedPhotos:
+                return 31
+            case .openLinksIn:
+                return 32
+            case .connectionHeader:
+                return 33
+            case .connectionProxy:
+                return 34
+            case .enableSensitiveContent:
+                return 35
         }
     }
     
@@ -202,6 +222,24 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .automaticDownloadReset(lhsTheme, lhsText, lhsEnabled):
                 if case let .automaticDownloadReset(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoSaveHeader(text):
+                if case .autoSaveHeader(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoSaveItem(index, type, title, label, value):
+                if case .autoSaveItem(index, type, title, label, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoSaveInfo(text):
+                if case .autoSaveInfo(text) = rhs {
                     return true
                 } else {
                     return false
@@ -244,12 +282,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .shareSheet(lhsTheme, lhsText):
                 if case let .shareSheet(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .saveIncomingPhotos(lhsTheme, lhsText):
-                if case let .saveIncomingPhotos(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -334,6 +366,23 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                         arguments.resetAutomaticDownload()
                     }
                 })
+            case let .autoSaveHeader(text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .autoSaveItem(_, type, title, label, value):
+                let iconName: String
+                switch type {
+                case .privateChats:
+                    iconName = "Settings/Menu/EditProfile"
+                case .groups:
+                    iconName = "Settings/Menu/GroupChats"
+                case .channels:
+                    iconName = "Settings/Menu/Channels"
+                }
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: iconName)?.precomposed(), title: title, label: value, labelStyle: .text, additionalDetailLabel: label.isEmpty ? nil : label, sectionId: self.section, style: .blocks, action: {
+                    arguments.openSaveIncoming(type)
+                })
+            case let .autoSaveInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .autoplayHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .autoplayGifs(_, text, value):
@@ -355,10 +404,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
             case let .shareSheet(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openIntents()
-                })
-            case let .saveIncomingPhotos(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.openSaveIncomingPhotos()
                 })
             case let .saveEditedPhotos(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -478,7 +523,76 @@ private func stringForAutoDownloadSetting(strings: PresentationStrings, decimalS
     }
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64) -> [DataAndStorageEntry] {
+private func autosaveLabelAndValue(presentationData: PresentationData, settings: MediaAutoSaveSettings, peerType: AutomaticSaveIncomingPeerType, exceptionPeers: [EnginePeer.Id: EnginePeer?]) -> (label: String, value: String) {
+    var exceptionCount = 0
+    let configuration: MediaAutoSaveConfiguration
+    switch peerType {
+    case .privateChats:
+        configuration = settings.configurations[.users] ?? .default
+    case .groups:
+        configuration = settings.configurations[.groups] ?? .default
+    case .channels:
+        configuration = settings.configurations[.channels] ?? .default
+    }
+    
+    for exception in settings.exceptions {
+        if let maybePeer = exceptionPeers[exception.id], let peer = maybePeer {
+            let peerTypeValue: AutomaticSaveIncomingPeerType
+            switch peer {
+            case .user, .secretChat:
+                peerTypeValue = .privateChats
+            case .legacyGroup:
+                peerTypeValue = .groups
+            case let .channel(channel):
+                if case .broadcast = channel.info {
+                    peerTypeValue = .channels
+                } else {
+                    peerTypeValue = .groups
+                }
+            }
+            
+            if peerTypeValue == peerType {
+                exceptionCount += 1
+            }
+        }
+    }
+    
+    //TODO:localize
+    let value: String
+    if configuration.photo || configuration.video {
+        value = "On"
+    } else {
+        value = "Off"
+    }
+    
+    var label = ""
+    if configuration.photo && configuration.video {
+        label.append("All Media (\(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData))))")
+    } else {
+        if configuration.photo {
+            if !label.isEmpty {
+                label.append(", ")
+            }
+            label.append("Photos")
+        } else if configuration.video {
+            if !label.isEmpty {
+                label.append(", ")
+            }
+            label.append("Videos up to \(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))")
+        }
+    }
+    
+    if exceptionCount != 0 {
+        if !label.isEmpty {
+            label.append(", ")
+        }
+        label.append(presentationData.strings.Notifications_CategoryExceptions(Int32(exceptionCount)))
+    }
+    
+    return (label, value)
+}
+
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?]) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
@@ -490,6 +604,18 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     
     let defaultSettings = MediaAutoDownloadSettings.defaultSettings
     entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.cellular != defaultSettings.cellular || data.automaticMediaDownloadSettings.wifi != defaultSettings.wifi))
+    
+    //TODO:localize
+    entries.append(.autoSaveHeader("SAVE TO CAMERA ROLL"))
+    
+    let privateLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .privateChats, exceptionPeers: autosaveExceptionPeers)
+    let groupsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .groups, exceptionPeers: autosaveExceptionPeers)
+    let channelsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .channels, exceptionPeers: autosaveExceptionPeers)
+    
+    entries.append(.autoSaveItem(index: 0, type: .privateChats, title: "Private Chats", label: privateLabelAndValue.label, value: privateLabelAndValue.value))
+    entries.append(.autoSaveItem(index: 1, type: .groups, title: "Groups", label: groupsLabelAndValue.label, value: groupsLabelAndValue.value))
+    entries.append(.autoSaveItem(index: 2, type: .channels, title: "Channels", label: channelsLabelAndValue.label, value: channelsLabelAndValue.value))
+    entries.append(.autoSaveInfo("Automatically save all new photos and videos from these chats to your Cameral Roll."))
     
     entries.append(.downloadInBackground(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackground, data.automaticMediaDownloadSettings.downloadInBackground))
     entries.append(.downloadInBackgroundInfo(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackgroundInfo))
@@ -506,7 +632,6 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
         entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
     }
-    entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
 
@@ -706,8 +831,8 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
             current.dataSaving = value ? .always : .never
             return current
         }).start()
-    }, openSaveIncomingPhotos: {
-        pushControllerImpl?(saveIncomingMediaController(context: context))
+    }, openSaveIncoming: { type in
+        pushControllerImpl?(saveIncomingMediaController(context: context, scope: .peerType(type)))
     }, toggleSaveEditedPhotos: { value in
         let _ = updateGeneratedMediaStoreSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedStoreEditedPhotos(value)
@@ -747,6 +872,23 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         })
         updateSensitiveContentDisposable.set(updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: value).start())
     })
+    
+    let preferencesKey: PostboxViewKey = .preferences(keys: Set([ApplicationSpecificPreferencesKeys.mediaAutoSaveSettings]))
+    let preferences = context.account.postbox.combinedView(keys: [preferencesKey])
+    |> map { views -> MediaAutoSaveSettings in
+        guard let view = views.views[preferencesKey] as? PreferencesView else {
+            return .default
+        }
+        return view.values[ApplicationSpecificPreferencesKeys.mediaAutoSaveSettings]?.get(MediaAutoSaveSettings.self) ?? MediaAutoSaveSettings.default
+    }
+    
+    let autosaveExceptionPeers: Signal<[EnginePeer.Id: EnginePeer?], NoError> = preferences
+    |> mapToSignal { mediaAutoSaveSettings -> Signal<[EnginePeer.Id: EnginePeer?], NoError> in
+        let peerIds = mediaAutoSaveSettings.exceptions.map(\.id)
+        return context.engine.data.get(EngineDataMap(
+            peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
+        ))
+    }
 
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
@@ -754,9 +896,11 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         dataAndStorageDataPromise.get(),
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings]),
         contentSettingsConfiguration.get(),
-        usageSignal
+        preferences,
+        usageSignal,
+        autosaveExceptionPeers
     )
-    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration, usageSignal -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration, mediaAutoSaveSettings, usageSignal, autosaveExceptionPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let webBrowserSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
@@ -767,7 +911,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage, mediaAutoSaveSettings: mediaAutoSaveSettings, autosaveExceptionPeers: autosaveExceptionPeers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

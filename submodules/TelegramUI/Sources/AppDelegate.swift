@@ -1563,10 +1563,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
         
-        /*
-         [AnyHashable("aps"): [AnyHashable("content-available"): 1], AnyHashable("com.google.firebase.auth"): {"receipt":"AEFDNu9IxcZSaYU0IPE23FIO_XQrbKCJJHw3zGFWxvhIBq_pF5OdcfY8Ij0HMnRuo6Es17Xv4UW9nbYJ1ZtPtZPt3_LrKjaAFr-t03BcZoVO7AtYcWYwaPlZyDyaZNCLa0VhK8ZXvw","secret":"vMcf7FRTiM9pr0CK"}, AnyHashable("gcm.message_id"): 1673550604893425, AnyHashable("google.c.sender.id"): 604544722005, AnyHashable("google.c.fid"): fq7N94bg_oA]
-         */
-        
         if let firebaseAuth = redactedPayload["com.google.firebase.auth"] as? String {
             guard let firebaseAuthData = firebaseAuth.data(using: .utf8), let firebaseJson = try? JSONSerialization.jsonObject(with: firebaseAuthData) else {
                 completionHandler(.newData)

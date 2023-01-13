@@ -2453,6 +2453,8 @@ final class StorageUsageScreenComponent: Component {
                     
                     if !firstTime {
                         self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
+                    } else {
+                        self.state?.updated(transition: Transition(animation: .none))
                     }
                     
                     completion()
