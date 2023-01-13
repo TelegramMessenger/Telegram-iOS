@@ -12,7 +12,7 @@ public enum CreateChannelError {
     case serverProvided(String)
 }
 
-private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil, isForum: Bool = false, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in
         var flags: Int32 = 0
         if isSupergroup {
@@ -22,6 +22,9 @@ private func createChannel(account: Account, title: String, description: String?
         }
         if isForHistoryImport {
             flags |= (1 << 3)
+        }
+        if isForum {
+            flags |= (1 << 5)
         }
         
         var geoPoint: Api.InputGeoPoint?
@@ -85,8 +88,8 @@ func _internal_createChannel(account: Account, title: String, description: Strin
     return createChannel(account: account, title: title, description: description, isSupergroup: false)
 }
 
-func _internal_createSupergroup(account: Account, title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
-    return createChannel(account: account, title: title, description: description, isSupergroup: true, location: location, isForHistoryImport: isForHistoryImport)
+func _internal_createSupergroup(account: Account, title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForum: Bool = false, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+    return createChannel(account: account, title: title, description: description, isSupergroup: true, location: location, isForum: isForum, isForHistoryImport: isForHistoryImport)
 }
 
 public enum DeleteChannelError {

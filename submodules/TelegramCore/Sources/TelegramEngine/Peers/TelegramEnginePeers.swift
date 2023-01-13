@@ -292,8 +292,8 @@ public extension TelegramEngine {
             return _internal_createChannel(account: self.account, title: title, description: description)
         }
 
-        public func createSupergroup(title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
-            return _internal_createSupergroup(account: self.account, title: title, description: description, location: location, isForHistoryImport: isForHistoryImport)
+        public func createSupergroup(title: String, description: String?, location: (latitude: Double, longitude: Double, address: String)? = nil, isForum: Bool = false, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+            return _internal_createSupergroup(account: self.account, title: title, description: description, location: location, isForum: isForum, isForHistoryImport: isForHistoryImport)
         }
 
         public func deleteChannel(peerId: PeerId) -> Signal<Void, DeleteChannelError> {
