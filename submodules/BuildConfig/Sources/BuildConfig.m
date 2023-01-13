@@ -484,4 +484,18 @@ API_AVAILABLE(ios(10))
     });
 }
 
+#if DEBUG
++ (bool)isNonDevAccount {
+    return APP_CONFIG_NO_DEV_ACCOUNT;
+}
+#endif
+
++ (bool)iCloudEnabled {
+    return APP_CONFIG_ICLOUD_ENABLED;
+}
+
++ (bool)siriEnabled {
+    return APP_CONFIG_SIRI_ENABLED;
+}
+
 @end

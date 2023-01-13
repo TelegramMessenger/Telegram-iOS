@@ -84,4 +84,6 @@ public struct PresentationResourcesSettings {
     public static let clearSynced = renderIcon(name: "Settings/Menu/ClearSynced")
     
     public static let websites = renderIcon(name: "Settings/Menu/Websites")
+    
+    public static let cloudballon = renderIcon(name: "Cloudballon")
 }

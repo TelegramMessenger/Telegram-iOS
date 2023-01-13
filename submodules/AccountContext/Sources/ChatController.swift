@@ -583,7 +583,9 @@ public enum ChatPresentationInputQueryResult: Equatable {
     }
 }
 
+#if DEBUG
 public let ChatControllerCount = Atomic<Int32>(value: 0)
+#endif
 
 public final class PeerInfoNavigationSourceTag {
     public let peerId: EnginePeer.Id

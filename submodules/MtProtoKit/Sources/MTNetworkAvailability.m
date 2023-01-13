@@ -104,6 +104,10 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
          
          SCNetworkReachabilitySetCallback(reachability, NULL, NULL);
          SCNetworkReachabilitySetDispatchQueue(reachability, NULL);
+        
+        if (reachability != NULL) {
+            CFRelease(reachability);
+        }
      }];
 }
 

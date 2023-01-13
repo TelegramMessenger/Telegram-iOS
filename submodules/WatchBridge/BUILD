@@ -26,6 +26,7 @@ swift_library(
         "//submodules/LegacyUI:LegacyUI",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     	"//submodules/WatchBridge/Impl:WatchBridgeImpl",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
     visibility = [
         "//visibility:public",

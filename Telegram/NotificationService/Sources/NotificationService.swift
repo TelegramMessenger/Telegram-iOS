@@ -15,6 +15,9 @@ import PersistentStringHash
 import CallKit
 import AppLockState
 import NotificationsPresentationData
+import FakePasscode
+import PtgForeignAgentNoticeRemoval
+import PtgSettings
 
 private let queue = Queue()
 
@@ -444,6 +447,9 @@ private struct NotificationContent: CustomStringConvertible {
     
     var isLockedMessage: String?
     
+    var suppressForeignAgentNotice: Bool = false
+    var messageType: String?
+    
     init(isLockedMessage: String?) {
         self.isLockedMessage = isLockedMessage
     }
@@ -510,7 +516,17 @@ private struct NotificationContent: CustomStringConvertible {
             content.subtitle = subtitle
         }
         if let body = self.body {
-            content.body = body
+            if self.suppressForeignAgentNotice && !body.isEmpty {
+                content.body = removeForeignAgentNotice(text: body, mayRemoveWholeText: self.messageType != nil)
+                if content.body == body {
+                    content.body = removeForeignAgentNoticePartialMatchAtEnd(text: body, mayRemoveWholeText: self.messageType != nil)
+                }
+                if content.body.isEmpty, let messageType = self.messageType {
+                    content.body = messageType
+                }
+            } else {
+                content.body = body
+            }
         }
         
         if !content.title.isEmpty || !content.subtitle.isEmpty || !content.body.isEmpty {
@@ -691,10 +707,13 @@ private final class NotificationServiceHandler {
         }
         
         let incomingCallMessage: String
+        let presentationStrings: NotificationsPresentationData?
         if let notificationsPresentationData = try? Data(contentsOf: URL(fileURLWithPath: notificationsPresentationDataPath(rootPath: rootPath))), let notificationsPresentationDataValue = try? JSONDecoder().decode(NotificationsPresentationData.self, from: notificationsPresentationData) {
             incomingCallMessage = notificationsPresentationDataValue.incomingCallString
+            presentationStrings = notificationsPresentationDataValue
         } else {
             incomingCallMessage = "is calling you"
+            presentationStrings = nil
         }
 
         Logger.shared.log("NotificationService \(episode)", "Begin processing payload")
@@ -715,7 +734,7 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings, ApplicationSpecificSharedDataKeys.ptgSettings])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -943,7 +962,17 @@ private final class NotificationServiceHandler {
                             break
                         }
                     } else {
-                        if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
+                        var hideNotification = false
+                        if let peerId = peerId {
+                            let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+                            if let activeFakePasscodeSettings = fakePasscodeHolder.activeFakePasscodeSettings() {
+                                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == stateManager.accountPeerId && $0.recordId == recordId }) {
+                                    hideNotification = accountActions.chatsToRemove.contains(where: { $0.removalType == .hide && $0.peerId == peerId })
+                                }
+                            }
+                        }
+                        
+                        if !hideNotification, let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 if let topicTitleValue = payloadJson["topic_title"] as? String {
@@ -964,6 +993,9 @@ private final class NotificationServiceHandler {
                                 completed()
                                 return
                             }
+                            
+                            let ptgSettings = PtgSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSettings])
+                            content.suppressForeignAgentNotice = ptgSettings.suppressForeignAgentNotice
 
                             var messageIdValue: MessageId?
                             if let messageId = messageId {
@@ -1342,6 +1374,26 @@ private final class NotificationServiceHandler {
                                                         }
                                                     }
                                                 }
+                                                
+                                                if content.suppressForeignAgentNotice && content.messageType == nil {
+                                                    if mediaAttachment is TelegramMediaImage {
+                                                        content.messageType = presentationStrings?.messagePhoto ?? "Photo"
+                                                    } else if let file = mediaAttachment as? TelegramMediaFile {
+                                                        if file.isVideo {
+                                                            content.messageType = presentationStrings?.messageVideo ?? "Video"
+                                                        } else if file.isMusic {
+                                                            content.messageType = presentationStrings?.messageMusic ?? "Music"
+                                                        } else if file.isVoice {
+                                                            content.messageType = presentationStrings?.messageVoice ?? "Voice Message"
+                                                        } else if file.isSticker || file.isAnimatedSticker {
+                                                            content.messageType = presentationStrings?.messageSticker ?? "Sticker"
+                                                        } else if file.isAnimated {
+                                                            content.messageType = presentationStrings?.messageAnimation ?? "GIF"
+                                                        } else {
+                                                            content.messageType = presentationStrings?.messageFile ?? "File"
+                                                        }
+                                                    }
+                                                }
 
                                                 Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
 
@@ -1566,6 +1618,7 @@ private final class NotificationServiceHandler {
     deinit {
         self.pollDisposable.dispose()
         self.stateManager?.network.shouldKeepConnection.set(.single(false))
+        self.notificationKeyDisposable.dispose()
     }
 }
 

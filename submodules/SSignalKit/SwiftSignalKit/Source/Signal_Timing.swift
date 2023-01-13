@@ -66,14 +66,16 @@ public func suspendAwareDelay<T, E>(_ timeout: Double, granularity: Double = 4.0
                         }
                     }, queue: queue)
                     
-                    invalidateImpl = {
+                    invalidateImpl = { [weak timer] in
                         queue.async {
-                            timer.invalidate()
+                            timer?.invalidate()
                         }
                     }
                     
                     disposable.set(ActionDisposable {
-                        invalidateImpl?()
+                        queue.async {
+                            timer.invalidate()
+                        }
                     })
                     
                     timer.start()

@@ -105,6 +105,7 @@
     if (!_disposed)
     {
         disposable = _disposable;
+        _disposable = nil;
         _disposed = true;
     }
     os_unfair_lock_unlock(&_lock);

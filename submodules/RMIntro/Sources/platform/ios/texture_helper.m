@@ -28,7 +28,8 @@ GLuint setup_texture(NSString *fileName, UIColor *color)
     CGContextRef spriteContext = CGBitmapContextCreate(spriteData, width, height, 8, width*4, CGImageGetColorSpace(spriteImage), (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     
     // 3
-    if ([fileName isEqualToString:@"telegram_sphere.png"]) {
+    if ([fileName isEqualToString:@"cloudballon1.png"]) {
+//    if ([fileName isEqualToString:@"telegram_sphere.png"]) {
         CGContextSetFillColorWithColor(spriteContext, color.CGColor);
         CGContextFillRect(spriteContext, CGRectMake(0, 0, width, height));
     }

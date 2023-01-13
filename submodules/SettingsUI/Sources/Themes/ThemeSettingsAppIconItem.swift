@@ -103,7 +103,7 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
     private var action: (() -> Void)?
     
     private var locked = false
-    
+
     override init() {
         self.iconNode = ASImageNode()
         self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
@@ -117,7 +117,7 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.lockNode.contentMode = .scaleAspectFit
         self.lockNode.displaysAsynchronously = false
         self.lockNode.isUserInteractionEnabled = false
-        
+
         self.textNode = ImmediateTextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
@@ -139,7 +139,7 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.action = {
             action()
         }
-        
+
         self.setNeedsLayout()
     }
     
@@ -162,14 +162,14 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         
         self.iconNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
         self.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
-        
+
         let textSize = self.textNode.updateLayout(bounds.size)
         var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - textSize.width)) / 2.0, y: 87.0), size: textSize)
         if self.locked {
             textFrame = textFrame.offsetBy(dx: 5.0, dy: 0.0)
         }
         self.textNode.frame = textFrame
-        
+
         self.lockNode.frame = CGRect(x: self.textNode.frame.minX - 10.0, y: 90.0, width: 6.0, height: 8.0)
     }
 }
@@ -350,6 +350,8 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_AppIconBlack
                                 case "PremiumTurbo":
                                     name = item.strings.Appearance_AppIconTurbo
+                                case "Cloudballon":
+                                    name = item.strings.Appearance_AppIconCloudballon
                                 default:
                                     name = icon.name
                             }

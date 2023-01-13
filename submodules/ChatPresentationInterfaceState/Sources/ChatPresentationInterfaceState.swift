@@ -134,13 +134,15 @@ public struct ChatSearchResultsState: Equatable {
     public let state: SearchMessagesState
     public let totalCount: Int32
     public let completed: Bool
+    public let matchesOnlyBcOfFAN: Set<MessageId>
     
-    public init(messageIndices: [MessageIndex], currentId: MessageId?, state: SearchMessagesState, totalCount: Int32, completed: Bool) {
+    public init(messageIndices: [MessageIndex], currentId: MessageId?, state: SearchMessagesState, totalCount: Int32, completed: Bool, matchesOnlyBcOfFAN: Set<MessageId>) {
         self.messageIndices = messageIndices
         self.currentId = currentId
         self.state = state
         self.totalCount = totalCount
         self.completed = completed
+        self.matchesOnlyBcOfFAN = matchesOnlyBcOfFAN
     }
 }
     

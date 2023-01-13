@@ -55,8 +55,8 @@ bazel-genfiles
 bazel-genfiles/*
 bazel-out
 bazel-out/*
-bazel-telegram-ios
-bazel-telegram-ios/*
+bazel-Partisan-Telegram-iOS
+bazel-Partisan-Telegram-iOS/*
 bazel-testlogs
 bazel-testlogs/*
 */*.swp

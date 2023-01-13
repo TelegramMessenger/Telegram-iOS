@@ -48,6 +48,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     var selectPasscodeMode: (() -> Void)?
     var checkPasscode: ((String) -> Bool)?
+    var validatePasscode: ((String) -> String?)?
     var complete: ((String, Bool) -> Void)?
     var updateNextAction: ((Bool) -> Void)?
     
@@ -80,6 +81,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         passcodeType = .alphanumeric
                 }
             case .setup:
+                passcodeType = .digits6
+            case .secretSetup, .secretEntry:
                 passcodeType = .digits6
         }
         
@@ -114,12 +117,17 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 self.modeButtonNode.isHidden = true
                 self.modeButtonNode.isAccessibilityElement = false
                 text = self.presentationData.strings.EnterPasscode_EnterPasscode
-            case let .setup(change, _):
+            case let .setup(change, allowChangeMode, _):
                 if change {
                     text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange
                 } else {
                     text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew
                 }
+                self.modeButtonNode.isHidden = !allowChangeMode
+            case .secretSetup:
+                text = self.presentationData.strings.SecretPasscodeSettings_EnterNewPasscode
+            case .secretEntry:
+                text = self.presentationData.strings.SecretPasscodeSettings_EnterPasscode
         }
         self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         
@@ -169,7 +177,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.mode = mode
         self.inputFieldNode.reset()
         
-        if case let .setup(_, type) = mode {
+        switch mode {
+        case let .setup(_, _, type), let .secretSetup(type), let .secretEntry(_, type):
             self.inputFieldNode.updateFieldType(type, animated: true)
             
             let fieldBackgroundAlpha: CGFloat
@@ -184,6 +193,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             self.inputFieldBackgroundNode.alpha = fieldBackgroundAlpha
             self.inputFieldBackgroundNode.layer.animateAlpha(from: previousAlpha, to: fieldBackgroundAlpha, duration: 0.25)
             self.subtitleNode.isHidden = true
+        default:
+            break
         }
     }
     
@@ -194,67 +205,43 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         }
         
         switch self.mode {
-            case .entry:
+            case .entry, .secretEntry:
                 if !(self.checkPasscode?(self.currentPasscode) ?? false) {
                     self.animateError()
                 }
-            case .setup:
+            case let .setup(_, _, type), let .secretSetup(type):
                 if let previousPasscode = self.previousPasscode {
                     if self.currentPasscode == previousPasscode {
                         var numerical = false
-                        if case let .setup(_, type) = mode {
-                            if case .alphanumeric = type {
-                            } else {
-                                numerical = true
-                            }
+                        if case .alphanumeric = type {
+                        } else {
+                            numerical = true
                         }
                         self.complete?(self.currentPasscode, numerical)
                     } else {
                         self.previousPasscode = nil
                         
-                        if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
-                            snapshotView.frame = self.wrapperNode.frame
-                            self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
-                            snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
-                                snapshotView?.removeFromSuperview()
-                            })
-                            self.wrapperNode.layer.animatePosition(from: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
-                            
-                            self.inputFieldNode.reset(animated: false)
-                            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-                            self.subtitleNode.isHidden = false
-                            self.subtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PasscodeSettings_DoNotMatch, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-                            self.modeButtonNode.isHidden = false
-                            self.modeButtonNode.isAccessibilityElement = true
-                            
-                            UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.presentationData.strings.PasscodeSettings_DoNotMatch)
-                            
-                            if let validLayout = self.validLayout {
-                                self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
-                            }
+                        if case let .setup(change, _, _) = self.mode {
+                            self.updateTitles(success: false, text: change ? self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange : self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew, subtitle: self.presentationData.strings.PasscodeSettings_DoNotMatch)
+                        } else if case .secretSetup = self.mode {
+                            self.updateTitles(success: false, text: self.presentationData.strings.SecretPasscodeSettings_EnterNewPasscode, subtitle: self.presentationData.strings.PasscodeSettings_DoNotMatch)
                         }
                     }
                 } else {
                     self.previousPasscode = self.currentPasscode
                     
-                    if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
-                        snapshotView.frame = self.wrapperNode.frame
-                        self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
-                        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
-                            snapshotView?.removeFromSuperview()
-                        })
-                        self.wrapperNode.layer.animatePosition(from: CGPoint(x: self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
-                        
-                        self.inputFieldNode.reset(animated: false)
-                        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_RepeatNewPasscode, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-                        self.subtitleNode.isHidden = true
-                        self.modeButtonNode.isHidden = true
-                        self.modeButtonNode.isAccessibilityElement = false
-                        
-                        UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.presentationData.strings.EnterPasscode_RepeatNewPasscode)
-                        
-                        if let validLayout = self.validLayout {
-                            self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                    if let failureReason = self.validatePasscode?(self.currentPasscode) {
+                        self.previousPasscode = nil
+                        if case let .setup(change, _, _) = self.mode {
+                            self.updateTitles(success: false, text: change ? self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange : self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew, subtitle: failureReason, withAnimation: false)
+                        } else if case .secretSetup = self.mode {
+                            self.updateTitles(success: false, text: self.presentationData.strings.SecretPasscodeSettings_EnterNewPasscode, subtitle: failureReason, withAnimation: false)
+                        }
+                    } else {
+                        if case .setup = self.mode {
+                            self.updateTitles(success: true, text: self.presentationData.strings.EnterPasscode_RepeatNewPasscode)
+                        } else if case .secretSetup = self.mode {
+                            self.updateTitles(success: true, text: self.presentationData.strings.SecretPasscodeSettings_RepeatNewPasscode)
                         }
                     }
                 }
@@ -262,6 +249,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     }
     
     func activateInput() {
+        self.inputFieldNode.reset()
         self.inputFieldNode.activateInput()
         
         UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.titleNode.attributedText?.string)
@@ -276,5 +264,42 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     @objc func modePressed() {
         self.selectPasscodeMode?()
+    }
+
+    func updateTitles(success: Bool, text: String, subtitle: String? = nil, withAnimation: Bool = true) {
+        if let snapshotView = self.wrapperNode.view.snapshotContentTree() {
+            let c = success ? -1.0 : 1.0
+
+            if withAnimation {
+                snapshotView.frame = self.wrapperNode.frame
+                self.wrapperNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.wrapperNode.view)
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: c * self.wrapperNode.bounds.width, y: 0.0), duration: 0.25, removeOnCompletion: false, additive: true, completion : { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                self.wrapperNode.layer.animatePosition(from: CGPoint(x: -c * self.wrapperNode.bounds.width, y: 0.0), to: CGPoint(), duration: 0.25, additive: true)
+            } else {
+                animateError()
+            }
+            self.inputFieldNode.reset(animated: false)
+            self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            self.subtitleNode.isHidden = success
+            if let subtitle = subtitle {
+                self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            }
+            if case let .setup(_, allowChange, _) = self.mode, allowChange {
+                self.modeButtonNode.isHidden = success
+            } else if case .secretSetup = self.mode {
+                self.modeButtonNode.isHidden = success
+            } else {
+                self.modeButtonNode.isHidden = true
+            }
+            self.modeButtonNode.isAccessibilityElement = !success
+
+            UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: subtitle ?? text)
+
+            if let validLayout = self.validLayout {
+                self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+            }
+        }
     }
 }

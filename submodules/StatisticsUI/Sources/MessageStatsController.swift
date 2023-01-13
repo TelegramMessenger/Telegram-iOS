@@ -211,7 +211,7 @@ public func messageStatsController(context: AccountContext, messageId: MessageId
     
     let previousData = Atomic<MessageStats?>(value: nil)
     
-    let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil)
+    let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
     |> map(Optional.init)
     |> afterNext { result in
         if let result = result {

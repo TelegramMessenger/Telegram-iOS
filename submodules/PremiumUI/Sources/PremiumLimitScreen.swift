@@ -795,18 +795,19 @@ private final class LimitSheetContent: CombinedComponent {
                         string = strings.Premium_MaxFileSizeNoPremiumText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
                     }
                 case .accounts:
-                    let limit = 3
-                    let premiumLimit = limit + 1
+                    let limit = 10
+                    let premiumLimit = 10
                     iconName = "Premium/Account"
                     badgeText = "\(component.count)"
                     string = component.count >= premiumLimit ? strings.Premium_MaxAccountsFinalText("\(premiumLimit)").string : strings.Premium_MaxAccountsText("\(limit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if component.count == limit {
-                        badgePosition = 0.5
-                    } else {
-                        badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
-                    }
+//                    if component.count == limit {
+//                        badgePosition = 0.5
+//                    } else {
+//                        badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
+//                    }
+                    badgePosition = 1.0
                     buttonAnimationName = "premium_addone"
                 
                     if isPremiumDisabled {

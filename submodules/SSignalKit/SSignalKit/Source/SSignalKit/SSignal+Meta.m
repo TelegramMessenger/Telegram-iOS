@@ -8,13 +8,12 @@
 
 #import <os/lock.h>
 
-@interface SSignalQueueState : NSObject <SDisposable>
+@interface SSignalQueueState : NSObject
 {
     os_unfair_lock _lock;
     bool _executingSignal;
     bool _terminated;
     
-    id<SDisposable> _disposable;
     SMetaDisposable *_currentDisposable;
     SSubscriber *_subscriber;
     
@@ -27,23 +26,18 @@
 
 @implementation SSignalQueueState
 
-- (instancetype)initWithSubscriber:(SSubscriber *)subscriber queueMode:(bool)queueMode throttleMode:(bool)throttleMode
+- (instancetype)initWithSubscriber:(SSubscriber *)subscriber queueMode:(bool)queueMode throttleMode:(bool)throttleMode currentDisposable:(SMetaDisposable *)currentDisposable
 {
     self = [super init];
     if (self != nil)
     {
         _subscriber = subscriber;
-        _currentDisposable = [[SMetaDisposable alloc] init];
+        _currentDisposable = currentDisposable;
         _queuedSignals = queueMode ? [[NSMutableArray alloc] init] : nil;
         _queueMode = queueMode;
         _throttleMode = throttleMode;
     }
     return self;
-}
-
-- (void)beginWithDisposable:(id<SDisposable>)disposable
-{
-    _disposable = disposable;
 }
 
 - (void)enqueueSignal:(SSignal *)signal
@@ -142,12 +136,6 @@
         [_subscriber putCompletion];
 }
 
-- (void)dispose
-{
-    [_currentDisposable dispose];
-    [_disposable dispose];
-}
-
 @end
 
 @implementation SSignal (Meta)
@@ -156,9 +144,10 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:false throttleMode:false];
+        SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:false throttleMode:false currentDisposable:currentDisposable];
         
-        [state beginWithDisposable:[self startWithNext:^(id next)
+        id<SDisposable> disposable = [self startWithNext:^(id next)
         {
             [state enqueueSignal:next];
         } error:^(id error)
@@ -167,9 +156,13 @@
         } completed:^
         {
             [state beginCompletion];
-        }]];
+        }];
         
-        return state;
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [currentDisposable dispose];
+            [disposable dispose];
+        }];
     }];
 }
 
@@ -224,9 +217,10 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true throttleMode:false];
+        SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true throttleMode:false currentDisposable:currentDisposable];
         
-        [state beginWithDisposable:[self startWithNext:^(id next)
+        id<SDisposable> disposable = [self startWithNext:^(id next)
         {
             [state enqueueSignal:next];
         } error:^(id error)
@@ -235,16 +229,21 @@
         } completed:^
         {
             [state beginCompletion];
-        }]];
+        }];
         
-        return state;
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [currentDisposable dispose];
+            [disposable dispose];
+        }];
     }];
 }
 
 - (SSignal *)throttled {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
-        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true throttleMode:true];
-        [state beginWithDisposable:[self startWithNext:^(id next)
+        SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true throttleMode:true currentDisposable:currentDisposable];
+        id<SDisposable> disposable = [self startWithNext:^(id next)
         {
             [state enqueueSignal:next];
         } error:^(id error)
@@ -253,9 +252,13 @@
         } completed:^
         {
             [state beginCompletion];
-        }]];
+        }];
 
-        return state;
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [currentDisposable dispose];
+            [disposable dispose];
+        }];
     }];
 }
 

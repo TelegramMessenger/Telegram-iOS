@@ -30,13 +30,14 @@ struct ChatListNodeViewUpdate {
 }
 
 public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilterPredicate {
-    var includePeers = Set(filter.includePeers.peers)
-    var excludePeers = Set(filter.excludePeers)
+    let includePeers = Set(filter.includePeers.peers)
+    let excludePeers = Set(filter.excludePeers)
     
-    if !filter.includePeers.pinnedPeers.isEmpty {
-        includePeers.subtract(filter.includePeers.pinnedPeers)
-        excludePeers.subtract(filter.includePeers.pinnedPeers)
-    }
+    // commented out to fix bug: pinning user chat in folder hides secret chats of the same user
+//    if !filter.includePeers.pinnedPeers.isEmpty {
+//        includePeers.subtract(filter.includePeers.pinnedPeers)
+//        excludePeers.subtract(filter.includePeers.pinnedPeers)
+//    }
     
     var includeAdditionalPeerGroupIds: [PeerGroupId] = []
     if !filter.excludeArchived {
@@ -119,7 +120,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
         } else {
             filterPredicate = nil
         }
-        
+
         switch location {
         case let .initial(count, _):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
@@ -148,11 +149,11 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             guard case let .chatList(index) = index else {
                 return .never()
             }
-            
+
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > .chatList(index) ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil
@@ -187,9 +188,9 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 ]
             )
         )
-        
+
         let readStateKey: PostboxViewKey = .combinedReadState(peerId: peerId, handleThreads: false)
-        
+
         var isFirst = false
         return account.postbox.combinedView(keys: [viewKey, readStateKey])
         |> map { views -> ChatListNodeViewUpdate in
@@ -199,14 +200,14 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             guard let readStateView = views.views[readStateKey] as? CombinedReadStateView else {
                 preconditionFailure()
             }
-            
+
             var maxReadId: Int32 = 0
             if let state = readStateView.state?.states.first(where: { $0.0 == Namespaces.Message.Cloud }) {
                 if case let .idBased(maxIncomingReadId, _, _, _, _) = state.1 {
                     maxReadId = maxIncomingReadId
                 }
             }
-            
+
             var items: [EngineChatList.Item] = []
             for item in view.items {
                 guard let peer = view.peer else {
@@ -215,11 +216,11 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 guard let data = item.info.get(MessageHistoryThreadData.self) else {
                     continue
                 }
-                
+
                 let defaultPeerNotificationSettings: TelegramPeerNotificationSettings = (view.peerNotificationSettings as? TelegramPeerNotificationSettings) ?? .defaultSettings
-                
+
                 var hasUnseenMentions = false
-                
+
                 var isMuted = false
                 switch data.notificationSettings.muteState {
                 case .muted:
@@ -233,14 +234,14 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                         }
                     }
                 }
-                
+
                 if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
                     tag: .unseenPersonalMessage,
                     actionType: PendingMessageActionType.consumeUnseenPersonalMessage
                 )] {
                     hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
                 }
-                
+
                 var hasUnseenReactions = false
                 if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
                     tag: .unseenReaction,
@@ -248,21 +249,21 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 )] {
                     hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
                 }
-                
+
                 let pinnedIndex: EngineChatList.Item.PinnedIndex
                 if let index = item.pinnedIndex {
                     pinnedIndex = .index(index)
                 } else {
                     pinnedIndex = .none
                 }
-                
+
                 var topicMaxIncomingReadId = data.maxIncomingReadId
                 if data.maxIncomingReadId == 0 && maxReadId != 0 && Int64(maxReadId) <= item.id {
                     topicMaxIncomingReadId = max(topicMaxIncomingReadId, maxReadId)
                 }
-                
+
                 let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: topicMaxIncomingReadId, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
-                
+
                 var draft: EngineChatList.Draft?
                 if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {
                     if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -271,7 +272,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                         }
                     }
                 }
-                
+
                 items.append(EngineChatList.Item(
                     id: .forum(item.id),
                     index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
@@ -291,7 +292,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     autoremoveTimeout: nil
                 ))
             }
-            
+
             let list = EngineChatList(
                 items: items.reversed(),
                 groupItems: [],
@@ -300,7 +301,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 hasLater: false,
                 isLoading: view.isLoading
             )
-            
+
             let type: ViewUpdateType
             if isFirst {
                 type = .Initial

@@ -19,13 +19,15 @@ final class ChatSearchResultsController: ViewController {
     private let searchQuery: String
     private let searchResult: SearchMessagesResult
     private let searchState: SearchMessagesState
+    private let matchesOnlyBcOfFAN: Set<MessageId>
+    private let loadMorePaused: Bool
         
     private let navigateToMessageIndex: (Int) -> Void
-    private let resultsUpdated: (SearchMessagesResult, SearchMessagesState) -> Void
+    private let resultsUpdated: (SearchMessagesResult, SearchMessagesState, Set<MessageId>) -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState, navigateToMessageIndex: @escaping (Int) -> Void, resultsUpdated: @escaping (SearchMessagesResult, SearchMessagesState) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState, matchesOnlyBcOfFAN: Set<MessageId>, loadMorePaused: Bool, navigateToMessageIndex: @escaping (Int) -> Void, resultsUpdated: @escaping (SearchMessagesResult, SearchMessagesState, Set<MessageId>) -> Void) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.location = location
@@ -34,6 +36,8 @@ final class ChatSearchResultsController: ViewController {
         self.resultsUpdated = resultsUpdated
         self.searchResult = searchResult
         self.searchState = searchState
+        self.matchesOnlyBcOfFAN = matchesOnlyBcOfFAN
+        self.loadMorePaused = loadMorePaused
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
         
@@ -63,15 +67,15 @@ final class ChatSearchResultsController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatSearchResultsControllerNode(context: self.context, location: self.location, searchQuery: self.searchQuery, searchResult: self.searchResult, searchState: self.searchState, presentInGlobalOverlay: { [weak self] c in
+        self.displayNode = ChatSearchResultsControllerNode(context: self.context, location: self.location, searchQuery: self.searchQuery, searchResult: self.searchResult, searchState: self.searchState, matchesOnlyBcOfFAN: self.matchesOnlyBcOfFAN, loadMorePaused: self.loadMorePaused, presentInGlobalOverlay: { [weak self] c in
             self?.presentInGlobalOverlay(c)
         })
         self.controllerNode.resultSelected = { [weak self] messageIndex in
             self?.navigateToMessageIndex(messageIndex)
             self?.dismiss()
         }
-        self.controllerNode.resultsUpdated = { [weak self] result, state in
-            self?.resultsUpdated(result, state)
+        self.controllerNode.resultsUpdated = { [weak self] result, state, matchesOnlyBcOfFAN in
+            self?.resultsUpdated(result, state, matchesOnlyBcOfFAN)
         }
     }
     

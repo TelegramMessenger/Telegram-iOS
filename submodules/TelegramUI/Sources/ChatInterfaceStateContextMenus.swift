@@ -32,6 +32,7 @@ import Pasteboard
 import SettingsUI
 import PremiumUI
 import TextNodeWithEntities
+import PtgForeignAgentNoticeRemoval
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -269,14 +270,14 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
                 } else if threadData.isOwnedByMe {
                     canManage = true
                 }
-                
+
                 if !canManage {
                     return false
                 }
             }
         }
     }
-    
+
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {
     case .peer:
@@ -530,7 +531,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             canReply = false
         }
     }
-    
+
     if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
@@ -625,7 +626,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         readCounters,
         ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
         context.engine.stickers.availableReactions(),
-        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings, SharedDataKeys.loggingSettings]),
+        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings, SharedDataKeys.loggingSettings]) |> take(1),
         context.engine.peers.notificationSoundList() |> take(1),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
@@ -660,7 +661,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     |> deliverOnMainQueue
     |> map { data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer -> ContextController.Items in
         let isPremium = accountPeer?.isPremium ?? false
-        
+
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -828,7 +829,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         guard case let .builtin(emojiValue) = reaction.value else {
                                             continue
                                         }
-                                        
+
                                         subActions.append(.action(ContextMenuActionItem(text: emojiValue, icon: { _ in
                                             return nil
                                         }, action: { _, f in
@@ -954,7 +955,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         } else {
             resourceAvailable = false
         }
-        
+
 
         if !isPremium && isDownloading {
             var isLargeFile = false
@@ -980,13 +981,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         controller?.replace(with: c)
                     }
                     controllerInteraction.navigationController()?.pushViewController(controller)
-                    
+
                     f(.dismissWithoutContent)
                 })))
                 actions.append(.separator)
             }
         }
-        
+
         var isReplyThreadHead = false
         if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
             isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
@@ -1023,10 +1024,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
         
         var messageText: String = ""
+        var messageEntities: [MessageTextEntity]?
+        let suppressForeignAgentNotice = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
         for message in messages {
             if !message.text.isEmpty {
                 if messageText.isEmpty {
-                    messageText = message.text
+                    (messageText, messageEntities) = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media) : (message.text, message.textEntitiesAttribute?.entities ?? [])
                 } else {
                     messageText = ""
                     break
@@ -1053,7 +1056,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     for option in poll.options {
                         text.append("\n— \(option.text)")
                     }
-                    messageText = poll.text
+                    messageText = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
                     break
                 }
             }
@@ -1078,23 +1081,23 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 UIPasteboard.general.string = diceEmoji
                             } else {
                                 let copyTextWithEntities = {
-                                    var messageEntities: [MessageTextEntity]?
+//                                    var messageEntities: [MessageTextEntity]?
                                     var restrictedText: String?
                                     for attribute in message.attributes {
-                                        if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                            messageEntities = attribute.entities
-                                        }
+//                                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+//                                            messageEntities = attribute.entities
+//                                        }
                                         if let attribute = attribute as? RestrictedContentMessageAttribute {
                                             restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
                                         }
                                     }
-                                    
+
                                     if let restrictedText = restrictedText {
                                         storeMessageTextInPasteboard(restrictedText, entities: nil)
                                     } else {
                                         storeMessageTextInPasteboard(messageText, entities: messageEntities)
                                     }
-                                    
+
                                     Queue.mainQueue().after(0.2, {
                                         let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
                                         controllerInteraction.displayUndo(content)
@@ -1313,7 +1316,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if isMigrated {
             canPin = false
         }
-        
+
         if canPin {
             var pinnedSelectedMessageId: MessageId?
             for message in messages {
@@ -1549,7 +1552,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             clearCacheAsDelete = true
         }
-        
+
         if isReplyThreadHead {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.SharedMedia_ViewInChat, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.actionSheet.primaryTextColor)
@@ -1693,10 +1696,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         })
                     } else if (stats != nil && !stats!.peers.isEmpty) || reactionCount != 0 {
                         var tip: ContextController.Tip?
-                        
+
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                        
+
                         if !premiumConfiguration.isPremiumDisabled {
                             if customReactionEmojiPacks.count == 1, let firstCustomEmojiReaction = firstCustomEmojiReaction {
                                 tip = .animatedEmoji(
@@ -1719,7 +1722,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 })
                             }
                         }
-                        
+
                         c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(
                             context: context,
                             availableReactions: availableReactions,
@@ -1807,7 +1810,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         var disableDelete = false
         var isCopyProtected = false
         var isShareProtected = false
-        
+
         func getPeer(_ peerId: PeerId) -> Peer? {
             if let maybePeer = peerMap[peerId], let peer = maybePeer {
                 return peer._asPeer()
@@ -2026,12 +2029,12 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                     optionsMap[id]!.insert(.deleteLocally)
                 }
             }
-            
+
             if !isShareProtected {
                 optionsMap[id]!.insert(.externalShare)
             }
         }
-                
+
         if !optionsMap.isEmpty {
             var reducedOptions = optionsMap.values.first!
             for value in optionsMap.values {
@@ -2317,7 +2320,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     private var disposable: Disposable?
     private var currentStats: MessageReadStats?
-    
+
     private var customEmojiPacksDisposable: Disposable?
     private var customEmojiPacks: [StickerPackCollectionInfo] = []
     private var firstCustomEmojiReaction: TelegramMediaFile?
@@ -2399,12 +2402,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         var customEmojiFiles = Set<Int64>()
         for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
-            
+
             if case let .custom(fileId) = reaction.value {
                 customEmojiFiles.insert(fileId)
             }
         }
-        
+
         if !customEmojiFiles.isEmpty {
             self.customEmojiPacksDisposable = (item.context.engine.stickers.resolveInlineStickers(fileIds: Array(customEmojiFiles))
             |> mapToSignal { customEmoji -> Signal<([StickerPackCollectionInfo], TelegramMediaFile?), NoError> in
@@ -2418,7 +2421,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                                 if firstCustomEmojiReaction == nil {
                                     firstCustomEmojiReaction = file
                                 }
-                                
+
                                 existingIds.insert(id)
                                 stickerPackSignals.append(item.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
                                 |> filter { result in
@@ -2526,7 +2529,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         if let currentStats = self.currentStats {
             reactionCount = currentStats.reactionCount
-            
+
             if currentStats.peers.isEmpty {
                 if reactionCount != 0 {
                     let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))

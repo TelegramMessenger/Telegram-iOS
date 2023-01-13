@@ -1,0 +1,117 @@
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Пры пераключэнні праграмы";
+
+"PasscodeSettings.FakePasscodes" = "Несапраўдныя кады доступу";
+"PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
+"PasscodeSettings.AddFakePasscode" = "Дадаць несапраўдны код доступу";
+"PasscodeSettings.FakePasscodeHelp" = "Пры ўводзе несапраўднага кода доступу выконваюцца выбранныя дзеянні.";
+"PasscodeSettings.PasscodeInUse" = "Гэты код доступу ужо выкарыстоўваецца";
+"PasscodeSettings.ConfirmDeletion" = "Пацвердзіце выдаленне";
+"PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Усе несапраўдныя кады доступу будць выдалены. Жадаеце працягнуць?";
+
+"PasscodeSettings.FakePasscodeChangeName" = "Змяніць назву";
+"PasscodeSettings.FakePasscodeChange" = "Змяніць несапраўдны код блакіроўкі";
+"PasscodeSettings.FakePasscodeChangeHelp" = "Вы можаце змяніць несапраўдны код блакіроўкі, не выдаляя яго.";
+"PasscodeSettings.FakePasscodeAllowLogin" = "Уваходзіць з несапраўдным кодам блакіроўкі";
+"PasscodeSettings.FakePasscodeAllowLoginHelp" = "Вы можаце забараніць уваход з гэтым несапраўдным кодам блакіроўкі. У такім выпадку зламыснік не атрымае доступ да акаунтаў, але зазначанныя дзеянні будуць выкананы.";
+"PasscodeSettings.FakePasscodeClearAfterActivation" = "Чысціць налады код-пароля";
+"PasscodeSettings.FakePasscodeClearAfterActivationHelp" = "Усе налады несапраўднага код-пароля пасля актывацыі будуць выдаляцца і зламыснік не зможа атрымаць да іх доступ.";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivation" = "Выдаляць іншыя код-паролі";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivationHelp" = "Усе астатнія несапраўдныя код-паролі пасля актывацыі будуць выдалены і зламыснік не зможа атрымаць да іх доступ.";
+"PasscodeSettings.FakePasscodeActivationMessage" = "Паведамленне-актыватар";
+"PasscodeSettings.FakePasscodeActivationMessageHelp" = "Дзеянні з несапраўдным кодам блакіроўкі будуць выкананы пры атрыманні паведамлення-актыватара ў любым чаце.";
+"PasscodeSettings.BadPasscodeTriesToActivate" = "Ліміт спроб уваходу для актывацыі";
+"PasscodeSettings.BadPasscodeTriesToActivateHelp" = "Дзеянні з несапраўдным кодам блакіроўкі будуць выкананы пасля адзначанай колькасці няўдалых спроб уводу кода блакіроўкі.";
+"PasscodeSettings.FakePasscodeActionsTitle" = "Дзеянні";
+"PasscodeSettings.FakePasscodeSmsActionTitle" = "СМС";
+"PasscodeSettings.ClearTelegramCache" = "Ачышчаць кэш Telegram";
+"PasscodeSettings.ClearProxiesOnFakeLogin" = "Ачышчаць спіс проксі";
+"PasscodeSettings.FakePasscodeActionsHelp" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
+"PasscodeSettings.FakePasscodeAccountsTitle" = "Дзеянні для акаўнтаў";
+"PasscodeSettings.FakePasscodeAccountsHelp" = "Наладзьце дзеянні для акаўнтаў.";
+"PasscodeSettings.FakePasscodeDelete" = "Выдаліць несапраўдны код блакіроўкі";
+"PasscodeSettings.FakePasscodeDeleteHelp" = "Калі Вы выдаліце несапраўдны код блакіроўкі, усе дзеянні будуць ачышчаны. Вы можаце змяніць код блакіроўкі, калі не хочаце выдаляць яго.";
+
+"PasscodeSettings.FakePasscodeDeleteTitle" = "Выдаліць несапраўдны код блакіроўкі";
+"PasscodeSettings.FakePasscodeDeleteMessage" = "Вы дакладна хочаце выдаліць гэты несапраўдны код блакіроўкі?";
+
+"Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
+
+"PasscodeSettings.BadAttempts" = "Няўдалыя спробы ўвода кода";
+"PasscodeSettings.BadAttempts.Help" = "Паглядзіце ўсе няўдалыя спробы ўводу кода блакіроўкі.";
+"PasscodeSettings.BadAttempts.AppLogin" = "Разблакіроўка дадатка";
+"PasscodeSettings.BadAttempts.SettingsLogin" = "Уваход у налады кода блакіроўкі";
+"PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
+"PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
+
+"FakePasscodes.Common.DoNotShowAgain" = "Больш не паказваць";
+
+"FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для выдалення";
+"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Наладжаныя чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Даступныя чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.EmptyListInfo" = "Чаты не знойдзены.";
+"FakePasscodes.AccountActions.ChatsToRemove.SettingsTitle" = "Налады выдалення чатаў";
+"FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Выбраныя чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Дзеянне";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Выдаліць";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteForEveryone" = "Выдаліць для ўсіх";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteJustForMe" = "Выдаліць толькі для мяне";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHide" = "Схаваць";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "Калі была абраная опцыя \"Схаваць\", дыялогі (чаты, каналы) не будуць выдаленыя. Яны будуць схаваныя са спісу дыялогаў. Іх апавяшчэнні таксама будуць схаваныя. Пасля ўваходу з арыгінальным код-паролем дыялогі (чаты, каналы) з'явяцца ў спісе. Больш бяспечна выкарыстоўваць выдаленне.";
+"FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Выдаліць у суразмоўцы";
+"FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Выдаліць дыялогі ў суразмоўцаў. Гэтая опцыя прымяняецца толькі для дыялогаў з карыстальнікамі.";
+"FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для хавання";
+"FakePasscodes.AccountActions.SessionsToTerminate" = "Сеансы для завяршэння";
+"FakePasscodes.AccountActions.All" = "Усе";
+"FakePasscodes.AccountActions.AllExceptCount" = "Усе (-%1$@)";
+"FakePasscodes.AccountActions.SessionsSettingsInfo" = "Абярыце сеансы, якія будуць бачны ў наладах і/альбо завершаны пасля актывацыі несапраўднага кода блакіроўкі.";
+"FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";
+"FakePasscodes.AccountActions.MiscActionsInfo" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
+
+"AccountActions.SessionsToHide.Clear" = "Clear";
+"AccountActions.SessionsToHide.CheckAll" = "Выбраць усе";
+"AccountActions.SessionsToHide.Selected" = "Абраныя";
+"AccountActions.SessionsToHide.ExceptSelected" = "Акрамя абраных";
+"AccountActions.SessionsToHide.ActiveSessions" = "Актыўныя сеансы";
+"AccountActions.SessionsToHide.CleanConfirmation" = "Вы ўпэўнены?";
+
+"AccountActions.SessionsToTerminate.24hWarningMessage" = "Гэта функцыя не будзе працавать, калі пасля увахода ў аккаўнт на гэтым дэвайсе прайшло менш за 24 гадзіны.";
+
+"PtgSettings.Title" = "Cloudballon";
+"PtgSettings.ShowPeerId" = "Паказваць ID";
+"PtgSettings.ShowPeerIdHelp" = "Паказваць ID у профілях карыстальнікаў, суполак, каналаў, ботаў.";
+"PtgSettings.ForeignAgentNoticeHeader" = "Маркіроўка замежных агентаў";
+"PtgSettings.SuppressForeignAgentNotice" = "Хаваць у паведамленнях";
+"PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фільтраваць вынікі пошуку";
+"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Адфільтроўваць з вынікаў пошуку паведамлення, якія былі ўключаны толькі з-за тэксту маркіроўкі замежных агентаў.";
+"PtgSettings.EnableLiveText" = "Распазнанне тэксту";
+"PtgSettings.EnableLiveTextHelp" = "Аўтаматычна выконваць распазнанне тэксту і штрых-кодаў (напрыклад, QR-кода) на кожнай выяве, якую вы праглядаеце ў поўнаэкранным рэжыме. Выключыце, каб зэканоміць зарад батарэі.";
+
+"Profile.Id" = "ID";
+"Conversation.IdCopied" = "ID скапіяваны ў буфер абмену.";
+"Settings.CopyId" = "Капіяваць ID";
+
+"SiriAndDictationAreDisabledAlert" = "Каб транскрыбаваць галасавыя паведамленні, неабходна ўключыць дыктоўку (Налады сістэмы > Агульныя > Клавіятура) або Siri (Налады сістэмы > Siri і пошук).";
+
+"SecretPasscodeSettings.Title" = "Сакрэтны код доступу";
+"SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код доступу";
+"SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код доступу";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце сакрэтны код доступу яшчэ раз";
+"SecretPasscodeSettings.AutoHide" = "Аўта-схаванне";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код доступу";
+"Settings.EnterSecretPasscode" = "Увесці сакрэтны код доступу";
+"Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі доступу";
+"SecretPasscodeMenu.Add" = "Дадаць сакрэтны код доступу";
+"SecretPasscodeMenu.Edit" = "Рэдагаваць сакрэтны код доступу";
+"SecretPasscodeMenu.HideAllSecrets" = "Схаваць усе сакрэты";
+"SecretPasscodeStatus.SomeRevealed" = "Некаторыя сакрэты адкрыты.";
+"SecretPasscodeStatus.AllHidden" = "Усе сакрэты схаваны.";
+"SecretPasscodeStatus.Revealed" = "Цяперашні стан: **сакрэты адкрыты**.";
+"SecretPasscodeStatus.Hidden" = "Цяперашні стан: **сакрэты схаваны**.";
+"SecretPasscode.AddSecretChats" = "Дадаць сакрэтныя чаты";
+"SecretPasscode.SecretChatsSelectionTitle" = "Сакрэтныя чаты";
+"SecretPasscode.SecretChatDeleted" = "Выдален";
+"SecretPasscode.AccountListTitle" = "Акаўнты";
+"SecretPasscode.AccountSelectionTitle" = "Абярыце акаўнт";
+
+"Share.LockedTitle" = "Разблакіруйце Telegram";
+"Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";

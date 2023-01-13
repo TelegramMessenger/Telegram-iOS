@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import LocalAuth
 import TelegramStringFormatting
+import FakePasscode
 
 public final class PasscodeEntryControllerPresentationArguments {
     let animated: Bool
@@ -62,7 +63,11 @@ public final class PasscodeEntryController: ViewController {
     private var statusBarHost: StatusBarHost?
     private var previousStatusBarStyle: UIStatusBarStyle?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    private let sharedAccountContext: SharedAccountContext?
+    
+    private var invalidAttemptsDisposable: Disposable?
+    
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, sharedAccountContext: SharedAccountContext?) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext
@@ -71,6 +76,7 @@ public final class PasscodeEntryController: ViewController {
         self.challengeData = challengeData
         self.biometrics = biometrics
         self.arguments = arguments
+        self.sharedAccountContext = sharedAccountContext
         
         self.statusBarHost = statusBarHost
         self.previousStatusBarStyle = statusBarHost?.statusBarStyle
@@ -109,6 +115,7 @@ public final class PasscodeEntryController: ViewController {
         self.presentationDataDisposable?.dispose()
         self.biometricsDisposable.dispose()
         self.inBackgroundDisposable?.dispose()
+        self.invalidAttemptsDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -144,7 +151,7 @@ public final class PasscodeEntryController: ViewController {
         self.displayNode = PasscodeEntryControllerNode(accountManager: self.accountManager, presentationData: self.presentationData, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, arguments: self.arguments, modalPresentation: self.arguments.modalPresentation)
         self.displayNodeDidLoad()
         
-        let _ = (self.appLockContext.invalidAttempts
+        self.invalidAttemptsDisposable = (self.appLockContext.invalidAttempts
         |> deliverOnMainQueue).start(next: { [weak self] attempts in
             guard let strongSelf = self else {
                 return
@@ -157,35 +164,85 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
     
-            var succeed = false
-            switch strongSelf.challengeData {
-                case .none:
-                    succeed = true
-                case let .numericalPassword(code):
-                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code):
-                    succeed = passcode == code
-            }
-            
-            if succeed {
-                if let completed = strongSelf.completed {
-                    completed()
-                } else {
-                    strongSelf.appLockContext.unlock()
+            let _ = (strongSelf.accountManager.transaction { transaction -> (Bool, Bool, FakePasscodeSettings?) in
+                let fakePasscodeHolder = FakePasscodeSettingsHolder(transaction)
+                
+                let (succeed, updatedAccessChallenge, updatedFakePasscodeHolder) = ptgCheckPasscode(passcode: passcode, secondaryUnlock: false, accessChallenge: strongSelf.challengeData, fakePasscodeHolder: fakePasscodeHolder)
+                
+                if let updatedAccessChallenge = updatedAccessChallenge {
+                    transaction.setAccessChallengeData(updatedAccessChallenge)
                 }
                 
-                let isMainApp = strongSelf.applicationBindings.isMainApp
-                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
-                    if isMainApp {
-                        return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
-                    } else {
-                        return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                if let updatedFakePasscodeHolder = updatedFakePasscodeHolder {
+                    updateFakePasscodeSettingsInternal(transaction: transaction) { _ in
+                        return updatedFakePasscodeHolder
                     }
-                }).start()
-            } else {
-                strongSelf.appLockContext.failedUnlockAttempt()
-                strongSelf.controllerNode.animateError()
+                }
+                
+                let passcodeSwitched = updatedFakePasscodeHolder != nil // true -> fake, fake -> true, or fake -> another fake
+                let unlockedWithFakePasscode = updatedFakePasscodeHolder?.unlockedWithFakePasscode() ?? (succeed && fakePasscodeHolder.unlockedWithFakePasscode())
+                
+                if succeed {
+                    if unlockedWithFakePasscode {
+                        addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: true))
+                    }
+                } else {
+                    addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
+                }
+                
+                let fakePasscodeToActivate = (passcodeSwitched && unlockedWithFakePasscode) ? updatedFakePasscodeHolder!.activeFakePasscodeSettings()! : nil
+                
+                return (succeed, passcodeSwitched, fakePasscodeToActivate)
             }
+            |> deliverOnMainQueue).start(next: { succeed, passcodeSwitched, fakePasscodeToActivate in
+                if succeed {
+                    let completeUnlock = {
+                        if let completed = strongSelf.completed {
+                            completed()
+                        } else {
+                            strongSelf.appLockContext.unlock()
+                        }
+                        
+                        let isMainApp = strongSelf.applicationBindings.isMainApp
+                        let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
+                            if isMainApp {
+                                return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                            } else {
+                                return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                            }
+                        }).start()
+                    }
+                    
+                    if passcodeSwitched {
+                        strongSelf.window?.forEachController { controller in
+                            if let controller = controller as? ReactiveToPasscodeSwitch {
+                                controller.passcodeSwitched()
+                            }
+                            if let controller = (controller as? TabBarController)?.currentController as? ReactiveToPasscodeSwitch {
+                                controller.passcodeSwitched()
+                            }
+                            if let actionSheet = controller as? ActionSheetController {
+                                actionSheet.dismiss(animated: false)
+                            }
+                        }
+                    }
+                    
+                    if let fakePasscodeToActivate = fakePasscodeToActivate, let sharedAccountContext = strongSelf.sharedAccountContext {
+                        let beforeUnlockTaskCounter = PendingTaskCounter()
+                        fakePasscodeToActivate.activate(sharedAccountContext: sharedAccountContext, beforeUnlockTaskCounter: beforeUnlockTaskCounter)
+                        
+                        let _ = (beforeUnlockTaskCounter.completed()
+                        |> deliverOnMainQueue).start(next: {
+                            completeUnlock()
+                        })
+                    } else {
+                        completeUnlock()
+                    }
+                } else {
+                    strongSelf.appLockContext.failedUnlockAttempt()
+                    strongSelf.controllerNode.animateError()
+                }
+            })
         }
         self.controllerNode.requestBiometrics = { [weak self] in
             if let strongSelf = self {
@@ -268,6 +325,7 @@ public final class PasscodeEntryController: ViewController {
                     strongSelf.hasOngoingBiometricsRequest = false
                 } else {
                     strongSelf.appLockContext.unlock()
+                    // PTG: currently biometric unlock preserves last unlock status
                     strongSelf.hasOngoingBiometricsRequest = false
                 }
             } else {
@@ -284,17 +342,25 @@ public final class PasscodeEntryController: ViewController {
     }
     
     public override func dismiss(completion: (() -> Void)? = nil) {
+        self.dismiss(animated: true, completion: completion)
+    }
+    
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.statusBarHost?.shouldChangeStatusBarStyle = nil
         if let statusBarHost = self.statusBarHost, let previousStatusBarStyle = self.previousStatusBarStyle {
-            statusBarHost.setStatusBarStyle(previousStatusBarStyle, animated: true)
+            statusBarHost.setStatusBarStyle(previousStatusBarStyle, animated: flag)
         }
         self.view.endEditing(true)
-        self.controllerNode.animateOut { [weak self] in
-            guard let strongSelf = self else {
-                return
+        if flag {
+            self.controllerNode.animateOut { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.view.endEditing(true)
+                strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
             }
-            strongSelf.view.endEditing(true)
-            strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
+        } else {
+            self.presentingViewController?.dismiss(animated: false, completion: completion)
         }
     }
 }

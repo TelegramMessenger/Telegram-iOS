@@ -69,7 +69,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var forumTopicData: EngineChatList.ForumTopicData?
         var topForumTopicItems: [EngineChatList.ForumTopicData]
         var revealed: Bool
-        
+
         init(
             index: EngineChatList.Item.Index,
             presentationData: ChatListPresentationData,
@@ -117,7 +117,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.topForumTopicItems = topForumTopicItems
             self.revealed = revealed
         }
-        
+
         static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
             if lhs.index != rhs.index {
                 return false
@@ -228,7 +228,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return true
         }
     }
-    
+
     case HeaderEntry
     case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
@@ -381,7 +381,7 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -406,9 +406,9 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
     if !view.hasLater && savedMessagesPeer == nil {
         pinnedIndexOffset += UInt16(filteredAdditionalItemEntries.count)
     }
-    
+
     var hiddenGeneralThread: ChatListNodeEntry?
-    
+
     loop: for entry in view.items {
         var peerId: EnginePeer.Id?
         var threadId: Int64?
@@ -421,11 +421,14 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             activityItemId = ChatListNodePeerInputActivities.ItemId(peerId: peerIdValue, threadId: threadIdValue)
             threadId = threadIdValue
         }
-        
+
         if let savedMessagesPeer = savedMessagesPeer, let peerId = peerId, savedMessagesPeer.id == peerId || foundPeerIds.contains(peerId) {
             continue loop
         }
         if let peerId = peerId, state.pendingRemovalItemIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {
+            continue loop
+        }
+        if hiddenPeerIds.contains(entry.index.messageIndex.id.peerId) {
             continue loop
         }
         var updatedMessages = entry.messages
@@ -439,7 +442,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         if let draft = entry.draft {
             draftState = ChatListItemContent.DraftState(draft: draft)
         }
-        
+
         var hasActiveRevealControls = false
         if let peerId {
             hasActiveRevealControls = ChatListNodeState.ItemId(peerId: peerId, threadId: threadId) == state.peerIdWithRevealedOptions
@@ -448,14 +451,14 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         if let activityItemId {
             inputActivities = state.peerInputActivities?.activities[activityItemId]
         }
-        
+
         var isSelected = false
         if let threadId, threadId != 0 {
             isSelected = state.selectedThreadIds.contains(threadId)
         } else if let peerId {
             isSelected = state.selectedPeerIds.contains(peerId)
         }
-        
+
         var threadInfo: ChatListItemContent.ThreadInfo?
         if let threadData = entry.threadData, let threadId = threadId {
             threadInfo = ChatListItemContent.ThreadInfo(id: threadId, info: threadData.info, isOwnedByMe: threadData.isOwnedByMe, isClosed: threadData.isClosed, isHidden: threadData.isHidden)
@@ -485,18 +488,18 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             topForumTopicItems: entry.topForumTopicItems,
             revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
         ))
-        
+
         if let threadInfo, threadInfo.isHidden {
             hiddenGeneralThread = entry
         } else {
             result.append(entry)
         }
     }
-    
+
     if let hiddenGeneralThread {
         result.append(hiddenGeneralThread)
     }
-    
+
     if !view.hasLater {
         var pinningIndex: UInt16 = UInt16(pinnedIndexOffset == 0 ? 0 : (pinnedIndexOffset - 1))
         
@@ -570,7 +573,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     guard case let .chatList(index) = item.item.index else {
                         continue
                     }
-                    
+
                     let promoInfo: ChatListNodeEntryPromoInfo
                     switch item.promoInfo.content {
                     case .proxy:
@@ -579,10 +582,10 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         promoInfo = .psa(type: type, message: message)
                     }
                     let draftState = item.item.draft.flatMap(ChatListItemContent.DraftState.init)
-                    
+
                     let peerId = index.messageIndex.id.peerId
                     let isSelected = state.selectedPeerIds.contains(peerId)
-                    
+
                     var threadId: Int64 = 0
                     switch item.item.index {
                     case let .forum(_, _, threadIdValue, _, _):

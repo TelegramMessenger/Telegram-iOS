@@ -332,6 +332,7 @@ final class ChatHistoryPreloadManager {
     
     deinit {
         self.canPreloadHistoryDisposable?.dispose()
+        self.automaticChatListDisposable.dispose()
     }
     
     func addAdditionalPeerId(peerId: PeerId) -> Disposable {

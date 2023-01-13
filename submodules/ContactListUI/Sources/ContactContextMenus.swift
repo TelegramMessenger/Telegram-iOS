@@ -42,8 +42,8 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         }
         
         if canStartSecretChat {
-            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_StartSecretChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                let _ = (context.engine.peers.mostRecentSecretChat(id: peerId)
+            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_StartSecretChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Lock"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                let _ = (context.engine.peers.mostRecentSecretChat(id: peerId, inactiveSecretChatPeerIds: context.currentInactiveSecretChatPeerIds.with { $0 })
                 |> deliverOnMainQueue).start(next: { currentPeerId in
                     if let currentPeerId = currentPeerId {
                         let _ = (context.engine.data.get(

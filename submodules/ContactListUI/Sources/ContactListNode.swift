@@ -1047,7 +1047,7 @@ public final class ContactListNode: ASDisplayNode {
                 |> mapToSignal { query in
                     let foundLocalContacts: Signal<([FoundPeer], [EnginePeer.Id: EnginePeer.Presence]), NoError>
                     if searchChatList {
-                        let foundChatListPeers = context.account.postbox.searchPeers(query: query.lowercased())
+                        let foundChatListPeers = context.account.postbox.searchPeers(query: query.lowercased(), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                         foundLocalContacts = foundChatListPeers
                         |> mapToSignal { peers -> Signal<([FoundPeer], [EnginePeer.Id: EnginePeer.Presence]), NoError> in
                             var resultPeers: [FoundPeer] = []
@@ -1270,7 +1270,7 @@ public final class ContactListNode: ASDisplayNode {
             } else {
                 let chatListSignal: Signal<[(EnginePeer, Int32)], NoError>
                 if includeChatList {
-                    chatListSignal = self.context.account.viewTracker.tailChatListView(groupId: .root, count: 100)
+                    chatListSignal = context.account.viewTracker.tailChatListView(groupId: .root, count: 100, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                     |> take(1)
                     |> mapToSignal { view, _ -> Signal<[(EnginePeer, Int32)], NoError> in
                         return context.engine.data.get(EngineDataMap(

@@ -68,7 +68,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             experimentalBackground: false,
             snow: false,
             inlineStickers: false,
-            localTranscription: false,
+            localTranscription: true,
             enableReactionOverrides: false,
             inlineForums: false,
             accountReactionEffectOverrides: [],
@@ -144,7 +144,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalBackground = (try container.decodeIfPresent(Int32.self, forKey: "experimentalBackground") ?? 0) != 0
         self.snow = (try container.decodeIfPresent(Int32.self, forKey: "snow") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
-        self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
+        self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 1) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
         self.inlineForums = try container.decodeIfPresent(Bool.self, forKey: "inlineForums") ?? false
         self.accountReactionEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []

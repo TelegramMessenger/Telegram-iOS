@@ -254,6 +254,10 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         }
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let previousLayout = self.validLayout
         self.validLayout = size

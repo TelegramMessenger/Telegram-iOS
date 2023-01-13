@@ -756,6 +756,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     deinit {
         self.disposable.dispose()
+        self.searchContainerNodeLoadedDisposable.dispose()
+        self.maskDisposable.dispose()
     }
     
     override func didLoad() {

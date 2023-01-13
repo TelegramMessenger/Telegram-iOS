@@ -476,7 +476,7 @@ public struct MessageFlags: OptionSet {
         if flags.contains(StoreMessageFlags.IsForumTopic) {
             rawValue |= MessageFlags.IsForumTopic.rawValue
         }
-        
+
         self.rawValue = rawValue
     }
     
@@ -490,7 +490,7 @@ public struct MessageFlags: OptionSet {
     public static let CountedAsIncoming = MessageFlags(rawValue: 256)
     public static let CopyProtected = MessageFlags(rawValue: 512)
     public static let IsForumTopic = MessageFlags(rawValue: 1024)
-    
+
     public static let IsIncomingMask = MessageFlags([.Incoming, .CountedAsIncoming])
 }
 
@@ -612,13 +612,13 @@ public final class Message {
         public let title: String
         public let icon: Int64?
         public let iconColor: Int32
-        
+
         public init(title: String, icon: Int64?, iconColor: Int32) {
             self.title = title
             self.icon = icon
             self.iconColor = iconColor
         }
-        
+
         public static func ==(lhs: AssociatedThreadInfo, rhs: AssociatedThreadInfo) -> Bool {
             if lhs === rhs {
                 return true
@@ -635,7 +635,7 @@ public final class Message {
             return true
         }
     }
-    
+
     public let stableId: UInt32
     public let stableVersion: UInt32
     
@@ -659,7 +659,7 @@ public final class Message {
     public let associatedMessageIds: [MessageId]
     public let associatedMedia: [MediaId: Media]
     public let associatedThreadInfo: AssociatedThreadInfo?
-    
+
     public var index: MessageIndex {
         return MessageIndex(id: self.id, timestamp: self.timestamp)
     }
@@ -688,7 +688,7 @@ public final class Message {
         self.associatedMedia = associatedMedia
         self.associatedThreadInfo = associatedThreadInfo
     }
-    
+
     public func withUpdatedStableVersion(stableVersion: UInt32) -> Message {
         return Message(stableId: self.stableId, stableVersion: stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo)
     }
@@ -787,7 +787,7 @@ public struct StoreMessageFlags: OptionSet {
         if flags.contains(.IsForumTopic) {
             rawValue |= StoreMessageFlags.IsForumTopic.rawValue
         }
-        
+
         self.rawValue = rawValue
     }
     
@@ -801,7 +801,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let CountedAsIncoming = StoreMessageFlags(rawValue: 256)
     public static let CopyProtected = StoreMessageFlags(rawValue: 512)
     public static let IsForumTopic = StoreMessageFlags(rawValue: 1024)
-    
+
     public static let IsIncomingMask = StoreMessageFlags([.Incoming, .CountedAsIncoming])
 }
 

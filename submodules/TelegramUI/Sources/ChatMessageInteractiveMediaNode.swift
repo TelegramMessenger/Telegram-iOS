@@ -1046,18 +1046,18 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
-                                    if file.isAnimated {
-                                        strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
-                                    } else {
+//                                    if file.isAnimated {
+//                                        strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
+//                                    } else {
                                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).start())
-                                    }
+//                                    }
                                 }
                             }, cancel: {
-                                if file.isAnimated {
-                                    context.account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
-                                } else {
+//                                if file.isAnimated {
+//                                    context.account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+//                                } else {
                                     messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
-                                }
+//                                }
                             })
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             updateImageSignal = { synchronousLoad, _ in
@@ -1507,7 +1507,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             progressRequired = true
                         } else if content.embedUrl != nil {
                             progressRequired = true
-                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                        } else if let file = content.file, file.isVideo/*, !file.isAnimated*/ {
                             progressRequired = true
                         }
                     } else {

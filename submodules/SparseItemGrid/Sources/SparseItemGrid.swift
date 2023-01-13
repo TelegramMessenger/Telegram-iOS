@@ -1351,6 +1351,10 @@ public final class SparseItemGrid: ASDisplayNode {
             items.itemBinding.onTagTap()
         }
     }
+    
+    deinit {
+        self.loadingHoleDisposable.dispose()
+    }
 
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         guard let currentViewport = self.currentViewport, let items = self.items else {

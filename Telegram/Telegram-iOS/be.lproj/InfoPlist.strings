@@ -10,3 +10,5 @@
 "NSMicrophoneUsageDescription" = "Нам неабходны гэты дазвол, каб вы маглі запісваць і абагульваць галасавыя паведамленні і відэа з гукам.";
 "NSSiriUsageDescription" = "Вы можаце адпраўляць паведамленні праз Siri.";
 "NSFaceIDUsageDescription" = "Вы можаце карыстацца Face ID для разблакіравання праграмы.";
+
+"NSSpeechRecognitionUsageDescription" = "Гэта патрэбна, каб транскрыбаваць галасавыя паведамленні па вашым запыце.";

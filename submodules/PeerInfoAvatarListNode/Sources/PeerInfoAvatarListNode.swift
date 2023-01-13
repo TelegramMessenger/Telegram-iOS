@@ -294,6 +294,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.statusDisposable.dispose()
         self.playbackStartDisposable.dispose()
         self.preloadDisposable.dispose()
+        self.loadingProgressDisposable.dispose()
     }
     
     private func updateStatus() {

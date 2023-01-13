@@ -9,6 +9,8 @@ import Display
 import ItemListPeerItem
 import ItemListPeerActionItem
 
+import PtgForeignAgentNoticeRemoval
+
 private let collapsedResultCount: Int = 10
 private let collapsedInitialLimit: Int = 10
 
@@ -205,7 +207,7 @@ private struct PollResultsControllerState: Equatable {
     var isSolutionExpanded: Bool = false
 }
 
-private func pollResultsControllerEntries(presentationData: PresentationData, poll: TelegramMediaPoll, state: PollResultsControllerState, resultsState: PollResultsState) -> [PollResultsEntry] {
+private func pollResultsControllerEntries(presentationData: PresentationData, poll: TelegramMediaPoll, state: PollResultsControllerState, resultsState: PollResultsState, suppressForeignAgentNotice: Bool) -> [PollResultsEntry] {
     var entries: [PollResultsEntry] = []
     
     var isEmpty = false
@@ -216,7 +218,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
         }
     }
     
-    entries.append(.text(poll.text))
+    entries.append(.text(suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text))
     
     var optionVoterCount: [Int: Int32] = [:]
     let totalVoterCount = poll.results.totalVoters ?? 0
@@ -384,7 +386,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
             totalVoters = totalVotersValue
         }
         
-        let entries = pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState)
+        let entries = pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState, suppressForeignAgentNotice: context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
         
         var initialScrollToItem: ListViewScrollToItem?
         if let focusOnOptionWithOpaqueIdentifier = focusOnOptionWithOpaqueIdentifier, previousWasEmptyValue == nil {

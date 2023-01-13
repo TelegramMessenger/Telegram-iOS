@@ -1795,9 +1795,26 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                 if let fromMedia = currentMessage.media.first, let encryptedFile = encryptedFile, let file = file {
                                     var toMedia: Media?
                                     if let fromMedia = fromMedia as? TelegramMediaFile {
-                                        let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), partialReference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: fromMedia.previewRepresentations, videoThumbnails: fromMedia.videoThumbnails, immediateThumbnailData: fromMedia.immediateThumbnailData, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
+                                        var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                                        if let smallestRepresentation = smallestImageRepresentation(fromMedia.previewRepresentations) {
+                                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), thumbSecretChatId: currentMessage.id.peerId.id)
+                                            let thumbRepresentation = TelegramMediaImageRepresentation(dimensions: smallestRepresentation.dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+                                            previewRepresentations.append(thumbRepresentation)
+                                        }
+                                        let updatedFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id), partialReference: nil, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), previewRepresentations: previewRepresentations, videoThumbnails: fromMedia.videoThumbnails, immediateThumbnailData: fromMedia.immediateThumbnailData, mimeType: fromMedia.mimeType, size: fromMedia.size, attributes: fromMedia.attributes)
                                         toMedia = updatedFile
                                         updatedMedia = [updatedFile]
+                                    } else if let fromMedia = fromMedia as? TelegramMediaImage, let largestRepresentation = largestImageRepresentation(fromMedia.representations) {
+                                        var representations: [TelegramMediaImageRepresentation] = []
+                                        if let smallestRepresentation = smallestImageRepresentation(fromMedia.representations), smallestRepresentation != largestRepresentation {
+                                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), thumbSecretChatId: currentMessage.id.peerId.id)
+                                            let thumbRepresentation = TelegramMediaImageRepresentation(dimensions: smallestRepresentation.dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+                                            representations.append(thumbRepresentation)
+                                        }
+                                        representations.append(TelegramMediaImageRepresentation(dimensions: largestRepresentation.dimensions, resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: file.size, datacenterId: Int(encryptedFile.datacenterId), key: file.key), progressiveSizes: [], immediateThumbnailData: nil))
+                                        let updatedImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: encryptedFile.id), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+                                        toMedia = updatedImage
+                                        updatedMedia = [updatedImage]
                                     }
                                     
                                     if let toMedia = toMedia {

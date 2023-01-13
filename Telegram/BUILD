@@ -37,6 +37,9 @@ load(
     "telegram_enable_icloud",
     "telegram_enable_siri",
     "telegram_enable_watch",
+    "telegram_is_non_dev_account",
+    "telegram_bundle_name",
+    "telegram_bundle_display_name",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -120,7 +123,6 @@ minimum_watchos_version="9.0"
 
 empty_languages = [
     "ar",
-    "be",
     "ca",
     "de",
     "es",
@@ -133,7 +135,6 @@ empty_languages = [
     "nl",
     "pl",
     "pt",
-    "ru",
     "tr",
     "uk",
     "uz",
@@ -223,6 +224,8 @@ filegroup(
     name = "AppStringResources",
     srcs = [
         "Telegram-iOS/en.lproj/Localizable.strings",
+        "Telegram-iOS/be.lproj/Localizable.strings",
+        "Telegram-iOS/ru.lproj/Localizable.strings",
     ] + [
         "{}.lproj/Localizable.strings".format(language) for language in empty_languages
     ],
@@ -304,6 +307,7 @@ alternate_icon_folders = [
     "Premium",
     "PremiumBlack",
     "PremiumTurbo",
+    "Cloudballon",
 ]
 
 [
@@ -486,11 +490,16 @@ aps_fragment = "" if telegram_aps_environment == "" else """
 <string>{telegram_aps_environment}</string>
 """.format(telegram_aps_environment=telegram_aps_environment)
 
-app_groups_fragment = """
+app_groups_fragment = "" if telegram_is_non_dev_account else """
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.{telegram_bundle_id}</string>
     </array>
+""".format(
+    telegram_bundle_id=telegram_bundle_id
+)
+
+app_id_fragment = """
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
 """.format(
@@ -498,8 +507,13 @@ app_groups_fragment = """
     telegram_bundle_id=telegram_bundle_id
 )
 
-communication_notifications_fragment = """
+communication_notifications_fragment = "" if telegram_is_non_dev_account else """
 <key>com.apple.developer.usernotifications.communication</key>
+<true/>
+"""
+
+filtering_notifications_fragment = "" if telegram_is_non_dev_account else """
+<key>com.apple.developer.usernotifications.filtering</key>
 <true/>
 """
 
@@ -517,6 +531,7 @@ plist_fragment(
     template = "".join([
         aps_fragment,
         app_groups_fragment,
+        app_id_fragment,
         siri_fragment,
         associated_domains_fragment,
         icloud_fragment,
@@ -525,6 +540,7 @@ plist_fragment(
         carplay_fragment,
         communication_notifications_fragment,
         signin_fragment,
+        filtering_notifications_fragment,
     ])
 )
 
@@ -607,13 +623,25 @@ plist_fragment(
 )
 
 plist_fragment(
+    name = "PTVersionInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>PTelegramVersion</key>
+    <string>{partisanVersion}</string>
+    """
+)
+
+plist_fragment(
     name = "AppNameInfoPlist",
     extension = "plist",
     template =
     """
     <key>CFBundleDisplayName</key>
-    <string>Telegram</string>
-    """
+    <string>{telegram_bundle_display_name}</string>
+    """.format(
+        telegram_bundle_display_name = telegram_bundle_display_name,
+    )
 )
 
 plist_fragment(
@@ -660,13 +688,14 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.watchkitapp.watchkitextension</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>WKExtensionDelegateClassName</key>
     <string>TGExtensionDelegate</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -680,7 +709,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.watchkitapp</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
@@ -692,6 +721,7 @@ plist_fragment(
     <string>APPL</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1176,7 +1206,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Share</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1213,6 +1243,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1245,6 +1276,7 @@ ios_extension(
         ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = minimum_os_version,
     provisioning_profile = select({
@@ -1267,7 +1299,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationContent</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1289,6 +1321,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1351,6 +1384,7 @@ ios_extension(
         ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
     #ipa_post_processor = ":SetMinOsVersionNotificationContentExtension",
@@ -1374,7 +1408,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Widget</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1388,6 +1422,7 @@ plist_fragment(
     </array>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1419,6 +1454,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//Telegram:GeneratedSources",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
 )
 
@@ -1456,6 +1492,7 @@ ios_extension(
         ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
@@ -1487,7 +1524,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.SiriIntents</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1516,6 +1553,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1593,6 +1631,7 @@ ios_extension(
         ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
     #ipa_post_processor = ":SetMinOsVersionIntentsExtension",
@@ -1618,7 +1657,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.BroadcastUpload</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1632,6 +1671,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1688,6 +1728,7 @@ ios_extension(
         ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
     #ipa_post_processor = ":SetMinOsVersionBroadcastUploadExtension",
@@ -1712,7 +1753,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationService</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1731,6 +1772,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1768,6 +1810,7 @@ ios_extension(
         ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
     #ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
@@ -1798,11 +1841,11 @@ plist_fragment(
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_display_name}</string>
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
@@ -1873,7 +1916,7 @@ plist_fragment(
     <key>NSSiriUsageDescription</key>
     <string>You can use Siri to send messages.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>We need this to transcribe audio messages on your request.</string>
+    <string>We need this to transcribe voice messages on your request.</string>
     <key>NSUserActivityTypes</key>
     <array>
         <string>INSendMessageIntent</string>
@@ -1955,6 +1998,8 @@ plist_fragment(
     <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
+        telegram_bundle_display_name = telegram_bundle_display_name,
     )
 )
 
@@ -1976,6 +2021,7 @@ ios_application(
         ":VersionInfoPlist",
         ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     alternate_icons = [
         ":{}".format(name) for name in alternate_icon_folders

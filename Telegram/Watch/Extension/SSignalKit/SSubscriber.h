@@ -1,6 +1,6 @@
 #import <SSignalKit/SDisposable.h>
 
-@interface SSubscriber : NSObject <SDisposable>
+@interface SSubscriber : NSObject
 {
 }
 

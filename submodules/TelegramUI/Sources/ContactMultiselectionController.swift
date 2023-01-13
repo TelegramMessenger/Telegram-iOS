@@ -30,7 +30,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let mode: ContactMultiselectionControllerMode
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     private let attemptDisabledItemSelection: ((EnginePeer) -> Void)?
-    
+
     private let titleView: CounterContollerTitleView
     
     private var contactsNode: ContactMultiselectionControllerNode {
@@ -53,7 +53,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     var result: Signal<ContactMultiselectionResult, NoError> {
         return self._result.get()
     }
-    
+    private var resultIsSet = false
+
     private var rightNavigationButton: UIBarButtonItem?
     
     var displayProgress: Bool = false {
@@ -217,7 +218,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.titleView.title = CounterContollerTitle(title: chatSelection.title, counter: "")
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
             self.rightNavigationButton = rightNavigationButton
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.navigationPresentation == .default ? self.presentationData.strings.Common_Back : self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = self.params.alwaysEnabled
         }
@@ -534,6 +535,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         case .chats:
             break
         }
+
+        if !self.resultIsSet {
+            self._result.set(.single(.none))
+            self.resultIsSet = true
+        }
     }
 
     private var suspendNavigationBarLayout: Bool = false
@@ -563,7 +569,9 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     @objc func cancelPressed() {
+        assert(!self.resultIsSet)
         self._result.set(.single(.none))
+        self.resultIsSet = true
         self.dismiss()
     }
     
@@ -587,6 +595,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
             additionalOptionIds.sort()
         }
+        assert(!self.resultIsSet)
         self._result.set(.single(.result(peerIds: peerIds, additionalOptionIds: additionalOptionIds)))
+        self.resultIsSet = true
     }
 }

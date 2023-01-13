@@ -121,7 +121,7 @@ private func mergedState(transaction: Transaction, seedConfiguration: SeedConfig
     if let state = state {
         threadInfo = state.threadInfo
     }
-    
+
     var renderedMessages: [Message] = []
     for message in messages {
         var peerIsForum = false
@@ -161,7 +161,7 @@ private func mergedState(transaction: Transaction, seedConfiguration: SeedConfig
     renderedMessages.sort(by: { lhs, rhs in
         return lhs.index > rhs.index
     })
-        
+
     let completed = renderedMessages.isEmpty || renderedMessages.count == totalCount
     if let previous = state {
         var currentIds = Set<MessageId>()
@@ -218,11 +218,11 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
             threadInfo[message.id] = data
         }
     }
-    
+
     return SearchMessagesResult(messages: messages, readStates: readStates, threadInfo: threadInfo, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
 }
 
-func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100, inactiveSecretChatPeerIds: Set<PeerId>) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
         case let .peer(peerId, fromId, tags, topMsgId, minDate, maxDate):
@@ -233,8 +233,8 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     if let readState = transaction.getCombinedPeerReadState(peerId) {
                         readStates[peerId] = readState
                     }
-                    let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags)
-                    
+                    let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+
                     for message in result {
                         for attribute in message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
@@ -248,7 +248,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                             }
                         }
                     }
-                    
+
                     return (SearchMessagesResult(messages: result, readStates: readStates, threadInfo: threadInfo, totalCount: Int32(result.count), completed: true), SearchMessagesState(main: SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: nil))
                 }
             }
@@ -417,7 +417,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
             if state?.additional == nil {
                 switch location {
                     case let .general(tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
-                        let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
+                        let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
                         var filteredMessages: [Message] = []
                         var readStates: [PeerId: CombinedPeerReadState] = [:]
                         var threadInfo:[MessageId : MessageHistoryThreadData] = [:]

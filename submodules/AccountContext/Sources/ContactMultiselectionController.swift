@@ -43,7 +43,7 @@ public enum ContactMultiselectionControllerMode {
         public var additionalCategories: ContactMultiselectionControllerAdditionalCategories?
         public var chatListFilters: [ChatListFilter]?
         public var displayAutoremoveTimeout: Bool
-        
+
         public init(
             title: String,
             searchPlaceholder: String,
@@ -60,7 +60,7 @@ public enum ContactMultiselectionControllerMode {
             self.displayAutoremoveTimeout = displayAutoremoveTimeout
         }
     }
-    
+
     case groupCreation
     case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation

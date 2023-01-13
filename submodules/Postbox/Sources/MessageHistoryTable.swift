@@ -2954,7 +2954,7 @@ final class MessageHistoryTable: Table {
         var result: [PeerId: Set<MediaId>] = [:]
         var lastIndex: MessageIndex?
         var count = 0
-        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(upperBound == nil ? MessageIndex.absoluteUpperBound() : upperBound!), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(upperBound == nil ? MessageIndex(id: MessageId(peerId: PeerId.max64, namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max) : upperBound!), values: { key, value in
             count += 1
             
             let entry = self.readIntermediateEntry(key, value: value)
@@ -3035,6 +3035,9 @@ final class MessageHistoryTable: Table {
                         result.append(message)
                     } else {
                         assertionFailure()
+                    }
+                    if indices.count >= limit {
+                        break
                     }
                 }
             } else {

@@ -424,6 +424,15 @@ public extension TelegramEngine {
             |> ignoreValues
         }
 
+        public func removePeerChats(items: [(peerId: PeerId, deleteGloballyIfPossible: Bool)]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for (peerId, deleteGloballyIfPossible) in items {
+                    _internal_removePeerChat(account: self.account, transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible)
+                }
+            }
+            |> ignoreValues
+        }
+
         public func terminateSecretChat(peerId: PeerId, requestRemoteHistoryRemoval: Bool) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 _internal_terminateSecretChat(transaction: transaction, peerId: peerId, requestRemoteHistoryRemoval: requestRemoteHistoryRemoval)
@@ -845,9 +854,9 @@ public extension TelegramEngine {
             return _internal_storedMessageFromSearchPeers(account: self.account, peers: peers.map { $0._asPeer() })
         }
         
-        public func mostRecentSecretChat(id: EnginePeer.Id) -> Signal<EnginePeer.Id?, NoError> {
+        public func mostRecentSecretChat(id: EnginePeer.Id, inactiveSecretChatPeerIds: Set<PeerId>) -> Signal<EnginePeer.Id?, NoError> {
             return self.account.postbox.transaction { transaction -> EnginePeer.Id? in
-                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id)).filter { $0.namespace == Namespaces.Peer.SecretChat }
+                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)).filter { $0.namespace == Namespaces.Peer.SecretChat }
                 var activeIndices: [ChatListIndex] = []
                 for associatedId in filteredPeerIds {
                     if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {

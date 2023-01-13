@@ -1016,7 +1016,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         |> mapToSignal { query -> Signal<(PresentationData, NotificationSoundList?, (NotificationExceptionState, String?), PreferencesView, [RenderedPeer]), NoError> in
             var contactsSignal: Signal<[RenderedPeer], NoError> = .single([])
             if let query = query {
-                contactsSignal = context.account.postbox.searchPeers(query: query)
+                contactsSignal = context.account.postbox.searchPeers(query: query, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
             }
             return combineLatest(context.sharedContext.presentationData, context.engine.peers.notificationSoundList(), stateAndPeers, preferences, contactsSignal)
         }

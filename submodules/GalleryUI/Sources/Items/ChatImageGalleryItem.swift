@@ -294,7 +294,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     deinit {
-        //self.fetchDisposable.dispose()
+        self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
         self.dataDisposable.dispose()
         self.recognitionDisposable.dispose()
@@ -337,6 +337,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         switch quality {
                         case .medium, .full:
                             strongSelf.statusNodeContainer.isHidden = true
+                            
+                            if !strongSelf.context.sharedContext.currentPtgSettings.with({ $0.enableLiveText }) {
+                                break
+                            }
                             
                             Queue.concurrentDefaultQueue().async {
                                 if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {

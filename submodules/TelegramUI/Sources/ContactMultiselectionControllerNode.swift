@@ -70,9 +70,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
-    
+
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
-    
+
     init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
         self.navigationBar = navigationBar
         
@@ -81,9 +81,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
-        
+
         self.isPeerEnabled = isPeerEnabled
-        
+
         var placeholder: String
         var includeChatList = false
         switch mode {
@@ -103,7 +103,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             let selectedChats = chatSelection.selectedChats
             let additionalCategories = chatSelection.additionalCategories
             let chatListFilters = chatSelection.chatListFilters
-            
+
             placeholder = placeholderValue
             let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
             chatListNode.disabledPeerSelected = { peer, _ in
@@ -144,7 +144,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contentNode.node)
-        self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
+        if case let .chatSelection(_, _, _, _, _, _, omitTokenList, _) = mode, omitTokenList {
+        } else {
+            self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
+        }
         
         switch self.contentNode {
         case let .contacts(contactsNode):
@@ -272,7 +275,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
                 
-        let tokenListHeight = self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        let tokenListHeight = self.tokenListNode.supernode == nil ? 0.0 : self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         
         transition.updateFrame(node: self.tokenListNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: tokenListHeight)))
         

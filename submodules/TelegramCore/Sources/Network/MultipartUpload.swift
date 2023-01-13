@@ -191,6 +191,10 @@ private final class MultipartUploadManager {
         }
     }
     
+    deinit {
+        self.dataDisposable.dispose()
+    }
+    
     func start() {
         self.queue.async {
             self.dataDisposable.set((self.dataSignal

@@ -1,32 +1,28 @@
 import Foundation
 
-private final class SignalQueueState<T, E>: Disposable {
+private final class SignalQueueState<T, E> {
     var lock = pthread_mutex_t()
     var executingSignal = false
     var terminated = false
     
-    var disposable: Disposable = EmptyDisposable
-    let currentDisposable = MetaDisposable()
+    let currentDisposable: MetaDisposable
     var subscriber: Subscriber<T, E>?
     
     var queuedSignals: [Signal<T, E>] = []
     let queueMode: Bool
     let throttleMode: Bool
     
-    init(subscriber: Subscriber<T, E>, queueMode: Bool, throttleMode: Bool) {
+    init(subscriber: Subscriber<T, E>, queueMode: Bool, throttleMode: Bool, currentDisposable: MetaDisposable) {
         pthread_mutex_init(&self.lock, nil)
         
         self.subscriber = subscriber
         self.queueMode = queueMode
         self.throttleMode = throttleMode
+        self.currentDisposable = currentDisposable
     }
     
     deinit {
         pthread_mutex_destroy(&self.lock)
-    }
-    
-    func beginWithDisposable(_ disposable: Disposable) {
-        self.disposable = disposable
     }
     
     func enqueueSignal(_ signal: Signal<T, E>) {
@@ -114,52 +110,59 @@ private final class SignalQueueState<T, E>: Disposable {
             self.subscriber?.putCompletion()
         }
     }
-    
-    func dispose() {
-        self.currentDisposable.dispose()
-        self.disposable.dispose()
-    }
 }
 
 public func switchToLatest<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: false, throttleMode: false)
-        state.beginWithDisposable(signal.start(next: { next in
+        let currentDisposable = MetaDisposable()
+        let state = SignalQueueState(subscriber: subscriber, queueMode: false, throttleMode: false, currentDisposable: currentDisposable)
+        let disposable = signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
             subscriber.putError(error)
         }, completed: {
             state.beginCompletion()
-        }))
-        return state
+        })
+        return ActionDisposable {
+            currentDisposable.dispose()
+            disposable.dispose()
+        }
     }
 }
 
 public func queue<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: false)
-        state.beginWithDisposable(signal.start(next: { next in
+        let currentDisposable = MetaDisposable()
+        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: false, currentDisposable: currentDisposable)
+        let disposable = signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
             subscriber.putError(error)
         }, completed: {
             state.beginCompletion()
-        }))
-        return state
+        })
+        return ActionDisposable {
+            currentDisposable.dispose()
+            disposable.dispose()
+        }
     }
 }
 
 public func throttled<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: true)
-        state.beginWithDisposable(signal.start(next: { next in
+        let currentDisposable = MetaDisposable()
+        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: true, currentDisposable: currentDisposable)
+        let disposable = signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
             subscriber.putError(error)
         }, completed: {
             state.beginCompletion()
-        }))
-        return state
+        })
+        return ActionDisposable {
+            currentDisposable.dispose()
+            disposable.dispose()
+        }
     }
 }
 

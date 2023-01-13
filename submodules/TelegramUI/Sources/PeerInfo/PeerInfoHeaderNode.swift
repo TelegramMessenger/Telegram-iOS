@@ -367,13 +367,13 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             self.tapped?()
         }
     }
-    
+
     @objc private func emojiTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.emojiTapped?()
         }
     }
-        
+
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
         if let videoNode = self.videoNode {
             if case .immediate = transition, fraction == 1.0 {
@@ -419,10 +419,10 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             
             self.avatarNode.imageNode.animateFirstTransition = !isSettings
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
-            
+
             if let threadInfo = threadInfo {
                 self.avatarNode.isHidden = true
-                
+
                 let iconView: ComponentView<Empty>
                 if let current = self.iconView {
                     iconView = current
@@ -460,7 +460,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     iconComponentView.frame = CGRect(origin: CGPoint(), size: CGSize(width: avatarSize, height: avatarSize))
                 }
             }
-            
+
             let avatarCornerRadius: CGFloat
             if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
                 avatarCornerRadius = floor(avatarSize * 0.25)
@@ -473,7 +473,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 self.avatarNode.layer.cornerRadius = avatarCornerRadius
             }
             self.avatarNode.layer.masksToBounds = true
-            
+
             self.isFirstAvatarLoading = false
             
             self.containerNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
@@ -667,7 +667,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         } else {
             clipStyle = .round
         }
-        
+
         if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData) {
             var overlayHidden = true
             if let updatingAvatar = updatingAvatar {
@@ -804,7 +804,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             self.avatarNode.layer.cornerRadius = avatarCornerRadius
         }
         self.avatarNode.layer.masksToBounds = true
-        
+
         if let item = item {
             let representations: [ImageRepresentationWithReference]
             let videoRepresentations: [VideoRepresentationWithReference]
@@ -2075,7 +2075,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private let videoCallsEnabled: Bool
     private let forumTopicThreadId: Int64?
     private let chatLocation: ChatLocation
-    
+
     private(set) var isAvatarExpanded: Bool
     var skipCollapseCompletion = false
     var ignoreCollapse = false
@@ -2101,6 +2101,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var subtitleArrowNode: ASImageNode?
     let panelSubtitleNode: MultiScaleTextNode
     let nextPanelSubtitleNode: MultiScaleTextNode
+    let idNodeContainer: ASDisplayNode
+    let idNodeRawContainer: ASDisplayNode
+    let idNode: MultiScaleTextNode
     let usernameNodeContainer: ASDisplayNode
     let usernameNodeRawContainer: ASDisplayNode
     let usernameNode: MultiScaleTextNode
@@ -2123,11 +2126,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var animateOverlaysFadeIn: (() -> Void)?
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
-    var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
+    var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool, Bool) -> Void)?
     var displayEmojiPackTooltip: (() -> Void)?
     
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
-    
+
     var navigateToForum: (() -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
@@ -2137,10 +2140,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
-    
+
     var emojiStatusPackDisposable = MetaDisposable()
     var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, LoadedStickerPack)?>()
-    
+    var isExpandedForPhoneAndId: Bool = false
+
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
@@ -2149,7 +2153,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.videoCallsEnabled = true
         self.forumTopicThreadId = forumTopicThreadId
         self.chatLocation = chatLocation
-        
+
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded, isSettings: isSettings)
         
         self.titleNodeContainer = ASDisplayNode()
@@ -2174,6 +2178,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.nextPanelSubtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.nextPanelSubtitleNode.displaysAsynchronously = false
         
+        self.idNodeContainer = ASDisplayNode()
+        self.idNodeRawContainer = ASDisplayNode()
+        self.idNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
+        self.idNode.displaysAsynchronously = false
+
         self.usernameNodeContainer = ASDisplayNode()
         self.usernameNodeRawContainer = ASDisplayNode()
         self.usernameNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
@@ -2217,7 +2226,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
-        
+
         super.init()
         
         requestUpdateLayoutImpl = { [weak self] in
@@ -2234,6 +2243,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.subtitleNodeContainer.addSubnode(self.subtitleNode)
         self.subtitleNodeContainer.addSubnode(self.panelSubtitleNode)
 //        self.subtitleNodeContainer.addSubnode(self.nextPanelSubtitleNode)
+        self.idNodeContainer.addSubnode(self.idNode)
         self.usernameNodeContainer.addSubnode(self.usernameNode)
 
         self.regularContentNode.addSubnode(self.avatarListNode)
@@ -2241,6 +2251,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.addSubnode(self.titleNodeContainer)
         self.regularContentNode.addSubnode(self.subtitleNodeContainer)
         self.regularContentNode.addSubnode(self.subtitleNodeRawContainer)
+        self.regularContentNode.addSubnode(self.idNodeContainer)
+        self.regularContentNode.addSubnode(self.idNodeRawContainer)
         self.regularContentNode.addSubnode(self.usernameNodeContainer)
         self.regularContentNode.addSubnode(self.usernameNodeRawContainer)
         
@@ -2263,7 +2275,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.avatarContainerNode.emojiTapped = { [weak self] in
             self?.displayEmojiPackTooltip?()
         }
-        
+
         self.editingContentNode.avatarNode.tapped = { [weak self] confirm in
             self?.initiateAvatarExpansion(gallery: true, first: true)
         }
@@ -2291,6 +2303,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             strongSelf.titleNode.layer.animateAlpha(from: 0.0, to: strongSelf.titleNode.alpha, duration: 0.25)
             strongSelf.subtitleNode.layer.animateAlpha(from: 0.0, to: strongSelf.subtitleNode.alpha, duration: 0.25)
+            strongSelf.idNode.layer.animateAlpha(from: 0.0, to: strongSelf.idNode.alpha, duration: 0.25)
 
             strongSelf.animateOverlaysFadeIn?()
         }
@@ -2299,7 +2312,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     deinit {
         self.emojiStatusPackDisposable.dispose()
     }
-    
+
     override func didLoad() {
         super.didLoad()
         
@@ -2308,24 +2321,33 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let phoneGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePhoneLongPress(_:)))
         self.subtitleNodeRawContainer.view.addGestureRecognizer(phoneGestureRecognizer)
+
+        let idGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleIdLongPress(_:)))
+        self.idNodeRawContainer.view.addGestureRecognizer(idGestureRecognizer)
     }
     
     @objc private func handleUsernameLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         if gestureRecognizer.state == .began {
-            self.displayCopyContextMenu?(self.usernameNodeRawContainer, !self.isAvatarExpanded, true)
+            self.displayCopyContextMenu?(self.usernameNodeRawContainer, !self.isAvatarExpanded, true, false)
         }
     }
     
     @objc private func handlePhoneLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         if gestureRecognizer.state == .began {
-            self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, !self.isAvatarExpanded)
+            self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, !self.isAvatarExpanded, false)
+        }
+    }
+
+    @objc private func handleIdLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu?(self.idNodeRawContainer, false, false, true)
         }
     }
     
     @objc private func subtitleBackgroundPressed() {
         self.navigateToForum?()
     }
-    
+
     func invokeDisplayPremiumIntro() {
         self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, nil, .never(), self.isAvatarExpanded)
     }
@@ -2471,9 +2493,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
                 emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15), themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
             }
-            
+
             let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
-            
+
             let iconSize = self.titleCredibilityIconView.update(
                 transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
                 component: AnyComponent(EmojiStatusComponent(
@@ -2493,10 +2515,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        
+
                         if let emojiFile = emojiFile {
                             strongSelf.emojiStatusFileAndPackTitle.set(.never())
-                            
+
                             for attribute in emojiFile.attributes {
                                 if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
                                     strongSelf.emojiStatusPackDisposable.set((strongSelf.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
@@ -2571,7 +2593,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var transitionSourceSubtitleFrame = CGRect()
         
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 13.0), size: CGSize(width: avatarSize, height: avatarSize))
-        
+
         self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         
         let headerBackgroundColor: UIColor = presentationData.theme.list.blocksBackgroundColor
@@ -2579,7 +2601,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if let navigationTransition = self.navigationTransition {
             transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
             transitionFraction = navigationTransition.fraction
-            
+
             if let avatarNavigationNode = navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
                 if let statusView = avatarNavigationNode.statusView.view {
                     transitionSourceAvatarFrame = statusView.convert(statusView.bounds, to: navigationTransition.sourceNavigationBar.view)
@@ -2645,6 +2667,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var subtitleIsButton: Bool = false
         var panelSubtitleString: NSAttributedString?
         var nextPanelSubtitleString: NSAttributedString?
+        var smallIdString = NSAttributedString()
+        var idString = NSAttributedString()
         let usernameString: NSAttributedString
         if let peer = peer {
             isPremium = peer.isPremium
@@ -2684,18 +2708,23 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 smallSubtitleString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                 subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                if showPeerId {
+                    let id = "\(presentationData.strings.Profile_Id): \(String(user.id.id._internalGetInt64Value()))"
+                    smallIdString = NSAttributedString(string: id, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
+                    idString = NSAttributedString(string: id, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                }
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             } else if let _ = threadData {
                 let subtitleColor: UIColor
                 subtitleColor = presentationData.theme.list.itemAccentColor
-                
+
                 let statusText: String
                 statusText = peer.debugDisplayTitle
-                
+
                 smallSubtitleString = NSAttributedString(string: statusText, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                 subtitleString = NSAttributedString(string: statusText, font: Font.semibold(15.0), textColor: subtitleColor)
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                
+
                 subtitleIsButton = true
 
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
@@ -2764,7 +2793,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallSubtitleString, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleString.string
-        
+
+        let idNodeLayout = self.idNode.updateLayout(states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributedText: idString, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallIdString, constrainedSize: titleConstrainedSize)
+        ], mainState: TitleNodeStateRegular)
+        self.idNode.accessibilityLabel = idString.string
+
         if subtitleIsButton {
             let subtitleBackgroundNode: ASDisplayNode
             if let current = self.subtitleBackgroundNode {
@@ -2774,7 +2809,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.subtitleBackgroundNode = subtitleBackgroundNode
                 self.subtitleNode.insertSubnode(subtitleBackgroundNode, at: 0)
             }
-            
+
             let subtitleBackgroundButton: HighlightTrackingButtonNode
             if let current = self.subtitleBackgroundButton {
                 subtitleBackgroundButton = current
@@ -2782,7 +2817,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleBackgroundButton = HighlightTrackingButtonNode()
                 self.subtitleBackgroundButton = subtitleBackgroundButton
                 self.subtitleNode.addSubnode(subtitleBackgroundButton)
-                
+
                 subtitleBackgroundButton.addTarget(self, action: #selector(self.subtitleBackgroundPressed), forControlEvents: .touchUpInside)
                 subtitleBackgroundButton.highligthedChanged = { [weak self] highlighted in
                     guard let self else {
@@ -2797,7 +2832,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 }
             }
-            
+
             let subtitleArrowNode: ASImageNode
             if let current = self.subtitleArrowNode {
                 subtitleArrowNode = current
@@ -2808,7 +2843,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleArrowNode = ASImageNode()
                 self.subtitleArrowNode = subtitleArrowNode
                 self.subtitleNode.insertSubnode(subtitleArrowNode, at: 1)
-                
+
                 subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5))
             }
             subtitleBackgroundNode.backgroundColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.1)
@@ -2817,9 +2852,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             subtitleBackgroundFrame.size.width += 12.0
             transition.updateFrame(node: subtitleBackgroundNode, frame: subtitleBackgroundFrame)
             transition.updateCornerRadius(node: subtitleBackgroundNode, cornerRadius: subtitleBackgroundFrame.height * 0.5)
-            
+
             transition.updateFrame(node: subtitleBackgroundButton, frame: subtitleBackgroundFrame)
-            
+
             if let arrowImage = subtitleArrowNode.image {
                 let scaleFactor: CGFloat = 0.8
                 let arrowSize = CGSize(width: floorToScreenPixels(arrowImage.size.width * scaleFactor), height: floorToScreenPixels(arrowImage.size.height * scaleFactor))
@@ -2839,7 +2874,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleBackgroundButton.removeFromSupernode()
             }
         }
-        
+
         if let previousPanelStatusData = previousPanelStatusData, let currentPanelStatusData = panelStatusData.0, let previousPanelStatusDataKey = previousPanelStatusData.key, let currentPanelStatusDataKey = currentPanelStatusData.key, previousPanelStatusDataKey != currentPanelStatusDataKey {
             if let snapshotView = self.panelSubtitleNode.view.snapshotContentTree() {
                 let direction: CGFloat = previousPanelStatusDataKey.rawValue > currentPanelStatusDataKey.rawValue ? 1.0 : -1.0
@@ -2888,34 +2923,37 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
         let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let _ = nextPanelSubtitleNodeLayout[TitleNodeStateRegular]!.size
+        let idSize = idNodeLayout[TitleNodeStateRegular]!.size
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
         
         var titleHorizontalOffset: CGFloat = 0.0
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
             titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
-            
+
             var collapsedTransitionOffset: CGFloat = 0.0
             if let navigationTransition = self.navigationTransition {
                 collapsedTransitionOffset = -10.0 * navigationTransition.fraction
             }
-            
+
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0) + 2.0), size: credibilityIconSize))
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
         }
         
         var titleFrame: CGRect
         var subtitleFrame: CGRect
+        let idFrame: CGRect
         let usernameFrame: CGRect
         let usernameSpacing: CGFloat = 4.0
         
-        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - 70.0), size: CGSize(width: width, height: 70.0)))
+        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - 70.0 - idSize.height), size: CGSize(width: width, height: 70.0 + idSize.height)))
         
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * 0.7, height: titleSize.height * 0.7)
-            let minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            let minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0) - idSize.height), size: minTitleSize)
 
             titleFrame = CGRect(origin: CGPoint(x: minTitleFrame.midX - titleSize.width / 2.0, y: minTitleFrame.midY - titleSize.height / 2.0), size: titleSize)
             subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0), size: subtitleSize)
+            idFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0 + subtitleSize.height), size: idSize)
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
             titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
@@ -2928,6 +2966,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - totalSubtitleWidth) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
                 usernameFrame = CGRect(origin: CGPoint(x: subtitleFrame.maxX + usernameSpacing, y: titleFrame.maxY + 1.0), size: usernameSize)
             }
+            idFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - idSize.width) / 2.0), y: subtitleFrame.maxY + 1.0), size: idSize)
         }
         
         let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
@@ -2991,7 +3030,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         self.subtitleNode.update(stateFractions: [
-            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
+            TitleNodeStateRegular: self.isAvatarExpanded || (isSettings && !self.isExpandedForPhoneAndId) ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: subtitleAlpha, transition: transition)
 
@@ -3004,7 +3043,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: panelSubtitleAlpha, transition: transition)
-        
+
+        self.idNode.update(stateFractions: [
+            TitleNodeStateRegular: self.isAvatarExpanded || (isSettings && !self.isExpandedForPhoneAndId) ? 0.0 : 1.0,
+            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
+        ], alpha: subtitleAlpha, transition: transition)
+
         self.usernameNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
@@ -3023,7 +3067,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         }
-        
+
         if subtitleIsButton {
             subtitleFrame.origin.y += 11.0 * (1.0 - titleCollapseFraction)
             if let subtitleBackgroundButton = self.subtitleBackgroundButton {
@@ -3036,14 +3080,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateAlpha(node: subtitleArrowNode, alpha: (1.0 - titleCollapseFraction))
             }
         }
-        
+
         let avatarCornerRadius: CGFloat
         if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
             avatarCornerRadius = floor(avatarSize * 0.25)
         } else {
             avatarCornerRadius = avatarSize / 2.0
         }
-                
+
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
@@ -3211,11 +3255,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 let rawSubtitleFrame = subtitleFrame
                 self.subtitleNodeRawContainer.frame = rawSubtitleFrame
+                let rawIdFrame = idFrame
+                self.idNodeRawContainer.frame = rawIdFrame
                 let rawUsernameFrame = usernameFrame
                 self.usernameNodeRawContainer.frame = rawUsernameFrame
                 if self.isAvatarExpanded {
                     transition.updateFrameAdditive(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
                     transition.updateFrameAdditive(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                    transition.updateFrameAdditive(node: self.idNodeContainer, frame: CGRect(origin: rawIdFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                     transition.updateFrameAdditive(node: self.usernameNodeContainer, frame: CGRect(origin: rawUsernameFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                 } else {
                     transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
@@ -3225,6 +3272,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitleCenter.y += subtitleOffset
                     transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: subtitleCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                     
+                    var idCenter = rawIdFrame.center
+                    idCenter.x = rawTitleFrame.center.x + (idCenter.x - rawTitleFrame.center.x) * subtitleScale
+                    idCenter.y += subtitleOffset
+                    transition.updateFrameAdditiveToCenter(node: self.idNodeContainer, frame: CGRect(origin: idCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+
                     var usernameCenter = rawUsernameFrame.center
                     usernameCenter.x = rawTitleFrame.center.x + (usernameCenter.x - rawTitleFrame.center.x) * subtitleScale
                     transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
@@ -3232,9 +3284,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
                 transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
                 transition.updateFrame(node: self.nextPanelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.idNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
                 transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
+                transition.updateSublayerTransformScaleAdditive(node: self.idNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
             }
         }
@@ -3423,21 +3477,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 break
             }
         }
-        
+
         if let subtitleBackgroundButton = self.subtitleBackgroundButton, subtitleBackgroundButton.view.convert(subtitleBackgroundButton.bounds, to: self.view).contains(point) {
             if let result = subtitleBackgroundButton.view.hitTest(self.view.convert(point, to: subtitleBackgroundButton.view), with: event) {
                 return result
             }
         }
-        
+
         if result.isDescendant(of: self.navigationButtonContainer.view) {
             return result
         }
-        
+
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {
             return nil
         }
-        
+
         return result
     }
     

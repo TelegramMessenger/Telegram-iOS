@@ -472,7 +472,7 @@ final class CallListControllerNode: ASDisplayNode {
             currentGroupCallPeerId = .single(nil)
         }
         
-        let groupCalls: Signal<[EnginePeer], NoError> = context.engine.messages.chatList(group: .root, count: 100)
+        let groupCalls: Signal<[EnginePeer], NoError> = context.engine.messages.chatList(group: .root, count: 100, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
         |> map { chatList -> [EnginePeer] in
             var result: [EnginePeer] = []
             for item in chatList.items {

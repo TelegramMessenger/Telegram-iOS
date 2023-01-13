@@ -140,6 +140,10 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
         self.statusDisposable?.dispose()
     }
     
+    deinit {
+        self.shouldBeDismissedDisposable?.dispose()
+    }
+    
     override public func didLoad() {
         super.didLoad()
     }

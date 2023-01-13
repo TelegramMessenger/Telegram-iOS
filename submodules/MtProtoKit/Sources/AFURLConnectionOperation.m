@@ -194,25 +194,6 @@ static inline BOOL AFStateTransitionIsValid(AFOperationState fromState, AFOperat
     return [NSString stringWithFormat:@"<%@: %p, state: %@, cancelled: %@ request: %@, response: %@>", NSStringFromClass([self class]), self, AFKeyPathFromOperationState(self.state), ([self isCancelled] ? @"YES" : @"NO"), self.request, self.response];
 }
 
-- (void)setCompletionBlock:(void (^)(void))block {
-#ifdef AF_DEBUGLOCK
-    if ([NSThread currentThread] != [AFURLConnectionOperation networkRequestThread])
-        NSLog(@"0x%x: setCompletionBlock thread %@", (int)self, [NSThread currentThread]);
-#endif
-    [self.lock lock];
-    if (!block) {
-        [super setCompletionBlock:nil];
-    } else {
-        __block id _blockSelf = self;
-        [super setCompletionBlock:^ {
-            //TGLog(@"===== Completed %@", [_blockSelf request].URL);
-            block();
-            [_blockSelf setCompletionBlock:nil];
-        }];
-    }
-    [self.lock unlock];
-}
-
 - (NSInputStream *)inputStream {
     return self.request.HTTPBodyStream;
 }

@@ -45,8 +45,8 @@ public extension TelegramEngine {
             return _internal_searchPeers(account: self.account, query: query)
         }
 
-        public func searchLocalPeers(query: String) -> Signal<[EngineRenderedPeer], NoError> {
-            return self.account.postbox.searchPeers(query: query)
+        public func searchLocalPeers(query: String, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<[EngineRenderedPeer], NoError> {
+            return self.account.postbox.searchPeers(query: query, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             |> map { peers in
                 return peers.map(EngineRenderedPeer.init)
             }

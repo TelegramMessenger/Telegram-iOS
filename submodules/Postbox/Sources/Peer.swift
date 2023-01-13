@@ -60,6 +60,10 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             return Id(rawValue: 0x000000007fffffff)
         }
 
+        public static var max64: Id {
+            return Id(rawValue: 0x007fffffffffffff)
+        }
+
         fileprivate var rawValue: Int64
 
         var predecessor: Id {
@@ -109,6 +113,10 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
         return PeerId(namespace: .max, id: .max)
     }
     
+    public static var max64: PeerId {
+        return PeerId(namespace: .max, id: .max64)
+    }
+
     public let namespace: Namespace
     public let id: Id
 

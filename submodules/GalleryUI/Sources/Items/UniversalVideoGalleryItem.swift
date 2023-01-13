@@ -962,6 +962,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.mediaPlaybackStateDisposable.dispose()
         self.scrubbingFrameDisposable?.dispose()
         self.hideControlsDisposable?.dispose()
+        self.fetchDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {

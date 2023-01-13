@@ -18,9 +18,9 @@ swift_library(
         "//submodules/MonotonicTime:MonotonicTime",
         "//submodules/PasscodeUI:PasscodeUI",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/ImageBlur:ImageBlur",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AppLockState:AppLockState",
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
     ],
     visibility = [
         "//visibility:public",

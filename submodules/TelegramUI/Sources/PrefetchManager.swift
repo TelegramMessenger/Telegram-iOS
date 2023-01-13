@@ -101,6 +101,7 @@ private final class PrefetchManagerInnerImpl {
     deinit {
         assert(self.queue.isCurrent())
         self.listDisposable?.dispose()
+        self.preloadGreetingStickerDisposable.dispose()
     }
     
     private func updateOrderedPreloadMedia(_ items: [PrefetchMediaItem], automaticDownloadSettings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) {

@@ -295,6 +295,9 @@ public enum PresentationResourceKey: Int32 {
     case chatGeneralThreadFreeIcon
     
     case uploadToneIcon
+    
+    case enterSecretPasscodeIcon
+    case manageSecretPasscodesIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {

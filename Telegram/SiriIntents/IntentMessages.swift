@@ -31,7 +31,7 @@ func getMessages(account: Account, ids: [MessageId]) -> Signal<[INMessage], NoEr
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
-    return account.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
+    return account.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents(), inactiveSecretChatPeerIds: .single([]))
     |> take(1)
     |> mapToSignal { view -> Signal<[INMessage], NoError> in
         var signals: [Signal<[INMessage], NoError>] = []

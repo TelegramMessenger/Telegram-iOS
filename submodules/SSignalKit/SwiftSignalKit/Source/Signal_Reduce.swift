@@ -44,25 +44,22 @@ public enum Passthrough<T> {
 
 private final class ReduceQueueState<T, E> : Disposable {
     var lock = os_unfair_lock()
+    var lock: OSSpinLock = 0
     var executingSignal = false
     var terminated = false
     
-    var disposable: Disposable = EmptyDisposable
-    let currentDisposable = MetaDisposable()
+    let currentDisposable: MetaDisposable
     let subscriber: Subscriber<T, E>
     
     var queuedValues: [T] = []
     var generator: (T, T) -> Signal<(T, Passthrough<T>), E>
     var value: T
     
-    init(subscriber: Subscriber<T, E>, value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>) {
+    init(subscriber: Subscriber<T, E>, value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>, currentDisposable: MetaDisposable) {
         self.subscriber = subscriber
         self.generator = generator
         self.value = value
-    }
-    
-    func beginWithDisposable(_ disposable: Disposable) {
-        self.disposable = disposable
+        self.currentDisposable = currentDisposable
     }
     
     func enqueueNext(_ next: T) {
@@ -165,25 +162,24 @@ private final class ReduceQueueState<T, E> : Disposable {
             self.subscriber.putCompletion()
         }
     }
-    
-    func dispose() {
-        self.currentDisposable.dispose()
-        self.disposable.dispose()
-    }
 }
 
 public func reduceLeft<T, E>(_ value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal { subscriber in
-            let state = ReduceQueueState(subscriber: subscriber, value: value, generator: generator)
-            state.beginWithDisposable(signal.start(next: { next in
+            let currentDisposable = MetaDisposable()
+            let state = ReduceQueueState(subscriber: subscriber, value: value, generator: generator, currentDisposable: currentDisposable)
+            let disposable = signal.start(next: { next in
                 state.enqueueNext(next)
             }, error: { error in
                 subscriber.putError(error)
             }, completed: {
                 state.beginCompletion()
-            }))
-            return state
+            })
+            return ActionDisposable {
+                currentDisposable.dispose()
+                disposable.dispose()
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ import AuthTransferUI
 import ItemListPeerActionItem
 import DeviceAccess
 import QrCodeUI
+import FakePasscode
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext
@@ -463,11 +464,12 @@ private struct RecentSessionsControllerState: Equatable {
     }
 }
 
-private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool) -> [RecentSessionsEntry] {
+private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool, sessionFilter: ((RecentAccountSession) -> Bool)) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
-    
+
     entries.append(.header(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_HeaderInfo))
-    
+
+
     if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
         entries.append(.currentSessionHeader(SortIndex(section: 1, item: 0), presentationData.strings.AuthSessions_CurrentSession))
@@ -475,10 +477,12 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             existingSessionIds.insert(sessionsState.sessions[index].hash)
             entries.append(.currentSession(SortIndex(section: 1, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
-        
+
+        let filteredSessions = sessionsState.sessions.filter(sessionFilter)
+
         var hasAddDevice = false
-        if sessionsState.sessions.count > 1 || enableQRLogin {
-            if sessionsState.sessions.count > 1 {
+        if filteredSessions.count > 1 || enableQRLogin {
+            if filteredSessions.count > 1 {
                 entries.append(.terminateOtherSessions(SortIndex(section: 1, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
                 entries.append(.currentSessionInfo(SortIndex(section: 1, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
             } else if enableQRLogin {
@@ -487,7 +491,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 entries.append(.currentSessionInfo(SortIndex(section: 1, item: 5), presentationData.strings.AuthSessions_OtherDevices))
             }
             
-            let filteredPendingSessions: [RecentAccountSession] = sessionsState.sessions.filter({ $0.flags.contains(.passwordPending) })
+            let filteredPendingSessions: [RecentAccountSession] = filteredSessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
                 entries.append(.pendingSessionsHeader(SortIndex(section: 1, item: 6), presentationData.strings.AuthSessions_IncompleteAttempts))
                 for i in 0 ..< filteredPendingSessions.count {
@@ -498,23 +502,23 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 }
                 entries.append(.pendingSessionsInfo(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
-            
-            if sessionsState.sessions.count > 1 {
+
+            if filteredSessions.count > 1 {
                 entries.append(.otherSessionsHeader(SortIndex(section: 4, item: 0), presentationData.strings.AuthSessions_OtherSessions))
             }
-            
+
 //            if enableQRLogin && !hasAddDevice {
 //                entries.append(.addDevice(SortIndex(section: 4, item: 1), presentationData.strings.AuthSessions_AddDevice))
 //            }
             
-            let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
+            let sortedSessions: [RecentAccountSession] = filteredSessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
             })
-            
-            for i in 0 ..< filteredSessions.count {
-                if !existingSessionIds.contains(filteredSessions[i].hash) {
-                    existingSessionIds.insert(filteredSessions[i].hash)
-                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 5, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
+
+            for i in 0 ..< sortedSessions.count {
+                if !existingSessionIds.contains(sortedSessions[i].hash) {
+                    existingSessionIds.insert(sortedSessions[i].hash)
+                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 5, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: sortedSessions[i], enabled: state.removingSessionId != sortedSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sortedSessions[i].hash))
                 }
             }
             
@@ -808,10 +812,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         return true
     }
     |> distinctUntilChanged
+
+    let sharedDataPromise = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
     
-    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin)
+    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin, sharedDataPromise)
     |> deliverOnMainQueue
-    |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         let websites = websitesAndPeers.sessions
         let peers = websitesAndPeers.peers
@@ -848,13 +854,15 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         } else {
             title = .text(presentationData.strings.AuthSessions_DevicesTitle)
         }
-        
+
+        let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+
         var animateChanges = true
         switch (mode, websites, peers) {
             case (.websites, let websites, let peers):
                 entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
             default:
-                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState, enableQRLogin: enableQRLogin)
+                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState, enableQRLogin: enableQRLogin, sessionFilter: fakePasscodeHolder.sessionFilter(account: context.account))
         }
         
         let previousMode = previousMode.swap(mode)

@@ -16,6 +16,7 @@ import StickerResources
 import SaveToCameraRoll
 import TelegramStringFormatting
 import WallpaperBackgroundNode
+import PtgForeignAgentNoticeRemoval
 
 public struct ShareControllerAction {
     let title: String
@@ -514,6 +515,7 @@ public final class ShareController: ViewController {
         self.peersDisposable.dispose()
         self.readyDisposable.dispose()
         self.accountActiveDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
         
         if self.fromForeignApp {
             if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
@@ -782,9 +784,11 @@ public final class ShareController: ViewController {
                     case let .messages(messages):
 //                        messagesToShare = messages
                         for message in messages {
+                            let message_ = strongSelf.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+                            
                             var url: String?
                             var selectedMedia: Media?
-                            loop: for media in message.media {
+                            loop: for media in message_.media {
                                 switch media {
                                     case _ as TelegramMediaImage, _ as TelegramMediaFile:
                                         selectedMedia = media
@@ -832,7 +836,7 @@ public final class ShareController: ViewController {
                             if let restrictedText = restrictedText {
                                 collectableItems.append(CollectableExternalShareItem(url: url, text: restrictedText, author: authorPeerId, timestamp: message.timestamp, mediaReference: nil))
                             } else {
-                                collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
+                                collectableItems.append(CollectableExternalShareItem(url: url, text: message_.text, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message_), media: $0) })))
                             }
                         }
                     case .fromExternal:
@@ -1017,9 +1021,16 @@ public final class ShareController: ViewController {
         self.currentAccount = account
         self.accountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
         
+        let context: AccountContext
+        if self.currentContext.account.id == self.currentAccount.id {
+            context = self.currentContext
+        } else {
+            context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
+        }
+        
         self.peers.set(combineLatest(
             TelegramEngine(account: self.currentAccount).data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.currentAccount.peerId)),
-            self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150)
+            self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
             |> take(1)
         )
         |> mapToSignal { maybeAccountPeer, view -> Signal<([(EngineRenderedPeer, EnginePeer.Presence?)], EnginePeer), NoError> in

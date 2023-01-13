@@ -25,6 +25,7 @@ def locate_bazel(base_path):
                 version=versions.bazel_version,
                 name=bazel_name
             ),
+            '--create-dirs',
             '--output',
             bazel_path
         ])

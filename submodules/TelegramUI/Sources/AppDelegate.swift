@@ -415,7 +415,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
         let appGroupName = "group.\(baseAppBundleId)"
+#if !DEBUG
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+#else
+        var maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        if maybeAppGroupUrl == nil, BuildConfig.isNonDevAccount() {
+            maybeAppGroupUrl = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+        }
+#endif
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         self.buildConfig = buildConfig
@@ -609,6 +616,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             for id in ids {
                 self.clearNotificationsManager?.append(id)
             }
+        }, clearAllNotifications: {
+            self.clearNotificationsManager?.clearAll()
         }, pushIdleTimerExtension: {
             let disposable = MetaDisposable()
             Queue.mainQueue().async {
@@ -670,7 +679,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 completion(false)
             }
         }, siriAuthorization: {
-            if #available(iOS 10, *) {
+            if #available(iOS 10, *), BuildConfig.siriEnabled() {
                 switch INPreferences.siriAuthorizationStatus() {
                     case .authorized:
                         return .allowed
@@ -693,7 +702,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [
-                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    PresentationAppIcon(name: "Cloudballon", imageName: "Cloudballon", isDefault: true),
+                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon"),
                     PresentationAppIcon(name: "New2", imageName: "New2"),
                     PresentationAppIcon(name: "New1", imageName: "New1"),
                     PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
@@ -820,6 +830,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     }
                 }
             })
+            
+            appLockContext.sharedAccountContext = sharedContext
             
             presentationDataPromise.set(sharedContext.presentationData)
             
@@ -1290,9 +1302,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }*/
         
+        #if canImport(AppCenter)
         self.maybeCheckForUpdates()
 
-        #if canImport(AppCenter)
         if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
             AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
                 Crashes.self
@@ -1383,6 +1395,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 UIApplication.shared.endBackgroundTask(taskId)
             }
         })
+        
+        self.mainWindow.forEachViewController { controller in
+            if let controller = controller as? UIViewController {
+                if controller is ActionSheetController || controller.isSensitiveUI {
+                    controller.dismiss(animated: false)
+                }
+            }
+            return true
+        }
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
@@ -1407,7 +1428,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
         self.resetBadge()
         
+        #if canImport(AppCenter)
         self.maybeCheckForUpdates()
+        #endif
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -2248,6 +2271,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private var lastCheckForUpdatesTimestamp: Double?
     private let currentCheckForUpdatesDisposable = MetaDisposable()
     
+    #if canImport(AppCenter)
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
         #else
@@ -2297,6 +2321,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         #endif
     }
+    #endif
     
     override var next: UIResponder? {
         if let context = self.contextValue, let controller = context.context.keyShortcutsController {

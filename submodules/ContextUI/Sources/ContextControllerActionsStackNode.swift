@@ -451,7 +451,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             self.requestUpdate = requestUpdate
             self.items = items
             
-            var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
+            weak var weakSelf: Node?
+            
             self.itemNodes = items.map { item -> Item in
                 switch item {
                 case let .action(actionItem):
@@ -460,7 +461,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                             getController: getController,
                             requestDismiss: requestDismiss,
                             requestUpdateAction: { id, action in
-                                requestUpdateAction?(id, action)
+                                requestUpdateAction(id, action)
                             },
                             item: actionItem
                         ),
@@ -493,8 +494,10 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                 self.addSubnode(item.node)
             }
             
-            requestUpdateAction = { [weak self] id, action in
-                guard let strongSelf = self else {
+            weakSelf = self
+            
+            func requestUpdateAction(_ id: AnyHashable, _ action: ContextMenuActionItem) {
+                guard let strongSelf = weakSelf else {
                     return
                 }
                 loop: for i in 0 ..< strongSelf.items.count {
@@ -510,7 +513,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                                     getController: getController,
                                     requestDismiss: requestDismiss,
                                     requestUpdateAction: { id, action in
-                                        requestUpdateAction?(id, action)
+                                        requestUpdateAction(id, action)
                                     },
                                     item: action
                                 ),

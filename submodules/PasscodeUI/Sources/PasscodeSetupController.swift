@@ -7,13 +7,16 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AccountContext
+import FakePasscode
 
 public enum PasscodeSetupControllerMode {
-    case setup(change: Bool, PasscodeEntryFieldType)
+    case setup(change: Bool, allowChangeType: Bool, PasscodeEntryFieldType)
     case entry(PostboxAccessChallengeData)
+    case secretSetup(PasscodeEntryFieldType)
+    case secretEntry(modal: Bool, PasscodeEntryFieldType)
 }
 
-public final class PasscodeSetupController: ViewController {
+public final class PasscodeSetupController: ViewController, ReactiveToPasscodeSwitch {
     private var controllerNode: PasscodeSetupControllerNode {
         return self.displayNode as! PasscodeSetupControllerNode
     }
@@ -23,6 +26,7 @@ public final class PasscodeSetupController: ViewController {
     
     public var complete: ((String, Bool) -> Void)?
     public var check: ((String) -> Bool)?
+    public var validate: ((String) -> String?)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -42,7 +46,18 @@ public final class PasscodeSetupController: ViewController {
         
         self.nextAction = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
-        self.title = self.presentationData.strings.PasscodeSettings_Title
+        switch self.mode {
+        case .setup, .entry:
+            self.title = self.presentationData.strings.PasscodeSettings_Title
+        case .secretSetup, .secretEntry:
+            self.title = self.presentationData.strings.SecretPasscodeSettings_Title
+        }
+        
+        if case let .secretEntry(modal, _) = self.mode, modal {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
+        
+        self.isSensitiveUI = true
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -54,9 +69,17 @@ public final class PasscodeSetupController: ViewController {
         self.displayNodeDidLoad()
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.controllerNode.updateMode(self.mode)
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
-            guard let strongSelf = self, case let .setup(change, type) = strongSelf.mode else {
+            guard let strongSelf = self else {
+                return
+            }
+            let type: PasscodeEntryFieldType
+            switch strongSelf.mode {
+            case let .setup(_, _, fieldType), let .secretSetup(fieldType), let .secretEntry(_, fieldType):
+                type = fieldType
+            default:
                 return
             }
             
@@ -71,7 +94,16 @@ public final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_6DigitCode, action: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(change: change, .digits6)
+                        switch strongSelf.mode {
+                        case let .setup(change, allowChange, _):
+                            strongSelf.mode = .setup(change: change, allowChangeType: allowChange, .digits6)
+                        case .secretSetup:
+                            strongSelf.mode = .secretSetup(.digits6)
+                        case let .secretEntry(modal, _):
+                            strongSelf.mode = .secretEntry(modal: modal, .digits6)
+                        default:
+                            assertionFailure()
+                        }
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -81,7 +113,16 @@ public final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_4DigitCode, action: {
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(change: change, .digits4)
+                        switch strongSelf.mode {
+                        case let .setup(change, allowChange, _):
+                            strongSelf.mode = .setup(change: change, allowChangeType: allowChange, .digits4)
+                        case .secretSetup:
+                            strongSelf.mode = .secretSetup(.digits4)
+                        case let .secretEntry(modal, _):
+                            strongSelf.mode = .secretEntry(modal: modal, .digits4)
+                        default:
+                            assertionFailure()
+                        }
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -91,7 +132,16 @@ public final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_AlphanumericCode, action: {
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(change: change, .alphanumeric)
+                        switch strongSelf.mode {
+                        case let .setup(change, allowChange, _):
+                            strongSelf.mode = .setup(change: change, allowChangeType: allowChange, .alphanumeric)
+                        case .secretSetup:
+                            strongSelf.mode = .secretSetup(.alphanumeric)
+                        case let .secretEntry(modal, _):
+                            strongSelf.mode = .secretEntry(modal: modal, .alphanumeric)
+                        default:
+                            assertionFailure()
+                        }
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -126,6 +176,9 @@ public final class PasscodeSetupController: ViewController {
         self.controllerNode.checkPasscode = { [weak self] passcode in
             return self?.check?(passcode) ?? false
         }
+        self.controllerNode.validatePasscode = { [weak self] passcode in
+            return self?.validate?(passcode)
+        }
     }
     
     override public func viewWillAppear(_ animated: Bool) {
@@ -136,7 +189,11 @@ public final class PasscodeSetupController: ViewController {
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        var flag = true
+        if case let .secretEntry(modal, _) = self.mode, modal {
+            flag = false
+        }
+        self.view.disablesInteractiveTransitionGestureRecognizer = flag
         
         self.controllerNode.activateInput()
     }
@@ -149,5 +206,17 @@ public final class PasscodeSetupController: ViewController {
     
     @objc private func nextPressed() {
        self.controllerNode.activateNext()
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss()
+    }
+
+    public func passcodeSwitched() {
+        self.dismiss(animated: false)
+    }
+    
+    public func activateInput() {
+        self.controllerNode.activateInput()
     }
 }

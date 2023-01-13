@@ -39,8 +39,8 @@ public extension TelegramEngine {
             return _internal_acceptMessageActionUrlAuth(account: self.account, subject: subject, allowWriteAccess: allowWriteAccess)
         }
 
-        public func searchMessages(location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
-            return _internal_searchMessages(account: self.account, location: location, query: query, state: state, limit: limit)
+        public func searchMessages(location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100, inactiveSecretChatPeerIds: Set<PeerId>) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+            return _internal_searchMessages(account: self.account, location: location, query: query, state: state, limit: limit, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         }
 
         public func downloadMessage(messageId: MessageId) -> Signal<Message?, NoError> {
@@ -214,8 +214,8 @@ public extension TelegramEngine {
             return _internal_topPeerActiveLiveLocationMessages(viewTracker: self.account.viewTracker, accountPeerId: self.account.peerId, peerId: peerId)
         }
 
-        public func chatList(group: EngineChatList.Group, count: Int) -> Signal<EngineChatList, NoError> {
-            return self.account.postbox.tailChatListView(groupId: group._asGroup(), count: count, summaryComponents: ChatListEntrySummaryComponents())
+        public func chatList(group: EngineChatList.Group, count: Int, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<EngineChatList, NoError> {
+            return self.account.postbox.tailChatListView(groupId: group._asGroup(), count: count, summaryComponents: ChatListEntrySummaryComponents(), inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             |> map { view -> EngineChatList in
                 return EngineChatList(view.0)
             }

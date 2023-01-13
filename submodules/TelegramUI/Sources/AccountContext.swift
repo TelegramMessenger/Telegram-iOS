@@ -179,7 +179,11 @@ public final class AccountContextImpl: AccountContext {
     private var userLimitsConfigurationDisposable: Disposable?
     public private(set) var userLimits: EngineConfiguration.UserLimits
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
+    public let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
+    public let currentInactiveSecretChatPeerIds: Atomic<Set<PeerId>>
+    private var inactiveSecretChatPeerIdsDisposable: Disposable?
+    
+    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false, initialInactiveSecretChatPeerIds: Set<PeerId>? = nil)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
@@ -189,12 +193,18 @@ public final class AccountContextImpl: AccountContext {
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
+        self.inactiveSecretChatPeerIds = sharedContext.ptgSecretPasscodes
+        |> map { secretPasscodes in
+            return secretPasscodes.inactiveSecretChatPeerIds(for: account)
+        }
+        |> distinctUntilChanged
+        
         if let locationManager = self.sharedContextImpl.locationManager {
             self.liveLocationManager = LiveLocationManagerImpl(engine: self.engine, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
-        self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
+        self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager, inactiveSecretChatPeerIds: self.inactiveSecretChatPeerIds, shouldClearCachedMediaResourcesOfInactiveSecretChats: sharedContext.applicationBindings.isMainApp && !temp, engine: self.engine, initialInactiveSecretChatPeerIds: initialInactiveSecretChatPeerIds)
         if sharedContext.applicationBindings.isMainApp && !temp {
             self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
@@ -282,6 +292,11 @@ public final class AccountContextImpl: AccountContext {
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
         
+        self.currentInactiveSecretChatPeerIds = Atomic(value: sharedContext.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIds(for: account) })
+        self.inactiveSecretChatPeerIdsDisposable = self.inactiveSecretChatPeerIds.start(next: { [weak self] next in
+            let _ = self?.currentInactiveSecretChatPeerIds.swap(next)
+        })
+        
         self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
         |> map { animatedEmoji -> [String: [StickerPackItem]] in
             var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
@@ -332,6 +347,8 @@ public final class AccountContextImpl: AccountContext {
         self.countriesConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.animatedEmojiStickersDisposable?.dispose()
+        self.userLimitsConfigurationDisposable?.dispose()
+        self.inactiveSecretChatPeerIdsDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

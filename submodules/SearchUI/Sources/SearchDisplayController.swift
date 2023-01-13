@@ -114,6 +114,10 @@ public final class SearchDisplayController {
         }
     }
     
+    deinit {
+        self.isSearchingDisposable?.dispose()
+    }
+    
     public func updatePresentationData(_ presentationData: PresentationData) {
         self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator, inline: self.inline), strings: presentationData.strings)
         self.contentNode.updatePresentationData(presentationData)

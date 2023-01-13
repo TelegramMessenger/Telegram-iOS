@@ -41,21 +41,21 @@ final class WatchChatListHandler: WatchRequestHandler {
             return SSignal { subscriber in
                 let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ context -> Signal<(ChatListView, PresentationData), NoError> in
+                |> mapToSignal({ context -> Signal<(ChatListView, PresentationData, Bool), NoError> in
                     if let context = context {
-                        return context.account.viewTracker.tailChatListView(groupId: .root, count: limit)
-                        |> map { chatListView, _ -> (ChatListView, PresentationData) in
-                            return (chatListView, context.sharedContext.currentPresentationData.with { $0 })
+                        return context.account.viewTracker.tailChatListView(groupId: .root, count: limit, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
+                        |> map { chatListView, _ -> (ChatListView, PresentationData, Bool) in
+                            return (chatListView, context.sharedContext.currentPresentationData.with { $0 }, context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
                         }
                     } else {
                         return .complete()
                     }
                 })
-                let disposable = signal.start(next: { chatListView, presentationData in
+                let disposable = signal.start(next: { chatListView, presentationData, suppressForeignAgentNotice in
                     var chats: [TGBridgeChat] = []
                     var users: [Int64 : TGBridgeUser] = [:]
                     for entry in chatListView.entries.reversed() {
-                        if let (chat, chatUsers) = makeBridgeChat(entry, strings: presentationData.strings) {
+                        if let (chat, chatUsers) = makeBridgeChat(entry, strings: presentationData.strings, suppressForeignAgentNotice: suppressForeignAgentNotice) {
                             chats.append(chat)
                             users = users.merging(chatUsers, uniquingKeysWith: { (_, last) in last })
                         }
@@ -89,7 +89,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                 let limit = Int(args.rangeMessageCount)
                 let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ context -> Signal<(MessageHistoryView, Bool, PresentationData), NoError> in
+                |> mapToSignal({ context -> Signal<(MessageHistoryView, Bool, PresentationData, Bool), NoError> in
                     if let context = context {
                         return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
                         |> map { messageHistoryView, _, _ -> (MessageHistoryView, Bool, PresentationData) in
@@ -99,11 +99,11 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                         return .complete()
                     }
                 })
-                let disposable = signal.start(next: { messageHistoryView, savedMessages, presentationData in
+                let disposable = signal.start(next: { messageHistoryView, savedMessages, presentationData, suppressForeignAgentNotice in
                     var messages: [TGBridgeMessage] = []
                     var users: [Int64 : TGBridgeUser] = [:]
                     for entry in messageHistoryView.entries.reversed() {
-                        if let (message, messageUsers) = makeBridgeMessage(entry, strings: presentationData.strings) {
+                        if let (message, messageUsers) = makeBridgeMessage(entry, strings: presentationData.strings, suppressForeignAgentNotice: suppressForeignAgentNotice) {
                             messages.append(message)
                             users = users.merging(messageUsers, uniquingKeysWith: { (_, last) in last })
                         }
@@ -141,12 +141,12 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
             return SSignal { subscriber in
                 let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ context -> Signal<(Message, PresentationData)?, NoError> in
+                |> mapToSignal({ context -> Signal<(Message, PresentationData, Bool)?, NoError> in
                     if let context = context {
                         let messageSignal = context.engine.messages.downloadMessage(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
-                        |> map { message -> (Message, PresentationData)? in
+                        |> map { message -> (Message, PresentationData, Bool)? in
                             if let message = message {
-                                return (message, context.sharedContext.currentPresentationData.with { $0 })
+                                return (message, context.sharedContext.currentPresentationData.with { $0 }, context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
                             } else {
                                 return nil
                             }
@@ -157,7 +157,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                     }
                 })
                 let disposable = signal.start(next: { messageAndPresentationData in
-                    if let (message, presentationData) = messageAndPresentationData, let bridgeMessage = makeBridgeMessage(message, strings: presentationData.strings) {
+                    if let (message, presentationData, suppressForeignAgentNotice) = messageAndPresentationData, let bridgeMessage = makeBridgeMessage(message, strings: presentationData.strings, suppressForeignAgentNotice: suppressForeignAgentNotice) {
                         let peers = makeBridgePeers(message)
                         var response: [String : Any] = [TGBridgeMessageKey: bridgeMessage, TGBridgeUsersDictionaryKey: peers]
                         if peerId.namespace != Namespaces.Peer.CloudUser {

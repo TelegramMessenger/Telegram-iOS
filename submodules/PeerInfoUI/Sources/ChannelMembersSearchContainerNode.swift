@@ -1246,6 +1246,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         self.searchDisposable.dispose()
         self.presentationDataDisposable?.dispose()
         self.removeMemberDisposable.dispose()
+        self.emptyQueryDisposable.dispose()
     }
     
     override public func didLoad() {

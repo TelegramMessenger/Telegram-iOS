@@ -184,6 +184,8 @@ public final class MediaBox {
         try! FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
     }()
     
+    private let allSecretChatIdsDisposable = MetaDisposable()
+    
     public init(basePath: String) {
         self.basePath = basePath
         
@@ -200,8 +202,14 @@ public final class MediaBox {
         let _ = self.ensureDirectoryCreated
     }
     
-    public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
-        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
+    deinit {
+        self.allSecretChatIdsDisposable.dispose()
+    }
+    
+    public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32, allSecretChatIds: Signal<Set<Int64>, NoError>) {
+        self.allSecretChatIdsDisposable.set(allSecretChatIds.start(next: { [weak self] allSecretChatIds in
+            self?.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit, allSecretChatIds: allSecretChatIds)
+        }))
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {

@@ -876,20 +876,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             return
         }
         
-        if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
-            if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
+        if parsedUrl.scheme?.lowercased() == "http" || parsedUrl.scheme?.lowercased() == "https" {
+            if parsedUrl.host?.lowercased() == "t.me" || parsedUrl.host?.lowercased() == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                let settings = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData())
+                let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
                 |> take(1)
-                |> map { sharedData, accessChallengeData -> WebBrowserSettings in
-                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
-                    if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil {
-                            return WebBrowserSettings(defaultWebBrowser: "Safari")
-                        }
-                    }
-                    
+                |> map { sharedData -> WebBrowserSettings in
                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
                         return current   
                     } else {
@@ -935,9 +928,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         }
     }
     
-    if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+    if parsedUrl.scheme?.lowercased() == "http" || parsedUrl.scheme?.lowercased() == "https" {
         let nativeHosts = ["t.me", "telegram.me"]
-        if let host = parsedUrl.host, nativeHosts.contains(host) {
+        if let host = parsedUrl.host?.lowercased(), nativeHosts.contains(host) {
             continueHandling()
         } else {
             context.sharedContext.applicationBindings.openUniversalUrl(url, TelegramApplicationOpenUrlCompletion(completion: { success in

@@ -383,6 +383,7 @@ final class SharedMediaPlayer {
         self.inForegroundDisposable?.dispose()
         self.playbackStateValueDisposable?.dispose()
         self.prefetchDisposable.dispose()
+        self.audioLevelDisposable.dispose()
         
         if let proximityManagerIndex = self.proximityManagerIndex {
             DeviceProximityManager.shared().remove(proximityManagerIndex)

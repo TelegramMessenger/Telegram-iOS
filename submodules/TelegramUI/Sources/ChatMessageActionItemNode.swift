@@ -20,6 +20,8 @@ import WallpaperBackgroundNode
 import InvisibleInkDustNode
 import TextNodeWithEntities
 
+import PtgForeignAgentNoticeRemoval
+
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId, forForumOverview: Bool) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false, forForumOverview: forForumOverview)
 }
@@ -159,11 +161,12 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             let backgroundImage = PresentationResourcesChat.chatActionPhotoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+                let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: item.message, inAssociatedPinnedMessageToo: true) : item.message
                 var forForumOverview = false
                 if item.chatLocation.threadId == nil {
                     forForumOverview = true
                 }
-                
+
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
@@ -338,7 +341,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                         strongSelf.insertSubnode(backgroundNode, at: 0)
                                     }
                                 }
-                                
+
                                 if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
                                     strongSelf.backgroundColorNode.isHidden = true
                                 } else {

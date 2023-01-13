@@ -77,7 +77,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
-    
+
     private var readyValue = Promise<Bool>()
     var ready: Signal<Bool, NoError> {
         return self.readyValue.get()
@@ -86,7 +86,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) {
         return (self.presentationData, self.presentationDataPromise.get())
     }
-    
+
+    private let contactListNodeReadyDisposable = MetaDisposable()
+
     init(context: AccountContext, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
@@ -102,7 +104,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
-        
+
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
         
         self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds) }
@@ -129,14 +131,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         if let _ = createNewGroup {
             chatListCategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), title: self.presentationData.strings.PeerSelection_ImportIntoNewGroup, appearance: .action))
         }
-        
+
         let chatListLocation: ChatListControllerLocation
         if let forumPeerId = self.forumPeerId {
             chatListLocation = .forum(peerId: forumPeerId)
         } else {
             chatListLocation = .chatList(groupId: .root)
         }
-       
+
         self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false), theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
         
         super.init()
@@ -378,6 +380,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.readyValue.set(self.chatListNode.ready)
     }
     
+    deinit {
+        self.contactListNodeReadyDisposable.dispose()
+    }
+
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.updateThemeAndStrings()
@@ -605,7 +611,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             } else {
                 chatListLocation = .chatList(groupId: EngineChatList.Group(.root))
             }
-            
+
             self.searchDisplayController = SearchDisplayController(
                 presentationData: self.presentationData,
                 contentNode: ChatListSearchContainerNode(
@@ -839,7 +845,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     if let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .immediate)
                         
-                        let _ = (contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        self.contactListNodeReadyDisposable.set((contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
                             if let strongSelf = self {
                                 if let contactListNode = strongSelf.contactListNode {
                                     strongSelf.insertSubnode(contactListNode, aboveSubnode: strongSelf.chatListNode)
@@ -847,7 +853,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 strongSelf.chatListNode.removeFromSupernode()
                                 strongSelf.recursivelyEnsureDisplaySynchronously(true)
                             }
-                        })
+                        }))
                     } else {
                         if let contactListNode = self.contactListNode {
                             self.insertSubnode(contactListNode, aboveSubnode: self.chatListNode)
