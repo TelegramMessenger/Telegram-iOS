@@ -608,6 +608,8 @@ public protocol ChatController: ViewController {
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)
     
+    func updateIsPushed(_ isPushed: Bool)
+    
     func hintPlayNextOutgoingGift()
     
     var isSendButtonVisible: Bool { get }

@@ -17576,6 +17576,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.historyNodeContainer.layer.addShakeAnimation(amplitude: -6.0, decay: true)
     }
+    
+    public func updateIsPushed(_ isPushed: Bool) {
+        let scale: CGFloat = isPushed ? 0.94 : 1.0
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0))
+        transition.updateTransformScale(node: self.chatDisplayNode.historyNodeContainer, scale: scale)
+    }
 }
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {

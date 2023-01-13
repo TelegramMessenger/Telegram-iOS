@@ -1432,7 +1432,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
         self.backgroundNode.updateLayout(size: contentBounds.size, transition: transition)
 
-        transition.updateFrame(node: self.historyNodeContainer, frame: contentBounds)
+        transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
+        transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
+        
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
         if let blurredHistoryNode = self.blurredHistoryNode {
