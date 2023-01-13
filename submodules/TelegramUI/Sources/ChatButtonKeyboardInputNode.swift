@@ -431,8 +431,10 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     })
                 case let .openWebView(url, simple):
                     self.controllerInteraction.openWebView(markupButton.title, url, simple, false)
-                case .requestPeer:
-                    break
+                case let .requestPeer(peerType, buttonId):
+                    if let message = self.message {
+                    self.controllerInteraction.openRequestedPeerSelection(message.id, peerType, buttonId)
+                    }
             }
             if dismissIfOnce {
                 if let message = self.message {

@@ -1117,7 +1117,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         let wasEmpty = self.viewControllers.isEmpty
         super.setViewControllers(viewControllers, animated: animated)
         if wasEmpty {
-            self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            if self.topViewController is AuthorizationSequenceSplashController {
+            } else {
+                self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
         }
         if !self.didSetReady {
             self.didSetReady = true
@@ -1150,7 +1153,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     
     private func animateIn() {
-        self.view.layer.animatePosition(from: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), to: self.view.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        if !self.otherAccountPhoneNumbers.1.isEmpty {
+            self.view.layer.animatePosition(from: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), to: self.view.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        } else {
+            if let splashController = self.topViewController as? AuthorizationSequenceSplashController {
+                splashController.animateIn()
+            }
+        }
     }
     
     private func animateOut(completion: (() -> Void)? = nil) {

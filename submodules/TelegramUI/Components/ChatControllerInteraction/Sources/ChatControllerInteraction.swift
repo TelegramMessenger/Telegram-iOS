@@ -167,6 +167,7 @@ public final class ChatControllerInteraction {
     public let openJoinLink: (String) -> Void
     public let openWebView: (String, String, Bool, Bool) -> Void
     public let activateAdAction: (EngineMessage.Id) -> Void
+    public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -277,6 +278,7 @@ public final class ChatControllerInteraction {
         openJoinLink: @escaping (String) -> Void,
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
         activateAdAction: @escaping (EngineMessage.Id) -> Void,
+        openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -370,6 +372,7 @@ public final class ChatControllerInteraction {
         self.openJoinLink = openJoinLink
         self.openWebView = openWebView
         self.activateAdAction = activateAdAction
+        self.openRequestedPeerSelection = openRequestedPeerSelection
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput

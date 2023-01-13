@@ -8624,3 +8624,69 @@ Sorry for the inconvenience.";
 "StorageManagement.OpenFile" = "Open File";
 
 "ChatListFilter.AddChatsSearchPlaceholder" = "Search Chats";
+
+"RequestPeer.ChooseUserTitle" = "Choose User";
+"RequestPeer.ChooseBotTitle" = "Choose Bot";
+"RequestPeer.ChooseGroupTitle" = "Choose Group";
+"RequestPeer.ChooseChannelTitle" = "Choose Channel";
+"RequestPeer.Requirements" = "Requirements:";
+
+"RequestPeer.CreateNewGroup" = "Create a New Group for This";
+"RequestPeer.CreateNewChannel" = "Create a New Channel for This";
+
+"RequestPeer.UsersEmpty" = "You don't have users that meet the following requirements:";
+"RequestPeer.UsersAllEmpty" = "You don't have any users.";
+"RequestPeer.BotsAllEmpty" = "You don't have any bots.";
+"RequestPeer.GroupsEmpty" = "You don't have groups that meet the following requirements:";
+"RequestPeer.GroupsAllEmpty" = "You don't have any groups.";
+"RequestPeer.ChannelsEmpty" = "You don't have channels that meet the following requirements:";
+"RequestPeer.ChannelsAllEmpty" = "You don't have any channels.";
+
+"RequestPeer.Requirement.UserPremiumOff" = "User should not have a Premium subscription.";
+"RequestPeer.Requirement.UserPremiumOn" = "User should have a Premium subscription.";
+
+"RequestPeer.Requirement.Group.HasUsernameOff" = "The group should be private.";
+"RequestPeer.Requirement.Group.HasUsernameOn" = "The group should be public.";
+
+"RequestPeer.Requirement.Group.ForumOff" = "The group should have topics off.";
+"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics on.";
+
+"RequestPeer.Requirement.Group.CreatorOn" = "You should be the owner of the group.";
+
+"RequestPeer.Requirement.Group.Rights" = "You have the admin rights to %@.";
+"RequestPeer.Requirement.Group.Rights.Info" = "change group info";
+"RequestPeer.Requirement.Group.Rights.Send" = "post messages";
+"RequestPeer.Requirement.Group.Rights.Delete" = "delete messages";
+"RequestPeer.Requirement.Group.Rights.Edit" = "delete messages";
+"RequestPeer.Requirement.Group.Rights.Ban" = "ban users";
+"RequestPeer.Requirement.Group.Rights.Invite" = "invite users via link";
+"RequestPeer.Requirement.Group.Rights.Pin" = "pin messages";
+"RequestPeer.Requirement.Group.Rights.Topics" = "manage topics";
+"RequestPeer.Requirement.Group.Rights.VideoChats" = "manage video chats";
+"RequestPeer.Requirement.Group.Rights.Anonymous" = "remain anonymous";
+"RequestPeer.Requirement.Group.Rights.AddAdmins" = "add new admins";
+
+"RequestPeer.Requirement.Channel.HasUsernameOff" = "The channel should be private.";
+"RequestPeer.Requirement.Channel.HasUsernameOn" = "The channel should be public.";
+
+"RequestPeer.Requirement.Channel.CreatorOn" = "You should be the owner of the channel.";
+
+"RequestPeer.Requirement.Channel.Rights" = "You have the admin rights to %@.";
+"RequestPeer.Requirement.Channel.Rights.Info" = "change group info";
+"RequestPeer.Requirement.Channel.Rights.Send" = "post messages";
+"RequestPeer.Requirement.Channel.Rights.Delete" = "delete messages";
+"RequestPeer.Requirement.Channel.Rights.Edit" = "delete messages";
+"RequestPeer.Requirement.Channel.Rights.Ban" = "ban users";
+"RequestPeer.Requirement.Channel.Rights.Invite" = "invite users via link";
+"RequestPeer.Requirement.Channel.Rights.Pin" = "pin messages";
+"RequestPeer.Requirement.Channel.Rights.Topics" = "manage topics";
+"RequestPeer.Requirement.Channel.Rights.VideoChats" = "manage video chats";
+"RequestPeer.Requirement.Channel.Rights.Anonymous" = "remain anonymous";
+"RequestPeer.Requirement.Channel.Rights.AddAdmins" = "add new admins";
+
+"CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
+"CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
+
+"Notification.RequestedPeer" = "You shared %@ with the bot.";
+
+"Conversation.ViewInChannel" = "View in Channel";

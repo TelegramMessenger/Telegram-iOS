@@ -4131,13 +4131,53 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .join(_, joinHash):
                 self.controllerInteraction?.openJoinLink(joinHash)
             }
+        }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId in
+            guard let self else {
+                return
+            }
+            let context = self.context
+            let peerId = self.chatLocation.peerId
+            var createNewGroupImpl: (() -> Void)?
+            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent], requestPeerType: peerType, hasContactSelector: false, createNewGroup: {
+                createNewGroupImpl?()
+            }))
+            controller.peerSelected = { [weak controller] peer, _ in
+                let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+                
+                controller?.dismiss()
+            }
+            createNewGroupImpl = { [weak controller] in
+                switch peerType {
+                case .user:
+                    break
+                case let .group(group):
+                    let createGroupController = createGroupControllerImpl(context: context, peerIds: peerId.flatMap { [$0] } ?? [], mode: .requestPeer(group), completion: { peerId, dismiss in
+                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peerId).start()
+                        
+                        dismiss()
+                    })
+                    createGroupController.navigationPresentation = .modal
+                    controller?.replace(with: createGroupController)
+                case let .channel(channel):
+                    let createChannelController = createChannelController(context: context, mode: .requestPeer(channel), completion: { peerId, dismiss in
+                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peerId).start()
+                        
+                        dismiss()
+                    })
+                    createChannelController.navigationPresentation = .modal
+                    controller?.replace(with: createChannelController)
+                }
+            }
+            self.push(controller)
         }, requestMessageUpdate: { [weak self] id, scroll in
-            if let strongSelf = self {
-                strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
+            if let self {
+                self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
             }
         }, cancelInteractiveKeyboardGestures: { [weak self] in
-            (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
-            self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
+            if let self {
+                (self.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
+                self.chatDisplayNode.cancelInteractiveKeyboardGestures()
+            }
         }, dismissTextInput: { [weak self] in
             self?.chatDisplayNode.dismissTextInput()
         }, scrollToMessageId: { [weak self] index in

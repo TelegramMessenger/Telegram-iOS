@@ -10,7 +10,7 @@ import LegacyComponents
 import SolidRoundedButtonNode
 import RMIntro
 
-final class AuthorizationSequenceSplashController: ViewController {
+public final class AuthorizationSequenceSplashController: ViewController {
     private var controllerNode: AuthorizationSequenceSplashControllerNode {
         return self.displayNode as! AuthorizationSequenceSplashControllerNode
     }
@@ -107,9 +107,13 @@ final class AuthorizationSequenceSplashController: ViewController {
         self.activateLocalizationDisposable.dispose()
     }
     
-    override public func loadDisplayNode() {
+    public override func loadDisplayNode() {
         self.displayNode = AuthorizationSequenceSplashControllerNode(theme: self.theme)
         self.displayNodeDidLoad()
+    }
+    
+    func animateIn() {
+        self.controller.animateIn()
     }
     
     var buttonFrame: CGRect {
@@ -138,31 +142,31 @@ final class AuthorizationSequenceSplashController: ViewController {
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         self.addControllerIfNeeded()
         self.controller.viewWillAppear(false)
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         controller.viewDidAppear(animated)
     }
     
-    override func viewWillDisappear(_ animated: Bool) {
+    public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
         controller.viewWillDisappear(animated)
     }
     
-    override func viewDidDisappear(_ animated: Bool) {
+    public override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         controller.viewDidDisappear(animated)
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout

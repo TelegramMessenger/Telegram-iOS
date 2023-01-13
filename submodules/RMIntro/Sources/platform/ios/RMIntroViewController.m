@@ -102,6 +102,7 @@ typedef enum {
     NSDictionary<NSString *, NSString *> *_englishStrings;
     
     UIView *_wrapperView;
+    UIView *_startButton;
     
     bool _loadedView;
 }
@@ -123,9 +124,7 @@ typedef enum {
         _accentColor = accentColor;
         _regularDotColor = regularDotColor;
         _highlightedDotColor = highlightedDotColor;
-        
-        self.automaticallyAdjustsScrollViewInsets = false;
-        
+                
         NSArray<NSString *> *stringKeys = @[
             @"Tour.Title1",
             @"Tour.Title2",
@@ -227,6 +226,45 @@ typedef enum {
     }
 }
 
+- (void)animateIn {
+    CGPoint logoTargetPosition = _glkView.center;
+    _glkView.center = CGPointMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0);
+    
+    RMIntroPageView *firstPage = (RMIntroPageView *)[_pageViews firstObject];
+    CGPoint headerTargetPosition = firstPage.headerLabel.center;
+    firstPage.headerLabel.center = CGPointMake(headerTargetPosition.x, headerTargetPosition.y + 140.0);
+    
+    CGPoint descriptionTargetPosition = firstPage.descriptionLabel.center;
+    firstPage.descriptionLabel.center = CGPointMake(descriptionTargetPosition.x, descriptionTargetPosition.y + 160.0);
+    
+    CGPoint pageControlTargetPosition = _pageControl.center;
+    _pageControl.center = CGPointMake(pageControlTargetPosition.x, pageControlTargetPosition.y + 200.0);
+    
+    CGPoint buttonTargetPosition = _startButton.center;
+    _startButton.center = CGPointMake(buttonTargetPosition.x, buttonTargetPosition.y + 220.0);
+    
+    _glkView.transform = CGAffineTransformMakeScale(0.68, 0.68);
+        
+    [UIView animateWithDuration:0.65 delay:0.15 usingSpringWithDamping:1.2f initialSpringVelocity:0.0 options:kNilOptions animations:^{
+        _glkView.center = logoTargetPosition;
+        firstPage.headerLabel.center = headerTargetPosition;
+        firstPage.descriptionLabel.center = descriptionTargetPosition;
+        _pageControl.center = pageControlTargetPosition;
+        _startButton.center = buttonTargetPosition;
+        _glkView.transform = CGAffineTransformIdentity;
+    } completion:nil];
+    
+    _pageScrollView.alpha = 0.0;
+    _pageControl.alpha = 0.0;
+    _startButton.alpha = 0.0;
+    
+    [UIView animateWithDuration:0.3 delay:0.15 options:kNilOptions animations:^{
+        _pageScrollView.alpha = 1.0;
+        _pageControl.alpha = 1.0;
+        _startButton.alpha = 1.0;
+    } completion:nil];
+}
+
 - (void)loadGL
 {
 #if TARGET_OS_SIMULATOR && defined(__aarch64__)
@@ -313,6 +351,7 @@ typedef enum {
     [self.view addSubview:_wrapperView];
     
     _pageScrollView = [[UIScrollView alloc]initWithFrame:self.view.bounds];
+    _pageScrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     _pageScrollView.clipsToBounds = true;
     _pageScrollView.opaque = true;
     _pageScrollView.clearsContextBeforeDrawing = false;
@@ -512,6 +551,7 @@ typedef enum {
     CGFloat startButtonWidth = MIN(430.0 - 48.0, self.view.bounds.size.width - 48.0f);
     UIView *startButton = self.createStartButton(startButtonWidth);
     if (startButton.superview == nil) {
+        _startButton = startButton;
         [self.view addSubview:startButton];
     }
     startButton.frame = CGRectMake(floor((self.view.bounds.size.width - startButtonWidth) / 2.0f), self.view.bounds.size.height - startButtonY - statusBarHeight, startButtonWidth, 50.0f);
@@ -523,10 +563,9 @@ typedef enum {
     _pageScrollView.contentSize=CGSizeMake(_headlines.count * self.view.bounds.size.width, 150);
     _pageScrollView.contentOffset = CGPointMake(_currentPage * self.view.bounds.size.width, 0);
     
-    [_pageViews enumerateObjectsUsingBlock:^(UIView *pageView, NSUInteger index, __unused BOOL *stop)
-     {
-         pageView.frame = CGRectMake(index * self.view.bounds.size.width, (pageY - statusBarHeight), self.view.bounds.size.width, 150);
-     }];
+    [_pageViews enumerateObjectsUsingBlock:^(UIView *pageView, NSUInteger index, __unused BOOL *stop) {
+        pageView.frame = CGRectMake(index * self.view.bounds.size.width, (pageY - statusBarHeight), self.view.bounds.size.width, 150);
+    }];
 }
 
 - (void)viewWillAppear:(BOOL)animated

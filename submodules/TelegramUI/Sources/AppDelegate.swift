@@ -35,6 +35,7 @@ import BackgroundTasks
 import UIKitRuntimeUtils
 import StoreKit
 import PhoneNumberFormat
+import AuthorizationUI
 
 #if canImport(AppCenter)
 import AppCenter
@@ -284,7 +285,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private var alertActions: (primary: (() -> Void)?, other: (() -> Void)?)?
     
     private let deviceToken = Promise<Data?>(nil)
-    
+        
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
@@ -314,6 +315,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.window = window
         self.nativeWindow = window
+        
+        let launchIconSize = CGSize(width: 120.0, height: 120.0)
+        let launchIconView = UIImageView(image: UIImage(bundleImageName: "Chat/Links/QrLogo"))
+        launchIconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((hostView.containerView.frame.width - launchIconSize.width) / 2.0), y: floorToScreenPixels((hostView.containerView.frame.height - launchIconSize.height) / 2.0)), size: launchIconSize)
+        hostView.containerView.addSubview(launchIconView)
         
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {
@@ -1044,7 +1050,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let startTime = CFAbsoluteTimeGetCurrent()
         self.contextDisposable.set((self.context.get()
-        |> deliverOnMainQueue).start(next: { context in
+        |> deliverOnMainQueue).start(next: { [weak launchIconView] context in
             print("Application: context took \(CFAbsoluteTimeGetCurrent() - startTime) to become available")
             
             var network: Network?
@@ -1075,8 +1081,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
 
                     self.mainWindow.debugAction = nil
-                    
                     self.mainWindow.viewController = context.rootController
+                    
+                    if let launchIconView {
+                        launchIconView.alpha = 0.0
+                        launchIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak launchIconView] _ in
+                            launchIconView?.removeFromSuperview()
+                        })
+                    }
+                    
                     if firstTime {
                         let layer = context.rootController.view.layer
                         layer.allowsGroupOpacity = true
@@ -1123,7 +1136,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let authContextReadyDisposable = MetaDisposable()
         
         self.authContextDisposable.set((self.authContext.get()
-        |> deliverOnMainQueue).start(next: { context in
+        |> deliverOnMainQueue).start(next: { [weak launchIconView] context in
             var network: Network?
             if let context = context {
                 network = context.account.network
@@ -1155,15 +1168,38 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             self.authContextValue = context
             if let context = context {
                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
-                let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                self.mainWindow.present(statusController, on: .root)
+                
+                let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                    let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                    self?.mainWindow.present(statusController, on: .root)
+                    return ActionDisposable { [weak statusController] in
+                        Queue.mainQueue().async() {
+                            statusController?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.5, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
                 let isReady: Signal<Bool, NoError> = context.isReady.get()
                 authContextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
-                    statusController.dismiss()
+                    progressDisposable.dispose()
                     self.mainWindow.present(context.rootController, on: .root)
+                    
+                    if let launchIconView {
+                        if context.rootController.topViewController is AuthorizationSequenceSplashController {
+                            context.rootController.view.addSubview(launchIconView)
+                            Queue.mainQueue().after(0.01, {
+                                launchIconView.removeFromSuperview()
+                            })
+                        } else {
+                            launchIconView.removeFromSuperview()
+                        }
+                    }
                 }))
             } else {
                 authContextReadyDisposable.set(nil)

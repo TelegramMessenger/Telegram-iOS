@@ -206,7 +206,13 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     return entries
 }
 
-public func createChannelController(context: AccountContext) -> ViewController {
+public enum CreateChannelMode {
+    case generic
+    case requestPeer(ReplyMarkupButtonRequestPeerType.Channel)
+}
+
+
+public func createChannelController(context: AccountContext, mode: CreateChannelMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
