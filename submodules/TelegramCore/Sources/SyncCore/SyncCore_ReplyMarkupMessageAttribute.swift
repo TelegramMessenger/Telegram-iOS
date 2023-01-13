@@ -53,7 +53,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
             case botAdminRights = "br"
         }
         
-        public var isCreator: Bool?
+        public var isCreator: Bool
         public var hasUsername: Bool?
         public var isForum: Bool?
         public var botParticipant: Bool
@@ -61,7 +61,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public var botAdminRights: TelegramChatAdminRights?
         
         public init(
-            isCreator: Bool?,
+            isCreator: Bool,
             hasUsername: Bool?,
             isForum: Bool?,
             botParticipant: Bool,
@@ -79,7 +79,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            self.isCreator = try container.decodeIfPresent(Bool.self, forKey: .isCreator)
+            self.isCreator = try container.decode(Bool.self, forKey: .isCreator)
             self.hasUsername = try container.decodeIfPresent(Bool.self, forKey: .hasUsername)
             self.isForum = try container.decodeIfPresent(Bool.self, forKey: .isForum)
             self.botParticipant = try container.decode(Bool.self, forKey: .botParticipant)
@@ -90,7 +90,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
-            try container.encodeIfPresent(self.isCreator, forKey: .isCreator)
+            try container.encode(self.isCreator, forKey: .isCreator)
             try container.encodeIfPresent(self.hasUsername, forKey: .hasUsername)
             try container.encodeIfPresent(self.isForum, forKey: .isForum)
             try container.encode(self.botParticipant, forKey: .botParticipant)
@@ -107,13 +107,13 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
             case botAdminRights = "br"
         }
         
-        public var isCreator: Bool?
+        public var isCreator: Bool
         public var hasUsername: Bool?
         public var userAdminRights: TelegramChatAdminRights?
         public var botAdminRights: TelegramChatAdminRights?
         
         public init(
-            isCreator: Bool?,
+            isCreator: Bool,
             hasUsername: Bool?,
             userAdminRights: TelegramChatAdminRights?,
             botAdminRights: TelegramChatAdminRights?
@@ -127,7 +127,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            self.isCreator = try container.decodeIfPresent(Bool.self, forKey: .isCreator)
+            self.isCreator = try container.decode(Bool.self, forKey: .isCreator)
             self.hasUsername = try container.decodeIfPresent(Bool.self, forKey: .hasUsername)
             self.userAdminRights = try container.decodeIfPresent(TelegramChatAdminRights.self, forKey: .userAdminRights)
             self.botAdminRights = try container.decodeIfPresent(TelegramChatAdminRights.self, forKey: .botAdminRights)
@@ -136,7 +136,7 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
-            try container.encodeIfPresent(self.isCreator, forKey: .isCreator)
+            try container.encode(self.isCreator, forKey: .isCreator)
             try container.encodeIfPresent(self.hasUsername, forKey: .hasUsername)
             try container.encodeIfPresent(self.userAdminRights, forKey: .userAdminRights)
             try container.encodeIfPresent(self.botAdminRights, forKey: .botAdminRights)
