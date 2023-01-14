@@ -8687,6 +8687,7 @@ Sorry for the inconvenience.";
 "RequestPeer.SelectionConfirmationText" = "Are you sure you want to send %1$@ to %2$@?";
 "RequestPeer.SelectionConfirmationInviteText" = "Are you sure you want to send %1$@ to %2$@? This will also add %3$@ to %4$@.";
 "RequestPeer.SelectionConfirmationInviteWithRightsText" = "Are you sure you want to send %1$@ to %2$@? This will also add %3$@ to %4$@ with the following rights: %5$@.";
+"RequestPeer.SelectionConfirmationSend" = "Send";
 
 "CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
 "CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
