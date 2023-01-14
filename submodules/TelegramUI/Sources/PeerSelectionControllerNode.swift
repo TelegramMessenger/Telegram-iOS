@@ -1060,6 +1060,48 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
 }
 
+func stringForAdminRights(strings: PresentationStrings, adminRights: TelegramChatAdminRights) -> String {
+    var rights: [String] = []
+    if adminRights.rights.contains(.canChangeInfo) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Info)
+    }
+    if adminRights.rights.contains(.canPostMessages) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Send)
+    }
+    if adminRights.rights.contains(.canDeleteMessages) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Delete)
+    }
+    if adminRights.rights.contains(.canEditMessages) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Edit)
+    }
+    if adminRights.rights.contains(.canBanUsers) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Ban)
+    }
+    if adminRights.rights.contains(.canInviteUsers) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Invite)
+    }
+    if adminRights.rights.contains(.canPinMessages) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Pin)
+    }
+    if adminRights.rights.contains(.canManageTopics) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Topics)
+    }
+    if adminRights.rights.contains(.canManageCalls) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_VideoChats)
+    }
+    if adminRights.rights.contains(.canBeAnonymous) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_Anonymous)
+    }
+    if adminRights.rights.contains(.canAddAdmins) {
+        rights.append(strings.RequestPeer_Requirement_Group_Rights_AddAdmins)
+    }
+    if !rights.isEmpty {
+        return String(rights.joined(separator: ", "))
+    } else {
+        return ""
+    }
+}
+
 private func stringForRequestPeerType(strings: PresentationStrings, peerType: ReplyMarkupButtonRequestPeerType, offset: Bool) -> String? {
     var lines: [String] = []
     
@@ -1098,7 +1140,7 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
                 append(strings.RequestPeer_Requirement_Group_ForumOff)
             }
         }
-        if let adminRights = group.userAdminRights {
+        if let adminRights = group.userAdminRights, !group.isCreator {
             var rights: [String] = []
             if adminRights.rights.contains(.canChangeInfo) {
                 rights.append(strings.RequestPeer_Requirement_Group_Rights_Info)
@@ -1147,6 +1189,46 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
                 append(strings.RequestPeer_Requirement_Channel_HasUsernameOn)
             } else {
                 append(strings.RequestPeer_Requirement_Channel_HasUsernameOff)
+            }
+        }
+        if let adminRights = channel.userAdminRights, !channel.isCreator {
+            var rights: [String] = []
+            if adminRights.rights.contains(.canChangeInfo) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Info)
+            }
+            if adminRights.rights.contains(.canPostMessages) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Send)
+            }
+            if adminRights.rights.contains(.canDeleteMessages) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Delete)
+            }
+            if adminRights.rights.contains(.canEditMessages) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Edit)
+            }
+            if adminRights.rights.contains(.canBanUsers) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Ban)
+            }
+            if adminRights.rights.contains(.canInviteUsers) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Invite)
+            }
+            if adminRights.rights.contains(.canPinMessages) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Pin)
+            }
+            if adminRights.rights.contains(.canManageTopics) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Topics)
+            }
+            if adminRights.rights.contains(.canManageCalls) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_VideoChats)
+            }
+            if adminRights.rights.contains(.canBeAnonymous) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Anonymous)
+            }
+            if adminRights.rights.contains(.canAddAdmins) {
+                rights.append(strings.RequestPeer_Requirement_Channel_Rights_AddAdmins)
+            }
+            if !rights.isEmpty {
+                let rightsString = strings.RequestPeer_Requirement_Group_Rights(String(rights.joined(separator: ", "))).string
+                append(rightsString)
             }
         }
     }

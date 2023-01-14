@@ -1675,7 +1675,7 @@ public final class ChatListNode: ListView {
                         isEmpty = false
                         return true
                     case let .peerType(peerType):
-                        if let peer = peer.peer {
+                        if let peer = peer.peer, !peer.isDeleted {
                             switch peerType {
                             case let .user(userType):
                                 if case let .user(user) = peer {
@@ -1725,18 +1725,21 @@ public final class ChatListNode: ListView {
                                             return false
                                         }
                                     }
-                                    if let isForum = groupType.isForum, isForum {
+                                    if let isForum = groupType.isForum {
                                         if isForum != channel.flags.contains(.isForum) {
                                             return false
                                         }
                                     }
-                                    if let hasUsername = groupType.hasUsername, hasUsername {
+                                    if let hasUsername = groupType.hasUsername {
                                         if hasUsername != (channel.addressName != nil) {
                                             return false
                                         }
                                     }
                                     if let userAdminRights = groupType.userAdminRights {
                                         if channel.flags.contains(.isCreator) {
+                                            if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                                return false
+                                            }
                                         } else if let rights = channel.adminRights {
                                             if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
                                                 return false
@@ -1759,6 +1762,19 @@ public final class ChatListNode: ListView {
                                     }
                                     if let hasUsername = channelType.hasUsername, hasUsername {
                                         if hasUsername != (channel.addressName != nil) {
+                                            return false
+                                        }
+                                    }
+                                    if let userAdminRights = channelType.userAdminRights {
+                                        if channel.flags.contains(.isCreator) {
+                                            if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                                return false
+                                            }
+                                        } else if let rights = channel.adminRights {
+                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                return false
+                                            }
+                                        } else {
                                             return false
                                         }
                                     }

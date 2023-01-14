@@ -1648,6 +1648,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 let filteredPeer: (EnginePeer, EnginePeer) -> Bool = { peer, accountPeer in
                     if let peerType = requestPeerType {
+                        guard !peer.isDeleted else {
+                            return false
+                        }
                         switch peerType {
                         case let .user(userType):
                             if case let .user(user) = peer {
@@ -1695,18 +1698,21 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                         return false
                                     }
                                 }
-                                if let isForum = groupType.isForum, isForum {
+                                if let isForum = groupType.isForum {
                                     if isForum != channel.flags.contains(.isForum) {
                                         return false
                                     }
                                 }
-                                if let hasUsername = groupType.hasUsername, hasUsername {
+                                if let hasUsername = groupType.hasUsername {
                                     if hasUsername != (channel.addressName != nil) {
                                         return false
                                     }
                                 }
                                 if let userAdminRights = groupType.userAdminRights {
                                     if channel.flags.contains(.isCreator) {
+                                        if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                            return false
+                                        }
                                     } else if let rights = channel.adminRights {
                                         if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
                                             return false
@@ -1728,6 +1734,19 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 }
                                 if let hasUsername = channelType.hasUsername, hasUsername {
                                     if hasUsername != (channel.addressName != nil) {
+                                        return false
+                                    }
+                                }
+                                if let userAdminRights = channelType.userAdminRights {
+                                    if channel.flags.contains(.isCreator) {
+                                        if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                            return false
+                                        }
+                                    } else if let rights = channel.adminRights {
+                                        if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                            return false
+                                        }
+                                    } else {
                                         return false
                                     }
                                 }

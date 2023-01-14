@@ -8684,9 +8684,14 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Channel.Rights.Anonymous" = "remain anonymous";
 "RequestPeer.Requirement.Channel.Rights.AddAdmins" = "add new admins";
 
+"RequestPeer.SelectionConfirmationText" = "Are you sure you want to send %1$@ to %2$@?";
+"RequestPeer.SelectionConfirmationInviteText" = "Are you sure you want to send %1$@ to %2$@? This will also add %3$@ to %4$@.";
+"RequestPeer.SelectionConfirmationInviteWithRightsText" = "Are you sure you want to send %1$@ to %2$@? This will also add %3$@ to %4$@ with the following rights: %5$@.";
+
 "CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
 "CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
 
 "Notification.RequestedPeer" = "You shared %@ with the bot.";
 
 "Conversation.ViewInChannel" = "View in Channel";
+

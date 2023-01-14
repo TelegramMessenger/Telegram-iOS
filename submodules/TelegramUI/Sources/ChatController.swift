@@ -4135,16 +4135,42 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
+            let botName = self.presentationInterfaceState.renderedPeer?.peer.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
             let context = self.context
             let peerId = self.chatLocation.peerId
             var createNewGroupImpl: (() -> Void)?
-            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent], requestPeerType: peerType, hasContactSelector: false, createNewGroup: {
+            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: peerType, hasContactSelector: false, createNewGroup: {
                 createNewGroupImpl?()
             }))
-            controller.peerSelected = { [weak controller] peer, _ in
-                let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+            controller.peerSelected = { [weak self, weak controller] peer, _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                let text: String
+                if case .user = peerType {
+                    text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationText(peerName, botName).string
+                } else {
+                    var botAdminRights: TelegramChatAdminRights?
+                    switch peerType {
+                    case let .group(group):
+                        botAdminRights = group.botAdminRights
+                    case let .channel(channel):
+                        botAdminRights = channel.botAdminRights
+                    default:
+                        break
+                    }
+                    if let botAdminRights {
+                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(peerName, botName, botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights)).string
+                    } else {
+                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(peerName, botName, botName, peerName).string
+                    }
+                }
                 
-                controller?.dismiss()
+                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: { [weak controller] in
+                    let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+                    controller?.dismiss()
+                })]), in: .window(.root))
             }
             createNewGroupImpl = { [weak controller] in
                 switch peerType {
