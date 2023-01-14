@@ -82,7 +82,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         return hasPremium
     }
-
+    
     static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction?, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool) -> Signal<InputData, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -196,7 +196,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }
                     
                     let animationData: EntityKeyboardAnimationData
-
+                    
                     if let thumbnail = featuredStickerPack.info.thumbnail {
                         let type: EntityKeyboardAnimationData.ItemType
                         if item.file.isAnimatedSticker {
@@ -206,7 +206,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         } else {
                             type = .still
                         }
-
+                        
                         animationData = EntityKeyboardAnimationData(
                             id: .stickerPackThumbnail(featuredStickerPack.info.id),
                             type: type,
@@ -218,7 +218,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     } else {
                         animationData = EntityKeyboardAnimationData(file: item.file)
                     }
-
+                    
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
                         content: .animation(animationData),
@@ -652,7 +652,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     availableGifSearchEmojies.append(EntityKeyboardComponent.GifSearchEmoji(emoji: reaction, file: file, title: title))
                 }
             }
-
+                        
             return InputData(
                 emoji: emoji,
                 stickers: stickers,
@@ -673,7 +673,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private let emojiSearchDisposable = MetaDisposable()
     private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
-
+    
     private let controllerInteraction: ChatControllerInteraction?
     
     private var inputNodeInteraction: ChatMediaInputNodeInteraction?
@@ -687,7 +687,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             self.followsDefaultHeight = !self.isEmojiSearchActive
         }
     }
-
+    
     var externalTopPanelContainerImpl: PagerExternalTopPanelContainer?
     override var externalTopPanelContainer: UIView? {
         return self.externalTopPanelContainerImpl
@@ -943,7 +943,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private weak var currentUndoOverlayController: UndoOverlayController?
     
-
+    
     init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
@@ -956,7 +956,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         super.init()
         
         self.currentInputData = self.processInputData(inputData: self.currentInputData)
-
+        
         self.topBackgroundExtension = 34.0
         self.followsDefaultHeight = true
         
@@ -979,7 +979,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             switch attribute {
                             case let .CustomEmoji(_, displayText, _):
                                 text = displayText
-
+                                
                                 var packId: ItemCollectionId?
                                 if let id = groupId.base as? ItemCollectionId {
                                     packId = id
@@ -1024,7 +1024,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                         guard let peer = peer, let navigationController = controllerInteraction.navigationController() else {
                                             return
                                         }
-
+                                        
                                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
                                             navigationController: navigationController,
                                             chatController: nil,
@@ -1169,15 +1169,15 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-
+                
                 if query.isEmpty {
                     strongSelf.emojiSearchDisposable.set(nil)
                     strongSelf.emojiSearchResult.set(.single(nil))
                 } else {
                     let context = strongSelf.context
-
+                    
                     var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
                     if !languageCode.lowercased().hasPrefix("en") {
                         signal = signal
@@ -1191,7 +1191,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             )
                         }
                     }
-
+                
                     let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                     |> map { peer -> Bool in
                         guard case let .user(user) = peer else {
@@ -1200,7 +1200,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         return user.isPremium
                     }
                     |> distinctUntilChanged
-
+                    
                     let resultSignal = signal
                     |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                         return combineLatest(
@@ -1211,21 +1211,21 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         |> take(1)
                         |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
                             var result: [(String, TelegramMediaFile?, String)] = []
-
+                            
                             var existingEmoticons = Set<String>()
                             var allEmoticonsList: [String] = []
                             var allEmoticons: [String: String] = [:]
                             for keyword in keywords {
                                 for emoticon in keyword.emoticons {
                                     allEmoticons[emoticon] = keyword.keyword
-
+                                    
                                     if !existingEmoticons.contains(emoticon) {
                                         allEmoticonsList.append(emoticon)
                                         existingEmoticons.insert(emoticon)
                                     }
                                 }
                             }
-
+                            
                             for entry in view.entries {
                                 guard let item = entry.item as? StickerPackItem else {
                                     continue
@@ -1245,9 +1245,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     }
                                 }
                             }
-
+                            
                             var items: [EmojiPagerContentComponent.Item] = []
-
+                            
                             var existingIds = Set<MediaId>()
                             for item in result {
                                 if let itemFile = item.1 {
@@ -1267,7 +1267,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     items.append(item)
                                 }
                             }
-
+                            
                             for emoji in allEmoticonsList {
                                 items.append(EmojiPagerContentComponent.Item(
                                     animationData: nil,
@@ -1278,7 +1278,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     accentTint: false)
                                 )
                             }
-
+                            
                             return [EmojiPagerContentComponent.ItemGroup(
                                 supergroupId: "search",
                                 groupId: "search",
@@ -1296,7 +1296,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             )]
                         }
                     }
-
+                    
                     strongSelf.emojiSearchDisposable.set((resultSignal
                     |> delay(0.15, queue: .mainQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] result in
@@ -1314,7 +1314,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalExpansionView: nil,
             useOpaqueTheme: false
         )
-
+        
         var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
         if let controllerInteraction = controllerInteraction {
             stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
@@ -1547,7 +1547,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
                 inputData.emoji = inputData.emoji.withUpdatedItemGroups(itemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults)
             }
-
+            
             var transition: Transition = .immediate
             var useAnimation = false
             
@@ -1699,7 +1699,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
-
+    
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
         self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded)
         
@@ -1876,11 +1876,11 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return nil
             }
         }
-
+        
         let stableOrder = self.stableReorderableGroupOrder[category] ?? nextIds
-
+        
         var updatedGroups: [EmojiPagerContentComponent.ItemGroup] = []
-
+        
         for group in itemGroups {
             if !(group.groupId.base is ItemCollectionId) {
                 if group.groupId != AnyHashable("static") {
@@ -1908,7 +1908,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 updatedGroups.append(group)
             }
         }
-
+        
         let updatedIds = updatedGroups.compactMap { group -> ItemCollectionId? in
             if group.isEmbedded {
                 return nil
@@ -1924,10 +1924,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
 
         self.stableReorderableGroupOrder[category] = updatedIds
-
+        
         return updatedGroups
     }
-
+    
     private func processInputData(inputData: InputData) -> InputData {
         return InputData(
             emoji: inputData.emoji.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.itemGroups), itemContentUniqueId: inputData.emoji.itemContentUniqueId, emptySearchResults: inputData.emoji.emptySearchResults),
@@ -1938,7 +1938,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             availableGifSearchEmojies: inputData.availableGifSearchEmojies
         )
     }
-
+    
     private func reorderItems(category: EntityKeyboardComponent.ReorderCategory, items: [EntityKeyboardTopPanelComponent.Item]) {
         var currentIds: [ItemCollectionId] = []
         for item in items {
@@ -1954,9 +1954,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         case .emoji:
             namespace = Namespaces.ItemCollection.CloudEmojiPacks
         }
-
+        
         self.stableReorderableGroupOrder.removeValue(forKey: category)
-
+        
         let _ = (self.context.engine.stickers.reorderStickerPacks(namespace: namespace, itemIds: currentIds)
         |> deliverOnMainQueue).start(completed: { [weak self] in
             guard let strongSelf = self else {
@@ -1965,7 +1965,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             strongSelf.performLayout(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
         })
     }
-
+    
     private func openGifContextMenu(item: GifPagerContentComponent.Item, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
         let file = item
         
@@ -2269,7 +2269,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             navigationController: {
                 return nil
             },
-            requestUpdate: { _ in
+            requestUpdate: { _ in   
             },
             updateSearchQuery: { _, _ in
             },
@@ -2283,7 +2283,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
+        let _ = (EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> take(1)).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2391,16 +2391,16 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
     private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let chatPeerId: EnginePeer.Id?
-
+    
     private var peekRecognizer: PeekControllerGestureRecognizer?
     private weak var peekController: PeekController?
-
+    
     init(context: AccountContext, controllerInteraction: ChatControllerInteraction, chatPeerId: EnginePeer.Id?) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.chatPeerId = chatPeerId
     }
-
+    
     func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?) {
         if self.peekRecognizer == nil {
             let peekRecognizer = PeekControllerGestureRecognizer(contentAtPoint: { [weak self, weak view] point in
@@ -2410,12 +2410,12 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                 guard let (groupId, itemLayer, file) = itemAtPoint(point) else {
                     return nil
                 }
-
+                
                 var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
                 if let id = groupId.base as? ItemCollectionId {
                     bubbleUpEmojiOrStickersets.append(id)
                 }
-
+                
                 let context = strongSelf.context
                 let accountPeerId = context.account.peerId
                 return combineLatest(
@@ -2434,16 +2434,16 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                         return nil
                     }
                     var menuItems: [ContextMenuItem] = []
-
+                    
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
+                    
                     let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void = { fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
                         guard let strongSelf = self else {
                             return
                         }
                         let _ = strongSelf.controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
                     }
-
+                    
                     if let chatPeerId = strongSelf.chatPeerId {
                         if chatPeerId != strongSelf.context.account.peerId && chatPeerId.namespace != Namespaces.Peer.SecretChat  {
                             menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
@@ -2459,7 +2459,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 f(.default)
                             })))
                         }
-
+                    
                         menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
@@ -2473,18 +2473,18 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             f(.default)
                         })))
                     }
-
+                    
                     menuItems.append(
                         .action(ContextMenuActionItem(text: isStarred ? presentationData.strings.Stickers_RemoveFromFavorites : presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                             f(.default)
-
+                            
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let _ = (context.engine.stickers.toggleStickerSaved(file: file, saved: !isStarred)
                             |> deliverOnMainQueue).start(next: { result in
                                 guard let strongSelf = self else {
                                     return
                                 }
-
+                                
                                 switch result {
                                 case .generic:
                                     strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
@@ -2516,11 +2516,11 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.default)
-
+                            
                             guard let strongSelf = self else {
                                 return
                             }
-
+                            
                             loop: for attribute in file.attributes {
                             switch attribute {
                             case let .CustomEmoji(_, _, packReference), let .Sticker(_, packReference, _):
@@ -2529,7 +2529,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                         sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                         return true
                                     })
-
+                                    
                                     strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                     strongSelf.controllerInteraction.presentController(controller, nil)
                                 }
@@ -2540,11 +2540,11 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                         }
                         }))
                     )
-
+                    
                     guard let view = view else {
                         return nil
                     }
-
+                    
                     return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
                         guard let strongSelf = self else {
                             return
@@ -2557,7 +2557,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                 guard let strongSelf = self else {
                     return nil
                 }
-
+                
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
                     return (sourceView, sourceRect)
@@ -2574,7 +2574,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 let _ = strongSelf
             })
             self.peekRecognizer = peekRecognizer

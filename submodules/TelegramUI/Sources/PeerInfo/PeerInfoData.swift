@@ -188,9 +188,10 @@ final class PeerInfoScreenData {
     let invitations: PeerExportedInvitationsState?
     let requests: PeerInvitationImportersState?
     let requestsContext: PeerInvitationImportersContext?
+    let showPeerId: Bool
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
-    let showPeerId: Bool
+    
     init(
         peer: Peer?,
         chatPeer: Peer?,
@@ -208,9 +209,9 @@ final class PeerInfoScreenData {
         invitations: PeerExportedInvitationsState?,
         requests: PeerInvitationImportersState?,
         requestsContext: PeerInvitationImportersContext?,
+        showPeerId: Bool,
         threadData: MessageHistoryThreadData?,
         appConfiguration: AppConfiguration?
-        showPeerId: Bool
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -228,9 +229,9 @@ final class PeerInfoScreenData {
         self.invitations = invitations
         self.requests = requests
         self.requestsContext = requestsContext
+        self.showPeerId = showPeerId
         self.threadData = threadData
         self.appConfiguration = appConfiguration
-        self.showPeerId = showPeerId
     }
 }
 
@@ -485,9 +486,9 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             invitations: nil,
             requests: nil,
             requestsContext: nil,
+            showPeerId: ptgSettings.showPeerId,
             threadData: nil,
             appConfiguration: appConfiguration
-            showPeerId: ptgSettings.showPeerId
         )
     }
 }
@@ -514,9 +515,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitations: nil,
                 requests: nil,
                 requestsContext: nil,
+                showPeerId: false,
                 threadData: nil,
                 appConfiguration: nil
-                showPeerId: false
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -648,9 +649,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: nil,
                     requests: nil,
                     requestsContext: nil,
+                    showPeerId: ptgSettings.showPeerId,
                     threadData: nil,
                     appConfiguration: nil
-                    showPeerId: ptgSettings.showPeerId
                 )
             }
         case .channel:
@@ -727,9 +728,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
+                    showPeerId: ptgSettings.showPeerId,
                     threadData: nil,
                     appConfiguration: nil
-                    showPeerId: ptgSettings.showPeerId
                 )
             }
         case let .group(groupId):
@@ -847,7 +848,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             } else {
                 threadData = .single(nil)
             }
-
+            
             return combineLatest(queue: .mainQueue(),
                 context.account.viewTracker.peerView(groupId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: groupId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
@@ -858,11 +859,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
+                context.sharedContext.ptgSettings,
                 threadData,
-                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
-                context.sharedContext.ptgSettings
+                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, ptgSettings, threadData, preferencesView -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -902,16 +903,16 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         requestsStatePromise.set(requestsContext.state |> map(Optional.init))
                     }
                 }
-
+                
                 var notificationSettings: TelegramPeerNotificationSettings?
                 if let threadData = threadData {
                     notificationSettings = threadData.notificationSettings
                 } else {
                     notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings
                 }
-
+                
                 let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
-
+              
                 return PeerInfoScreenData(
                     peer: peerView.peers[groupId],
                     chatPeer: peerView.peers[groupId],
@@ -929,9 +930,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
+                    showPeerId: ptgSettings.showPeerId,
                     threadData: threadData,
                     appConfiguration: appConfiguration
-                    showPeerId: ptgSettings.showPeerId
                 )
             }
         }
@@ -1134,7 +1135,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             case .group:
                 hasDiscussion = false
             }
-
+            
             let canLeave: Bool
             switch channel.participationStatus {
             case .member:
@@ -1142,14 +1143,14 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             default:
                 canLeave = false
             }
-
+            
             let canViewStats: Bool
             if let cachedChannelData = cachedData as? CachedChannelData {
                 canViewStats = cachedChannelData.flags.contains(.canViewStats)
             } else {
                 canViewStats = false
             }
-
+            
             if hasVoiceChat || canStartVoiceChat {
                 result.append(.voiceChat)
             }
@@ -1161,18 +1162,18 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             if canLeave {
                 result.append(.leave)
             }
-
+            
             var canReport = true
             if channel.adminRights != nil || channel.flags.contains(.isCreator)  {
                 canReport = false
             }
-
+            
             var hasMore = false
             if canReport || canViewStats {
                 hasMore = true
                 result.append(.more)
             }
-
+            
             if hasDiscussion && isExpanded && result.count >= 5 {
                 result.removeAll(where: { $0 == .search })
                 if !hasMore {
@@ -1180,7 +1181,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                     result.append(.more)
                 }
             }
-
+            
             if canLeave && isExpanded && (canManage || result.count >= 5) {
                 result.removeAll(where: { $0 == .leave })
                 if !hasMore {

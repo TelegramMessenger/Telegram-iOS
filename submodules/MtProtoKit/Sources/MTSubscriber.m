@@ -67,7 +67,7 @@
 - (void)_markTerminatedWithoutDisposal
 {
     id<MTDisposable> disposable = nil;
-
+    
     os_unfair_lock_lock(&_lock);
     MTSubscriberBlocks *blocks = nil;
     if (!_terminated)
@@ -77,7 +77,7 @@
         
         disposable = _disposable;
         _disposable = nil;
-
+        
         _terminated = true;
     }
     os_unfair_lock_unlock(&_lock);
@@ -85,7 +85,7 @@
     if (blocks) {
         blocks = nil;
     }
-
+    
     if (disposable) {
         disposable = nil;
     }
@@ -119,7 +119,7 @@
         
         disposable = _disposable;
         _disposable = nil;
-
+        
         _terminated = true;
     }
     os_unfair_lock_unlock(&_lock);
@@ -144,7 +144,7 @@
         
         disposable = _disposable;
         _disposable = nil;
-
+        
         _terminated = true;
     }
     os_unfair_lock_unlock(&_lock);

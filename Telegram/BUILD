@@ -539,8 +539,8 @@ plist_fragment(
         unrestricted_voip_fragment,
         carplay_fragment,
         communication_notifications_fragment,
-        signin_fragment,
         filtering_notifications_fragment,
+        signin_fragment,
     ])
 )
 
@@ -611,6 +611,16 @@ plist_fragment(
 )
 
 plist_fragment(
+    name = "PTVersionInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>PTelegramVersion</key>
+    <string>{partisanVersion}</string>
+    """
+)
+
+plist_fragment(
     name = "RequiredDeviceCapabilitiesPlist",
     extension = "plist",
     template =
@@ -619,16 +629,6 @@ plist_fragment(
     <array>
         <string>arm64</string>
     </array>
-    """
-)
-
-plist_fragment(
-    name = "PTVersionInfoPlist",
-    extension = "plist",
-    template =
-    """
-    <key>PTelegramVersion</key>
-    <string>{partisanVersion}</string>
     """
 )
 

@@ -494,12 +494,12 @@ public class Window1 {
                 if case .regular = strongSelf.windowLayout.metrics.widthClass {
                     isTablet = true
                 }
-
+                
                 var keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
                 if isTablet && keyboardFrame.isEmpty {
                     return
                 }
-
+                                
                 if #available(iOSApplicationExtension 14.2, iOS 14.2, *), UIAccessibility.prefersCrossFadeTransitions {
                 } else if let keyboardView = strongSelf.statusBarHost?.keyboardView {
                     if keyboardFrame.width.isEqual(to: keyboardView.bounds.width) && keyboardFrame.height.isEqual(to: keyboardView.bounds.height) && keyboardFrame.minX.isEqual(to: keyboardView.frame.minX) {
@@ -564,7 +564,7 @@ public class Window1 {
                 if strongSelf.hostView.containerView is ChildWindowHostView, !isTablet {
                     keyboardHeight += 27.0
                 }
-
+                
                 print("keyboardHeight: \(keyboardHeight) (raw: \(keyboardFrame))")
             
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
@@ -684,7 +684,7 @@ public class Window1 {
     
     private func updateBadgeVisibility() {
         /*
-        let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+        let badgeIsHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
         if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
             Queue.mainQueue().after(0.4) {
                 let badgeShouldBeHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
@@ -1350,7 +1350,7 @@ public class Window1 {
             self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = false
         }
     }
-
+    
     public var keyboardHeight: CGFloat {
         return self.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0
     }

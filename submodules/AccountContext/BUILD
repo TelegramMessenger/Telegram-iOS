@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        
         "//submodules/PtgSettings:PtgSettings",
     ],
     visibility = [

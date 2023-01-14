@@ -8479,6 +8479,7 @@ Sorry for the inconvenience.";
 "MessageTimer.LargeShortYears_1" = "%@y";
 "MessageTimer.LargeShortYears_any" = "%@y";
 
+
 "Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
 
 "PasscodeSettings.BadAttempts" = "Bad Passcode Attempts";

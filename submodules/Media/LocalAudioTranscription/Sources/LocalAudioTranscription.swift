@@ -23,10 +23,10 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         guard let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: locale)), speechRecognizer.isAvailable else {
                             subscriber.putNext(nil)
                             subscriber.putCompletion()
-
+                            
                             return
                         }
-
+                        
                         speechRecognizer.defaultTaskHint = .unspecified
                         
                         let tempFilePath = NSTemporaryDirectory() + "\(UInt64.random(in: 0 ... UInt64.max)).m4a"
@@ -36,7 +36,6 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         if #available(iOS 16.0, *) {
                             request.addsPunctuation = true
                         }
-                        request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
                         request.shouldReportPartialResults = true
                         
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
@@ -45,14 +44,14 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                                 
                                 if result.isFinal {
                                     subscriber.putCompletion()
-
+                                    
                                     let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                                 }
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
                                 
                                 subscriber.putError(error!)
-
+                                
                                 let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                             }
                         })

@@ -14,6 +14,7 @@ import MeshAnimationCache
 import InAppPurchaseManager
 import AnimationCache
 import MultiAnimationRenderer
+
 import PtgSettings
 import PtgSecretPasscodes
 
@@ -189,15 +190,15 @@ public enum ResolvedUrlSettingsSection {
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {
     public var rawValue: UInt32
-
+    
     public init(rawValue: UInt32) {
         self.rawValue = rawValue
     }
-
+    
     public init() {
         self.rawValue = 0
     }
-
+    
     public static let users = ResolvedBotChoosePeerTypes(rawValue: 1)
     public static let bots = ResolvedBotChoosePeerTypes(rawValue: 2)
     public static let groups = ResolvedBotChoosePeerTypes(rawValue: 4)
@@ -398,7 +399,7 @@ public enum ChatControllerActivateInput {
 public struct ChatNavigationStackItem: Hashable {
     public var peerId: EnginePeer.Id
     public var threadId: Int64?
-
+    
     public init(peerId: EnginePeer.Id, threadId: Int64?) {
         self.peerId = peerId
         self.threadId = threadId
@@ -409,7 +410,7 @@ public final class NavigateToChatControllerParams {
     public enum Location {
         case peer(EnginePeer)
         case replyThread(ChatReplyThreadMessage)
-
+        
         public var peerId: EnginePeer.Id {
             switch self {
             case let .peer(peer):
@@ -418,7 +419,7 @@ public final class NavigateToChatControllerParams {
                 return message.messageId.peerId
             }
         }
-
+        
         public var threadId: Int64? {
             switch self {
             case .peer:
@@ -427,7 +428,7 @@ public final class NavigateToChatControllerParams {
                 return Int64(message.messageId.id)
             }
         }
-
+        
         public var asChatLocation: ChatLocation {
             switch self {
             case let .peer(peer):
@@ -437,7 +438,7 @@ public final class NavigateToChatControllerParams {
             }
         }
     }
-
+    
     public let navigationController: NavigationController
     public let chatController: ChatController?
     public let context: AccountContext
@@ -750,7 +751,7 @@ public protocol SharedAccountContext: AnyObject {
     var currentPtgSettings: Atomic<PtgSettings> { get }
     var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> { get }
     var currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes> { get }
-
+    
     var applicationBindings: TelegramApplicationBindings { get }
     
     var mediaManager: MediaManager { get }
@@ -808,16 +809,16 @@ public protocol SharedAccountContext: AnyObject {
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
     func openAddPeerMembers(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, parentController: ViewController, groupPeer: Peer, selectAddMemberDisposable: MetaDisposable, addMemberDisposable: MetaDisposable)
-
+    
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
-
+    
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
-
+    
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
     
     func navigateToCurrentCall()
@@ -896,22 +897,22 @@ public protocol AccountContext: AnyObject {
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
     var inAppPurchaseManager: InAppPurchaseManager? { get }
-
+    
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
     var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
-
+    
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
     
     var animationCache: AnimationCache { get }
     var animationRenderer: MultiAnimationRenderer { get }
-
+    
     var animatedEmojiStickers: [String: [StickerPackItem]] { get }
-
+    
     var userLimits: EngineConfiguration.UserLimits { get }
-
+    
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
     
@@ -923,7 +924,7 @@ public protocol AccountContext: AnyObject {
     func scheduleGroupCall(peerId: PeerId)
     func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
-
+    
     var inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError> { get }
     var currentInactiveSecretChatPeerIds: Atomic<Set<PeerId>> { get }
 }
@@ -932,13 +933,13 @@ public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
         return PremiumConfiguration(isPremiumDisabled: true)
     }
-
+    
     public let isPremiumDisabled: Bool
-
+    
     fileprivate init(isPremiumDisabled: Bool) {
         self.isPremiumDisabled = isPremiumDisabled
     }
-
+    
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
         if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
             return PremiumConfiguration(isPremiumDisabled: value)
@@ -952,15 +953,15 @@ public struct AntiSpamBotConfiguration {
     public static var defaultValue: AntiSpamBotConfiguration {
         return AntiSpamBotConfiguration(antiSpamBotId: nil, minimumGroupParticipants: 100)
     }
-
+    
     public let antiSpamBotId: EnginePeer.Id?
     public let minimumGroupParticipants: Int32
-
+    
     fileprivate init(antiSpamBotId: EnginePeer.Id?, minimumGroupParticipants: Int32) {
         self.antiSpamBotId = antiSpamBotId
         self.minimumGroupParticipants = minimumGroupParticipants
     }
-
+    
     public static func with(appConfiguration: AppConfiguration) -> AntiSpamBotConfiguration {
         if let data = appConfiguration.data, let botIdString = data["telegram_antispam_user_id"] as? String, let botIdValue = Int64(botIdString), let groupSize = data["telegram_antispam_group_size_min"] as? Double {
             return AntiSpamBotConfiguration(antiSpamBotId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(botIdValue)), minimumGroupParticipants: Int32(groupSize))

@@ -28,6 +28,7 @@ import TextSelectionNode
 import AudioTranscriptionPendingIndicatorComponent
 import UndoUI
 import TelegramNotices
+
 import PresentationDataUtils
 import NaturalLanguage
 
@@ -212,7 +213,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
     var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
-
+    
     private var context: AccountContext?
     private var message: Message?
     private var arguments: Arguments?
@@ -235,7 +236,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var isWaitingForCollapse: Bool = false
     
     private var hapticFeedback: HapticFeedback?
-
+    
     override init() {
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -365,14 +366,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let context = self.context, let message = self.message else {
             return .single(nil)
         }
-
+        
         // checking previous text messages to detect language
         // prefer to analyze messages of the same author, fallback to others
         // if message is forwarded, messages analyzed in source chat
-
+        
         let messageId: MessageId
         let author: PeerId?
-
+        
         if let source = message.attributes.first(where: { $0 is SourceReferenceMessageAttribute }) as? SourceReferenceMessageAttribute {
             messageId = source.messageId
             author = message.forwardInfo?.author?.id
@@ -380,14 +381,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             messageId = message.id
             author = message.author?.id
         }
-
+        
         return context.account.postbox.transaction { transaction -> String? in
             if #available(iOS 12.0, *) {
                 let recognizer = NLLanguageRecognizer()
                 var authorProcessedTextLength = 0
                 var nonAuthorStrings: [String] = []
                 var nonAuthorTextLength = 0
-
+                
                 transaction.scanMessages(peerId: messageId.peerId, namespace: messageId.namespace, fromId: messageId, includeFrom: true, limit: 50) { message in
                     var messageText = message.text
                     if let textEntities = message.textEntitiesAttribute?.entities, !textEntities.isEmpty {
@@ -428,12 +429,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     return true
                 }
-
+                
                 var hypotheses = recognizer.languageHypotheses(withMaximum: 1)
                 if let dominant = hypotheses.first, dominant.value >= 0.6 {
                     return dominant.key.rawValue
                 }
-
+                
                 recognizer.reset()
                 for string in nonAuthorStrings {
                     recognizer.processString(string)
@@ -442,28 +443,28 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         return dominant.key.rawValue
                     }
                 }
-
+                
                 hypotheses = recognizer.languageHypotheses(withMaximum: 1)
                 if let dominant = hypotheses.first, dominant.value >= 0.6 {
                     return dominant.key.rawValue
                 }
             }
-
+            
             return nil
         }
     }
-
+    
     private func transcribe() {
         guard let arguments = self.arguments, let context = self.context, let message = self.message, let presentationData = self.presentationData else {
             return
         }
-
-        guard arguments.associatedData.isPremium else {
+        
+        guard arguments.associatedData.isPremium || context.sharedContext.immediateExperimentalUISettings.localTranscription else {
             if self.hapticFeedback == nil {
                 self.hapticFeedback = HapticFeedback()
             }
             self.hapticFeedback?.impact(.medium)
-
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                 if case .undo = action {
@@ -476,7 +477,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         controller?.replace(with: c)
                     }
                     arguments.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
-
+                    
                     let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: context.sharedContext.accountManager).start()
                 }
                 return false })
@@ -615,7 +616,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let currentMessage = self.message
         let audioTranscriptionState = self.audioTranscriptionState
         let forcedAudioTranscriptionText = self.forcedAudioTranscriptionText
-
+        
         return { arguments in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 let titleFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
@@ -672,13 +673,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                 }
-
+                                
                 var isAudio = false
                 var audioWaveform: AudioWaveform?
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 var isConsumed: Bool?
-
+                
                 var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
@@ -693,17 +694,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         break
                     }
                 }
-
+                                
                 var candidateTitleString: NSAttributedString?
                 var candidateDescriptionString: NSAttributedString?
-
+                
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 let isInstantVideo = arguments.file.isInstantVideo
                 for attribute in arguments.file.attributes {
                     if case let .Video(videoDuration, _, flags) = attribute, flags.contains(.instantRoundVideo) {
                         isAudio = true
                         isVoice = true
-
+                        
                         let durationString = stringForDuration(Int32(videoDuration))
                         candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor: messageTheme.fileDurationColor)
                     }
@@ -711,7 +712,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         isAudio = true
                         
                         let voice = voice || isInstantVideo
-
+                        
                         if let forcedResourceStatus = arguments.forcedResourceStatus, statusUpdated {
                             updatedStatusSignal = .single((forcedResourceStatus, nil))
                         } else if let currentUpdatedStatusSignal = updatedStatusSignal {
@@ -757,7 +758,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     let waveformBase64 = "DAAOAAkACQAGAAwADwAMABAADQAPABsAGAALAA0AGAAfABoAHgATABgAGQAYABQADAAVABEAHwANAA0ACQAWABkACQAOAAwACQAfAAAAGQAVAAAAEwATAAAACAAfAAAAHAAAABwAHwAAABcAGQAAABQADgAAABQAHwAAAB8AHwAAAAwADwAAAB8AEwAAABoAFwAAAB8AFAAAAAAAHwAAAAAAHgAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAAAA="
                     audioWaveform = AudioWaveform(bitstream: Data(base64Encoded: waveformBase64)!, bitsPerSample: 5)
                 }
-
+                                
                 var titleString: NSAttributedString?
                 var descriptionString: NSAttributedString?
                 
@@ -802,7 +803,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var textString: NSAttributedString?
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
-                let displayTranscribe: Bool
+                var displayTranscribe: Bool
+                var displayingTranscribeDueToLocalTranscription = false
                 if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                     if arguments.associatedData.isPremium {
                         displayTranscribe = true
@@ -811,16 +813,22 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             displayTranscribe = true
                         } else if arguments.incoming && isConsumed == false && arguments.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
                             displayTranscribe = true
+                        } else if arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription {
+                            displayTranscribe = true
+                            displayingTranscribeDueToLocalTranscription = true
                         } else {
                             displayTranscribe = false
                         }
+                    } else if arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription {
+                        displayTranscribe = true
+                        displayingTranscribeDueToLocalTranscription = true
                     } else {
                         displayTranscribe = false
                     }
                 } else {
                     displayTranscribe = false
                 }
-
+                
                 let transcribedText = forcedAudioTranscriptionText ?? transcribedText(message: arguments.message)
                 
                 switch audioTranscriptionState {
@@ -1059,7 +1067,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     // need to get file status first time (before self.resourceStatus is set), to know whether to show transcribe button; don't show button if local transcription to be used but file is not downloaded.
                     let maybeFetchVoiceStatus: (@escaping (Bool, ListViewItemUpdateAnimation, ListViewItemApply?, MediaResourceStatus?) -> Void) -> ((Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void) = { f in
                         return { [weak self] synchronousLoads, animation, info in
-                            if isVoice && !arguments.associatedData.isPremium && arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription && !messageHasCompleteTransription(arguments.message) && self?.resourceStatus == nil && arguments.forcedResourceStatus == nil && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                            if displayingTranscribeDueToLocalTranscription && !messageHasCompleteTransription(arguments.message) && self?.resourceStatus == nil && arguments.forcedResourceStatus == nil {
                                 let _ = (messageMediaFileStatus(context: arguments.context, messageId: arguments.message.id, file: arguments.file)
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { fetchStatus in
@@ -1279,6 +1287,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             if isVoice {
                                 var scrubbingFrame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 18.0))
+                                
+                                if displayingTranscribeDueToLocalTranscription {
+                                    displayTranscribe = messageHasCompleteTransription(arguments.message) || strongSelf.resourceStatus?.fetchStatus ?? voiceFetchStatusFirstTime == .Local
+                                }
+                                
                                 if displayTranscribe {
                                     scrubbingFrame.size.width -= 30.0 + 4.0
                                 }
@@ -1364,7 +1377,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         environment: {},
                                         containerSize: CGSize(width: 30.0, height: 30.0)
                                     )
-
+                                    
                                     let audioTranscriptionButtonFrame = CGRect(origin: CGPoint(x: boundingWidth - 30.0 + 3.0, y: -6.0), size: audioTranscriptionButtonSize)
                                     if added {
                                         audioTranscriptionButton.layer.frame = audioTranscriptionButtonFrame
@@ -1429,7 +1442,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                             strongSelf.actualFetchStatus = actualFetchStatus
                                             strongSelf.updateStatus(animated: !synchronousLoads || !firstTime)
                                             // update layout to show transcribe button after voice message was downloaded
-                                            if !firstTime && isVoice && !arguments.associatedData.isPremium && arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription && !messageHasCompleteTransription(arguments.message) && status.fetchStatus == .Local && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                                            if !firstTime && displayingTranscribeDueToLocalTranscription && !messageHasCompleteTransription(arguments.message) && status.fetchStatus == .Local {
                                                 strongSelf.requestUpdateLayout(true)
                                             }
                                         }
@@ -2008,9 +2021,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             view.animateIn()
         }
     }
-
+    
     func animateTo(_ node: ChatMessageInteractiveInstantVideoNode) {
-
+        
     }
 }
 

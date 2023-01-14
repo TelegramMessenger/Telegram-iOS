@@ -43,14 +43,22 @@ public enum ContactMultiselectionControllerMode {
         public var additionalCategories: ContactMultiselectionControllerAdditionalCategories?
         public var chatListFilters: [ChatListFilter]?
         public var displayAutoremoveTimeout: Bool
-
+        public var chatListNodeFilter: ChatListFilter?
+        public var chatListNodePeersFilter: ChatListNodePeersFilter?
+        public var omitTokenList: Bool
+        public var inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>?
+        
         public init(
             title: String,
             searchPlaceholder: String,
             selectedChats: Set<PeerId>,
             additionalCategories: ContactMultiselectionControllerAdditionalCategories?,
             chatListFilters: [ChatListFilter]?,
-            displayAutoremoveTimeout: Bool = false
+            displayAutoremoveTimeout: Bool = false,
+            chatListNodeFilter: ChatListFilter? = nil,
+            chatListNodePeersFilter: ChatListNodePeersFilter? = nil,
+            omitTokenList: Bool = false,
+            inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>? = nil
         ) {
             self.title = title
             self.searchPlaceholder = searchPlaceholder
@@ -58,9 +66,13 @@ public enum ContactMultiselectionControllerMode {
             self.additionalCategories = additionalCategories
             self.chatListFilters = chatListFilters
             self.displayAutoremoveTimeout = displayAutoremoveTimeout
+            self.chatListNodeFilter = chatListNodeFilter
+            self.chatListNodePeersFilter = chatListNodePeersFilter
+            self.omitTokenList = omitTokenList
+            self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
         }
     }
-
+    
     case groupCreation
     case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation

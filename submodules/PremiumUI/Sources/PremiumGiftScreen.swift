@@ -30,7 +30,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     let present: (ViewController) -> Void
     let selectProduct: (String) -> Void
     let buy: () -> Void
-
+    
     init(context: AccountContext, peer: EnginePeer?, products: [PremiumGiftProduct]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
         self.context = context
         self.peer = peer
@@ -57,24 +57,24 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         
         return true
     }
-
+    
     final class State: ComponentState {
         private let context: AccountContext
-
+    
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
         private(set) var promoConfiguration: PremiumPromoConfiguration?
-
+        
         private var stickersDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
-
+        
         var price: String?
-
+        
         init(context: AccountContext) {
             self.context = context
-
+            
             super.init()
-
+            
             self.disposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Configuration.App(),
                 TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
@@ -84,7 +84,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                     strongSelf.configuration = PremiumIntroConfiguration.with(appConfiguration: appConfiguration)
                     strongSelf.promoConfiguration = promoConfiguration
                     strongSelf.updated(transition: .immediate)
-
+                    
 //                    if let identifier = source.identifier {
 //                        var jsonString: String = "{"
 //                        jsonString += "\"source\": \"\(identifier)\","
@@ -104,15 +104,15 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
 //                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
 //                        }
 //                    }
-
+                    
                     for (_, video) in promoConfiguration.videos {
                         strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
                     }
                 }
             })
-
+            
             let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
-
+            
             let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
             self.stickersDisposable = (self.context.account.postbox.combinedView(keys: [stickersKey])
             |> deliverOnMainQueue).start(next: { [weak self] views in
@@ -132,18 +132,18 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 }
             })
         }
-
+        
         deinit {
             self.disposable?.dispose()
             self.preloadDisposableSet.dispose()
             self.stickersDisposable?.dispose()
         }
     }
-
+    
     func makeState() -> State {
         return State(context: self.context)
     }
-
+        
     static var body: Body {
         let overscroll = Child(Rectangle.self)
         let fade = Child(RoundedRectangle.self)
@@ -197,7 +197,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let titleColor = theme.list.itemPrimaryTextColor
             let subtitleColor = theme.list.itemSecondaryTextColor
             let arrowColor = theme.list.disclosureArrowColor
-
+            
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             
@@ -225,7 +225,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             size.height += 21.0
             
             var items: [SectionGroupComponent.Item] = []
-
+            
             var i = 0
             if let products = component.products {
                 let gradientColors: [UIColor] = [
@@ -233,7 +233,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                     UIColor(rgb: 0x9a6fff),
                     UIColor(rgb: 0xb36eee)
                 ]
-
+                
                 let shortestOptionPrice: (Int64, NSDecimalNumber)
                 if let product = products.last {
                     shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months)), product.storeProduct.priceValue.dividing(by: NSDecimalNumber(value: product.months)))
@@ -258,15 +258,15 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                     }
                     
                     let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
-
+                    
                     var subtitle = ""
                     var pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
                     pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
-
+                    
                     if discountValue > 0 {
                         subtitle = "**\(defaultPrice)** \(product.price)"
                     }
-
+                   
                     items.append(SectionGroupComponent.Item(
                         AnyComponentWithIdentity(
                             id: product.id,
@@ -316,10 +316,10 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let accountContext = context.component.context
             let present = context.component.present
             let buy = context.component.buy
-
+            
             let price = context.component.products?.first(where: { $0.id == context.component.selectedProductId })?.price
             state.price = price
-
+            
             let gradientColors: [UIColor] = [
                 UIColor(rgb: 0xF27C30),
                 UIColor(rgb: 0xE36850),
@@ -335,7 +335,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54bdff)
             ]
-
+            
             i = 0
             var perksItems: [SectionGroupComponent.Item] = []
             for perk in state.configuration.perks {
@@ -387,7 +387,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         case .emojiStatus:
                             demoSubject = .emojiStatus
                         }
-
+                        
                         var dismissImpl: (() -> Void)?
                         let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .gift(state?.price), order: state?.configuration.perks, buttonText: strings.Premium_Gift_GiftSubscription(state?.price ?? "–").string, isPremium: false)
                         controller.action = {
@@ -401,7 +401,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         dismissImpl = { [weak controller] in
                             controller?.dismiss(animated: true, completion: nil)
                         }
-
+                        
 //                        let controller = PremiumDemoScreen(
 //                            context: accountContext,
 //                            subject: demoSubject,
@@ -416,13 +416,13 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
 //                        }
 //                        present(controller)
 ////                        updateIsFocused(true)
-
+                        
                         addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
                     }
                 ))
                 i += 1
             }
-
+            
             let perksSection = perksSection.update(
                 component: SectionGroupComponent(
                     items: perksItems,
@@ -439,9 +439,9 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 .clipsToBounds(true)
                 .cornerRadius(10.0)
             )
-
+            
             size.height += perksSection.size.height
-
+            
             size.height += 10.0
             size.height += scrollEnvironment.insets.bottom
             
@@ -607,7 +607,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                                     let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
                                     strongSelf.inProgress = false
                                     strongSelf.updateInProgress(false)
-
+                                    
                                     strongSelf.updated(transition: .easeInOut(duration: 0.25))
                                     strongSelf.completion(duration)
                                 }

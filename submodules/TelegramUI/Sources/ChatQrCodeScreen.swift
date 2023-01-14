@@ -1196,10 +1196,6 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.contactDisposable.dispose()
     }
     
-    deinit {
-        self.disposable.dispose()
-    }
-    
     private func enqueueTransition(_ transition: ThemeSettingsThemeItemNodeTransition) {
         self.enqueuedTransitions.append(transition)
         

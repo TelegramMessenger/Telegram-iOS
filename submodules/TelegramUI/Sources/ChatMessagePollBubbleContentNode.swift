@@ -11,6 +11,7 @@ import AccountContext
 import AvatarNode
 import TelegramPresentationData
 import ChatMessageBackground
+
 import PtgForeignAgentNoticeRemoval
 
 func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
@@ -492,7 +493,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private var theme: PresentationTheme?
     
     weak var previousOptionNode: ChatMessagePollOptionNode?
-
+    
     override init() {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.alpha = 0.0
@@ -514,7 +515,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         self.percentageNode.isLayerBacked = true
         
         super.init()
-
+                
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.resultBarNode)
@@ -531,13 +532,13 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         strongSelf.highlightedBackgroundNode.frame = strongSelf.view.convert(strongSelf.highlightedBackgroundNode.frame, to: backdropNode.view)
                         backdropNode.addSubnode(strongSelf.highlightedBackgroundNode)
                     }
-
+                    
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
-
+                    
                     strongSelf.separatorNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.separatorNode.alpha = 0.0
-
+                    
                     strongSelf.previousOptionNode?.separatorNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.previousOptionNode?.separatorNode.alpha = 0.0
                 } else {
@@ -549,10 +550,10 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                             strongSelf.insertSubnode(strongSelf.highlightedBackgroundNode, at: 0)
                         }
                     })
-
+                    
                     strongSelf.separatorNode.alpha = 1.0
                     strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-
+                    
                     strongSelf.previousOptionNode?.separatorNode.alpha = 1.0
                     strongSelf.previousOptionNode?.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 }
@@ -1136,7 +1137,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     pollText = poll?.text ?? ""
                 }
-
+                
                 let attributedText = NSAttributedString(string: pollText, font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
@@ -1412,7 +1413,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 verticalOffset += size.height
                                 updatedOptionNodes.append(optionNode)
                                 optionNode.isUserInteractionEnabled = canVote && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
-
+                                
                                 if i > 0 {
                                     optionNode.previousOptionNode = updatedOptionNodes[i - 1]
                                 }

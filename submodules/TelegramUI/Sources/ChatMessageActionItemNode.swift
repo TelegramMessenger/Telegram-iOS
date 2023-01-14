@@ -162,12 +162,13 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: item.message, inAssociatedPinnedMessageToo: true) : item.message
+                
                 var forForumOverview = false
                 if item.chatLocation.threadId == nil {
                     forForumOverview = true
                 }
-
-                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
+                
+                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: message_, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
                 for media in item.message.media {
@@ -341,7 +342,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                         strongSelf.insertSubnode(backgroundNode, at: 0)
                                     }
                                 }
-
+                                
                                 if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
                                     strongSelf.backgroundColorNode.isHidden = true
                                 } else {

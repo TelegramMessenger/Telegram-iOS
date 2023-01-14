@@ -115,7 +115,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var suggestedFilters: [ChatListSearchFilter]?
     private let suggestedFiltersDisposable = MetaDisposable()
     private var forumPeer: EnginePeer?
-
+    
     private var shareStatusDisposable: MetaDisposable?
     
     private var stateValue = ChatListSearchContainerNodeSearchState()
@@ -140,7 +140,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if case .chats = initialFilter, case .forum = location {
             initialFilter = .topics
         }
-
+        
         self.context = context
         self.peersFilter = filter
         self.location = location
@@ -158,7 +158,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-
+        
         self.filterContainerNode = ChatListSearchFiltersContainerNode()
         self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, peersFilter: self.peersFilter, location: location, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
         self.paneContainerNode.clipsToBounds = true
@@ -289,7 +289,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         if case .forum = strongSelf.location {
                             isForum = true
                         }
-
+                        
                         filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: !isForum && strongSelf.hasDownloads).map(\.filter)
                     }
                     strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilter?.id, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
@@ -367,7 +367,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             |> mapToSignal { query -> Signal<[EnginePeer], NoError> in
                 if let query = query {
-                    return context.account.postbox.searchPeers(query: query.lowercased())
+                    return context.account.postbox.searchPeers(query: query.lowercased(), inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                     |> map { local -> [EnginePeer] in
                         return Array(local.compactMap { $0.peer }.prefix(10).map(EnginePeer.init))
                     }
@@ -480,7 +480,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 self?.updateSearchOptions(nil)
             })
         }
-
+        
         self._ready.set(self.paneContainerNode.isReady.get()
         |> map { _ in Void() })
     }
@@ -496,19 +496,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     public override func didLoad() {
         super.didLoad()
-
-
+        
+        
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
-
+    
     public override var hasDim: Bool {
         return self.peersFilter.contains(.excludeRecent)
     }
-
+    
     public override var animateBackgroundAppearance: Bool {
         return !self.hasDim
     }
-
+    
     private func updateState(_ f: (ChatListSearchContainerNodeSearchState) -> ChatListSearchContainerNodeSearchState) {
         let state = f(self.stateValue)
         if state != self.stateValue {
@@ -628,7 +628,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
         self.setQuery?(nil, tokens, query ?? "")
     }
-
+    
     @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.cancel?()
@@ -642,7 +642,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.validLayout = (layout, navigationBarHeight)
         
         let topInset = navigationBarHeight
-
+        
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
         transition.updateFrame(node: self.filterContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 6.0), size: CGSize(width: layout.size.width, height: 38.0)))
         
@@ -650,7 +650,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if case .forum = self.location {
             isForum = true
         }
-
+        
         let filters: [ChatListSearchFilter]
         if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
             filters = suggestedFilters
@@ -664,7 +664,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if isFirstTime {
             self.filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
-
+        
         var bottomIntrinsicInset = layout.intrinsicInsets.bottom
         if case .chatList(.root) = self.location {
             if layout.safeInsets.left > overflowInset {
@@ -911,7 +911,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     return []
                 }
                 let isPremium = accountPeer?.isPremium ?? false
-
+                
                 var items: [ContextMenuItem] = []
                 
                 if isCachedValue {
@@ -936,7 +936,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 f(.default)
                                 return
                             }
-
+                            
                             let context = strongSelf.context
                             var replaceImpl: ((ViewController) -> Void)?
                             let controller = PremiumDemoScreen(context: context, subject: .fasterDownload, action: {
@@ -947,12 +947,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 controller?.replace(with: c)
                             }
                             strongSelf.navigationController?.pushViewController(controller, animated: false, completion: {})
-
+                                                                                    
                             f(.default)
                         })))
                         items.append(.separator)
                     }
-
+                    
                     if let downloadResource = downloadResource, !downloadResource.isFirstInList {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_RaisePriority, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Raise"), color: theme.contextMenu.primaryColor)

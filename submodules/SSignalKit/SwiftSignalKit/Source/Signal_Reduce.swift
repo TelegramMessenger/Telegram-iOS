@@ -42,9 +42,8 @@ public enum Passthrough<T> {
     case Some(T)
 }
 
-private final class ReduceQueueState<T, E> : Disposable {
+private final class ReduceQueueState<T, E> {
     var lock = os_unfair_lock()
-    var lock: OSSpinLock = 0
     var executingSignal = false
     var terminated = false
     

@@ -86,6 +86,7 @@ swift_library(
         "//submodules/PeerInfoUI",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/TelegramUI/Components/ChatListTitleView",
+        
         "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
     ],

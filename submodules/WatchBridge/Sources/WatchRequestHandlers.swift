@@ -92,8 +92,8 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                 |> mapToSignal({ context -> Signal<(MessageHistoryView, Bool, PresentationData, Bool), NoError> in
                     if let context = context {
                         return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
-                        |> map { messageHistoryView, _, _ -> (MessageHistoryView, Bool, PresentationData) in
-                            return (messageHistoryView, peerId == context.account.peerId, context.sharedContext.currentPresentationData.with { $0 })
+                        |> map { messageHistoryView, _, _ -> (MessageHistoryView, Bool, PresentationData, Bool) in
+                            return (messageHistoryView, peerId == context.account.peerId, context.sharedContext.currentPresentationData.with { $0 }, context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
                         }
                     } else {
                         return .complete()

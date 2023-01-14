@@ -14,6 +14,7 @@ import ContextUI
 import ChatListSearchItemHeader
 import AnimationCache
 import MultiAnimationRenderer
+
 import PtgForeignAgentNoticeSearchFiltering
 
 private enum ChatListSearchEntryStableId: Hashable {
@@ -150,7 +151,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     private var searchState: SearchMessagesState
     private var matchesOnlyBcOfFAN: Set<MessageId>
     private var loadMorePaused: Bool
-
+    
     private var interaction: ChatListNodeInteraction?
     
     private let listNode: ListView
@@ -177,14 +178,14 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.searchState = searchState
         self.matchesOnlyBcOfFAN = matchesOnlyBcOfFAN
         self.loadMorePaused = loadMorePaused
-
+         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true))
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
-
+        
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.listNode.accessibilityPageScrolledString = { row, count in
@@ -319,13 +320,13 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             guard let strongSelf = self else {
                 return (updatedResult, updatedState, [], false)
             }
-
+            
             var matchesOnlyBcOfFAN = strongSelf.matchesOnlyBcOfFAN
-
+            
             let shouldTryLoadMore: Bool
             if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
                 let alreadyKnownIds = Set(strongSelf.searchResult.messages.lazy.map { $0.id })
-
+                
                 let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: updatedResult.messages.filter { !alreadyKnownIds.contains($0.id) }, query: strongSelf.searchQuery)
                 matchesOnlyBcOfFAN.formUnion(newMatchesOnlyBcOfFAN)
 
@@ -383,7 +384,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))
-
+            
             if shouldTryLoadMore && !updatedResult.completed {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -393,40 +394,40 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             }
         }))
     }
-
+    
     func willShowAgain(loadMorePaused: Bool) {
         self.loadMorePaused = loadMorePaused
-
+        
         self.updateViewEntries()
     }
-
+    
     func externalLoadMoreCompleted(searchResult: SearchMessagesResult, searchState: SearchMessagesState, matchesOnlyBcOfFAN: Set<MessageId>) {
         self.searchResult = searchResult
         self.searchState = searchState
         self.matchesOnlyBcOfFAN = matchesOnlyBcOfFAN
         self.loadMorePaused = false
-
+        
         if self.isVisible {
             self.updateViewEntries()
             self.listNode.visibleBottomContentOffsetChanged(self.listNode.visibleBottomContentOffset())
         }
     }
-
+    
     private func updateViewEntries() {
         guard let interaction = self.interaction else {
             return
         }
-
+        
         let context = self.context
-
+        
         let signal = self.presentationDataPromise.get()
         |> map { [weak self] presentationData -> [ChatListSearchEntry] in
             guard let strongSelf = self else {
                 return []
             }
-
+            
             var entries: [ChatListSearchEntry] = []
-
+            
             for message in strongSelf.searchResult.messages {
                 if strongSelf.matchesOnlyBcOfFAN.contains(message.id) {
                     continue
@@ -439,15 +440,15 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 }
                 entries.append(.message(message, peer, nil, presentationData))
             }
-
+            
             return entries
         }
-
+        
         self.disposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] entries in
             if let strongSelf = self {
                 let previousEntries = strongSelf.previousEntries.swap(entries)
-
+                
                 let firstTime = previousEntries == nil
                 let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)

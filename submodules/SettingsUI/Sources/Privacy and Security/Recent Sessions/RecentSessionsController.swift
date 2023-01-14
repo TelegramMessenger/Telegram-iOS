@@ -466,10 +466,9 @@ private struct RecentSessionsControllerState: Equatable {
 
 private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool, sessionFilter: ((RecentAccountSession) -> Bool)) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
-
+    
     entries.append(.header(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_HeaderInfo))
-
-
+    
     if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
         entries.append(.currentSessionHeader(SortIndex(section: 1, item: 0), presentationData.strings.AuthSessions_CurrentSession))
@@ -477,9 +476,9 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             existingSessionIds.insert(sessionsState.sessions[index].hash)
             entries.append(.currentSession(SortIndex(section: 1, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
-
+        
         let filteredSessions = sessionsState.sessions.filter(sessionFilter)
-
+        
         var hasAddDevice = false
         if filteredSessions.count > 1 || enableQRLogin {
             if filteredSessions.count > 1 {
@@ -502,11 +501,11 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 }
                 entries.append(.pendingSessionsInfo(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
-
+            
             if filteredSessions.count > 1 {
                 entries.append(.otherSessionsHeader(SortIndex(section: 4, item: 0), presentationData.strings.AuthSessions_OtherSessions))
             }
-
+            
 //            if enableQRLogin && !hasAddDevice {
 //                entries.append(.addDevice(SortIndex(section: 4, item: 1), presentationData.strings.AuthSessions_AddDevice))
 //            }
@@ -514,7 +513,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             let sortedSessions: [RecentAccountSession] = filteredSessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
             })
-
+            
             for i in 0 ..< sortedSessions.count {
                 if !existingSessionIds.contains(sortedSessions[i].hash) {
                     existingSessionIds.insert(sortedSessions[i].hash)
@@ -854,9 +853,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         } else {
             title = .text(presentationData.strings.AuthSessions_DevicesTitle)
         }
-
+        
         let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-
+        
         var animateChanges = true
         switch (mode, websites, peers) {
             case (.websites, let websites, let peers):

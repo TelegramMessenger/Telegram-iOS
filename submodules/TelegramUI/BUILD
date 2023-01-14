@@ -349,6 +349,7 @@ swift_library(
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/MediaPasteboardUI:MediaPasteboardUI",
+
         "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgSettings:PtgSettings",
         "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",

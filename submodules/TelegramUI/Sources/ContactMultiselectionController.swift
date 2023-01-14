@@ -30,7 +30,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let mode: ContactMultiselectionControllerMode
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     private let attemptDisabledItemSelection: ((EnginePeer) -> Void)?
-
+    
     private let titleView: CounterContollerTitleView
     
     private var contactsNode: ContactMultiselectionControllerNode {
@@ -54,7 +54,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         return self._result.get()
     }
     private var resultIsSet = false
-
+    
     private var rightNavigationButton: UIBarButtonItem?
     
     var displayProgress: Bool = false {
@@ -535,7 +535,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         case .chats:
             break
         }
-
+        
         if !self.resultIsSet {
             self._result.set(.single(.none))
             self.resultIsSet = true
