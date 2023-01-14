@@ -37,24 +37,6 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
     return false
 }
 
-private func isSecretPasscodeTimedout(timeout: Int32, state: LockState) -> Bool {
-    if let applicationActivityTimestamp = state.applicationActivityTimestamp {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        
-        if bootTimestamp != applicationActivityTimestamp.bootTimestamp {
-            return true
-        }
-        if uptime >= applicationActivityTimestamp.uptime + timeout {
-            return true
-        }
-        
-        return false
-    } else {
-        return true
-    }
-}
-
 public final class AppLockContextImpl: AppLockContext {
     private let rootPath: String
     private let syncQueue = Queue()

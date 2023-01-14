@@ -2598,6 +2598,7 @@ public final class ChatListNode: ListView {
         }
         
         let engine = self.context.engine
+        let inactiveSecretChatPeerIds = self.inactiveSecretChatPeerIds
         return self.context.sharedContext.accountManager.transaction { transaction -> Signal<EngineChatList.Item.Index?, NoError> in
             var filter = true
             if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
@@ -2606,7 +2607,7 @@ public final class ChatListNode: ListView {
                         filter = true
                 }
             }
-            return engine.messages.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId)
+            return engine.messages.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         }
         |> switchToLatest
     }

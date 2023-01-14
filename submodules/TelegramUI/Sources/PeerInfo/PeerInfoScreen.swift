@@ -7862,13 +7862,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     
     private func accountContextMenuItems(context: AccountContext, logout: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
-        return context.engine.messages.unreadChatListPeerIds(groupId: .root, filterPredicate: nil)
+        return context.engine.messages.unreadChatListPeerIds(groupId: .root, filterPredicate: nil, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
         |> map { unreadChatListPeerIds -> [ContextMenuItem] in
             var items: [ContextMenuItem] = []
             
             if !unreadChatListPeerIds.isEmpty {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    let _ = (context.engine.messages.markAllChatsAsReadInteractively(items: [(groupId: .root, filterPredicate: nil)])
+                    let _ = (context.engine.messages.markAllChatsAsReadInteractively(items: [(groupId: .root, filterPredicate: nil)], inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
                     })

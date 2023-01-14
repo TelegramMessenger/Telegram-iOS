@@ -236,7 +236,7 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
-public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountResult?, NoError> {
+public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters, inactiveSecretChatPeerIds: Set<PeerId>) -> Signal<AccountResult?, NoError> {
     return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists)
     |> distinctUntilChanged(isEqual: { lhs, rhs in
         return lhs?.0 == rhs?.0
@@ -253,7 +253,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
                         return false
                     }
                 })
-                return accountWithId(accountManager: manager, networkArguments: networkArguments, id: record.0, encryptionParameters: encryptionParameters, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods)
+                return accountWithId(accountManager: manager, networkArguments: networkArguments, id: record.0, encryptionParameters: encryptionParameters, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
                 |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                     let postbox: Postbox
                     let initialKind: AccountKind
@@ -423,7 +423,7 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
             return false
         }
     })
-    return accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods)
+    return accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods, inactiveSecretChatPeerIds: [])
     |> mapToSignal { account -> Signal<Void, NoError> in
         switch account {
             case .upgrading:

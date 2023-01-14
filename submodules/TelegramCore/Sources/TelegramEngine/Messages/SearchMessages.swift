@@ -230,8 +230,10 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
                     var readStates: [PeerId: CombinedPeerReadState] = [:]
                     var threadInfo: [MessageId: MessageHistoryThreadData] = [:]
-                    if let readState = transaction.getCombinedPeerReadState(peerId) {
-                        readStates[peerId] = readState
+                    if !inactiveSecretChatPeerIds.contains(peerId) {
+                        if let readState = transaction.getCombinedPeerReadState(peerId) {
+                            readStates[peerId] = readState
+                        }
                     }
                     let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
                     

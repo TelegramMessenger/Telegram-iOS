@@ -639,13 +639,13 @@ public extension TelegramEngine {
                 func getForFilter(predicate: ChatListFilterPredicate?, isArchived: Bool) -> (peer: EnginePeer, unreadCount: Int)? {
                     var peerIds: [PeerId] = []
                     if predicate != nil {
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate))
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, inactiveSecretChatPeerIds: []))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, inactiveSecretChatPeerIds: []))
                     } else {
                         if isArchived {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, inactiveSecretChatPeerIds: []))
                         } else {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, inactiveSecretChatPeerIds: []))
                         }
                     }
 

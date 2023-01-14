@@ -236,6 +236,10 @@ public final class InitialPresentationDataAndSettings {
         self.ptgSettings = ptgSettings
         self.ptgSecretPasscodes = ptgSecretPasscodes
     }
+    
+    public func withUpdatedPtgSecretPasscodes(_ ptgSecretPasscodes: PtgSecretPasscodes) -> InitialPresentationDataAndSettings {
+        return InitialPresentationDataAndSettings(presentationData: self.presentationData, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, autodownloadSettings: self.autodownloadSettings, callListSettings: self.callListSettings, inAppNotificationSettings: self.inAppNotificationSettings, mediaInputSettings: self.mediaInputSettings, experimentalUISettings: self.experimentalUISettings, ptgSettings: self.ptgSettings, ptgSecretPasscodes: ptgSecretPasscodes)
+    }
 }
 
 public func currentPresentationDataAndSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<InitialPresentationDataAndSettings, NoError> {

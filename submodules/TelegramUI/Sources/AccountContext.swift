@@ -195,7 +195,7 @@ public final class AccountContextImpl: AccountContext {
         
         self.inactiveSecretChatPeerIds = sharedContext.ptgSecretPasscodes
         |> map { secretPasscodes in
-            return secretPasscodes.inactiveSecretChatPeerIds(for: account)
+            return secretPasscodes.inactiveSecretChatPeerIds(accountId: account.id)
         }
         |> distinctUntilChanged
         
@@ -292,9 +292,17 @@ public final class AccountContextImpl: AccountContext {
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
         
-        self.currentInactiveSecretChatPeerIds = Atomic(value: sharedContext.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIds(for: account) })
+        self.currentInactiveSecretChatPeerIds = Atomic(value: sharedContext.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIds(accountId: account.id) })
         self.inactiveSecretChatPeerIdsDisposable = self.inactiveSecretChatPeerIds.start(next: { [weak self] next in
-            let _ = self?.currentInactiveSecretChatPeerIds.swap(next)
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = strongSelf.currentInactiveSecretChatPeerIds.swap(next)
+            
+            let _ = (strongSelf.account.postbox.transaction { transaction in
+                transaction.updateInactiveSecretChatPeerIdsForUnreadCounts(next)
+            }).start()
         })
         
         self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)

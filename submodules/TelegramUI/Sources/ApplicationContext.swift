@@ -350,10 +350,15 @@ final class AuthorizedApplicationContext {
                     }
                     
                     if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
-                        let _ = (appLockContext.isCurrentlyLocked
+                        let _ = (combineLatest(appLockContext.isCurrentlyLocked, strongSelf.context.inactiveSecretChatPeerIds)
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { locked in
+                        |> deliverOnMainQueue).start(next: { locked, inactiveSecretChatPeerIds in
                             guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            // suppress in-app notifications for inactive secret chats
+                            if inactiveSecretChatPeerIds.contains(firstMessage.id.peerId) {
                                 return
                             }
                             

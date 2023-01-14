@@ -245,12 +245,17 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
+    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
         let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         var result: [PeerId] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
             let (_, _, messageIndex, _) = extractKey(key)
+            
+            if inactiveSecretChatPeerIds.contains(messageIndex.id.peerId) {
+                return true
+            }
+            
             if let state = postbox.readStateTable.getCombinedState(messageIndex.id.peerId), state.isUnread {
                 let passFilter: Bool
                 if let filterPredicate = filterPredicate {
@@ -797,7 +802,7 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func getRelativeUnreadChatListIndex(postbox: PostboxImpl, currentTransaction: Transaction, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
+    func getRelativeUnreadChatListIndex(postbox: PostboxImpl, currentTransaction: Transaction, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId, inactiveSecretChatPeerIds: Set<PeerId>) -> ChatListIndex? {
         var result: ChatListIndex?
         
         let lower: ValueBoxKey
@@ -829,6 +834,11 @@ final class ChatListTable: Table {
             let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
             if type == ChatListEntryType.message.rawValue {
                 let peerId = index.messageIndex.id.peerId
+                
+                if inactiveSecretChatPeerIds.contains(peerId) {
+                    return true
+                }
+                
                 if let readState = postbox.readStateTable.getCombinedState(peerId), readState.isUnread {
                     if filtered {
                         if let peer = postbox.peerTable.get(peerId) {

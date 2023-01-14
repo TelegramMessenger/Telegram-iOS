@@ -1,6 +1,7 @@
 import FakePasscode
 import PtgForeignAgentNoticeRemoval
 import PtgSettings
+import PtgSecretPasscodes
 
 import Foundation
 import UserNotifications
@@ -735,7 +736,7 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings, ApplicationSpecificSharedDataKeys.ptgSettings])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings, ApplicationSpecificSharedDataKeys.ptgSettings, ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -781,13 +782,16 @@ private final class NotificationServiceHandler {
                 return
             }
 
+            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes]).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+            
             let _ = (standaloneStateManager(
                 accountManager: strongSelf.accountManager,
                 networkArguments: networkArguments,
                 id: recordId,
                 encryptionParameters: strongSelf.encryptionParameters,
                 rootPath: rootPath,
-                auxiliaryMethods: accountAuxiliaryMethods
+                auxiliaryMethods: accountAuxiliaryMethods,
+                inactiveSecretChatPeerIds: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: recordId)
             )
             |> deliverOn(strongSelf.queue)).start(next: { stateManager in
                 guard let strongSelf = self else {

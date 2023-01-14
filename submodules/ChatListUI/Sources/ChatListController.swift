@@ -2912,7 +2912,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         markItems.append((EngineChatList.Group(additionalGroupId), filterPredicate))
                     }
                 }
-                signal = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems)
+                signal = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems, inactiveSecretChatPeerIds: self.context.inactiveSecretChatPeerIds)
             } else {
                 signal = .complete()
             }

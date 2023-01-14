@@ -373,12 +373,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         })
 
-        self._ptgSecretPasscodes.set(.single(initialPresentationDataAndSettings.ptgSecretPasscodes)
-        |> then(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
-            |> map { sharedData in
-                return PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
-            }
-        ))
+        var ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError> = .single(initialPresentationDataAndSettings.ptgSecretPasscodes)
+        if applicationBindings.isMainApp {
+            ptgSecretPasscodesSignal = ptgSecretPasscodesSignal
+            |> then(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+                |> map { sharedData in
+                    return PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+                }
+            )
+        }
+        self._ptgSecretPasscodes.set(ptgSecretPasscodesSignal)
         self.ptgSecretPasscodesDisposable = self._ptgSecretPasscodes.get().start(next: { [weak self] next in
             if let strongSelf = self {
                 let _ = strongSelf.currentPtgSecretPasscodes.swap(next)
@@ -454,7 +458,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
                 if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods, inactiveSecretChatPeerIds: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: id) }))
                     |> mapToSignal { result -> Signal<AddedAccountResult, NoError> in
                         switch result {
                             case let .authorized(account):
@@ -476,7 +480,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: telegramAccountAuxiliaryMethods, inactiveSecretChatPeerIds: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: authRecord.0) }))
                 |> mapToSignal { result -> Signal<UnauthorizedAccount?, NoError> in
                     switch result {
                         case let .unauthorized(account):
@@ -554,7 +558,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 assertionFailure()
                             }
 
-                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue, initialInactiveSecretChatPeerIds: initialPresentationDataAndSettings.ptgSecretPasscodes.inactiveSecretChatPeerIds(for: account))
+                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue, initialInactiveSecretChatPeerIds: initialPresentationDataAndSettings.ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: account.id))
 
                             self.activeAccountsValue!.accounts.append((account.id, context, accountRecord.2))
                             
@@ -873,6 +877,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.hasOngoingCallDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.ptgSecretPasscodesDisposable?.dispose()
+    }
+    
+    public func updatePtgSecretPasscodesPromise(_ ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError>) {
+        assert(!self.applicationBindings.isMainApp)
+        self._ptgSecretPasscodes.set(ptgSecretPasscodesSignal)
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {

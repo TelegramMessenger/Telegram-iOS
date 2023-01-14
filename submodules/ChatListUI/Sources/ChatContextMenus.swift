@@ -21,7 +21,7 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
     return combineLatest(
-        context.engine.messages.unreadChatListPeerIds(groupId: EngineChatList.Group(groupId), filterPredicate: nil),
+        context.engine.messages.unreadChatListPeerIds(groupId: EngineChatList.Group(groupId), filterPredicate: nil, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds),
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.chatArchiveSettings)
         )
@@ -31,7 +31,7 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
         
         if !unreadChatListPeerIds.isEmpty {
             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                let _ = (context.engine.messages.markAllChatsAsReadInteractively(items: [(groupId: EngineChatList.Group(groupId), filterPredicate: nil)])
+                let _ = (context.engine.messages.markAllChatsAsReadInteractively(items: [(groupId: EngineChatList.Group(groupId), filterPredicate: nil)], inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                 |> deliverOnMainQueue).start(completed: {
                     f(.default)
                 })

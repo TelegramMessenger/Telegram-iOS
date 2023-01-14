@@ -747,16 +747,16 @@ public final class FetchManagerImpl: FetchManager {
                     return
                 }
                 
-                // cancel downloads for hidden secret chats
-                for (_, categoryContext) in strongSelf.categoryContexts {
-                    for resourceReference in categoryContext.getResources(peerIds: inactiveSecretChatPeerIds) {
-                        strongSelf.cancelInteractiveFetches(resourceId: resourceReference.resource.id.stringRepresentation)
-                    }
-                }
-                
                 let newlyHiddenPeerIds = inactiveSecretChatPeerIds.subtracting(previousInactiveSecretChatPeerIds)
                 
                 if !newlyHiddenPeerIds.isEmpty {
+                    // cancel downloads for hidden secret chats
+                    for (_, categoryContext) in strongSelf.categoryContexts {
+                        for resourceReference in categoryContext.getResources(peerIds: newlyHiddenPeerIds) {
+                            strongSelf.cancelInteractiveFetches(resourceId: resourceReference.resource.id.stringRepresentation)
+                        }
+                    }
+                    
                     let _ = engine.resources.clearStorage(peerIds: newlyHiddenPeerIds).start()
                 }
                 
