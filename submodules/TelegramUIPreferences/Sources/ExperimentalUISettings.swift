@@ -41,7 +41,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var enableDebugDataDisplay: Bool
     public var acceleratedStickers: Bool
     public var experimentalBackground: Bool
-    public var snow: Bool
     public var inlineStickers: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
@@ -49,6 +48,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var accountReactionEffectOverrides: [AccountReactionOverrides]
     public var accountStickerEffectOverrides: [AccountReactionOverrides]
     public var disableQuickReaction: Bool
+    public var disableLanguageRecognition: Bool
+    public var disableImageContentAnalysis: Bool
+    public var disableBackgroundAnimation: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -67,14 +69,16 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enableDebugDataDisplay: false,
             acceleratedStickers: false,
             experimentalBackground: false,
-            snow: false,
             inlineStickers: false,
             localTranscription: false,
             enableReactionOverrides: false,
             inlineForums: false,
             accountReactionEffectOverrides: [],
             accountStickerEffectOverrides: [],
-            disableQuickReaction: false
+            disableQuickReaction: false,
+            disableLanguageRecognition: false,
+            disableImageContentAnalysis: false,
+            disableBackgroundAnimation: false
         )
     }
     
@@ -94,14 +98,16 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enableDebugDataDisplay: Bool,
         acceleratedStickers: Bool,
         experimentalBackground: Bool,
-        snow: Bool,
         inlineStickers: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
         inlineForums: Bool,
         accountReactionEffectOverrides: [AccountReactionOverrides],
         accountStickerEffectOverrides: [AccountReactionOverrides],
-        disableQuickReaction: Bool
+        disableQuickReaction: Bool,
+        disableLanguageRecognition: Bool,
+        disableImageContentAnalysis: Bool,
+        disableBackgroundAnimation: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -118,7 +124,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enableDebugDataDisplay = enableDebugDataDisplay
         self.acceleratedStickers = acceleratedStickers
         self.experimentalBackground = experimentalBackground
-        self.snow = snow
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
@@ -126,6 +131,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.accountReactionEffectOverrides = accountReactionEffectOverrides
         self.accountStickerEffectOverrides = accountStickerEffectOverrides
         self.disableQuickReaction = disableQuickReaction
+        self.disableLanguageRecognition = disableLanguageRecognition
+        self.disableImageContentAnalysis = disableImageContentAnalysis
+        self.disableBackgroundAnimation = disableBackgroundAnimation
     }
     
     public init(from decoder: Decoder) throws {
@@ -146,7 +154,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.enableDebugDataDisplay = (try container.decodeIfPresent(Int32.self, forKey: "enableDebugDataDisplay") ?? 0) != 0
         self.acceleratedStickers = (try container.decodeIfPresent(Int32.self, forKey: "acceleratedStickers") ?? 0) != 0
         self.experimentalBackground = (try container.decodeIfPresent(Int32.self, forKey: "experimentalBackground") ?? 0) != 0
-        self.snow = (try container.decodeIfPresent(Int32.self, forKey: "snow") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
@@ -154,6 +161,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.accountReactionEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
         self.accountStickerEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
         self.disableQuickReaction = try container.decodeIfPresent(Bool.self, forKey: "disableQuickReaction") ?? false
+        self.disableLanguageRecognition = try container.decodeIfPresent(Bool.self, forKey: "disableLanguageRecognition") ?? false
+        self.disableImageContentAnalysis = try container.decodeIfPresent(Bool.self, forKey: "disableImageContentAnalysis") ?? false
+        self.disableBackgroundAnimation = try container.decodeIfPresent(Bool.self, forKey: "disableBackgroundAnimation") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -174,7 +184,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.enableDebugDataDisplay ? 1 : 0) as Int32, forKey: "enableDebugDataDisplay")
         try container.encode((self.acceleratedStickers ? 1 : 0) as Int32, forKey: "acceleratedStickers")
         try container.encode((self.experimentalBackground ? 1 : 0) as Int32, forKey: "experimentalBackground")
-        try container.encode((self.snow ? 1 : 0) as Int32, forKey: "snow")
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
@@ -182,6 +191,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.accountReactionEffectOverrides, forKey: "accountReactionEffectOverrides")
         try container.encode(self.accountStickerEffectOverrides, forKey: "accountStickerEffectOverrides")
         try container.encode(self.disableQuickReaction, forKey: "disableQuickReaction")
+        try container.encode(self.disableLanguageRecognition, forKey: "disableLanguageRecognition")
+        try container.encode(self.disableImageContentAnalysis, forKey: "disableImageContentAnalysis")
+        try container.encode(self.disableBackgroundAnimation, forKey: "disableBackgroundAnimation")
     }
 }
 

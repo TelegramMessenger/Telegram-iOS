@@ -260,7 +260,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, titleHighlightedColor)
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, titleHighlightedColor, false)
                 
                 var maxContentWidth: CGFloat = avatarSize.width + 7.0
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {

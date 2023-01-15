@@ -834,9 +834,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .attachMenuBotAllowed:
                 attributedString = NSAttributedString(string: strings.Notification_BotWriteAllowed, font: titleFont, textColor: primaryTextColor)
             case let .requestedPeer(_, peerId):
-                //TODO:localize
-                let _ = peerId
-                attributedString = NSAttributedString(string: "Requested Chat", font: titleFont, textColor: primaryTextColor)
+                let peerName = message.peers[peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+                attributedString = addAttributesToStringWithRanges(strings.Notification_RequestedPeer(peerName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))
             case .unknown:
                 attributedString = nil
             }

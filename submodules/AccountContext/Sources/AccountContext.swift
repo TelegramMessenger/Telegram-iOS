@@ -719,6 +719,7 @@ public enum CreateGroupMode {
     case generic
     case supergroup
     case locatedGroup(latitude: Double, longitude: Double, address: String?)
+    case requestPeer(ReplyMarkupButtonRequestPeerType.Group)
 }
 
 public protocol AppLockContext: AnyObject {

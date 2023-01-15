@@ -644,7 +644,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, !(self.dustNode?.isRevealed ?? true) {
+            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, let dustNode = self.dustNode, !dustNode.isRevealed {
                 
             } else if let rects = rects {
                 let linkHighlightingNode: LinkHighlightingNode

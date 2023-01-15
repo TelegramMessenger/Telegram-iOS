@@ -933,6 +933,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let animationRenderer: MultiAnimationRenderer
     private let interaction: ChatListSearchInteraction
     private let peersFilter: ChatListNodePeersFilter
+    private let requestPeerType: ReplyMarkupButtonRequestPeerType?
     private var presentationData: PresentationData
     private let key: ChatListSearchPaneKey
     private let tagMask: EngineMessage.Tags?
@@ -981,7 +982,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let emptyResultsTitleNode: ImmediateTextNode
     private let emptyResultsTextNode: ImmediateTextNode
     private let emptyResultsAnimationNode: AnimatedStickerNode
-    private var emptyResultsAnimationSize: CGSize = CGSize()
+    private var emptyResultsAnimationSize = CGSize()
     
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
     
@@ -1002,7 +1003,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     
     private var hiddenMediaDisposable: Disposable?
   
-    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
+    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, requestPeerType: ReplyMarkupButtonRequestPeerType?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
@@ -1018,6 +1019,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             peersFilter.insert(.excludeRecent)
         }
         self.peersFilter = peersFilter
+        self.requestPeerType = requestPeerType
         
         let tagMask: EngineMessage.Tags?
         switch key {
@@ -1645,33 +1647,143 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let _ = currentRemotePeers.swap((foundRemotePeers.0, foundRemotePeers.1))
                 
                 let filteredPeer: (EnginePeer, EnginePeer) -> Bool = { peer, accountPeer in
-                    guard !peersFilter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
-                    guard !peersFilter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
-                    guard !peersFilter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
-                    
-                    if peersFilter.contains(.onlyGroups) {
-                        var isGroup: Bool = false
-                        if case let .channel(peer) = peer, case .group = peer.info {
-                            isGroup = true
-                        } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
-                            isGroup = true
-                        }
-                        if !isGroup {
+                    if let peerType = requestPeerType {
+                        guard !peer.isDeleted else {
                             return false
                         }
-                    }
-                    
-                    if peersFilter.contains(.onlyChannels) {
-                        if case let .channel(peer) = peer, case .broadcast = peer.info {
-                            return true
-                        } else {
-                            return false
+                        switch peerType {
+                        case let .user(userType):
+                            if case let .user(user) = peer {
+                                if let isBot = userType.isBot {
+                                    if isBot != (user.botInfo != nil) {
+                                        return false
+                                    }
+                                }
+                                if let isPremium = userType.isPremium {
+                                    if isPremium != user.isPremium {
+                                        return false
+                                    }
+                                }
+                                return true
+                            } else {
+                                return false
+                            }
+                        case let .group(groupType):
+                            if case let .legacyGroup(group) = peer {
+                                if groupType.isCreator {
+                                    if case .creator = group.role {
+                                    } else {
+                                        return false
+                                    }
+                                }
+                                if let isForum = groupType.isForum, isForum {
+                                    return false
+                                }
+                                if let hasUsername = groupType.hasUsername, hasUsername {
+                                    return false
+                                }
+                                if let userAdminRights = groupType.userAdminRights {
+                                    if case let .admin(rights, _) = group.role {
+                                        if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                            return false
+                                        }
+                                    } else if case .member = group.role {
+                                        return false
+                                    }
+                                }
+                                return true
+                            } else if case let .channel(channel) = peer, case .group = channel.info {
+                                if groupType.isCreator {
+                                    if !channel.flags.contains(.isCreator) {
+                                        return false
+                                    }
+                                }
+                                if let isForum = groupType.isForum {
+                                    if isForum != channel.flags.contains(.isForum) {
+                                        return false
+                                    }
+                                }
+                                if let hasUsername = groupType.hasUsername {
+                                    if hasUsername != (channel.addressName != nil) {
+                                        return false
+                                    }
+                                }
+                                if let userAdminRights = groupType.userAdminRights {
+                                    if channel.flags.contains(.isCreator) {
+                                        if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                            return false
+                                        }
+                                    } else if let rights = channel.adminRights {
+                                        if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                            return false
+                                        }
+                                    } else {
+                                        return false
+                                    }
+                                }
+                                return true
+                            } else {
+                                return false
+                            }
+                        case let .channel(channelType):
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                if channelType.isCreator {
+                                    if !channel.flags.contains(.isCreator) {
+                                        return false
+                                    }
+                                }
+                                if let hasUsername = channelType.hasUsername, hasUsername {
+                                    if hasUsername != (channel.addressName != nil) {
+                                        return false
+                                    }
+                                }
+                                if let userAdminRights = channelType.userAdminRights {
+                                    if channel.flags.contains(.isCreator) {
+                                        if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                            return false
+                                        }
+                                    } else if let rights = channel.adminRights {
+                                        if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                            return false
+                                        }
+                                    } else {
+                                        return false
+                                    }
+                                }
+                                return true
+                            } else {
+                                return false
+                            }
                         }
-                    }
-                    
-                    if peersFilter.contains(.excludeChannels) {
-                        if case let .channel(peer) = peer, case .broadcast = peer.info {
-                            return false
+                    } else {
+                        guard !peersFilter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
+                        guard !peersFilter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
+                        guard !peersFilter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
+                        
+                        if peersFilter.contains(.onlyGroups) {
+                            var isGroup: Bool = false
+                            if case let .channel(peer) = peer, case .group = peer.info {
+                                isGroup = true
+                            } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                                isGroup = true
+                            }
+                            if !isGroup {
+                                return false
+                            }
+                        }
+                        
+                        if peersFilter.contains(.onlyChannels) {
+                            if case let .channel(peer) = peer, case .broadcast = peer.info {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        
+                        if peersFilter.contains(.excludeChannels) {
+                            if case let .channel(peer) = peer, case .broadcast = peer.info {
+                                return false
+                            }
                         }
                     }
                     

@@ -21,6 +21,7 @@ import Postbox
 public enum ChatListNodeMode {
     case chatList
     case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool)
+    case peerType(type: ReplyMarkupButtonRequestPeerType)
 }
 
 struct ChatListNodeListViewTransition {
@@ -307,9 +308,12 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
             case let .AdditionalCategory(_, id, title, image, appearance, selected, presentationData):
                 var header: ChatListSearchItemHeader?
-                if case .action = appearance {
-                    // TODO: hack, generalize
-                    header = ChatListSearchItemHeader(type: .orImportIntoAnExistingGroup, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                if case .peerType = mode {
+                } else {
+                    if case .action = appearance {
+                        // TODO: hack, generalize
+                        header = ChatListSearchItemHeader(type: .orImportIntoAnExistingGroup, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                    }
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
@@ -546,6 +550,37 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             animationCache: nodeInteraction.animationCache,
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
+                case .peerType:
+                    let itemPeer = peer.chatMainPeer
+                    var chatPeer: EnginePeer?
+                    if let peer = peer.peers[peer.peerId] {
+                        chatPeer = peer
+                    }
+                    
+                    let peerContent: ContactsPeerItemPeer = .peer(peer: itemPeer, chatPeer: chatPeer)
+                    let status: ContactsPeerItemStatus = .none
+                    
+                    return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
+                        presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
+                        sortOrder: presentationData.nameSortOrder,
+                        displayOrder: presentationData.nameDisplayOrder,
+                        context: context,
+                        peerMode: .generalSearch,
+                        peer: peerContent,
+                        status: status,
+                        enabled: true,
+                        selection: .none,
+                        editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
+                        index: nil,
+                        header: nil,
+                        action: { _ in
+                            if let chatPeer = chatPeer {
+                                nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                            }
+                        }, disabledAction: nil,
+                        animationCache: nodeInteraction.animationCache,
+                        animationRenderer: nodeInteraction.animationRenderer
+                    ), directionHint: entry.directionHint)
                 }
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
@@ -766,6 +801,37 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             animationCache: nodeInteraction.animationCache,
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
+                    case .peerType:
+                        let itemPeer = peer.chatMainPeer
+                        var chatPeer: EnginePeer?
+                        if let peer = peer.peers[peer.peerId] {
+                            chatPeer = peer
+                        }
+                        
+                        let peerContent: ContactsPeerItemPeer = .peer(peer: itemPeer, chatPeer: chatPeer)
+                        let status: ContactsPeerItemStatus = .none
+                        
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
+                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
+                            sortOrder: presentationData.nameSortOrder,
+                            displayOrder: presentationData.nameDisplayOrder,
+                            context: context,
+                            peerMode: .generalSearch,
+                            peer: peerContent,
+                            status: status,
+                            enabled: true,
+                            selection: .none,
+                            editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
+                            index: nil,
+                            header: nil,
+                            action: { _ in
+                                if let chatPeer = chatPeer {
+                                    nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                }
+                            }, disabledAction: nil,
+                            animationCache: nodeInteraction.animationCache,
+                            animationRenderer: nodeInteraction.animationRenderer
+                        ), directionHint: entry.directionHint)
                 }
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
@@ -806,9 +872,12 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyHeaderItem(), directionHint: entry.directionHint)
             case let .AdditionalCategory(index: _, id, title, image, appearance, selected, presentationData):
                 var header: ChatListSearchItemHeader?
-                if case .action = appearance {
-                    // TODO: hack, generalize
-                    header = ChatListSearchItemHeader(type: .orImportIntoAnExistingGroup, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                if case .peerType = mode {
+                } else {
+                    if case .action = appearance {
+                        // TODO: hack, generalize
+                        header = ChatListSearchItemHeader(type: .orImportIntoAnExistingGroup, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                    }
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
@@ -963,7 +1032,7 @@ public final class ChatListNode: ListView {
     public var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     
-    var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ContainedViewLayoutTransition) -> Void)?
+    public var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ContainedViewLayoutTransition) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmptyState?
     
     public var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
@@ -1491,13 +1560,15 @@ public final class ChatListNode: ListView {
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
             let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, storageInfo: storageInfo, suggestPasswordSetup: suggestPasswordSetup, mode: mode, chatListLocation: location)
-            let entries = rawEntries.filter { entry in
+            var isEmpty = true
+            var entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(peerEntry):
                     let peer = peerEntry.peer
                     
                     switch mode {
                     case .chatList:
+                        isEmpty = false
                         return true
                     case let .peers(filter, _, _, _, _):
                         guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
@@ -1601,11 +1672,128 @@ public final class ChatListNode: ListView {
                             }
                         }
                         
+                        isEmpty = false
                         return true
+                    case let .peerType(peerType):
+                        if let peer = peer.peer, !peer.isDeleted {
+                            switch peerType {
+                            case let .user(userType):
+                                if case let .user(user) = peer {
+                                    if let isBot = userType.isBot {
+                                        if isBot != (user.botInfo != nil) {
+                                            return false
+                                        }
+                                    }
+                                    if let isPremium = userType.isPremium {
+                                        if isPremium != user.isPremium {
+                                            return false
+                                        }
+                                    }
+                                    isEmpty = false
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            case let .group(groupType):
+                                if case let .legacyGroup(group) = peer {
+                                    if groupType.isCreator {
+                                        if case .creator = group.role {
+                                        } else {
+                                            return false
+                                        }
+                                    }
+                                    if let isForum = groupType.isForum, isForum {
+                                        return false
+                                    }
+                                    if let hasUsername = groupType.hasUsername, hasUsername {
+                                        return false
+                                    }
+                                    if let userAdminRights = groupType.userAdminRights {
+                                        if case let .admin(rights, _) = group.role {
+                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                return false
+                                            }
+                                        } else if case .member = group.role {
+                                            return false
+                                        }
+                                    }
+                                    isEmpty = false
+                                    return true
+                                } else if case let .channel(channel) = peer, case .group = channel.info {
+                                    if groupType.isCreator {
+                                        if !channel.flags.contains(.isCreator) {
+                                            return false
+                                        }
+                                    }
+                                    if let isForum = groupType.isForum {
+                                        if isForum != channel.flags.contains(.isForum) {
+                                            return false
+                                        }
+                                    }
+                                    if let hasUsername = groupType.hasUsername {
+                                        if hasUsername != (channel.addressName != nil) {
+                                            return false
+                                        }
+                                    }
+                                    if let userAdminRights = groupType.userAdminRights {
+                                        if channel.flags.contains(.isCreator) {
+                                            if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                                return false
+                                            }
+                                        } else if let rights = channel.adminRights {
+                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                return false
+                                            }
+                                        } else {
+                                            return false
+                                        }
+                                    }
+                                    isEmpty = false
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            case let .channel(channelType):
+                                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                    if channelType.isCreator {
+                                        if !channel.flags.contains(.isCreator) {
+                                            return false
+                                        }
+                                    }
+                                    if let hasUsername = channelType.hasUsername, hasUsername {
+                                        if hasUsername != (channel.addressName != nil) {
+                                            return false
+                                        }
+                                    }
+                                    if let userAdminRights = channelType.userAdminRights {
+                                        if channel.flags.contains(.isCreator) {
+                                            if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                                return false
+                                            }
+                                        } else if let rights = channel.adminRights {
+                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                return false
+                                            }
+                                        } else {
+                                            return false
+                                        }
+                                    }
+                                    isEmpty = false
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }
+                        } else {
+                            return false
+                        }
                     }
                 default:
                     return true
                 }
+            }
+            if isEmpty {
+                entries = []
             }
             
             let processedView = ChatListNodeView(originalList: update.list, filteredEntries: entries, isLoading: isLoading, filter: filter)
@@ -1849,7 +2037,7 @@ public final class ChatListNode: ListView {
         switch mode {
         case .chatList:
             initialLocation = .initial(count: 50, filter: self.chatListFilter)
-        case .peers:
+        case .peers, .peerType:
             initialLocation = .initial(count: 200, filter: self.chatListFilter)
         }
         self.setChatListLocation(initialLocation)

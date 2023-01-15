@@ -206,7 +206,13 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     return entries
 }
 
-public func createChannelController(context: AccountContext) -> ViewController {
+public enum CreateChannelMode {
+    case generic
+    case requestPeer(ReplyMarkupButtonRequestPeerType.Channel)
+}
+
+
+public func createChannelController(context: AccountContext, mode: CreateChannelMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -455,6 +461,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             }
             
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: false, title: nil, isSuggesting: false)!
+            mixin.stickersContext = LegacyPaintStickersContext(context: context)
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
