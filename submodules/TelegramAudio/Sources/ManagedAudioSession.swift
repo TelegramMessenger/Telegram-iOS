@@ -58,6 +58,7 @@ private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: 
 public enum AudioSessionPortType {
     case generic
     case bluetooth
+    case wired
 }
 
 public struct AudioSessionPort: Equatable {
@@ -77,7 +78,14 @@ private let bluetoothPortTypes = Set<AVAudioSession.Port>([.bluetoothA2DP, .blue
 
 private extension AudioSessionOutput {
     init(description: AVAudioSessionPortDescription) {
-        self = .port(AudioSessionPort(uid: description.uid, name: description.portName, type: bluetoothPortTypes.contains(description.portType) ? .bluetooth : .generic))
+        var type: AudioSessionPortType = .generic
+        if bluetoothPortTypes.contains(description.portType) {
+            type = .bluetooth
+        } else if description.uid == "Wired Headphones" || description.uid == "Wired Microphone" {
+            type = .wired
+        }
+        
+        self = .port(AudioSessionPort(uid: description.uid, name: description.portName, type: type))
     }
 }
 

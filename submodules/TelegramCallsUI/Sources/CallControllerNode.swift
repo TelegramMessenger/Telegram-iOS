@@ -825,7 +825,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 switch currentOutput {
                 case .headphones, .speaker:
                     break
-                case let .port(port) where port.type == .bluetooth:
+                case let .port(port) where port.type == .bluetooth || port.type == .wired:
                     break
                 default:
                     self.setCurrentAudioOutput?(.speaker)
