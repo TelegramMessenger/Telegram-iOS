@@ -437,6 +437,7 @@ final class MutableMessageHistoryView {
         case .external:
             break
         }
+        
     }
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {

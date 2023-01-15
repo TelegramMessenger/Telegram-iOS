@@ -575,7 +575,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     if let replyToMessageId = replyToMessageId {
                         if let message = transaction.getMessage(replyToMessageId) {
                             if let threadIdValue = message.threadId {
-                                threadId = threadIdValue
+                                if threadIdValue == 1 {
+                                    if let channel = transaction.getPeer(message.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                                        threadId = threadIdValue
+                                    } else {
+                                        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                                            threadId = makeMessageThreadId(replyToMessageId)
+                                        }
+                                    }
+                                } else {
+                                    threadId = threadIdValue
+                                }
                             } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                                 threadId = makeMessageThreadId(replyToMessageId)
                             }
