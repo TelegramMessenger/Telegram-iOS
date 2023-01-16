@@ -7243,13 +7243,15 @@ public final class EmojiPagerContentComponent: Component {
         
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
-            forceHasPremium ? .single(true) : hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
+            hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
             hasTrending ? context.account.viewTracker.featuredStickerPacks() : .single([]),
             context.engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, id: ValueBoxKey(length: 0))),
             ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager),
             peerSpecificPack
         )
         |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks, peerSpecificPack -> EmojiPagerContentComponent in
+            let actuallyHasPremium = hasPremium
+            let hasPremium = forceHasPremium || hasPremium
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -7435,7 +7437,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
                 
-                if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty {
+                if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty, actuallyHasPremium {
                     premiumStickers.append(contentsOf: cloudPremiumStickers.items.compactMap { item -> StickerPackItem? in guard let item = item.contents.get(RecentMediaItem.self) else {
                             return nil
                         }

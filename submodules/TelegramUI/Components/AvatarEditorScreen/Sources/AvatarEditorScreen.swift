@@ -101,6 +101,9 @@ final class AvatarEditorScreenComponent: Component {
         var editingColor: Bool = false
         var previousColor: AvatarBackground
         
+        var previousCustomColor: AvatarBackground?
+        var customColor: AvatarBackground?
+        
         var isSearchActive: Bool = false
         
         init(context: AccountContext) {
@@ -825,6 +828,7 @@ final class AvatarEditorScreenComponent: Component {
                     theme: environment.theme,
                     values: defaultBackgrounds,
                     selectedValue: state.selectedBackground,
+                    customValue: state.customColor,
                     updateValue: { [weak state] value in
                         if let state {
                             state.selectedBackground = value
@@ -835,6 +839,7 @@ final class AvatarEditorScreenComponent: Component {
                         if let state {
                             state.editingColor = true
                             state.previousColor = state.selectedBackground
+                            state.previousCustomColor = state.customColor
                             state.updated(transition: .easeInOut(duration: 0.3))
                         }
                     }
@@ -857,9 +862,11 @@ final class AvatarEditorScreenComponent: Component {
                     ColorPickerComponent(
                         theme: environment.theme,
                         strings: environment.strings,
+                        isVisible: state.editingColor,
                         colors: state.selectedBackground.colors,
                         colorsChanged: { [weak state] colors in
                             if let state {
+                                state.customColor = .gradient(colors)
                                 state.selectedBackground = .gradient(colors)
                                 state.updated(transition: .immediate)
                             }
@@ -867,6 +874,7 @@ final class AvatarEditorScreenComponent: Component {
                         cancel: { [weak state] in
                             if let state {
                                 state.selectedBackground = state.previousColor
+                                state.customColor = state.previousCustomColor
                                 state.editingColor = false
                                 state.updated(transition: .easeInOut(duration: 0.3))
                             }
@@ -874,6 +882,7 @@ final class AvatarEditorScreenComponent: Component {
                         done: { [weak state] in
                             if let state {
                                 state.editingColor = false
+                                state.customColor = state.selectedBackground
                                 state.updated(transition: .easeInOut(duration: 0.3))
                             }
                         }

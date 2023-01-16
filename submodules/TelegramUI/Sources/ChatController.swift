@@ -2391,7 +2391,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.chatDisplayNode.dismissInput()
                                 strongSelf.present(controller, in: .window(.root))
                             case let .accepted(url):
-                                strongSelf.openUrl(url, concealed: false, skipUrlAuth: true)
+                                strongSelf.openUrl(url, concealed: false, forceExternal: true, skipUrlAuth: true)
                         }
                     }
                 }))
@@ -15691,10 +15691,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     })
                                 } else {
-                                    self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peer.id), subject: subject))
+                                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                                        self.effectiveNavigationController?.pushViewController(ChatListControllerImpl(context: self.context, location: .forum(peerId: channel.id), controlsHistoryPreload: false, enableDebugActions: false))
+                                    } else {
+                                        self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peer.id), subject: subject))
+                                    }
                                 }
                             case let .withBotStartPayload(botStart):
-                            self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peer.id), botStart: botStart))
+                                self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peer.id), botStart: botStart))
                             case let .withAttachBot(attachBotStart):
                                 if let navigationController = self.effectiveNavigationController {
                                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
