@@ -301,7 +301,7 @@ public final class AccountContextImpl: AccountContext {
             let _ = strongSelf.currentInactiveSecretChatPeerIds.swap(next)
             
             let _ = (strongSelf.account.postbox.transaction { transaction in
-                transaction.updateInactiveSecretChatPeerIdsForUnreadCounts(next)
+                transaction.updatePeerIdsExcludedFromUnreadCounters(next)
             }).start()
         })
         

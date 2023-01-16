@@ -7,8 +7,9 @@ swift_library(
         "Sources/*.swift",
     ]),
     deps = [
-        "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
+        "//submodules/PtgSettings:PtgSettings",
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
         
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",

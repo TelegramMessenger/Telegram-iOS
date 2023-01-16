@@ -193,6 +193,7 @@ public class ShareRootControllerImpl {
                 
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, clearAllNotifications: {
+            }, clearPeerNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
             }, openSettings: {

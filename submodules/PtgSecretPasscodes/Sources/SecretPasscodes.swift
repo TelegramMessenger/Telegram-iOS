@@ -117,6 +117,32 @@ public struct PtgSecretPasscodes: Codable, Equatable {
         return result
     }
     
+    public func activeSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
+        var result = Set<PeerId>()
+        for secretPasscode in self.secretPasscodes {
+            if secretPasscode.active {
+                for secretChat in secretPasscode.secretChats {
+                    if secretChat.accountRecordId == accountId {
+                        result.insert(secretChat.peerId)
+                    }
+                }
+            }
+        }
+        return result
+    }
+    
+    public func allSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
+        var result = Set<PeerId>()
+        for secretPasscode in self.secretPasscodes {
+            for secretChat in secretPasscode.secretChats {
+                if secretChat.accountRecordId == accountId {
+                    result.insert(secretChat.peerId)
+                }
+            }
+        }
+        return result
+    }
+    
     // used by app extensions to apply timeouts to handle cases when main app wasn't running for some time
     // changes are not saved to storage, only main app does that to avoid conflicts
     public func withCheckedTimeoutUsingLockStateFile(rootPath: String) -> PtgSecretPasscodes {

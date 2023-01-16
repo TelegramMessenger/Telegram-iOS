@@ -670,6 +670,8 @@ private final class AnimationSupportContext {
             }
         }, clearAllNotifications: {
             self.clearNotificationsManager?.clearAll()
+        }, clearPeerNotifications: { peerIds in
+            self.clearNotificationsManager?.clearPeers(peerIds: peerIds)
         }, pushIdleTimerExtension: {
             let disposable = MetaDisposable()
             Queue.mainQueue().async {

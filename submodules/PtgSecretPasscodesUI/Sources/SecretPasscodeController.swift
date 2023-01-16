@@ -410,6 +410,11 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                         return state.withUpdated(settings: state.settings.withUpdated(secretChats: secretChats))
                     }
 
+                    let addedPeerIds = Set(secretChats.filter({ $0.accountRecordId == context.account.id }).map({ $0.peerId })).subtracting(selectedChats)
+                    if !addedPeerIds.isEmpty {
+                        context.sharedContext.applicationBindings.clearPeerNotifications(addedPeerIds)
+                    }
+                    
                     if let _ = pushToController {
                         popToControllerImpl?()
                     } else {

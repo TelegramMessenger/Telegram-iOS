@@ -122,6 +122,7 @@ public final class NotificationViewControllerImpl {
                 
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, clearAllNotifications: {
+            }, clearPeerNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
             }, openSettings: {}, openAppStorePage: {}, openSubscriptions: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {

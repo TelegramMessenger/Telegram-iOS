@@ -1,4 +1,3 @@
-import FakePasscode
 import PtgForeignAgentNoticeRemoval
 import PtgSettings
 import PtgSecretPasscodes
@@ -736,7 +735,7 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings, ApplicationSpecificSharedDataKeys.ptgSettings, ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.ptgSettings, ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -782,7 +781,9 @@ private final class NotificationServiceHandler {
                 return
             }
 
-            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes]).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            
+            let allSecretPasscodeSecretChatPeerIds = ptgSecretPasscodes.allSecretChatPeerIds(accountId: recordId)
             
             let _ = (standaloneStateManager(
                 accountManager: strongSelf.accountManager,
@@ -791,7 +792,7 @@ private final class NotificationServiceHandler {
                 encryptionParameters: strongSelf.encryptionParameters,
                 rootPath: rootPath,
                 auxiliaryMethods: accountAuxiliaryMethods,
-                inactiveSecretChatPeerIds: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: recordId)
+                initialPeerIdsExcludedFromUnreadCounters: allSecretPasscodeSecretChatPeerIds
             )
             |> deliverOn(strongSelf.queue)).start(next: { stateManager in
                 guard let strongSelf = self else {
@@ -967,17 +968,7 @@ private final class NotificationServiceHandler {
                             break
                         }
                     } else {
-                        var hideNotification = false
-                        if let peerId = peerId {
-                            let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-                            if let activeFakePasscodeSettings = fakePasscodeHolder.activeFakePasscodeSettings() {
-                                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == stateManager.accountPeerId && $0.recordId == recordId }) {
-                                    hideNotification = accountActions.chatsToRemove.contains(where: { $0.removalType == .hide && $0.peerId == peerId })
-                                }
-                            }
-                        }
-                        
-                        if !hideNotification, let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
+                        if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId, !allSecretPasscodeSecretChatPeerIds.contains(peerId) {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 if let topicTitleValue = payloadJson["topic_title"] as? String {
