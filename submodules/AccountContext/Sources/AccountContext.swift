@@ -294,7 +294,7 @@ public enum ResolvedUrl {
     case joinVoiceChat(PeerId, String?)
     case importStickers
     case startAttach(peerId: PeerId, payload: String?, choose: ResolvedBotChoosePeerTypes?)
-    case invoice(slug: String, invoice: TelegramMediaInvoice)
+    case invoice(slug: String, invoice: TelegramMediaInvoice?)
     case premiumOffer(reference: String?)
 }
 
