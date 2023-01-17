@@ -22,6 +22,7 @@ import ReactionSelectionNode
 import ChatPresentationInterfaceState
 import TelegramNotices
 import ChatControllerInteraction
+import TranslateUI
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -317,7 +318,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: ChatMessageItemAssociatedData.DisplayTranscribeButton, accountPeer: EnginePeer?, topicAuthorId: EnginePeer.Id?, hasBots: Bool) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: ChatMessageItemAssociatedData.DisplayTranscribeButton, accountPeer: EnginePeer?, topicAuthorId: EnginePeer.Id?, hasBots: Bool, translateToLanguage: String?) -> ChatMessageItemAssociatedData {
     var automaticDownloadPeerId: EnginePeer.Id?
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
@@ -369,7 +370,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
         }
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage)
 }
 
 private extension ChatHistoryLocationInput {
@@ -519,6 +520,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
     private let extendedMediaProcessingManager = ChatMessageVisibleThrottledProcessingManager(interval: 5.0)
+    private let translationProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
     
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
@@ -658,6 +660,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let clientId: Atomic<Int32>
     
+    private var toLang: String?
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNode? = { nil }) {
         var tagMask = tagMask
         var appendMessagesFromTheSameGroup = false
@@ -786,6 +790,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.refreshMediaProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
+        }
+        self.translationProcessingManager.process = { [weak self, weak context] messageIds in
+            if let context = context, let toLang = self?.toLang {
+                let _ = translateMessageIds(context: context, messageIds: Array(messageIds), toLang: toLang).start()
+            }
         }
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
@@ -1109,6 +1118,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.justSentTextMessagePromise.get()
         )
         
+        let translationState: Signal<ChatTranslationState?, NoError>
+        if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
+            translationState = chatTranslationState(context: context, peerId: peerId)
+        } else {
+            translationState = .single(nil)
+        }
+        
         let promises = combineLatest(
             self.historyAppearsClearedPromise.get(),
             self.pendingUnpinnedAllMessagesPromise.get(),
@@ -1134,8 +1150,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             audioTranscriptionSuggestion,
             promises,
             topicAuthorId,
-            self.allAdMessagesPromise.get()
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages in
+            self.allAdMessagesPromise.get(),
+            translationState
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages, translationState in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots) = promises
             let currentlyPlayingMessageId = currentlyPlayingMessageIdAndType?.0
             
@@ -1275,7 +1292,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     displayForNotConsumed: suggestAudioTranscription.1
                 )
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots)
+                var translateToLanguage: String?
+                if let translationState, translationState.isEnabled {
+                    translateToLanguage = translationState.toLang ?? presentationData.strings.baseLanguageCode
+                }
+                
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,
@@ -1362,6 +1384,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 var scrollAnimationCurve: ListViewAnimationCurve? = nil
                 if let strongSelf = self, case .default = source {
+                    strongSelf.toLang = translateToLanguage
                     if strongSelf.appliedScrollToMessageId == nil, let scrollToMessageId = scrollToMessageId {
                         updatedScrollPosition = .index(index: .message(scrollToMessageId), position: .center(.top), directionHint: .Up, animated: true, highlight: false, displayLink: true)
                         scrollAnimationCurve = .Spring(duration: 0.4)
@@ -2003,6 +2026,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
             var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
+            var messageIdsToTranslate: [MessageId] = []
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             var allVisibleAnchorMessageIds: [(MessageId, Int)] = []
             var visibleAdOpaqueIds: [Data] = []
@@ -2170,6 +2194,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
             
+            let translateToLanguage = transactionState.historyView.associatedData.translateToLanguage
             var messageIdsWithPossibleReactions: [MessageId] = []
             for entry in historyView.filteredEntries {
                 switch entry {
@@ -2186,6 +2211,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             messageIdsWithPossibleReactions.append(message.id)
                         default:
                             break
+                        }
+                        
+                        if let translateToLanguage {
+                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                            } else {
+                                messageIdsToTranslate.append(message.id)
+                            }
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
@@ -2303,6 +2335,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !messageIdsWithInactiveExtendedMedia.isEmpty {
                 self.extendedMediaProcessingManager.update(messageIdsWithInactiveExtendedMedia)
+            }
+            if !messageIdsToTranslate.isEmpty {
+                self.translationProcessingManager.add(messageIdsToTranslate)
             }
             if !visibleAdOpaqueIds.isEmpty {
                 for opaqueId in visibleAdOpaqueIds {

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import SwipeToDismissGesture
+import AccountContext
 
 open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     public var statusBar: StatusBar?
@@ -361,9 +362,17 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         } else if useSimpleAnimation {
             self.scrollView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
+        
+        if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+            chatController.updateIsPushed(true)
+        }
     }
     
     open func animateOut(animateContent: Bool, completion: @escaping () -> Void) {
+        if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+            chatController.updateIsPushed(false)
+        }
+        
         self.isDismissed = true
         
         self.pager.isScrollEnabled = false

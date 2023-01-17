@@ -386,6 +386,10 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, insertText: { _ in
         }, backwardsDeleteText: {
         }, restartTopic: {
+        }, toggleTranslation: { _ in
+        }, changeTranslationLanguage: { _ in
+        }, addDoNotTranslateLanguage: { _ in
+        }, hideTranslationPanel: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil
@@ -2023,6 +2027,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private var forumTopicNotificationExceptions: [EngineMessageHistoryThread.NotificationException] = []
     private var forumTopicNotificationExceptionsDisposable: Disposable?
     
+    private var translationState: ChatTranslationState?
+    private var translationStateDisposable: Disposable?
+    
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
         return self._ready
@@ -3539,7 +3546,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 var isPersonal = false
                 var currentIsVideo = false
                 let item = strongSelf.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-                if let item = item, case let .image(_, representations, videoRepresentations, _, _) = item {
+                if let item = item, case let .image(_, representations, videoRepresentations, _, _, _) = item {
                     if representations.first?.representation.isPersonal == true {
                         isPersonal = true
                     }
@@ -3650,6 +3657,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
 
         self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, threadId: chatLocation.threadId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).start()
+        
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            self.translationStateDisposable = (chatTranslationState(context: context, peerId: peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] translationState in
+                self?.translationState = translationState
+            })
+        }
     }
     
     deinit {
@@ -3673,6 +3687,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.customStatusDisposable?.dispose()
         self.refreshMessageTagStatsDisposable?.dispose()
         self.forumTopicNotificationExceptionsDisposable?.dispose()
+        self.translationStateDisposable?.dispose()
         
         self.copyProtectionTooltipController?.dismiss()
     }
@@ -4844,6 +4859,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         })))
                     }
                     
+                    if let _ = strongSelf.translationState {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            if let strongSelf = self {
+                                Queue.mainQueue().after(0.3, {
+                                    let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, { state in
+                                        return state?.withIsHidden(false)
+                                    }).start()
+                                })
+                                self?.openChatForTranslation()
+                            }
+                        })))
+                    }
+                    
                     var canReport = true
                     if channel.adminRights != nil {
                         canReport = false
@@ -5187,6 +5219,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private func openChatForThemeChange() {
         if let peer = self.data?.peer, let navigationController = (self.controller?.navigationController as? NavigationController) {
             self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, changeColors: true, completion: { _ in
+            }))
+        }
+    }
+    
+    private func openChatForTranslation() {
+        if let peer = self.data?.peer, let navigationController = (self.controller?.navigationController as? NavigationController) {
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, changeColors: false, completion: { _ in
             }))
         }
     }
@@ -6824,11 +6863,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let signal: Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError>
         if self.isSettings {
             if case .fallback = mode {
-                signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+                signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             } else {
-                signal = self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+                signal = self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             }
@@ -6887,7 +6926,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     if let strongSelf = self, let peer {
                         switch mode {
                         case .fallback:
-                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicPhotoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicPhotoSuccess, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         case .custom:
                             strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessPhotoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                             
@@ -6898,7 +6937,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }))
                             }
                         case .accept:
-                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccessText, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccessText, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                                 if case .info = action {
                                     self?.controller?.parentController?.openSettings()
                                 }
@@ -7048,12 +7087,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.updateAvatarDisposable.set((signal
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
             if isSettings {
+                let fileId = adjustments?.documentId
+                let backgroundColors = adjustments?.colors as? [Int32]
                 if case .fallback = mode {
-                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: fileId, backgroundColors: backgroundColors, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 } else {
-                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 }
@@ -7093,7 +7134,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     if let strongSelf = self, let peer {
                         switch mode {
                         case .fallback:
-                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicVideoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicVideoSuccess, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         case .custom:
                             strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessVideoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                             
@@ -7104,7 +7145,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }))
                             }
                         case .accept:
-                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccessText, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccessText, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                                 if case .info = action {
                                     self?.controller?.parentController?.openSettings()
                                 }
@@ -7125,9 +7166,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         var currentIsVideo = false
+        var emojiMarkup: TelegramMediaImage.EmojiMarkup?
         let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-        if let item = item, case let .image(_, _, videoRepresentations, _, _) = item {
+        if let item = item, case let .image(_, _, videoRepresentations, _, _, emojiMarkupValue) = item {
             currentIsVideo = !videoRepresentations.isEmpty
+            emojiMarkup = emojiMarkupValue
         }
         
         let peerId = self.peerId
@@ -7221,7 +7264,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
-                let controller = AvatarEditorScreen(context: strongSelf.context)
+                let controller = AvatarEditorScreen(context: strongSelf.context, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
                 controller.completion = completion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
             }

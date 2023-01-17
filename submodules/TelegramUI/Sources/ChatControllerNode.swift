@@ -130,6 +130,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
+    private var chatTranslationPanel: ChatTranslationPanelNode?
+    
     private var inputPanelNode: ChatInputPanelNode?
     private(set) var inputPanelOverscrollNode: ChatInputPanelOverscrollNode?
     private weak var currentDismissedInputPanelNode: ChatInputPanelNode?
@@ -1091,6 +1093,42 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.titleAccessoryPanelNode = nil
         }
         
+        var dismissedTranslationPanelNode: ChatTranslationPanelNode?
+        var immediatelyLayoutTranslationPanelNodeAndAnimateAppearance = false
+        var translationPanelHeight: CGFloat?
+        if let _ = self.chatPresentationInterfaceState.translationState {
+            let translationPanelNode: ChatTranslationPanelNode
+            if let current = self.chatTranslationPanel {
+                translationPanelNode = current
+            } else {
+                translationPanelNode = ChatTranslationPanelNode(context: self.context)
+            }
+            translationPanelNode.interfaceInteraction = self.interfaceInteraction
+            
+            if self.chatTranslationPanel != translationPanelNode {
+                dismissedTranslationPanelNode = self.chatTranslationPanel
+                self.chatTranslationPanel = translationPanelNode
+                immediatelyLayoutTranslationPanelNodeAndAnimateAppearance = true
+                self.titleAccessoryPanelContainer.addSubnode(translationPanelNode)
+                
+                translationPanelNode.clipsToBounds = true
+                if transition.isAnimated {
+                    extraTransition = .animated(duration: 0.2, curve: .easeInOut)
+                }
+            }
+            
+            let height = translationPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            translationPanelHeight = height
+            if immediatelyLayoutTranslationPanelNodeAndAnimateAppearance {
+                translationPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                translationPanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
+                extraTransition.updateSublayerTransformOffset(layer: translationPanelNode.layer, offset: CGPoint())
+            }
+        } else if let chatTranslationPanel = self.chatTranslationPanel {
+            dismissedTranslationPanelNode = chatTranslationPanel
+            self.chatTranslationPanel = nil
+        }
+        
         var dismissedImportStatusPanelNode: ChatImportStatusPanel?
         var importStatusPanelHeight: CGFloat?
         if let importState = self.chatPresentationInterfaceState.importState {
@@ -1409,13 +1447,22 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.inputContextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         transition.updateFrame(node: self.inputContextOverTextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         
+        var extraNavigationBarHeight: CGFloat = 0.0
         var titleAccessoryPanelFrame: CGRect?
         if let _ = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
             titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
+            extraNavigationBarHeight += titleAccessoryPanelBackgroundHeight ?? 0.0
+        }
+        
+        var translationPanelFrame: CGRect?
+        if let _ = self.chatTranslationPanel, let panelHeight = translationPanelHeight {
+            translationPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
+            insets.top += panelHeight
+            extraNavigationBarHeight += panelHeight
         }
 
-        updateExtraNavigationBarBackgroundHeight(titleAccessoryPanelBackgroundHeight ?? 0.0, extraTransition)
+        updateExtraNavigationBarBackgroundHeight(extraNavigationBarHeight, extraTransition)
         
         var importStatusPanelFrame: CGRect?
         if let _ = self.chatImportStatusPanel, let panelHeight = importStatusPanelHeight {
@@ -1793,6 +1840,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
+        if let chatTranslationPanel = self.chatTranslationPanel, let translationPanelFrame = translationPanelFrame, !chatTranslationPanel.frame.equalTo(translationPanelFrame) {
+            chatTranslationPanel.frame = translationPanelFrame
+            transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: -translationPanelFrame.height))
+        }
+        
         if let chatImportStatusPanel = self.chatImportStatusPanel, let importStatusPanelFrame = importStatusPanelFrame, !chatImportStatusPanel.frame.equalTo(importStatusPanelFrame) {
             chatImportStatusPanel.frame = importStatusPanelFrame
             //transition.animatePositionAdditive(node: chatImportStatusPanel, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
@@ -1886,6 +1938,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
             transition.updateFrame(node: dismissedTitleAccessoryPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTitleAccessoryPanelNode] _ in
                 dismissedTitleAccessoryPanelNode?.removeFromSupernode()
+            })
+        }
+        
+        if let dismissedTranslationPanelNode = dismissedTranslationPanelNode {
+            var dismissedPanelFrame = dismissedTranslationPanelNode.frame
+            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
+            transition.updateFrame(node: dismissedTranslationPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTranslationPanelNode] _ in
+                dismissedTranslationPanelNode?.removeFromSupernode()
             })
         }
         

@@ -520,7 +520,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private var importStateDisposable: Disposable?
+    private var translationStateDisposable: Disposable?
 
     private var nextChannelToReadDisposable: Disposable?
     
@@ -4147,10 +4147,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-                let text: String
+                let attributedTitle: NSAttributedString?
+                let attributedText: NSAttributedString
+                
+                let theme = AlertControllerTheme(presentationData: strongSelf.presentationData)
                 if case .user = peerType {
-                    text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationText(peerName, botName).string
+                    attributedTitle = nil
+                    attributedText = NSAttributedString(string: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationTitle(peerName, botName).string, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                    
                 } else {
+                    attributedTitle = NSAttributedString(string: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationTitle(peerName, botName).string, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                    
                     var botAdminRights: TelegramChatAdminRights?
                     switch peerType {
                     case let .group(group):
@@ -4161,16 +4168,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                     if let botAdminRights {
-                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(peerName, botName, botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights)).string
+                        let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights))
+                        let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                        for range in stringWithRanges.ranges.prefix(2) {
+                            formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                        }
+                        attributedText = formattedString
                     } else {
-                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(peerName, botName, botName, peerName).string
+                        let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(botName, peerName)
+                        let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                        for range in stringWithRanges.ranges.prefix(2) {
+                            formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                        }
+                        attributedText = formattedString
                     }
                 }
-                
-                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: { [weak controller] in
+                                
+                let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: { [weak controller] in
                     let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
                     controller?.dismiss()
-                })]), in: .window(.root))
+                })])
+                strongSelf.present(controller, in: .window(.root))
             }
             createNewGroupImpl = { [weak controller] in
                 switch peerType {
@@ -5783,12 +5801,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.peerSuggestionsDismissDisposable.dispose()
             self.selectAddMemberDisposable.dispose()
             self.addMemberDisposable.dispose()
-            self.importStateDisposable?.dispose()
             self.nextChannelToReadDisposable?.dispose()
             self.inviteRequestsDisposable.dispose()
             self.sendAsPeersDisposable?.dispose()
             self.preloadAttachBotIconsDisposables?.dispose()
             self.keepMessageCountersSyncrhonizedDisposable?.dispose()
+            self.translationStateDisposable?.dispose()
         }
         deallocate()
     }
@@ -6550,6 +6568,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 threadData = .single(nil)
+            }
+            
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                self.translationStateDisposable = (chatTranslationState(context: self.context, peerId: peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] translationState in
+                    if let strongSelf = self {
+                        var chatTranslationState: ChatPresentationTranslationState?
+                        if let translationState, translationState.isHidden != true && !translationState.fromLang.isEmpty {
+                            chatTranslationState = ChatPresentationTranslationState(isEnabled: translationState.isEnabled, fromLang: translationState.fromLang, toLang: translationState.toLang ?? strongSelf.presentationData.strings.baseLanguageCode)
+                        }
+                        strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
+                            return state.updatedTranslationState(chatTranslationState)
+                        })
+                    }
+                })
             }
             
             self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages,
@@ -9746,6 +9779,80 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let _ = strongSelf.context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: false).start()
+        }, toggleTranslation: { [weak self] type in
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                return
+            }
+            let _ = (updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
+                return current?.withIsEnabled(type == .translated)
+            })
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                if let strongSelf = self, type == .translated {
+                    Queue.mainQueue().after(0.3) {
+                        strongSelf.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
+                    }
+                }
+            })
+        }, changeTranslationLanguage: { [weak self] langCode in
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                return
+            }
+            let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
+                return current?.withToLang(langCode).withIsEnabled(true)
+            }).start()
+        }, addDoNotTranslateLanguage: { [weak self] langCode in
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                return
+            }
+            let _ = updateTranslationSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
+                var updated = current
+                if var ignoredLanguages = updated.ignoredLanguages {
+                    ignoredLanguages.append(langCode)
+                    updated.ignoredLanguages = ignoredLanguages
+                } else {
+                    updated.ignoredLanguages = [strongSelf.presentationData.strings.baseLanguageCode, langCode]
+                }
+                return updated
+            }).start()
+            let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
+                return nil
+            }).start()
+            
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            var languageCode = presentationData.strings.baseLanguageCode
+            let rawSuffix = "-raw"
+            if languageCode.hasSuffix(rawSuffix) {
+                languageCode = String(languageCode.dropLast(rawSuffix.count))
+            }
+            let locale = Locale(identifier: languageCode)
+            let fromLanguage: String = locale.localizedString(forLanguageCode: langCode) ?? ""
+            
+            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_AddedToDoNotTranslateText(fromLanguage).string, round: false, undoText: "Settings"), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
+                if case .undo = action, let strongSelf = self {
+                    let controller = translationSettingsController(context: strongSelf.context)
+                    controller.navigationPresentation = .modal
+                    strongSelf.push(controller)
+                }
+                return true
+            }), in: .current)
+        }, hideTranslationPanel: { [weak self] in
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                return
+            }
+            let context = strongSelf.context
+            let _ = updateChatTranslationStateInteractively(engine: context.engine, peerId: peerId, { current in
+                return current?.withIsHidden(true)
+            }).start()
+            
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_TranslationBarHiddenText, round: false, undoText: presentationData.strings.Undo_Undo), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                    if case .undo = action {
+                        let _ = updateChatTranslationStateInteractively(engine: context.engine, peerId: peerId, { current in
+                            return current?.withIsHidden(false)
+                        }).start()
+                    }
+                    return true
+            }), in: .current)
         }, requestLayout: { [weak self] transition in
             if let strongSelf = self, let layout = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout, transition: transition)

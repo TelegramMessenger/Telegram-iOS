@@ -1355,13 +1355,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             if let undoOverlayController = strongSelf.undoOverlayController {
-                undoOverlayController.content = .image(image: image ?? UIImage(), title: nil, text: text, round: false, undo: true)
+                undoOverlayController.content = .image(image: image ?? UIImage(), title: nil, text: text, round: false, undoText: presentationData.strings.Undo_Undo)
             } else {
                 var elevatedLayout = true
                 if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                     elevatedLayout = false
                 }
-                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), title: nil, text: text, round: false, undo: true), elevatedLayout: elevatedLayout, action: { [weak self] action in
+                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), title: nil, text: text, round: false, undoText: presentationData.strings.Undo_Undo), elevatedLayout: elevatedLayout, action: { [weak self] action in
                     guard let strongSelf = self else {
                         return true
                     }

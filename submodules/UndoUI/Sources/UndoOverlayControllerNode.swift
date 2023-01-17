@@ -860,7 +860,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-            case let .image(image, title, text, round, undo):
+            case let .image(image, title, text, round, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()
                 self.iconNode?.clipsToBounds = true
@@ -885,8 +885,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
 
-                displayUndo = undo
-                self.originalRemainingSeconds = undo ? 5 : 3
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
+                self.originalRemainingSeconds = displayUndo ? 5 : 3
             
                 if text.contains("](") {
                     isUserInteractionEnabled = true

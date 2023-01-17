@@ -455,6 +455,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, insertText: { _ in
         }, backwardsDeleteText: {
         }, restartTopic: {
+        }, toggleTranslation: { _ in
+        }, changeTranslationLanguage: { _ in
+        }, addDoNotTranslateLanguage: { _ in
+        }, hideTranslationPanel: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil
@@ -1062,41 +1066,45 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
 func stringForAdminRights(strings: PresentationStrings, adminRights: TelegramChatAdminRights) -> String {
     var rights: [String] = []
+    func append(_ string: String) {
+        rights.append("•  \(string)")
+    }
+    
     if adminRights.rights.contains(.canChangeInfo) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Info)
+        append(strings.RequestPeer_Requirement_Group_Rights_Info)
     }
     if adminRights.rights.contains(.canPostMessages) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Send)
+        append(strings.RequestPeer_Requirement_Group_Rights_Send)
     }
     if adminRights.rights.contains(.canDeleteMessages) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Delete)
+        append(strings.RequestPeer_Requirement_Group_Rights_Delete)
     }
     if adminRights.rights.contains(.canEditMessages) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Edit)
+        append(strings.RequestPeer_Requirement_Group_Rights_Edit)
     }
     if adminRights.rights.contains(.canBanUsers) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Ban)
+        append(strings.RequestPeer_Requirement_Group_Rights_Ban)
     }
     if adminRights.rights.contains(.canInviteUsers) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Invite)
+        append(strings.RequestPeer_Requirement_Group_Rights_Invite)
     }
     if adminRights.rights.contains(.canPinMessages) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Pin)
+        append(strings.RequestPeer_Requirement_Group_Rights_Pin)
     }
     if adminRights.rights.contains(.canManageTopics) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Topics)
+        append(strings.RequestPeer_Requirement_Group_Rights_Topics)
     }
     if adminRights.rights.contains(.canManageCalls) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_VideoChats)
+        append(strings.RequestPeer_Requirement_Group_Rights_VideoChats)
     }
     if adminRights.rights.contains(.canBeAnonymous) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_Anonymous)
+        append(strings.RequestPeer_Requirement_Group_Rights_Anonymous)
     }
     if adminRights.rights.contains(.canAddAdmins) {
-        rights.append(strings.RequestPeer_Requirement_Group_Rights_AddAdmins)
+        append(strings.RequestPeer_Requirement_Group_Rights_AddAdmins)
     }
     if !rights.isEmpty {
-        return String(rights.joined(separator: ", "))
+        return String(rights.joined(separator: "\n"))
     } else {
         return ""
     }

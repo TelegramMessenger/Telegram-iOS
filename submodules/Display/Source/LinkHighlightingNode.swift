@@ -52,7 +52,7 @@ private func drawConnectingCorner(context: CGContext, color: UIColor, at point: 
     }
 }
 
-private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat, useModernPathCalculation: Bool) -> (CGPoint, UIImage?) {
+public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat, stroke: Bool = false, useModernPathCalculation: Bool) -> (CGPoint, UIImage?) {
     if rects.isEmpty {
         return (CGPoint(), nil)
     }
@@ -179,12 +179,25 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
                 context.addArc(tangent1End: rects[0].topLeft, tangent2End: CGPoint(x: rects[0].minX + outerRadius, y: rects[0].minY), radius: outerRadius)
                 context.addLine(to: CGPoint(x: rects[0].midX, y: rects[0].minY))
                 
-                context.fillPath()
+                if stroke {
+                    context.setStrokeColor(color.cgColor)
+                    context.setLineWidth(2.0)
+                    context.strokePath()
+                } else {
+                    context.fillPath()
+                }
                 return
             } else {
                 let path = UIBezierPath(roundedRect: rects[0], cornerRadius: outerRadius).cgPath
                 context.addPath(path)
-                context.fillPath()
+                
+                if stroke {
+                    context.setStrokeColor(color.cgColor)
+                    context.setLineWidth(2.0)
+                    context.strokePath()
+                } else {
+                    context.fillPath()
+                }
                 return
             }
         }

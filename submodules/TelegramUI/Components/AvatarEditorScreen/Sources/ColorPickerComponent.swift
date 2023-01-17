@@ -79,6 +79,8 @@ final class ColorPickerComponent: Component {
         private let topSeparatorView: UIView
         private let separatorView: UIView
         
+        private var changingColor = false
+        
         init(theme: PresentationTheme, strings: PresentationStrings) {
             self.addButton = HighlightableButtonNode()
             
@@ -190,9 +192,10 @@ final class ColorPickerComponent: Component {
                     }, animated: strongSelf.state.colors.count >= 2)
                 }
             }
-            
+                        
             self.colorPickerNode.colorChanged = { [weak self] color in
                 if let strongSelf = self {
+                    strongSelf.changingColor = true
                     strongSelf.updateState({ current in
                         var updated = current
                         updated.preview = true
@@ -205,6 +208,7 @@ final class ColorPickerComponent: Component {
             }
             self.colorPickerNode.colorChangeEnded = { [weak self] color in
                 if let strongSelf = self {
+                    strongSelf.changingColor = false
                     strongSelf.updateState({ current in
                         var updated = current
                         updated.preview = false
@@ -416,18 +420,20 @@ final class ColorPickerComponent: Component {
             transition.setFrame(view: self.topSeparatorView, frame: CGRect(x: 0.0, y: size.height, width: availableSize.width, height: UIScreenPixel))
             transition.setFrame(view: self.separatorView, frame: CGRect(x: size.width / 2.0, y: size.height, width: UIScreenPixel, height: buttonHeight))
             
-            self.updateState({ current in
-                var updated = current
-                updated.colors = component.colors.map { HSBColor(rgb: $0) }
-                
-                if component.isVisible != previousIsVisible && component.isVisible {
-                    updated.selection = 0
-                }
-                
-                return updated
-            }, updateLayout: true, notify: false, animated: false)
+            if !self.changingColor {
+                self.updateState({ current in
+                    var updated = current
+                    updated.colors = component.colors.map { HSBColor(rgb: $0) }
+                    
+                    if component.isVisible != previousIsVisible && component.isVisible {
+                        updated.selection = 0
+                    }
+                    
+                    return updated
+                }, updateLayout: true, notify: false, animated: false)
             
-            self.updateLayout(size: size, transition: transition.containedViewLayoutTransition)
+                self.updateLayout(size: size, transition: transition.containedViewLayoutTransition)
+            }
             return panelSize
         }
     }
@@ -588,7 +594,7 @@ private final class WallpaperColorHueSaturationNode: ASDisplayNode {
         let context = UIGraphicsGetCurrentContext()!
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         
-        let colors = [UIColor(rgb: 0xff0000).cgColor, UIColor(rgb: 0xffff00).cgColor, UIColor(rgb: 0x00ff00).cgColor, UIColor(rgb: 0x00ffff).cgColor, UIColor(rgb: 0x0000ff).cgColor, UIColor(rgb: 0xff00ff).cgColor, UIColor(rgb: 0xff0000).cgColor]
+        let colors = [UIColor(rgb: 0xff0000).cgColor, UIColor(rgb: 0xffff00).cgColor, UIColor(rgb: 0x00ff00).cgColor, UIColor(rgb: 0x00ffff).cgColor, UIColor(rgb: 0x0000ff).cgColor, UIColor(rgb: 0xff00ff).cgColor, UIColor(rgb: 0xfe0000).cgColor]
         var locations: [CGFloat] = [0.0, 0.16667, 0.33333, 0.5, 0.66667, 0.83334, 1.0]
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: bounds.width, y: 0.0), options: CGGradientDrawingOptions())

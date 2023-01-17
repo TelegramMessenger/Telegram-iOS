@@ -8686,7 +8686,7 @@ Sorry for the inconvenience.";
 
 "RequestPeer.SelectionConfirmationTitle" = "Are you sure you want to send %1$@ to %2$@?";
 "RequestPeer.SelectionConfirmationInviteText" = "This will also add %1$@ to %2$@.";
-"RequestPeer.SelectionConfirmationInviteWithRightsText" = "This will also add %1$@ to %2$@ with the following rights:\n\n%3$@.";
+"RequestPeer.SelectionConfirmationInviteWithRightsText" = "This will also add %1$@ to %2$@ with the following rights:\n\n%3$@";
 "RequestPeer.SelectionConfirmationSend" = "Send";
 
 "CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
