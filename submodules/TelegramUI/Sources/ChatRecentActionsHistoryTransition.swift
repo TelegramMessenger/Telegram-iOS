@@ -660,7 +660,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             
                             let order: [(TelegramChatBannedRightsFlags, String)] = [
                                 (.banReadMessages, self.presentationData.strings.Channel_AdminLog_BanReadMessages),
-                                (.banSendMessages, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
+                                (.banSendText, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
                                 (.banSendMedia, self.presentationData.strings.Channel_AdminLog_BanSendMedia),
                                 (.banSendStickers, self.presentationData.strings.Channel_AdminLog_BanSendStickersAndGifs),
                                 (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),
@@ -1015,7 +1015,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
         
                 let order: [(TelegramChatBannedRightsFlags, String)] = [
                     (.banReadMessages, self.presentationData.strings.Channel_AdminLog_BanReadMessages),
-                    (.banSendMessages, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
+                    (.banSendText, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
                     (.banSendMedia, self.presentationData.strings.Channel_AdminLog_BanSendMedia),
                     (.banSendStickers, self.presentationData.strings.Channel_AdminLog_BanSendStickersAndGifs),
                     (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),

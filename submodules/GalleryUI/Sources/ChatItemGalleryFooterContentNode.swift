@@ -621,11 +621,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         var canFullscreen = false
         
         var canEdit = false
+        var isImage = false
+        var isVideo = false
         for media in message.media {
             if media is TelegramMediaImage {
                 canEdit = true
+                isImage = true
             } else if let media = media as? TelegramMediaFile, !media.isAnimated {
-                var isVideo = false
                 for attribute in media.attributes {
                     switch attribute {
                     case let .Video(_, dimensions, _):
@@ -666,7 +668,19 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             } else if let channel = peer as? TelegramChannel {
                 if message.flags.contains(.Incoming) {
                     canDelete = channel.hasPermission(.deleteAllMessages)
-                    canEdit = canEdit && channel.hasPermission(.sendMessages)
+                    if canEdit {
+                        if isImage {
+                            if !channel.hasPermission(.sendPhoto) {
+                                canEdit = false
+                            }
+                        } else if isVideo {
+                            if !channel.hasPermission(.sendVideo) {
+                                canEdit = false
+                            }
+                        } else {
+                            canEdit = false
+                        }
+                    }
                 } else {
                     canDelete = true
                 }

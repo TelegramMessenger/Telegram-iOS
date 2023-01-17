@@ -302,7 +302,7 @@ public final class EntityKeyboardComponent: Component {
             if let maskContent = component.maskContent {
                 var topMaskItems: [EntityKeyboardTopPanelComponent.Item] = []
                                 
-                for itemGroup in maskContent.itemGroups {
+                for itemGroup in maskContent.panelItemGroups {
                     if let id = itemGroup.supergroupId.base as? String {
                         let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
                             "saved": .saved,
@@ -359,7 +359,7 @@ public final class EntityKeyboardComponent: Component {
                     theme: component.theme,
                     items: topMaskItems,
                     containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
-                    defaultActiveItemId: maskContent.itemGroups.first?.groupId,
+                    defaultActiveItemId: maskContent.panelItemGroups.first?.groupId,
                     activeContentItemIdUpdated: masksContentItemIdUpdated,
                     reorderItems: { [weak self] items in
                         guard let strongSelf = self else {
@@ -476,7 +476,7 @@ public final class EntityKeyboardComponent: Component {
                     ))
                 }
                 
-                for itemGroup in stickerContent.itemGroups {
+                for itemGroup in stickerContent.panelItemGroups {
                     if let id = itemGroup.supergroupId.base as? String {
                         if id == "peerSpecific" {
                             if let avatarPeer = stickerContent.avatarPeer {
@@ -551,7 +551,7 @@ public final class EntityKeyboardComponent: Component {
                     theme: component.theme,
                     items: topStickerItems,
                     containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
-                    defaultActiveItemId: stickerContent.itemGroups.first?.groupId,
+                    defaultActiveItemId: stickerContent.panelItemGroups.first?.groupId,
                     activeContentItemIdUpdated: stickersContentItemIdUpdated,
                     reorderItems: { [weak self] items in
                         guard let strongSelf = self else {
@@ -581,7 +581,7 @@ public final class EntityKeyboardComponent: Component {
             if let emojiContent = component.emojiContent {
                 contents.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(emojiContent)))
                 var topEmojiItems: [EntityKeyboardTopPanelComponent.Item] = []
-                for itemGroup in emojiContent.itemGroups {
+                for itemGroup in emojiContent.panelItemGroups {
                     if !itemGroup.items.isEmpty {
                         if let id = itemGroup.groupId.base as? String {
                             if id == "recent" {

@@ -1520,7 +1520,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }))
                 }
                 
-                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
+                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendSomething)) {
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
                     case let .broadcast(info):
@@ -7263,7 +7263,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 guard let strongSelf = self, let completion else {
                     return
                 }
-                
                 let controller = AvatarEditorScreen(context: strongSelf.context, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
                 controller.completion = completion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)

@@ -32,9 +32,9 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         
         let bannedPermission: (Int32, Bool)?
         if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel {
-            bannedPermission = channel.hasBannedPermission(.banSendMessages)
+            bannedPermission = channel.hasBannedPermission(.banSendText)
         } else if let group = interfaceState.renderedPeer?.peer as? TelegramGroup {
-            if group.hasBannedPermission(.banSendMessages) {
+            if group.hasBannedPermission(.banSendText) {
                 bannedPermission = (Int32.max, false)
             } else {
                 bannedPermission = nil

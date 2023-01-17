@@ -33,7 +33,7 @@
 
 @implementation TGAttachmentCameraView
 
-- (instancetype)initForSelfPortrait:(bool)selfPortrait
+- (instancetype)initForSelfPortrait:(bool)selfPortrait videoModeByDefault:(bool)videoModeByDefault
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -46,7 +46,7 @@
         PGCamera *camera = nil;
         if ([PGCamera cameraAvailable])
         {
-            camera = [[PGCamera alloc] initWithMode:PGCameraModePhoto position:selfPortrait ? PGCameraPositionFront : PGCameraPositionUndefined];
+            camera = [[PGCamera alloc] initWithMode:videoModeByDefault ? PGCameraModeVideo : PGCameraModePhoto position:selfPortrait ? PGCameraPositionFront : PGCameraPositionUndefined];
         }
         _camera = camera;
         

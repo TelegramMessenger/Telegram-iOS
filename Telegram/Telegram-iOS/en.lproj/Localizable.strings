@@ -8696,6 +8696,9 @@ Sorry for the inconvenience.";
 
 "Conversation.ViewInChannel" = "View in Channel";
 
+
+"Conversation.HoldForAudioOnly" = "Hold to record audio.";
+"Conversation.HoldForVideoOnly" = "Hold to record video.";
 "Conversation.Translation.TranslateTo" = "Translate to %@";
 "Conversation.Translation.ShowOriginal" = "Show Original";
 "Conversation.Translation.ChooseLanguage" = "Choose Another Language";

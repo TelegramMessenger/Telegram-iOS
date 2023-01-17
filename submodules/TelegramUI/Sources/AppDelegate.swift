@@ -1394,6 +1394,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }*/
         
+        if #available(iOS 12.0, *) {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
+        
         return true
     }
     
