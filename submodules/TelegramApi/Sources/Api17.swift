@@ -654,15 +654,16 @@ public extension Api {
 }
 public extension Api {
     enum PremiumSubscriptionOption: TypeConstructorDescription {
-        case premiumSubscriptionOption(flags: Int32, months: Int32, currency: String, amount: Int64, botUrl: String, storeProduct: String?)
+        case premiumSubscriptionOption(flags: Int32, transaction: String?, months: Int32, currency: String, amount: Int64, botUrl: String, storeProduct: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .premiumSubscriptionOption(let flags, let months, let currency, let amount, let botUrl, let storeProduct):
+                case .premiumSubscriptionOption(let flags, let transaction, let months, let currency, let amount, let botUrl, let storeProduct):
                     if boxed {
-                        buffer.appendInt32(-1225711938)
+                        buffer.appendInt32(1596792306)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(transaction!, buffer: buffer, boxed: false)}
                     serializeInt32(months, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
@@ -674,32 +675,35 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .premiumSubscriptionOption(let flags, let months, let currency, let amount, let botUrl, let storeProduct):
-                return ("premiumSubscriptionOption", [("flags", flags as Any), ("months", months as Any), ("currency", currency as Any), ("amount", amount as Any), ("botUrl", botUrl as Any), ("storeProduct", storeProduct as Any)])
+                case .premiumSubscriptionOption(let flags, let transaction, let months, let currency, let amount, let botUrl, let storeProduct):
+                return ("premiumSubscriptionOption", [("flags", flags as Any), ("transaction", transaction as Any), ("months", months as Any), ("currency", currency as Any), ("amount", amount as Any), ("botUrl", botUrl as Any), ("storeProduct", storeProduct as Any)])
     }
     }
     
         public static func parse_premiumSubscriptionOption(_ reader: BufferReader) -> PremiumSubscriptionOption? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Int64?
-            _4 = reader.readInt64()
-            var _5: String?
-            _5 = parseString(reader)
+            var _2: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_2 = parseString(reader) }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            _5 = reader.readInt64()
             var _6: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
+            _6 = parseString(reader)
+            var _7: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_7 = parseString(reader) }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PremiumSubscriptionOption.premiumSubscriptionOption(flags: _1!, months: _2!, currency: _3!, amount: _4!, botUrl: _5!, storeProduct: _6)
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.PremiumSubscriptionOption.premiumSubscriptionOption(flags: _1!, transaction: _2, months: _3!, currency: _4!, amount: _5!, botUrl: _6!, storeProduct: _7)
             }
             else {
                 return nil

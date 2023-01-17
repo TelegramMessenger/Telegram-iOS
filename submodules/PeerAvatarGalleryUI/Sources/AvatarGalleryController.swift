@@ -916,7 +916,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 case let .image(_, reference, _, _, _, _, _, messageId, _, _, isFallback):
                     if self.peer.id == self.context.account.peerId {
                         if isFallback {
-                            let _ = self.context.engine.accountData.updateFallbackPhoto(resource: nil, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+                            let _ = self.context.engine.accountData.updateFallbackPhoto(resource: nil, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
                         } else if let reference = reference {
                             let _ = self.context.engine.accountData.removeAccountPhoto(reference: reference).start()
                         }

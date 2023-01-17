@@ -73,6 +73,7 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case visualMediaStoredState = 5
     case cachedImageRecognizedContent = 6
     case pendingInAppPurchaseState = 7
+    case translationState = 8
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -84,6 +85,7 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let visualMediaStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.visualMediaStoredState.rawValue)
     public static let cachedImageRecognizedContent = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedImageRecognizedContent.rawValue)
     public static let pendingInAppPurchaseState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.pendingInAppPurchaseState.rawValue)
+    public static let translationState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.translationState.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
