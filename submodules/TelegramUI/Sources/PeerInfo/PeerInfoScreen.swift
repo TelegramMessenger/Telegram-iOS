@@ -6824,11 +6824,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let signal: Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError>
         if self.isSettings {
             if case .fallback = mode {
-                signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+                signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             } else {
-                signal = self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
+                signal = self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             }
@@ -7049,11 +7049,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
             if isSettings {
                 if case .fallback = mode {
-                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 } else {
-                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 }
@@ -7221,7 +7221,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
-                let controller = AvatarEditorScreen(context: strongSelf.context)
+                let controller = AvatarEditorScreen(context: strongSelf.context, initialFileId: nil, initialBackgroundColors: nil)
                 controller.completion = completion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
             }

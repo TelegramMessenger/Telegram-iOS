@@ -1210,11 +1210,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
         var sendingTextDisabled = false
-        if let peer = interfaceState.renderedPeer?.peer {
-            if let channel = peer as? TelegramChannel, channel.hasBannedPermission(.banSendText) != nil {
-                sendingTextDisabled = true
-            } else if let group = peer as? TelegramGroup, group.hasBannedPermission(.banSendText) {
-                sendingTextDisabled = true
+        if interfaceState.interfaceState.editMessage == nil {
+            if let peer = interfaceState.renderedPeer?.peer {
+                if let channel = peer as? TelegramChannel, channel.hasBannedPermission(.banSendText) != nil {
+                    sendingTextDisabled = true
+                } else if let group = peer as? TelegramGroup, group.hasBannedPermission(.banSendText) {
+                    sendingTextDisabled = true
+                }
             }
         }
         self.sendingTextDisabled = sendingTextDisabled
@@ -1366,7 +1368,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let dismissedButtonMessageUpdated = interfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != previousState?.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId
             let replyMessageUpdated = interfaceState.interfaceState.replyMessageId != previousState?.interfaceState.replyMessageId
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated || (previousState?.interfaceState.editMessage == nil) != (interfaceState.interfaceState.editMessage == nil) {
                 self.initializedPlaceholder = true
                 
                 var placeholder: String

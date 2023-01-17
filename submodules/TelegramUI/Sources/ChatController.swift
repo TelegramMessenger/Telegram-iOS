@@ -4162,7 +4162,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                 let text: String
                 if case .user = peerType {
-                    text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationText(peerName, botName).string
+                    text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationTitle(peerName, botName).string
                 } else {
                     var botAdminRights: TelegramChatAdminRights?
                     switch peerType {
@@ -4174,9 +4174,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                     if let botAdminRights {
-                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(peerName, botName, botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights)).string
+                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights)).string
                     } else {
-                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(peerName, botName, botName, peerName).string
+                        text = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(botName, peerName).string
                     }
                 }
                 
