@@ -194,7 +194,7 @@ final class AvatarEditorScreenComponent: Component {
         private func updateData(_ data: KeyboardInputData) {
             self.data = data
             
-            self.state?.selectedItem = data.emoji.itemGroups.first?.items.first
+            self.state?.selectedItem = data.emoji.panelItemGroups.first?.items.first
             self.state?.updated(transition: .immediate)
             
             let updateSearchQuery: (String, String) -> Void = { [weak self] rawQuery, languageCode in
@@ -735,9 +735,9 @@ final class AvatarEditorScreenComponent: Component {
                             }
                             
                             if state?.keyboardContentId == AnyHashable("emoji") {
-                                data.emoji = data.emoji.withUpdatedItemGroups(itemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults)
+                                data.emoji = data.emoji.withUpdatedItemGroups(panelItemGroups: data.emoji.panelItemGroups, contentItemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults)
                             } else {
-                                data.stickers = data.stickers?.withUpdatedItemGroups(itemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults)
+                                data.stickers = data.stickers?.withUpdatedItemGroups(panelItemGroups: data.stickers?.panelItemGroups ?? searchResult.groups, contentItemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults)
                             }
                         }
                         

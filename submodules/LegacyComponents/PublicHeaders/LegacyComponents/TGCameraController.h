@@ -19,7 +19,8 @@ typedef enum {
     TGCameraControllerPassportMultipleIntent,
     TGCameraControllerAvatarIntent,
     TGCameraControllerSignupAvatarIntent,
-    TGCameraControllerGenericPhotoOnlyIntent
+    TGCameraControllerGenericPhotoOnlyIntent,
+    TGCameraControllerGenericVideoOnlyIntent
 } TGCameraControllerIntent;
 
 @interface TGCameraControllerWindow : TGOverlayControllerWindow

@@ -1516,7 +1516,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }))
                 }
                 
-                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
+                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendSomething)) {
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
                     case let .broadcast(info):

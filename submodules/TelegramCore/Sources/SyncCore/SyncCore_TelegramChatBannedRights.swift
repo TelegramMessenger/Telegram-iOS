@@ -12,7 +12,6 @@ public struct TelegramChatBannedRightsFlags: OptionSet, Hashable {
     }
     
     public static let banReadMessages = TelegramChatBannedRightsFlags(rawValue: 1 << 0)
-    public static let banSendMessages = TelegramChatBannedRightsFlags(rawValue: 1 << 1)
     public static let banSendMedia = TelegramChatBannedRightsFlags(rawValue: 1 << 2)
     public static let banSendStickers = TelegramChatBannedRightsFlags(rawValue: 1 << 3)
     public static let banSendGifs = TelegramChatBannedRightsFlags(rawValue: 1 << 4)
@@ -30,6 +29,7 @@ public struct TelegramChatBannedRightsFlags: OptionSet, Hashable {
     public static let banSendMusic = TelegramChatBannedRightsFlags(rawValue: 1 << 22)
     public static let banSendVoice = TelegramChatBannedRightsFlags(rawValue: 1 << 23)
     public static let banSendFiles = TelegramChatBannedRightsFlags(rawValue: 1 << 24)
+    public static let banSendText = TelegramChatBannedRightsFlags(rawValue: 1 << 25)
 }
 
 public struct TelegramChatBannedRights: PostboxCoding, Equatable {

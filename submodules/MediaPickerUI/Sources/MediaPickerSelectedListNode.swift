@@ -254,7 +254,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
                 if let strongSelf = self, let interaction = strongSelf.interaction, let selectableItem = strongSelf.asset as? TGMediaSelectableItem {
-                    interaction.toggleSelection(selectableItem, value, true)
+                    if !interaction.toggleSelection(selectableItem, value, true) {
+                        strongSelf.checkNode?.setSelected(false, animated: false)
+                    }
                 }
             }
             self.addSubnode(checkNode)

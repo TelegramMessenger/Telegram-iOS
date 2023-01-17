@@ -283,7 +283,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     case .peer:
         if let channel = peer as? TelegramChannel {
             if case .member = channel.participationStatus {
-                canReply = channel.hasPermission(.sendMessages)
+                canReply = channel.hasPermission(.sendSomething)
             }
         } else if let group = peer as? TelegramGroup {
             if case .Member = group.membership {

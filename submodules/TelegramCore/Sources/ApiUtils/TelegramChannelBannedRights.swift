@@ -15,6 +15,7 @@ extension TelegramChatBannedRights {
     var apiBannedRights: Api.ChatBannedRights {
         var effectiveFlags = self.flags
         effectiveFlags.remove(.banSendMedia)
+        effectiveFlags.remove(TelegramChatBannedRightsFlags(rawValue: 1 << 1))
         
         return .chatBannedRights(flags: effectiveFlags.rawValue, untilDate: self.untilDate)
     }

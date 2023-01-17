@@ -477,7 +477,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                 } else {
                     controller?.inProgress = true
-                    strongSelf.actionDisposable.set((resendAuthorizationCode(account: strongSelf.account)
+                    strongSelf.actionDisposable.set((resendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream)
                     |> deliverOnMainQueue).start(next: { result in
                         controller?.inProgress = false
                     }, error: { error in

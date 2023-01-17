@@ -8,7 +8,7 @@ public enum ServerProvidedSuggestion: String {
     case newcomerTicks = "NEWCOMER_TICKS"
     case validatePhoneNumber = "VALIDATE_PHONE_NUMBER"
     case validatePassword = "VALIDATE_PASSWORD"
-    case setupPassword = "SETUP_2FA"
+    case setupPassword = "SETUP_PASSWORD"
 }
 
 private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
@@ -33,12 +33,7 @@ public func getServerProvidedSuggestions(account: Account) -> Signal<[ServerProv
             return []
         }
         
-        #if DEBUG
-        var list = listItems
-        list.append(ServerProvidedSuggestion.setupPassword.rawValue)
-        #else
         let list = listItems
-        #endif
         
         return list.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)

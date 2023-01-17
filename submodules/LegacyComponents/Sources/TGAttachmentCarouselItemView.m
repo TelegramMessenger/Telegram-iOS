@@ -230,7 +230,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         
         if (hasCamera)
         {
-            _cameraView = [[TGAttachmentCameraView alloc] initForSelfPortrait:selfPortrait];
+            _cameraView = [[TGAttachmentCameraView alloc] initForSelfPortrait:selfPortrait videoModeByDefault:false];
             _cameraView.frame = CGRectMake(_smallLayout.minimumLineSpacing, 0, TGAttachmentCellSize.width, TGAttachmentCellSize.height);
             [_cameraView startPreview];
             

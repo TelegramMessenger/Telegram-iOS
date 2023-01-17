@@ -378,7 +378,7 @@ private struct ChannelPermissionsControllerState: Equatable {
 
 func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool) -> String {
     //TODO:localize
-    if right.contains(.banSendMessages) {
+    if right.contains(.banSendText) {
         return strings.Channel_BanUser_PermissionSendMessages
     } else if right.contains(.banSendMedia) {
         return strings.Channel_BanUser_PermissionSendMedia
@@ -416,7 +416,7 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
 }
 
 func compactStringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags) -> String {
-    if right.contains(.banSendMessages) {
+    if right.contains(.banSendText) {
         return strings.GroupPermission_NoSendMessages
     } else if right.contains(.banSendMedia) {
         return strings.GroupPermission_NoSendMedia
@@ -440,7 +440,7 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
 }
 
 private let internal_allPossibleGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
-    (.banSendMessages, .banMembers),
+    (.banSendText, .banMembers),
     (.banSendMedia, .banMembers),
     (.banSendPhotos, .banMembers),
     (.banSendVideos, .banMembers),
@@ -460,9 +460,8 @@ private let internal_allPossibleGroupPermissionList: [(TelegramChatBannedRightsF
 public func allGroupPermissionList(peer: EnginePeer) -> [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] {
     if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         return [
-            (.banSendMessages, .banMembers),
+            (.banSendText, .banMembers),
             (.banSendMedia, .banMembers),
-            (.banSendPolls, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
             (.banManageTopics, .manageTopics),
@@ -470,9 +469,8 @@ public func allGroupPermissionList(peer: EnginePeer) -> [(TelegramChatBannedRigh
         ]
     } else {
         return [
-            (.banSendMessages, .banMembers),
+            (.banSendText, .banMembers),
             (.banSendMedia, .banMembers),
-            (.banSendPolls, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
             (.banChangeInfo, .changeInfo)
@@ -490,6 +488,7 @@ public func banSendMediaSubList() -> [(TelegramChatBannedRightsFlags, TelegramCh
         (.banSendVoice, .banMembers),
         (.banSendInstantVideos, .banMembers),
         (.banEmbedLinks, .banMembers),
+        (.banSendPolls, .banMembers),
     ]
 }
 
@@ -500,13 +499,13 @@ let publicGroupRestrictedPermissions: TelegramChatBannedRightsFlags = [
 
 func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
     if right.contains(.banSendMedia) || banSendMediaSubList().contains(where: { $0.0 == right }) {
-        return [.banSendMessages]
+        return []
     } else if right.contains(.banSendGifs) {
-        return [.banSendMessages]
+        return []
     } else if right.contains(.banEmbedLinks) {
-        return [.banSendMessages]
+        return []
     } else if right.contains(.banSendPolls) {
-        return [.banSendMessages]
+        return []
     } else if right.contains(.banChangeInfo) {
         return []
     } else if right.contains(.banAddMembers) {

@@ -462,6 +462,7 @@ final class ChatTextViewForOverlayContent: UIView, ChatInputPanelViewForOverlayC
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let clippingNode: ASDisplayNode
     var textPlaceholderNode: ImmediateTextNode
+    var textLockIconNode: ASImageNode?
     var contextPlaceholderNode: TextNode?
     var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
     let textInputContainerBackgroundNode: ASImageNode
@@ -516,6 +517,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var updatingInputState = false
     
     private var currentPlaceholder: String?
+    private var sendingTextDisabled: Bool = false
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var initializedPlaceholder = false
@@ -923,7 +925,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
             if let strongSelf = self {
-                strongSelf.ensureFocused()
+                if strongSelf.sendingTextDisabled {
+                    guard let controller = strongSelf.interfaceInteraction?.chatController() as? ChatControllerImpl else {
+                        return
+                    }
+                    //TODO:localize
+                    controller.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send text messages."))
+                } else {
+                    strongSelf.ensureFocused()
+                }
             }
         }
         recognizer.waitForTouchUp = { [weak self] in
@@ -997,6 +1007,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: -13.0)
         self.textInputContainer.addSubnode(textInputNode)
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
+        textInputNode.isUserInteractionEnabled = !self.sendingTextDisabled
         self.textInputNode = textInputNode
         
         var accessoryButtonsWidth: CGFloat = 0.0
@@ -1024,8 +1035,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.updateSpoiler()
         }
         
-        self.textInputBackgroundNode.isUserInteractionEnabled = false
-        self.textInputBackgroundNode.view.removeGestureRecognizer(self.textInputBackgroundNode.view.gestureRecognizers![0])
+        self.textInputBackgroundNode.isUserInteractionEnabled = !textInputNode.isUserInteractionEnabled
+        //self.textInputBackgroundNode.view.removeGestureRecognizer(self.textInputBackgroundNode.view.gestureRecognizers![0])
         
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
@@ -1198,6 +1209,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
+        var sendingTextDisabled = false
+        if let peer = interfaceState.renderedPeer?.peer {
+            if let channel = peer as? TelegramChannel, channel.hasBannedPermission(.banSendText) != nil {
+                sendingTextDisabled = true
+            } else if let group = peer as? TelegramGroup, group.hasBannedPermission(.banSendText) {
+                sendingTextDisabled = true
+            }
+        }
+        self.sendingTextDisabled = sendingTextDisabled
+        
+        self.textInputNode?.isUserInteractionEnabled = !sendingTextDisabled
+        
         var buttonTitleUpdated = false
         var menuTextSize = self.menuButtonTextNode.frame.size
         if self.presentationInterfaceState != interfaceState {
@@ -1347,22 +1370,30 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.initializedPlaceholder = true
                 
                 var placeholder: String
+                
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                     if interfaceState.interfaceState.silentPosting {
                         placeholder = interfaceState.strings.Conversation_InputTextSilentBroadcastPlaceholder
                     } else {
                         placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
                     }
-                } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
-                    placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
-                } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation, !replyThreadMessage.isForumPost {
-                    if replyThreadMessage.isChannelPost {
-                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
-                    } else {
-                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
-                    }
                 } else {
-                    placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
+                    if sendingTextDisabled {
+                        //TODO:localize
+                        placeholder = "Text not allowed"
+                    } else {
+                        if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                            placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
+                        } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation, !replyThreadMessage.isForumPost {
+                            if replyThreadMessage.isChannelPost {
+                                placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
+                            } else {
+                                placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
+                            }
+                        } else {
+                            placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
+                        }
+                    }
                 }
 
                 if let keyboardButtonsMessage = interfaceState.keyboardButtonsMessage, interfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != keyboardButtonsMessage.id {
@@ -2037,7 +2068,35 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: textInputBackgroundFrame)
         transition.updateAlpha(node: self.textInputBackgroundNode, alpha: audioRecordingItemsAlpha)
         
-        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size))
+        let textPlaceholderFrame: CGRect
+        if sendingTextDisabled {
+            textPlaceholderFrame = CGRect(origin: CGPoint(x: textInputBackgroundFrame.minX + floor((textInputBackgroundFrame.width - self.textPlaceholderNode.bounds.width) / 2.0), y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
+            
+            let textLockIconNode: ASImageNode
+            var textLockIconTransition = transition
+            if let current = self.textLockIconNode {
+                textLockIconNode = current
+            } else {
+                textLockIconTransition = .immediate
+                textLockIconNode = ASImageNode()
+                self.textLockIconNode = textLockIconNode
+                self.textPlaceholderNode.addSubnode(textLockIconNode)
+                
+                textLockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: interfaceState.theme.chat.inputPanel.inputPlaceholderColor)
+            }
+            
+            if let image = textLockIconNode.image {
+                textLockIconTransition.updateFrame(node: textLockIconNode, frame: CGRect(origin: CGPoint(x: -image.size.width - 4.0, y: floor((textPlaceholderFrame.height - image.size.height) / 2.0)), size: image.size))
+            }
+        } else {
+            textPlaceholderFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
+            
+            if let textLockIconNode = self.textLockIconNode {
+                self.textLockIconNode = nil
+                textLockIconNode.removeFromSupernode()
+            }
+        }
+        transition.updateFrame(node: self.textPlaceholderNode, frame: textPlaceholderFrame)
         
         var textPlaceholderAlpha: CGFloat = audioRecordingItemsAlpha
         if self.textPlaceholderNode.frame.width > (nextButtonTopRight.x - textInputBackgroundFrame.minX) - 32.0 {
@@ -3352,6 +3411,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func ensureFocused() {
+        if self.sendingTextDisabled {
+            return
+        }
+        
         if self.textInputNode == nil {
             self.loadTextInputNode()
         }

@@ -33,7 +33,7 @@ final class WebSearchControllerInteraction {
     let openResult: (ChatContextResult) -> Void
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
-    let toggleSelection: (ChatContextResult, Bool) -> Void
+    let toggleSelection: (ChatContextResult, Bool) -> Bool
     let sendSelected: (ChatContextResult?, Bool, Int32?) -> Void
     let schedule: () -> Void
     let avatarCompleted: (UIImage) -> Void
@@ -41,7 +41,7 @@ final class WebSearchControllerInteraction {
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResult?, Bool, Int32?) -> Void, schedule: @escaping () -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Bool, sendSelected: @escaping (ChatContextResult?, Bool, Int32?) -> Void, schedule: @escaping () -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
@@ -118,6 +118,8 @@ public final class WebSearchController: ViewController {
     public var dismissed: () -> Void = { }
     
     public var searchingUpdated: (Bool) -> Void = { _ in }
+    
+    public var attemptItemSelection: (ChatContextResult) -> Bool = { _ in return true }
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: EngineConfiguration.SearchBots, mode: WebSearchControllerMode) {
         self.context = context
@@ -233,8 +235,14 @@ public final class WebSearchController: ViewController {
             }
         }, toggleSelection: { [weak self] result, value in
             if let strongSelf = self {
+                if !strongSelf.attemptItemSelection(result) {
+                    return false
+                }
                 let item = LegacyWebSearchItem(result: result)
                 strongSelf.controllerInteraction?.selectionState?.setItem(item, selected: value)
+                return true
+            } else {
+                return false
             }
         }, sendSelected: { [weak self] current, silently, scheduleTime in
             if let selectionState = selectionState, let results = self?.controllerNode.currentExternalResults {
@@ -257,6 +265,18 @@ public final class WebSearchController: ViewController {
                 avatarCompleted(result)
             }
         }, selectionState: selectionState, editingState: editingState)
+        
+        selectionState?.attemptSelectingItem = { [weak self] item in
+            guard let self else {
+                return false
+            }
+            
+            if let item = item as? LegacyWebSearchItem {
+                return self.attemptItemSelection(item.result)
+            }
+            
+            return true
+        }
         
         if let selectionState = selectionState {
             self.selectionDisposable = (selectionChangedSignal(selectionState: selectionState)
