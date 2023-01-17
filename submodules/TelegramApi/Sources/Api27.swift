@@ -1247,6 +1247,7 @@ public extension Api.messages {
 public extension Api.messages {
     enum TranslatedText: TypeConstructorDescription {
         case translateNoResult
+        case translateResult(result: [Api.TextWithEntities])
         case translateResultText(text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1256,6 +1257,16 @@ public extension Api.messages {
                         buffer.appendInt32(1741309751)
                     }
                     
+                    break
+                case .translateResult(let result):
+                    if boxed {
+                        buffer.appendInt32(870003448)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(result.count))
+                    for item in result {
+                        item.serialize(buffer, true)
+                    }
                     break
                 case .translateResultText(let text):
                     if boxed {
@@ -1270,6 +1281,8 @@ public extension Api.messages {
         switch self {
                 case .translateNoResult:
                 return ("translateNoResult", [])
+                case .translateResult(let result):
+                return ("translateResult", [("result", result as Any)])
                 case .translateResultText(let text):
                 return ("translateResultText", [("text", text as Any)])
     }
@@ -1277,6 +1290,19 @@ public extension Api.messages {
     
         public static func parse_translateNoResult(_ reader: BufferReader) -> TranslatedText? {
             return Api.messages.TranslatedText.translateNoResult
+        }
+        public static func parse_translateResult(_ reader: BufferReader) -> TranslatedText? {
+            var _1: [Api.TextWithEntities]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.TextWithEntities.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.TranslatedText.translateResult(result: _1!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_translateResultText(_ reader: BufferReader) -> TranslatedText? {
             var _1: String?
@@ -1348,52 +1374,6 @@ public extension Api.messages {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, users: _4!, nextOffset: _5)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum BankCardData: TypeConstructorDescription {
-        case bankCardData(title: String, openUrls: [Api.BankCardOpenUrl])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .bankCardData(let title, let openUrls):
-                    if boxed {
-                        buffer.appendInt32(1042605427)
-                    }
-                    serializeString(title, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(openUrls.count))
-                    for item in openUrls {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .bankCardData(let title, let openUrls):
-                return ("bankCardData", [("title", title as Any), ("openUrls", openUrls as Any)])
-    }
-    }
-    
-        public static func parse_bankCardData(_ reader: BufferReader) -> BankCardData? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Api.BankCardOpenUrl]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BankCardOpenUrl.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.payments.BankCardData.bankCardData(title: _1!, openUrls: _2!)
             }
             else {
                 return nil

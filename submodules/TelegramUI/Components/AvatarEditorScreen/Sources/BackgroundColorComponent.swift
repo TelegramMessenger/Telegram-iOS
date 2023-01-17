@@ -11,6 +11,7 @@ final class BackgroundColorComponent: Component {
     let theme: PresentationTheme
     let values: [AvatarBackground]
     let selectedValue: AvatarBackground
+    let customValue: AvatarBackground?
     let updateValue: (AvatarBackground) -> Void
     let openColorPicker: () -> Void
     
@@ -18,12 +19,14 @@ final class BackgroundColorComponent: Component {
         theme: PresentationTheme,
         values: [AvatarBackground],
         selectedValue: AvatarBackground,
+        customValue: AvatarBackground?,
         updateValue: @escaping (AvatarBackground) -> Void,
         openColorPicker: @escaping () -> Void
     ) {
         self.theme = theme
         self.values = values
         self.selectedValue = selectedValue
+        self.customValue = customValue
         self.updateValue = updateValue
         self.openColorPicker = openColorPicker
     }
@@ -36,6 +39,9 @@ final class BackgroundColorComponent: Component {
             return false
         }
         if lhs.selectedValue != rhs.selectedValue {
+            return false
+        }
+        if lhs.customValue != rhs.customValue {
             return false
         }
         return true
@@ -62,8 +68,8 @@ final class BackgroundColorComponent: Component {
             self.state = state
             
             var values: [(AvatarBackground?, Bool)] = component.values.map { ($0, false) }
-            if !values.contains(where: { $0.0 == component.selectedValue }) {
-                values.append((component.selectedValue, true))
+            if let customValue = component.customValue {
+                values.append((customValue, true))
             } else {
                 values.append((nil, true))
             }
@@ -91,9 +97,9 @@ final class BackgroundColorComponent: Component {
                             isCustom: values[i].1,
                             isSelected: component.selectedValue == values[i].0,
                             action: {
-                                if !values[i].1, let value = values[i].0 {
+                                if let value = values[i].0, component.selectedValue != value {
                                     component.updateValue(value)
-                                } else {
+                                } else if values[i].1 {
                                     component.openColorPicker()
                                 }
                             }

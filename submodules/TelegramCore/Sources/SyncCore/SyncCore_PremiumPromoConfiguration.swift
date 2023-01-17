@@ -34,38 +34,59 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
     }
     
     public struct PremiumProductOption: Codable, Equatable {
+        enum CodingKeys: String, CodingKey {
+            case isCurrent
+            case months
+            case currency
+            case amount
+            case botUrl
+            case transactionId
+            case availableForUpgrade
+            case storeProductId
+        }
+        
+        public let isCurrent: Bool
         public let months: Int32
         public let currency: String
         public let amount: Int64
         public let botUrl: String
+        public let transactionId: String?
+        public let availableForUpgrade: Bool
         public let storeProductId: String?
         
-        public init(months: Int32, currency: String, amount: Int64, botUrl: String, storeProductId: String?) {
+        public init(isCurrent: Bool, months: Int32, currency: String, amount: Int64, botUrl: String, transactionId: String?, availableForUpgrade: Bool, storeProductId: String?) {
+            self.isCurrent = isCurrent
             self.months = months
             self.currency = currency
             self.amount = amount
             self.botUrl = botUrl
+            self.transactionId = transactionId
+            self.availableForUpgrade = availableForUpgrade
             self.storeProductId = storeProductId
         }
         
-        public init(decoder: PostboxDecoder) {
-            self.months = decoder.decodeInt32ForKey("months", orElse: 0)
-            self.currency = decoder.decodeStringForKey("currency", orElse: "")
-            self.amount = decoder.decodeInt64ForKey("amount", orElse: 0)
-            self.botUrl = decoder.decodeStringForKey("botUrl", orElse: "")
-            self.storeProductId = decoder.decodeOptionalStringForKey("storeProductId")
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.isCurrent = try container.decode(Bool.self, forKey: .isCurrent)
+            self.months = try container.decode(Int32.self, forKey: .months)
+            self.currency = try container.decode(String.self, forKey: .currency)
+            self.amount = try container.decode(Int64.self, forKey: .amount)
+            self.botUrl = try container.decode(String.self, forKey: .botUrl)
+            self.transactionId = try container.decodeIfPresent(String.self, forKey: .transactionId)
+            self.availableForUpgrade = try container.decode(Bool.self, forKey: .availableForUpgrade)
+            self.storeProductId = try container.decodeIfPresent(String.self, forKey: .storeProductId)
         }
         
-        public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeInt32(self.months, forKey: "months")
-            encoder.encodeString(self.currency, forKey: "currency")
-            encoder.encodeInt64(self.amount, forKey: "amount")
-            encoder.encodeString(self.botUrl, forKey: "botUrl")
-            if let storeProductId = self.storeProductId {
-                encoder.encodeString(storeProductId, forKey: "storeProductId")
-            } else {
-                encoder.encodeNil(forKey: "storeProductId")
-            }
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.isCurrent, forKey: .isCurrent)
+            try container.encode(self.months, forKey: .months)
+            try container.encode(self.currency, forKey: .currency)
+            try container.encode(self.amount, forKey: .amount)
+            try container.encode(self.botUrl, forKey: .botUrl)
+            try container.encodeIfPresent(self.transactionId, forKey: .transactionId)
+            try container.encode(self.availableForUpgrade, forKey: .availableForUpgrade)
+            try container.encodeIfPresent(self.storeProductId, forKey: .storeProductId)
         }
     }
     

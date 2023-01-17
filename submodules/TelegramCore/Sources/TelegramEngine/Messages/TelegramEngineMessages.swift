@@ -360,6 +360,10 @@ public extension TelegramEngine {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
         
+        public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
+            return _internal_translateMessages(postbox: self.account.postbox, network: self.account.network, messageIds: messageIds, toLang: toLang)
+        }
+        
         public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
             return _internal_transcribeAudio(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
         }

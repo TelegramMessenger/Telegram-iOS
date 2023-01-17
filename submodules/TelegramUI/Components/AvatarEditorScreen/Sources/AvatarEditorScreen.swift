@@ -74,17 +74,29 @@ final class AvatarEditorScreenComponent: Component {
     
     let context: AccountContext
     let ready: Promise<Bool>
+    let initialFileId: Int64?
+    let initialBackgroundColors: [Int32]?
     
     init(
         context: AccountContext,
-        ready: Promise<Bool>
+        ready: Promise<Bool>,
+        initialFileId: Int64?,
+        initialBackgroundColors: [Int32]?
     ) {
         self.context = context
         self.ready = ready
+        self.initialFileId = initialFileId
+        self.initialBackgroundColors = initialBackgroundColors
     }
     
     static func ==(lhs: AvatarEditorScreenComponent, rhs: AvatarEditorScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.initialFileId != rhs.initialFileId {
+            return false
+        }
+        if lhs.initialBackgroundColors != rhs.initialBackgroundColors {
             return false
         }
         return true
@@ -94,26 +106,49 @@ final class AvatarEditorScreenComponent: Component {
         let context: AccountContext
                 
         var selectedBackground: AvatarBackground
-        var selectedItem: EmojiPagerContentComponent.Item?
+        var selectedFile: TelegramMediaFile?
         
         var keyboardContentId: AnyHashable = "emoji"
         var expanded: Bool = false
         var editingColor: Bool = false
         var previousColor: AvatarBackground
         
+        var previousCustomColor: AvatarBackground?
+        var customColor: AvatarBackground?
+        
         var isSearchActive: Bool = false
         
-        init(context: AccountContext) {
+        init(context: AccountContext, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
             self.context = context
-            
+         
             self.selectedBackground = defaultBackgrounds.first!
+            self.previousColor = self.selectedBackground
+            
+            super.init()
+            
+            if let initialFileId, let initialBackgroundColors {
+                let _ = context.engine.stickers.resolveInlineStickers(fileIds: [initialFileId])
+                |> map { [weak self] files in
+                    if let strongSelf = self, let file = files.values.first {
+                        strongSelf.selectedFile = file
+                        strongSelf.updated(transition: .immediate)
+                    }
+                }
+                self.selectedBackground = .gradient(initialBackgroundColors.map { UInt32(bitPattern: $0) })
+                self.previousColor = self.selectedBackground
+            } else {
+                self.selectedBackground = defaultBackgrounds.first!
+            }
+            
             self.previousColor = self.selectedBackground
         }
     }
     
     func makeState() -> State {
         return State(
-            context: self.context
+            context: self.context,
+            initialFileId: self.initialFileId,
+            initialBackgroundColors: self.initialBackgroundColors
         )
     }
     
@@ -194,7 +229,7 @@ final class AvatarEditorScreenComponent: Component {
         private func updateData(_ data: KeyboardInputData) {
             self.data = data
             
-            self.state?.selectedItem = data.emoji.panelItemGroups.first?.items.first
+            self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
             self.state?.updated(transition: .immediate)
             
             let updateSearchQuery: (String, String) -> Void = { [weak self] rawQuery, languageCode in
@@ -366,7 +401,7 @@ final class AvatarEditorScreenComponent: Component {
                     guard let self, let _ = item.itemFile else {
                         return
                     }
-                    self.state?.selectedItem = item
+                    self.state?.selectedFile = item.itemFile
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                 },
                 deleteBackwards: nil,
@@ -487,7 +522,7 @@ final class AvatarEditorScreenComponent: Component {
                     guard let self, let _ = item.itemFile else {
                         return
                     }
-                    self.state?.selectedItem = item
+                    self.state?.selectedFile = item.itemFile
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                 },
                 deleteBackwards: nil,
@@ -756,7 +791,7 @@ final class AvatarEditorScreenComponent: Component {
                     AvatarPreviewComponent(
                         context: component.context,
                         background: state.selectedBackground,
-                        file: state.selectedItem?.itemFile,
+                        file: state.selectedFile,
                         tapped: { [weak state] in
                             if let state, !state.editingColor {
                                 state.expanded = !state.expanded
@@ -825,6 +860,7 @@ final class AvatarEditorScreenComponent: Component {
                     theme: environment.theme,
                     values: defaultBackgrounds,
                     selectedValue: state.selectedBackground,
+                    customValue: state.customColor,
                     updateValue: { [weak state] value in
                         if let state {
                             state.selectedBackground = value
@@ -835,6 +871,7 @@ final class AvatarEditorScreenComponent: Component {
                         if let state {
                             state.editingColor = true
                             state.previousColor = state.selectedBackground
+                            state.previousCustomColor = state.customColor
                             state.updated(transition: .easeInOut(duration: 0.3))
                         }
                     }
@@ -857,9 +894,11 @@ final class AvatarEditorScreenComponent: Component {
                     ColorPickerComponent(
                         theme: environment.theme,
                         strings: environment.strings,
+                        isVisible: state.editingColor,
                         colors: state.selectedBackground.colors,
                         colorsChanged: { [weak state] colors in
                             if let state {
+                                state.customColor = .gradient(colors)
                                 state.selectedBackground = .gradient(colors)
                                 state.updated(transition: .immediate)
                             }
@@ -867,6 +906,7 @@ final class AvatarEditorScreenComponent: Component {
                         cancel: { [weak state] in
                             if let state {
                                 state.selectedBackground = state.previousColor
+                                state.customColor = state.previousCustomColor
                                 state.editingColor = false
                                 state.updated(transition: .easeInOut(duration: 0.3))
                             }
@@ -874,6 +914,7 @@ final class AvatarEditorScreenComponent: Component {
                         done: { [weak state] in
                             if let state {
                                 state.editingColor = false
+                                state.customColor = state.selectedBackground
                                 state.updated(transition: .easeInOut(duration: 0.3))
                             }
                         }
@@ -1106,7 +1147,7 @@ final class AvatarEditorScreenComponent: Component {
         }
         
         func complete() {
-            guard let state = self.state, let item = state.selectedItem, let itemFile = item.itemFile, let previewView = self.previewView.view else {
+            guard let state = self.state, let itemFile = state.selectedFile, let previewView = self.previewView.view else {
                 return
             }
             let size = CGSize(width: 1920.0, height: 1920.0)
@@ -1120,8 +1161,15 @@ final class AvatarEditorScreenComponent: Component {
             entity.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
             entity.scale = 3.3
             
+            var documentId: Int64 = 0
+            if case let .file(file) = entity.content {
+                documentId = file.fileId.id
+            }
+            
+            let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
+            
             let entitiesData = DrawingEntitiesView.encodeEntities([entity])
-         
+            
             let paintingData = TGPaintingData(
                 drawing: nil,
                 entitiesData: entitiesData,
@@ -1156,7 +1204,7 @@ final class AvatarEditorScreenComponent: Component {
                 previewView.layer.render(in: context)
             }, opaque: false)!
             
-            self.controller?()?.completion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset), { [weak self] in
+            self.controller?()?.completion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, documentId: documentId, colors: colors), { [weak self] in
                 self?.controller?()?.dismiss()
             })
         }
@@ -1182,11 +1230,11 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
     
     public var completion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
         
-    public init(context: AccountContext) {
+    public init(context: AccountContext, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
         self.context = context
         
         let componentReady = Promise<Bool>()
-        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady), navigationBarAppearance: .transparent)
+        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)
         self.navigationPresentation = .modal
             
         self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))

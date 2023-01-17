@@ -917,6 +917,7 @@ public extension Api {
 public extension Api {
     enum VideoSize: TypeConstructorDescription {
         case videoSize(flags: Int32, type: String, w: Int32, h: Int32, size: Int32, videoStartTs: Double?)
+        case videoSizeEmojiMarkup(type: String, emojiId: Int64, backgroundColors: [Int32])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -931,6 +932,18 @@ public extension Api {
                     serializeInt32(size, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
                     break
+                case .videoSizeEmojiMarkup(let type, let emojiId, let backgroundColors):
+                    if boxed {
+                        buffer.appendInt32(195933766)
+                    }
+                    serializeString(type, buffer: buffer, boxed: false)
+                    serializeInt64(emojiId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(backgroundColors.count))
+                    for item in backgroundColors {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
     }
     }
     
@@ -938,6 +951,8 @@ public extension Api {
         switch self {
                 case .videoSize(let flags, let type, let w, let h, let size, let videoStartTs):
                 return ("videoSize", [("flags", flags as Any), ("type", type as Any), ("w", w as Any), ("h", h as Any), ("size", size as Any), ("videoStartTs", videoStartTs as Any)])
+                case .videoSizeEmojiMarkup(let type, let emojiId, let backgroundColors):
+                return ("videoSizeEmojiMarkup", [("type", type as Any), ("emojiId", emojiId as Any), ("backgroundColors", backgroundColors as Any)])
     }
     }
     
@@ -962,6 +977,25 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.VideoSize.videoSize(flags: _1!, type: _2!, w: _3!, h: _4!, size: _5!, videoStartTs: _6)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_videoSizeEmojiMarkup(_ reader: BufferReader) -> VideoSize? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: [Int32]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.VideoSize.videoSizeEmojiMarkup(type: _1!, emojiId: _2!, backgroundColors: _3!)
             }
             else {
                 return nil

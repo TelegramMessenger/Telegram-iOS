@@ -192,6 +192,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramExtendedMedia.self, f: { TelegramExtendedMedia(decoder: $0) })
     declareEncodable(TelegramPeerUsername.self, f: { TelegramPeerUsername(decoder: $0) })
     declareEncodable(MediaSpoilerMessageAttribute.self, f: { MediaSpoilerMessageAttribute(decoder: $0) })
+    declareEncodable(TranslationMessageAttribute.self, f: { TranslationMessageAttribute(decoder: $0) })
     return
 }()
 

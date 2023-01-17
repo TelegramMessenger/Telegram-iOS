@@ -20,6 +20,7 @@ private struct WallpaperColorPanelNodeState: Equatable {
 final class ColorPickerComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let isVisible: Bool
     let colors: [UInt32]
     let colorsChanged: ([UInt32]) -> Void
     let cancel: () -> Void
@@ -28,6 +29,7 @@ final class ColorPickerComponent: Component {
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        isVisible: Bool,
         colors: [UInt32],
         colorsChanged: @escaping ([UInt32]) -> Void,
         cancel: @escaping () -> Void,
@@ -35,6 +37,7 @@ final class ColorPickerComponent: Component {
     ) {
         self.theme = theme
         self.strings = strings
+        self.isVisible = isVisible
         self.colors = colors
         self.colorsChanged = colorsChanged
         self.cancel = cancel
@@ -46,6 +49,9 @@ final class ColorPickerComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.isVisible != rhs.isVisible {
             return false
         }
         if lhs.colors != rhs.colors {
@@ -381,6 +387,7 @@ final class ColorPickerComponent: Component {
         private var component: ColorPickerComponent?
         func update(component: ColorPickerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             let themeChanged = self.component?.theme !== component.theme
+            let previousIsVisible = self.component?.isVisible ?? false
             self.component = component
             
             let buttonHeight: CGFloat = 44.0
@@ -412,6 +419,11 @@ final class ColorPickerComponent: Component {
             self.updateState({ current in
                 var updated = current
                 updated.colors = component.colors.map { HSBColor(rgb: $0) }
+                
+                if component.isVisible != previousIsVisible && component.isVisible {
+                    updated.selection = 0
+                }
+                
                 return updated
             }, updateLayout: true, notify: false, animated: false)
             

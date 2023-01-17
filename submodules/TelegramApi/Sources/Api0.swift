@@ -622,7 +622,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[1958953753] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
-    dict[-1225711938] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
+    dict[1596792306] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
     dict[1124062251] = { return Api.PrivacyKey.parse_privacyKeyAddedByPhone($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1777096355] = { return Api.PrivacyKey.parse_privacyKeyForwards($0) }
@@ -762,6 +762,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1087454222] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[2008112412] = { return Api.StickerSetCovered.parse_stickerSetNoCovered($0) }
+    dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
@@ -906,6 +907,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-496024847] = { return Api.UserStatus.parse_userStatusRecently($0) }
     dict[-1274595769] = { return Api.Username.parse_username($0) }
     dict[-567037804] = { return Api.VideoSize.parse_videoSize($0) }
+    dict[195933766] = { return Api.VideoSize.parse_videoSizeEmojiMarkup($0) }
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-528465642] = { return Api.WallPaper.parse_wallPaperNoFile($0) }
     dict[499236004] = { return Api.WallPaperSettings.parse_wallPaperSettings($0) }
@@ -1073,6 +1075,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
     dict[-1821037486] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
     dict[1741309751] = { return Api.messages.TranslatedText.parse_translateNoResult($0) }
+    dict[870003448] = { return Api.messages.TranslatedText.parse_translateResult($0) }
     dict[-1575684144] = { return Api.messages.TranslatedText.parse_translateResultText($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
@@ -1637,6 +1640,8 @@ public extension Api {
             case let _1 as Api.StickerSet:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StickerSetCovered:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.TextWithEntities:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Theme:
                 _1.serialize(buffer, boxed)

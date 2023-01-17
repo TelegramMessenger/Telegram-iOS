@@ -7,11 +7,8 @@ import MtProtoKit
 func _internal_translate(network: Network, text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
     var flags: Int32 = 0
     flags |= (1 << 1)
-    if let _ = fromLang {
-        flags |= (1 << 2)
-    }
-    
-    return network.request(Api.functions.messages.translateText(flags: flags, peer: nil, msgId: nil, text: text, fromLang: fromLang, toLang: toLang))
+
+    return network.request(Api.functions.messages.translateText(flags: flags, peer: nil, id: nil, text: [.textWithEntities(text: text, entities: [])], toLang: toLang))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.messages.TranslatedText?, NoError> in
         return .single(nil)
@@ -21,10 +18,63 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
             return .complete()
         }
         switch result {
-            case .translateNoResult:
-                return .single(nil)
-            case let .translateResultText(text):
+        case .translateNoResult:
+            return .single(nil)
+        case let .translateResultText(text):
+            return .single(text)
+        case let .translateResult(results):
+            if case let .textWithEntities(text, _) = results.first {
                 return .single(text)
+            } else {
+                return .single(nil)
+            }
+        }
+    }
+}
+
+func _internal_translateMessages(postbox: Postbox, network: Network, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
+    guard let peerId = messageIds.first?.peerId else {
+        return .never()
+    }
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Void, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .never()
+        }
+        
+        var flags: Int32 = 0
+        flags |= (1 << 0)
+        
+        let id: [Int32] = messageIds.map { $0.id }
+        return network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.TranslatedText?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            guard let result = result, case let .translateResult(results) = result else {
+                return .complete()
+            }
+            return postbox.transaction { transaction in
+                var index = 0
+                for result in results {
+                    let messageId = messageIds[index]
+                    if case let .textWithEntities(text, entities) = result {
+                        let updatedAttribute: TranslationMessageAttribute = TranslationMessageAttribute(text: text, entities: messageTextEntitiesFromApiEntities(entities), toLang: toLang)
+                        transaction.updateMessage(messageId, update: { currentMessage in
+                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                            var attributes = currentMessage.attributes.filter { !($0 is TranslationMessageAttribute) }
+                            
+                            attributes.append(updatedAttribute)
+                            
+                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                        })
+                    }
+                    index += 1
+                }
+            }
         }
     }
 }

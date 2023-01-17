@@ -327,6 +327,52 @@ public extension Api {
     }
 }
 public extension Api {
+    enum TextWithEntities: TypeConstructorDescription {
+        case textWithEntities(text: String, entities: [Api.MessageEntity])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .textWithEntities(let text, let entities):
+                    if boxed {
+                        buffer.appendInt32(1964978502)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .textWithEntities(let text, let entities):
+                return ("textWithEntities", [("text", text as Any), ("entities", entities as Any)])
+    }
+    }
+    
+        public static func parse_textWithEntities(_ reader: BufferReader) -> TextWithEntities? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.TextWithEntities.textWithEntities(text: _1!, entities: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Theme: TypeConstructorDescription {
         case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: [Api.ThemeSettings]?, emoticon: String?, installsCount: Int32?)
     
