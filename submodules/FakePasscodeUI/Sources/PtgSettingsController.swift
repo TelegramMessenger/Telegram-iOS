@@ -7,6 +7,7 @@ import AccountContext
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountUtils
 import PtgSettings
 
 private final class PtgSettingsControllerArguments {
@@ -14,14 +15,14 @@ private final class PtgSettingsControllerArguments {
     let switchSuppressForeignAgentNotice: (Bool) -> Void
     let switchEnableForeignAgentNoticeSearchFiltering: (Bool) -> Void
     let switchEnableLiveText: (Bool) -> Void
-    let switchLocalTranscription: (Bool) -> Void
+    let switchPreferAppleVoiceToText: (Bool) -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchLocalTranscription: @escaping (Bool) -> Void) {
+    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void) {
         self.switchShowPeerId = switchShowPeerId
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
         self.switchEnableForeignAgentNoticeSearchFiltering = switchEnableForeignAgentNoticeSearchFiltering
         self.switchEnableLiveText = switchEnableLiveText
-        self.switchLocalTranscription = switchLocalTranscription
+        self.switchPreferAppleVoiceToText = switchPreferAppleVoiceToText
     }
 }
 
@@ -29,7 +30,7 @@ private enum PtgSettingsSection: Int32 {
     case showPeerId
     case foreignAgentNotice
     case liveText
-    case localTranscription
+    case preferAppleVoiceToText
 }
 
 private enum PtgSettingsEntry: ItemListNodeEntry {
@@ -44,7 +45,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
     case enableLiveText(String, Bool)
     case enableLiveTextInfo(String)
     
-    case localTranscription(String, Bool)
+    case preferAppleVoiceToText(String, Bool, Bool)
+    case preferAppleVoiceToTextInfo(String)
 
     var section: ItemListSectionId {
         switch self {
@@ -54,8 +56,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return PtgSettingsSection.foreignAgentNotice.rawValue
         case .enableLiveText, .enableLiveTextInfo:
             return PtgSettingsSection.liveText.rawValue
-        case .localTranscription:
-            return PtgSettingsSection.localTranscription.rawValue
+        case .preferAppleVoiceToText, .preferAppleVoiceToTextInfo:
+            return PtgSettingsSection.preferAppleVoiceToText.rawValue
         }
     }
     
@@ -77,8 +79,10 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 6
         case .enableLiveTextInfo:
             return 7
-        case .localTranscription:
+        case .preferAppleVoiceToText:
             return 8
+        case .preferAppleVoiceToTextInfo:
+            return 9
         }
     }
     
@@ -107,11 +111,11 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchEnableLiveText(updatedValue)
             })
-        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .localTranscription(title, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                arguments.switchLocalTranscription(updatedValue)
+        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text), let .preferAppleVoiceToTextInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+        case let .preferAppleVoiceToText(title, value, enabled):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                arguments.switchPreferAppleVoiceToText(updatedValue)
             })
         }
     }
@@ -125,7 +129,7 @@ private struct PtgSettingsState: Equatable {
     }
 }
 
-private func ptgSettingsControllerEntries(presentationData: PresentationData, settings: PtgSettings, experimentalSettings: ExperimentalUISettings) -> [PtgSettingsEntry] {
+private func ptgSettingsControllerEntries(presentationData: PresentationData, settings: PtgSettings, experimentalSettings: ExperimentalUISettings, hasPremiumAccounts: Bool) -> [PtgSettingsEntry] {
     var entries: [PtgSettingsEntry] = []
     
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
@@ -139,7 +143,10 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, settings.enableLiveText))
     entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
 
-    entries.append(.localTranscription(presentationData.strings.PtgSettings_LocalTranscription, experimentalSettings.localTranscription))
+    if experimentalSettings.localTranscription {
+        entries.append(.preferAppleVoiceToText(presentationData.strings.PtgSettings_PreferAppleVoiceToText, settings.preferAppleVoiceToText || !hasPremiumAccounts, hasPremiumAccounts))
+        entries.append(.preferAppleVoiceToTextInfo(presentationData.strings.PtgSettings_PreferAppleVoiceToTextHelp))
+    }
     
     return entries
 }
@@ -166,23 +173,32 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
         updateSettings(context, statePromise) { settings in
             return settings.withUpdated(enableLiveText: value)
         }
-    }, switchLocalTranscription: { value in
-        let _ = context.sharedContext.accountManager.transaction ({ transaction in
-            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                settings.localTranscription = value
-                return PreferencesEntry(settings)
-            })
-        }).start()
+    }, switchPreferAppleVoiceToText: { value in
+        updateSettings(context, statePromise) { settings in
+            return settings.withUpdated(preferAppleVoiceToText: value)
+        }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings]))
+    let hasPremiumAccounts = combineLatest(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)), activeAccountsAndPeers(context: context))
+    |> map { accountPeer, accountsAndPeers -> Bool in
+        if accountPeer?.isPremium == true && !context.account.testingEnvironment {
+            return true
+        }
+        for (accountContext, peer, _) in accountsAndPeers.1 {
+            if peer.isPremium && !accountContext.account.testingEnvironment {
+                return true
+            }
+        }
+        return false
+    }
+    
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings]), hasPremiumAccounts)
     |> deliverOnMainQueue
-    |> map { presentationData, state, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, sharedData, hasPremiumAccounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PtgSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ptgSettingsControllerEntries(presentationData: presentationData, settings: state.settings, experimentalSettings: experimentalSettings), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ptgSettingsControllerEntries(presentationData: presentationData, settings: state.settings, experimentalSettings: experimentalSettings, hasPremiumAccounts: hasPremiumAccounts), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

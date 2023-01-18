@@ -49,7 +49,8 @@
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Filter out search result messages that were included only because of the foreign agent notice.";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
-"PtgSettings.LocalTranscription" = "Voice-to-Text Transcription by Apple";
+"PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";
+"PtgSettings.PreferAppleVoiceToTextHelp" = "**This setting affects only Premium accounts.** It determines which services are used for voice-to-text conversion. If turned off (default), Telegram servers are used. If turned on, Apple services are used. For non-Premium accounts, Apple services are always used.";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";

@@ -85,7 +85,8 @@
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Отфильтровывать из результатов поиска сообщения, которые были включены только из-за текста маркировки иноагентов.";
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
-"PtgSettings.LocalTranscription" = "Перевод голоса в текст от Apple";
+"PtgSettings.PreferAppleVoiceToText" = "Перевод голоса в текст от Apple";
+"PtgSettings.PreferAppleVoiceToTextHelp" = "**Этот параметр влияет только на Premium-аккаунты.** Он определяет, какие сервисы используются для преобразования голоса в текст. Если отключен (по умолчанию), используются серверы Telegram. Если включен, используются сервисы Apple. Для не Premium-аккаунтов всегда используются сервисы Apple.";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопирован.";
