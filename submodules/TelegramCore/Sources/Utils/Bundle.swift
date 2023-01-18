@@ -15,4 +15,12 @@ public extension Bundle {
     }
     
     static let isTestFlight: Bool = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    
+    static var isDebugOrTestFlight: Bool {
+        #if DEBUG
+        return true
+        #else
+        return self.isTestFlight
+        #endif
+    }
 }

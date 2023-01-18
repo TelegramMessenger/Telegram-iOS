@@ -726,7 +726,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     "siri-logs",
                     "widget-logs",
                     "notificationcontent-logs",
-                    "notification-logs"
+                    "notification-logs",
+                    "share-logs"
                 ]
                 
                 var logByType: [Signal<(type: String, logs: [(String, String)]), NoError>] = []
@@ -1243,21 +1244,23 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
     
-//    entries.append(.testStickerImport(presentationData.theme))
-    entries.append(.sendLogs(presentationData.theme))
-    //entries.append(.sendOneLog(presentationData.theme))
-    entries.append(.sendShareLogs)
-    entries.append(.sendGroupCallLogs)
-    entries.append(.sendNotificationLogs(presentationData.theme))
-    entries.append(.sendCriticalLogs(presentationData.theme))
-    entries.append(.sendAllLogs)
-    if isMainApp {
-        entries.append(.accounts(presentationData.theme))
+    if Bundle.isDebugOrTestFlight {
+        //    entries.append(.testStickerImport(presentationData.theme))
+        entries.append(.sendLogs(presentationData.theme))
+        //entries.append(.sendOneLog(presentationData.theme))
+        entries.append(.sendShareLogs)
+            entries.append(.sendGroupCallLogs)
+        entries.append(.sendNotificationLogs(presentationData.theme))
+            entries.append(.sendCriticalLogs(presentationData.theme))
+        entries.append(.sendAllLogs)
+        if isMainApp {
+            entries.append(.accounts(presentationData.theme))
+        }
+        
+        entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
+        entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
+        entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
     }
-    
-    entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
-    entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
-    entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
 
     if isMainApp {
         entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
