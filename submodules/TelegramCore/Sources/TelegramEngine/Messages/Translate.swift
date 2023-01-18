@@ -77,6 +77,19 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
 
 func _internal_togglePeerMessagesTranslationHidden(account: Account, peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
+        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+            if let cachedData = cachedData as? CachedChannelData {
+                var updatedFlags = cachedData.flags
+                if hidden {
+                    updatedFlags.insert(.translationHidden)
+                } else {
+                    updatedFlags.remove(.translationHidden)
+                }
+                return cachedData.withUpdatedFlags(updatedFlags)
+            } else {
+                return cachedData
+            }
+        })
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
     |> mapToSignal { inputPeer -> Signal<Never, NoError> in
