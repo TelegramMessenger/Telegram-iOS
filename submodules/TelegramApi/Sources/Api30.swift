@@ -4565,6 +4565,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getEmojiGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1955122779)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getEmojiGroups", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.EmojiGroups? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.EmojiGroups?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.EmojiGroups
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getEmojiKeywords(langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiKeywordsDifference>) {
                     let buffer = Buffer()
                     buffer.appendInt32(899735650)
@@ -4609,6 +4624,21 @@ public extension Api.functions.messages {
                         var result: [Api.EmojiLanguage]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiLanguage.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func getEmojiStatusGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(785209037)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getEmojiStatusGroups", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.EmojiGroups? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.EmojiGroups?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.EmojiGroups
                         }
                         return result
                     })
@@ -6022,6 +6052,22 @@ public extension Api.functions.messages {
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func searchCustomEmoji(emoticon: String, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiList>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(739360983)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchCustomEmoji", parameters: [("emoticon", String(describing: emoticon)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.EmojiList? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.EmojiList?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.EmojiList
                         }
                         return result
                     })
@@ -7676,12 +7722,12 @@ public extension Api.functions.photos {
 public extension Api.functions.photos {
                 static func uploadProfilePhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?, videoEmojiMarkup: Api.VideoSize?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-771759753)
+                    buffer.appendInt32(154966609)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {videoEmojiMarkup!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {videoEmojiMarkup!.serialize(buffer, true)}
                     return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("flags", String(describing: flags)), ("file", String(describing: file)), ("video", String(describing: video)), ("videoStartTs", String(describing: videoStartTs)), ("videoEmojiMarkup", String(describing: videoEmojiMarkup))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
                         let reader = BufferReader(buffer)
                         var result: Api.photos.Photo?

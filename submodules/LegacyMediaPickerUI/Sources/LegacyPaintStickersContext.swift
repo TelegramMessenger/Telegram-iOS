@@ -101,7 +101,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
         case let .file(file):
             self.file = file
             if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
+                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
                 if let source = self.source {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
@@ -406,10 +406,13 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
     private let originalSize: CGSize
     private let cropRect: CGRect?
     
+    private let isAvatar: Bool
+    
     public init(account: Account?, adjustments: TGMediaEditAdjustments) {
         self.account = account
         self.originalSize = adjustments.originalSize
         self.cropRect = adjustments.cropRect.isEmpty ? nil : adjustments.cropRect
+        self.isAvatar = ((adjustments as? TGVideoEditAdjustments)?.documentId ?? 0) != 0
         
         var renderEntities: [LegacyPaintEntity] = []
         if let account = account, let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
@@ -477,7 +480,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
             } else {
                 result = minDuration
             }
-            if result < minDuration {
+            if result < minDuration && !self.isAvatar {
                 if result > 0 {
                     result = result * ceil(minDuration / result)
                 } else {

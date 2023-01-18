@@ -451,11 +451,24 @@ final class AvatarEditorScreenComponent: Component {
                     guard let strongSelf = self, let controller = strongSelf.controller?() else {
                         return
                     }
-                    if groupId == AnyHashable("popular") {
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    let context = controller.context
+                    let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                    if groupId == AnyHashable("recent") {
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
-                        let context = controller.context
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    } else if groupId == AnyHashable("popular") {
+                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                        var items: [ActionSheetItem] = []
                         items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -574,7 +587,7 @@ final class AvatarEditorScreenComponent: Component {
                     }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in

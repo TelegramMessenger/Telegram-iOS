@@ -801,6 +801,64 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum EmojiGroups: TypeConstructorDescription {
+        case emojiGroups(hash: Int32, groups: [Api.EmojiGroup])
+        case emojiGroupsNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiGroups(let hash, let groups):
+                    if boxed {
+                        buffer.appendInt32(-2011186869)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(groups.count))
+                    for item in groups {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .emojiGroupsNotModified:
+                    if boxed {
+                        buffer.appendInt32(1874111879)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiGroups(let hash, let groups):
+                return ("emojiGroups", [("hash", hash as Any), ("groups", groups as Any)])
+                case .emojiGroupsNotModified:
+                return ("emojiGroupsNotModified", [])
+    }
+    }
+    
+        public static func parse_emojiGroups(_ reader: BufferReader) -> EmojiGroups? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.EmojiGroup]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiGroup.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.EmojiGroups.emojiGroups(hash: _1!, groups: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiGroupsNotModified(_ reader: BufferReader) -> EmojiGroups? {
+            return Api.messages.EmojiGroups.emojiGroupsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum ExportedChatInvite: TypeConstructorDescription {
         case exportedChatInvite(invite: Api.ExportedChatInvite, users: [Api.User])
         case exportedChatInviteReplaced(invite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite, users: [Api.User])
@@ -1356,104 +1414,6 @@ public extension Api.messages {
             let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
             if _c1 && _c2 {
                 return Api.messages.HistoryImportParsed.historyImportParsed(flags: _1!, title: _2)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum InactiveChats: TypeConstructorDescription {
-        case inactiveChats(dates: [Int32], chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inactiveChats(let dates, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(-1456996667)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(dates.count))
-                    for item in dates {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inactiveChats(let dates, let chats, let users):
-                return ("inactiveChats", [("dates", dates as Any), ("chats", chats as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_inactiveChats(_ reader: BufferReader) -> InactiveChats? {
-            var _1: [Int32]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            }
-            var _2: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.InactiveChats.inactiveChats(dates: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum MessageEditData: TypeConstructorDescription {
-        case messageEditData(flags: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .messageEditData(let flags):
-                    if boxed {
-                        buffer.appendInt32(649453030)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .messageEditData(let flags):
-                return ("messageEditData", [("flags", flags as Any)])
-    }
-    }
-    
-        public static func parse_messageEditData(_ reader: BufferReader) -> MessageEditData? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.MessageEditData.messageEditData(flags: _1!)
             }
             else {
                 return nil
