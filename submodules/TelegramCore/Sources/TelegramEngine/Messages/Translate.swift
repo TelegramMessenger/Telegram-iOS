@@ -4,7 +4,7 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-func _internal_translate(network: Network, text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
+func _internal_translate(network: Network, text: String, toLang: String) -> Signal<String?, NoError> {
     var flags: Int32 = 0
     flags |= (1 << 1)
 
@@ -18,10 +18,6 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
             return .complete()
         }
         switch result {
-        case .translateNoResult:
-            return .single(nil)
-        case let .translateResultText(text):
-            return .single(text)
         case let .translateResult(results):
             if case let .textWithEntities(text, _) = results.first {
                 return .single(text)
@@ -32,11 +28,11 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
     }
 }
 
-func _internal_translateMessages(postbox: Postbox, network: Network, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
+func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
     guard let peerId = messageIds.first?.peerId else {
         return .never()
     }
-    return postbox.transaction { transaction -> Api.InputPeer? in
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
     |> mapToSignal { inputPeer -> Signal<Void, NoError> in
@@ -48,7 +44,7 @@ func _internal_translateMessages(postbox: Postbox, network: Network, messageIds:
         flags |= (1 << 0)
         
         let id: [Int32] = messageIds.map { $0.id }
-        return network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang))
+        return account.network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.TranslatedText?, NoError> in
             return .single(nil)
@@ -57,7 +53,7 @@ func _internal_translateMessages(postbox: Postbox, network: Network, messageIds:
             guard let result = result, case let .translateResult(results) = result else {
                 return .complete()
             }
-            return postbox.transaction { transaction in
+            return account.postbox.transaction { transaction in
                 var index = 0
                 for result in results {
                     let messageId = messageIds[index]
@@ -76,6 +72,28 @@ func _internal_translateMessages(postbox: Postbox, network: Network, messageIds:
                 }
             }
         }
+    }
+}
+
+func _internal_togglePeerMessagesTranslationHidden(account: Account, peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .never()
+        }
+        var flags: Int32 = 0
+        if hidden {
+            flags |= (1 << 0)
+        }
+        
+        return account.network.request(Api.functions.messages.togglePeerTranslations(flags: flags, peer: inputPeer))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> ignoreValues
     }
 }
 

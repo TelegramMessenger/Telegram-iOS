@@ -8686,13 +8686,14 @@ Sorry for the inconvenience.";
 
 "RequestPeer.SelectionConfirmationTitle" = "Are you sure you want to send %1$@ to %2$@?";
 "RequestPeer.SelectionConfirmationInviteText" = "This will also add %1$@ to %2$@.";
+"RequestPeer.SelectionConfirmationInviteAdminText" = "This will also add %1$@ to %2$@ as an admin.";
 "RequestPeer.SelectionConfirmationInviteWithRightsText" = "This will also add %1$@ to %2$@ with the following rights:\n\n%3$@";
 "RequestPeer.SelectionConfirmationSend" = "Send";
 
 "CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
 "CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
 
-"Notification.RequestedPeer" = "You shared %@ with the bot.";
+"Notification.RequestedPeer" = "You shared %1$@ with %2$@.";
 
 "Conversation.ViewInChannel" = "View in Channel";
 
@@ -8706,3 +8707,14 @@ Sorry for the inconvenience.";
 "Conversation.Translation.Hide" = "Hide";
 "Conversation.Translation.AddedToDoNotTranslateText" = "**%@** is added to the Do Not Translate list.";
 "Conversation.Translation.TranslationBarHiddenText" = "Translation bar is now hidden for this channel.";
+
+"AvatarEditor.Background" = "BACKGROUND";
+"AvatarEditor.EmojiOrSticker" = "EMOJI OR STICKER";
+"AvatarEditor.Emoji" = "EMOJI";
+"AvatarEditor.Stickers" = "STICKERS";
+"AvatarEditor.SwitchToEmoji" = "SWITCH TO EMOJI";
+"AvatarEditor.SwitchToStickers" = "SWITCH TO STICKERS";
+
+"AvatarEditor.SetVideo" = "Set Video";
+
+"AvatarEditor.Set" = "Set";

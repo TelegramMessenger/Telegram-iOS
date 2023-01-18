@@ -1344,18 +1344,10 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum TranslatedText: TypeConstructorDescription {
-        case translateNoResult
         case translateResult(result: [Api.TextWithEntities])
-        case translateResultText(text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .translateNoResult:
-                    if boxed {
-                        buffer.appendInt32(1741309751)
-                    }
-                    
-                    break
                 case .translateResult(let result):
                     if boxed {
                         buffer.appendInt32(870003448)
@@ -1366,29 +1358,16 @@ public extension Api.messages {
                         item.serialize(buffer, true)
                     }
                     break
-                case .translateResultText(let text):
-                    if boxed {
-                        buffer.appendInt32(-1575684144)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
-                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .translateNoResult:
-                return ("translateNoResult", [])
                 case .translateResult(let result):
                 return ("translateResult", [("result", result as Any)])
-                case .translateResultText(let text):
-                return ("translateResultText", [("text", text as Any)])
     }
     }
     
-        public static func parse_translateNoResult(_ reader: BufferReader) -> TranslatedText? {
-            return Api.messages.TranslatedText.translateNoResult
-        }
         public static func parse_translateResult(_ reader: BufferReader) -> TranslatedText? {
             var _1: [Api.TextWithEntities]?
             if let _ = reader.readInt32() {
@@ -1402,12 +1381,65 @@ public extension Api.messages {
                 return nil
             }
         }
-        public static func parse_translateResultText(_ reader: BufferReader) -> TranslatedText? {
-            var _1: String?
-            _1 = parseString(reader)
+    
+    }
+}
+public extension Api.messages {
+    enum VotesList: TypeConstructorDescription {
+        case votesList(flags: Int32, count: Int32, votes: [Api.MessageUserVote], users: [Api.User], nextOffset: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .votesList(let flags, let count, let votes, let users, let nextOffset):
+                    if boxed {
+                        buffer.appendInt32(136574537)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(votes.count))
+                    for item in votes {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .votesList(let flags, let count, let votes, let users, let nextOffset):
+                return ("votesList", [("flags", flags as Any), ("count", count as Any), ("votes", votes as Any), ("users", users as Any), ("nextOffset", nextOffset as Any)])
+    }
+    }
+    
+        public static func parse_votesList(_ reader: BufferReader) -> VotesList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.MessageUserVote]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserVote.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.TranslatedText.translateResultText(text: _1!)
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, users: _4!, nextOffset: _5)
             }
             else {
                 return nil
