@@ -127,13 +127,13 @@ final class AvatarEditorScreenComponent: Component {
             super.init()
             
             if let initialFileId, let initialBackgroundColors {
-                let _ = context.engine.stickers.resolveInlineStickers(fileIds: [initialFileId])
-                |> map { [weak self] files in
+                let _ = (context.engine.stickers.resolveInlineStickers(fileIds: [initialFileId])
+                |> deliverOnMainQueue).start(next: { [weak self] files in
                     if let strongSelf = self, let file = files.values.first {
                         strongSelf.selectedFile = file
                         strongSelf.updated(transition: .immediate)
                     }
-                }
+                })
                 self.selectedBackground = .gradient(initialBackgroundColors.map { UInt32(bitPattern: $0) })
                 self.previousColor = self.selectedBackground
             } else {
@@ -227,9 +227,12 @@ final class AvatarEditorScreenComponent: Component {
         }
         
         private func updateData(_ data: KeyboardInputData) {
+            let wasEmpty = self.data == nil
             self.data = data
             
-            self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
+            if wasEmpty && self.state?.selectedFile == nil {
+                self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
+            }
             self.state?.updated(transition: .immediate)
             
             let updateSearchQuery: (String, String) -> Void = { [weak self] rawQuery, languageCode in
@@ -656,6 +659,7 @@ final class AvatarEditorScreenComponent: Component {
             self.state = state
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            let strings = environment.strings
             
             let controller = environment.controller
             self.controller = {
@@ -703,7 +707,7 @@ final class AvatarEditorScreenComponent: Component {
             let navigationDoneButtonSize = self.navigationDoneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: "Set", font: Font.semibold(17.0), color: state.isSearchActive ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
+                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.isSearchActive ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
                     action: { [weak self] in
                         guard let self else {
                             return
@@ -723,8 +727,8 @@ final class AvatarEditorScreenComponent: Component {
             }
                         
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
-            self.backgroundContainerView.backgroundColor = environment.theme.list.plainBackgroundColor
-            self.keyboardContainerView.backgroundColor = environment.theme.list.plainBackgroundColor
+            self.backgroundContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
+            self.keyboardContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
             self.panelSeparatorView.backgroundColor = environment.theme.list.itemPlainSeparatorColor
                         
             if self.dataDisposable == nil {
@@ -845,7 +849,7 @@ final class AvatarEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
                     text: .markdown(
-                        text: "Background".uppercased(), attributes: MarkdownAttributes(
+                        text: strings.AvatarEditor_Background.uppercased(), attributes: MarkdownAttributes(
                             body: body,
                             bold: bold,
                             link: body,
@@ -955,14 +959,14 @@ final class AvatarEditorScreenComponent: Component {
             let keyboardSwitchTitle: String
             
             if state.isSearchActive {
-                keyboardTitle = "Emoji or Sticker"
+                keyboardTitle = strings.AvatarEditor_EmojiOrSticker
                 keyboardSwitchTitle = " "
             } else if state.keyboardContentId == AnyHashable("emoji") {
-                keyboardTitle = "Emoji"
-                keyboardSwitchTitle = "Switch to Stickers"
+                keyboardTitle = strings.AvatarEditor_Emoji
+                keyboardSwitchTitle = strings.AvatarEditor_SwitchToStickers
             } else if state.keyboardContentId == AnyHashable("stickers") {
-                keyboardTitle = "Stickers"
-                keyboardSwitchTitle = "Switch to Emoji"
+                keyboardTitle = strings.AvatarEditor_Stickers
+                keyboardSwitchTitle = strings.AvatarEditor_SwitchToEmoji
             } else {
                 keyboardTitle = " "
                 keyboardSwitchTitle = " "
@@ -1136,7 +1140,7 @@ final class AvatarEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(
                     SolidRoundedButtonComponent(
-                        title: "Set Video",
+                        title: strings.AvatarEditor_SetVideo,
                         theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                         fontSize: 17.0,
                         height: 50.0,
@@ -1175,7 +1179,7 @@ final class AvatarEditorScreenComponent: Component {
             entity.scale = 3.3
             
             var documentId: Int64 = 0
-            if case let .file(file) = entity.content {
+            if case let .file(file) = entity.content, !file.isCustomEmoji {
                 documentId = file.fileId.id
             }
             

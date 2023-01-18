@@ -4155,11 +4155,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: peerType, hasContactSelector: false, createNewGroup: {
                 createNewGroupImpl?()
             }))
-            controller.peerSelected = { [weak self, weak controller] peer, _ in
+            
+            let presentConfirmation: (String, @escaping () -> Void) -> Void = { [weak self] peerName, completion in
                 guard let strongSelf = self else {
                     return
                 }
-                let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+
                 let attributedTitle: NSAttributedString?
                 let attributedText: NSAttributedString
                 
@@ -4180,12 +4181,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                     if let botAdminRights {
-                        let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights))
-                        let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-                        for range in stringWithRanges.ranges.prefix(2) {
-                            formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                        if botAdminRights.rights.isEmpty {
+                            let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteAdminText(botName, peerName)
+                            let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                            for range in stringWithRanges.ranges.prefix(2) {
+                                formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                            }
+                            attributedText = formattedString
+                        } else {
+                            let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights))
+                            let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                            for range in stringWithRanges.ranges.prefix(2) {
+                                formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                            }
+                            attributedText = formattedString
                         }
-                        attributedText = formattedString
                     } else {
                         let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(botName, peerName)
                         let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
@@ -4196,28 +4206,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                                 
-                let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: { [weak controller] in
-                    let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
-                    controller?.dismiss()
+                let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
+                    
+                    completion()
                 })])
                 strongSelf.present(controller, in: .window(.root))
+            }
+            
+            controller.peerSelected = { [weak self, weak controller] peer, _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                presentConfirmation(peerName, {
+                    let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+                    controller?.dismiss()
+                })
             }
             createNewGroupImpl = { [weak controller] in
                 switch peerType {
                 case .user:
                     break
                 case let .group(group):
-                    let createGroupController = createGroupControllerImpl(context: context, peerIds: peerId.flatMap { [$0] } ?? [], mode: .requestPeer(group), completion: { peerId, dismiss in
+                    let createGroupController = createGroupControllerImpl(context: context, peerIds: peerId.flatMap { [$0] } ?? [], mode: .requestPeer(group), willComplete: { peerName, complete in
+                        presentConfirmation(peerName, {
+                            complete()
+                        })
+                    }, completion: { peerId, dismiss in
                         let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peerId).start()
-                        
                         dismiss()
                     })
                     createGroupController.navigationPresentation = .modal
                     controller?.replace(with: createGroupController)
                 case let .channel(channel):
-                    let createChannelController = createChannelController(context: context, mode: .requestPeer(channel), completion: { peerId, dismiss in
+                    let createChannelController = createChannelController(context: context, mode: .requestPeer(channel), willComplete: { peerName, complete in
+                        presentConfirmation(peerName, {
+                            complete()
+                        })
+                    }, completion: { peerId, dismiss in
                         let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peerId).start()
-                        
                         dismiss()
                     })
                     createChannelController.navigationPresentation = .modal
@@ -11082,10 +11110,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
         
         if self.presentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup || self.presentationInterfaceState.keyboardButtonsMessage?.id != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.id {
-            if let keyboardButtonsMessage = temporaryChatPresentationInterfaceState.keyboardButtonsMessage, let _ = keyboardButtonsMessage.visibleButtonKeyboardMarkup {
+            if let keyboardButtonsMessage = temporaryChatPresentationInterfaceState.keyboardButtonsMessage, let keyboardMarkup = keyboardButtonsMessage.visibleButtonKeyboardMarkup {
                 if self.presentationInterfaceState.interfaceState.editMessage == nil && self.presentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 && keyboardButtonsMessage.id != temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.closedButtonKeyboardMessageId && keyboardButtonsMessage.id != temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId && temporaryChatPresentationInterfaceState.botStartPayload == nil {
                     temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputMode({ _ in
-                        return .inputButtons
+                        return .inputButtons(persistent: keyboardMarkup.flags.contains(.persistent))
                     })
                 }
                 

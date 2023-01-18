@@ -211,8 +211,7 @@ public enum CreateChannelMode {
     case requestPeer(ReplyMarkupButtonRequestPeerType.Channel)
 }
 
-
-public func createChannelController(context: AccountContext, mode: CreateChannelMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
+public func createChannelController(context: AccountContext, mode: CreateChannelMode = .generic, willComplete: @escaping (String, @escaping () -> Void) -> Void = { _, complete in complete() }, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -256,53 +255,55 @@ public func createChannelController(context: AccountContext, mode: CreateChannel
         }
         
         if !creating && !title.isEmpty {
-            updateState { current in
-                var current = current
-                current.creating = true
-                return current
-            }
-            
-            endEditingImpl?()
-            actionsDisposable.add((context.engine.peers.createChannel(title: title, description: description.isEmpty ? nil : description)
-            |> deliverOnMainQueue
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    updateState { current in
-                        var current = current
-                        current.creating = false
-                        return current
-                    }
-                }
-            }).start(next: { peerId in
-                let updatingAvatar = stateValue.with {
-                    return $0.avatar
-                }
-                if let _ = updatingAvatar {
-                    let _ = context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
-                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
-                    }).start()
+            willComplete(title, {
+                updateState { current in
+                    var current = current
+                    current.creating = true
+                    return current
                 }
                 
-                let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
-                replaceControllerImpl?(controller)
-            }, error: { error in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String?
-                switch error {
-                    case .generic, .tooMuchLocationBasedGroups:
-                        text = presentationData.strings.Login_UnknownError
-                    case .tooMuchJoined:
-                        pushControllerImpl?(oldChannelsController(context: context, intent: .create))
-                        return
-                    case .restricted:
-                        text = presentationData.strings.Common_ActionNotAllowedError
-                    default:
-                        text = nil
-                }
-                if let text = text {
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                }
-            }))
+                endEditingImpl?()
+                actionsDisposable.add((context.engine.peers.createChannel(title: title, description: description.isEmpty ? nil : description)
+                |> deliverOnMainQueue
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        updateState { current in
+                            var current = current
+                            current.creating = false
+                            return current
+                        }
+                    }
+                }).start(next: { peerId in
+                    let updatingAvatar = stateValue.with {
+                        return $0.avatar
+                    }
+                    if let _ = updatingAvatar {
+                        let _ = context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                        }).start()
+                    }
+                    
+                    let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
+                    replaceControllerImpl?(controller)
+                }, error: { error in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let text: String?
+                    switch error {
+                        case .generic, .tooMuchLocationBasedGroups:
+                            text = presentationData.strings.Login_UnknownError
+                        case .tooMuchJoined:
+                            pushControllerImpl?(oldChannelsController(context: context, intent: .create))
+                            return
+                        case .restricted:
+                            text = presentationData.strings.Common_ActionNotAllowedError
+                        default:
+                            text = nil
+                    }
+                    if let text = text {
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    }
+                }))
+            })
         }
     }, changeProfilePhoto: {
         endEditingImpl?()
@@ -506,24 +507,23 @@ public func createChannelController(context: AccountContext, mode: CreateChannel
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            
-            let rightNavigationButton: ItemListNavigationButton
-            if state.creating {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
-                    arguments.done()
-                })
-            }
-            
-            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelIntro_CreateChannel), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: CreateChannelEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: CreateChannelEntryTag.info)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let rightNavigationButton: ItemListNavigationButton
+        if state.creating {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                arguments.done()
+            })
         }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelIntro_CreateChannel), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: CreateChannelEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: CreateChannelEntryTag.info)
+        
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
     let controller = ItemListController(context: context, state: signal)
     replaceControllerImpl = { [weak controller] value in

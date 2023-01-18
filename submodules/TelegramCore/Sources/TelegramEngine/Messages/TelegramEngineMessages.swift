@@ -356,12 +356,16 @@ public extension TelegramEngine {
             return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
         }
         
-        public func translate(text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
-            return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
+        public func translate(text: String, toLang: String) -> Signal<String?, NoError> {
+            return _internal_translate(network: self.account.network, text: text, toLang: toLang)
         }
         
         public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
-            return _internal_translateMessages(postbox: self.account.postbox, network: self.account.network, messageIds: messageIds, toLang: toLang)
+            return _internal_translateMessages(account: self.account, messageIds: messageIds, toLang: toLang)
+        }
+        
+        public func togglePeerMessagesTranslationHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
+            return _internal_togglePeerMessagesTranslationHidden(account: self.account, peerId: peerId, hidden: hidden)
         }
         
         public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {

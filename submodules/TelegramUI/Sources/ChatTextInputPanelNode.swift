@@ -2970,9 +2970,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.dismissedEmojiSuggestionPosition = nil
         
         if let presentationInterfaceState = self.presentationInterfaceState {
-            if let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, presentationInterfaceState.keyboardButtonsMessage != nil {
+            if let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, let keyboardButtonsMessage = presentationInterfaceState.keyboardButtonsMessage, let keyboardMarkup = keyboardButtonsMessage.visibleButtonKeyboardMarkup, keyboardMarkup.flags.contains(.persistent) {
                 self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
-                    return (.inputButtons, nil)
+                    return (.inputButtons(persistent: true), nil)
                 }
             } else {
                 switch presentationInterfaceState.inputMode {
@@ -3481,7 +3481,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             }
                         case .bot:
                             self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                                return (.inputButtons, nil)
+                                return (.inputButtons(persistent: state.keyboardButtonsMessage?.visibleButtonKeyboardMarkup?.flags.contains(.persistent) ?? false), nil)
                             })
                     }
                 case .commands:
