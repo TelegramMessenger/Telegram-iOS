@@ -415,7 +415,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
         if let hasUsername = requestPeer.hasUsername, hasUsername {
             let currentUsername = state.editingPublicLinkText ?? ""
             entries.append(.usernameHeader(presentationData.theme, presentationData.strings.CreateGroup_PublicLinkTitle.uppercased()))
-            entries.append(.username(presentationData.theme, "link", currentUsername))
+            entries.append(.username(presentationData.theme, presentationData.strings.Group_PublicLink_Placeholder, currentUsername))
             
             if let status = state.addressNameValidationStatus {
                 let statusText: String
@@ -1180,7 +1180,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         if state.creating {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+            var isEnabled = true
+            if state.editingName.composedTitle.isEmpty {
+                isEnabled = false
+            }
+            if case let .requestPeer(peerType) = mode, let hasUsername = peerType.hasUsername, hasUsername, (state.editingPublicLinkText ?? "").isEmpty {
+                isEnabled = false
+            }
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: isEnabled, action: {
                 arguments.done()
             })
         }

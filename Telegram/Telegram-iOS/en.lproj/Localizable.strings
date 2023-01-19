@@ -8660,7 +8660,7 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Group.Rights.Delete" = "delete messages";
 "RequestPeer.Requirement.Group.Rights.Edit" = "edit messages";
 "RequestPeer.Requirement.Group.Rights.Ban" = "ban users";
-"RequestPeer.Requirement.Group.Rights.Invite" = "invite users via link";
+"RequestPeer.Requirement.Group.Rights.Invite" = "add members";
 "RequestPeer.Requirement.Group.Rights.Pin" = "pin messages";
 "RequestPeer.Requirement.Group.Rights.Topics" = "manage topics";
 "RequestPeer.Requirement.Group.Rights.VideoChats" = "manage video chats";
