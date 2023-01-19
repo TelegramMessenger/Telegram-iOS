@@ -1709,7 +1709,9 @@ public final class ChatListNode: ListView {
                                         return false
                                     }
                                     if let userAdminRights = groupType.userAdminRights {
-                                        if case let .admin(rights, _) = group.role {
+                                        if case .creator = group.role, userAdminRights.rights.contains(.canBeAnonymous) {
+                                            return false
+                                        } else if case let .admin(rights, _) = group.role {
                                             if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
                                                 return false
                                             }
