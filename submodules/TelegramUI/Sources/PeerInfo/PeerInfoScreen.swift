@@ -4849,31 +4849,37 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         items.insert(.separator, at: itemsCount)
                     }
                 } else if let channel = peer as? TelegramChannel {
-                    if let cachedData = strongSelf.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_Stats, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, f in
-                            f(.dismissWithoutContent)
-                            
-                            self?.openStats()
-                        })))
-                    }
-                    
-                    if let _ = strongSelf.translationState {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, f in
-                            f(.dismissWithoutContent)
-                            
-                            if let strongSelf = self {
-                                Queue.mainQueue().after(0.3, {
-                                    let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, { state in
-                                        return state?.withIsHidden(false)
+                    if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
+                        if cachedData.flags.contains(.canViewStats) {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_Stats, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                self?.openStats()
+                            })))
+                        }
+                        
+                        if cachedData.flags.contains(.translationHidden) {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                if let strongSelf = self {
+                                    let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, { current in
+                                        return current?.withIsEnabled(true)
                                     }).start()
-                                })
-                                self?.openChatForTranslation()
-                            }
-                        })))
+                                    
+                                    Queue.mainQueue().after(0.2, {
+                                        let _ = (strongSelf.context.engine.messages.togglePeerMessagesTranslationHidden(peerId: strongSelf.peerId, hidden: false)
+                                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                                            self?.openChatForTranslation()
+                                        })
+                                    })
+                                }
+                            })))
+                        }
                     }
                     
                     var canReport = true
@@ -7263,7 +7269,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 guard let strongSelf = self, let completion else {
                     return
                 }
-                let controller = AvatarEditorScreen(context: strongSelf.context, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
+                let peerType: AvatarEditorScreen.PeerType
+                if case .legacyGroup = peer {
+                    peerType = .group
+                } else if case let .channel(channel) = peer {
+                    if case .group = channel.info {
+                        peerType = .group
+                    } else {
+                        peerType = .channel
+                    }
+                } else {
+                    peerType = .user
+                }
+                let controller = AvatarEditorScreen(context: strongSelf.context, peerType: peerType, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
                 controller.completion = completion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
             }
