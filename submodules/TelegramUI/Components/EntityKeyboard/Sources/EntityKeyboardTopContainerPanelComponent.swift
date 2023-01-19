@@ -8,18 +8,24 @@ import TelegramCore
 import Postbox
 
 public final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
+    let isContentInFocus: Bool
     let visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
     let isExpandedUpdated: (Bool, Transition) -> Void
     
     init(
+        isContentInFocus: Bool,
         visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>,
         isExpandedUpdated: @escaping (Bool, Transition) -> Void
     ) {
+        self.isContentInFocus = isContentInFocus
         self.visibilityFractionUpdated = visibilityFractionUpdated
         self.isExpandedUpdated = isExpandedUpdated
     }
     
     public static func ==(lhs: EntityKeyboardTopContainerPanelEnvironment, rhs: EntityKeyboardTopContainerPanelEnvironment) -> Bool {
+        if lhs.isContentInFocus != rhs.isContentInFocus {
+            return false
+        }
         if lhs.visibilityFractionUpdated !== rhs.visibilityFractionUpdated {
             return false
         }
@@ -146,6 +152,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             component: panel.component,
                             environment: {
                                 EntityKeyboardTopContainerPanelEnvironment(
+                                    isContentInFocus: panelEnvironment.isContentInFocus,
                                     visibilityFractionUpdated: panelView.visibilityFractionUpdated,
                                     isExpandedUpdated: { [weak self] isExpanded, transition in
                                         guard let strongSelf = self else {
