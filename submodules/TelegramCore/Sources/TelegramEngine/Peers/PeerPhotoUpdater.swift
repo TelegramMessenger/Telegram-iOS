@@ -375,7 +375,56 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                     return .generic
                 }
                 |> mapToSignal { photo -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-                    if peer.id != accountPeerId {
+                    if peer.id == accountPeerId {
+                        var updatedImage: TelegramMediaImage?
+                        var representations: [TelegramMediaImageRepresentation] = []
+                        switch photo {
+                        case let .photo(apiPhoto, _):
+                            updatedImage = telegramMediaImageFromApiPhoto(apiPhoto)
+                            switch apiPhoto {
+                                case .photoEmpty:
+                                    break
+                                case let .photo(_, id, _, _, _, sizes, _, dcId):
+                                    var sizes = sizes
+                                    if sizes.count == 3 {
+                                        sizes.remove(at: 1)
+                                    }
+                                    for size in sizes {
+                                        switch size {
+                                            case let .photoSize(_, w, h, _):
+                                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: nil, localId: nil), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+                                            case let .photoSizeProgressive(_, w, h, sizes):
+                                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: nil, localId: nil), progressiveSizes: sizes, immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+                                            default:
+                                                break
+                                        }
+                                    }
+                            }
+                        }
+                        return postbox.transaction { transaction -> UpdatePeerPhotoStatus in
+                            if let peer = transaction.getPeer(peer.id) {
+                                updatePeers(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
+                                    if let peer = peer as? TelegramUser {
+                                        if customPeerPhotoMode == .suggest || fallback {
+                                            return peer
+                                        } else {
+                                            return peer.withUpdatedPhoto(representations)
+                                        }
+                                    } else {
+                                        return peer
+                                    }
+                                })
+                                transaction.updatePeerCachedData(peerIds: Set([peer.id])) { peerId, cachedPeerData in
+                                    if let cachedPeerData = cachedPeerData as? CachedUserData {
+                                        return cachedPeerData.withUpdatedPersonalPhoto(.known(updatedImage))
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            }
+                            return .complete([])
+                        } |> mapError { _ -> UploadPeerPhotoError in }
+                    } else {
                         var updatedUsers: [TelegramUser] = []
                         switch photo {
                         case let .photo(_, apiUsers):
@@ -405,7 +454,6 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                             return .complete([])
                         } |> mapError { _ -> UploadPeerPhotoError in }
                     }
-                    return .single(.complete([]))
                 }
             } else {
                 let request: Signal<Api.Updates, MTRpcError>

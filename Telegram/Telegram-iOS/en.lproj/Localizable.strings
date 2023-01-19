@@ -8648,16 +8648,17 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Group.HasUsernameOff" = "The group should be private.";
 "RequestPeer.Requirement.Group.HasUsernameOn" = "The group should be public.";
 
-"RequestPeer.Requirement.Group.ForumOff" = "The group should have topics off.";
-"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics on.";
+"RequestPeer.Requirement.Group.ForumOff" = "The group should have topics turned off.";
+"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics turned  on.";
 
+"RequestPeer.Requirement.Group.ParticipantOn" = "Bot should be in the group.";
 "RequestPeer.Requirement.Group.CreatorOn" = "You should be the owner of the group.";
 
 "RequestPeer.Requirement.Group.Rights" = "You have the admin rights to %@.";
 "RequestPeer.Requirement.Group.Rights.Info" = "change group info";
 "RequestPeer.Requirement.Group.Rights.Send" = "post messages";
 "RequestPeer.Requirement.Group.Rights.Delete" = "delete messages";
-"RequestPeer.Requirement.Group.Rights.Edit" = "delete messages";
+"RequestPeer.Requirement.Group.Rights.Edit" = "edit messages";
 "RequestPeer.Requirement.Group.Rights.Ban" = "ban users";
 "RequestPeer.Requirement.Group.Rights.Invite" = "invite users via link";
 "RequestPeer.Requirement.Group.Rights.Pin" = "pin messages";
@@ -8672,10 +8673,10 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Channel.CreatorOn" = "You should be the owner of the channel.";
 
 "RequestPeer.Requirement.Channel.Rights" = "You have the admin rights to %@.";
-"RequestPeer.Requirement.Channel.Rights.Info" = "change group info";
+"RequestPeer.Requirement.Channel.Rights.Info" = "change channel info";
 "RequestPeer.Requirement.Channel.Rights.Send" = "post messages";
 "RequestPeer.Requirement.Channel.Rights.Delete" = "delete messages";
-"RequestPeer.Requirement.Channel.Rights.Edit" = "delete messages";
+"RequestPeer.Requirement.Channel.Rights.Edit" = "edit messages";
 "RequestPeer.Requirement.Channel.Rights.Ban" = "ban users";
 "RequestPeer.Requirement.Channel.Rights.Invite" = "invite users via link";
 "RequestPeer.Requirement.Channel.Rights.Pin" = "pin messages";
@@ -8697,7 +8698,6 @@ Sorry for the inconvenience.";
 
 "Conversation.ViewInChannel" = "View in Channel";
 
-
 "Conversation.HoldForAudioOnly" = "Hold to record audio.";
 "Conversation.HoldForVideoOnly" = "Hold to record video.";
 "Conversation.Translation.TranslateTo" = "Translate to %@";
@@ -8708,13 +8708,17 @@ Sorry for the inconvenience.";
 "Conversation.Translation.AddedToDoNotTranslateText" = "**%@** is added to the Do Not Translate list.";
 "Conversation.Translation.TranslationBarHiddenText" = "Translation bar is now hidden for this channel.";
 
+"ProfilePhoto.SetEmoji" = "Set Emoji";
+
 "AvatarEditor.Background" = "BACKGROUND";
 "AvatarEditor.EmojiOrSticker" = "EMOJI OR STICKER";
-"AvatarEditor.Emoji" = "EMOJI";
-"AvatarEditor.Stickers" = "STICKERS";
+"AvatarEditor.Emoji" = "Emoji";
+"AvatarEditor.Stickers" = "Stickers";
 "AvatarEditor.SwitchToEmoji" = "SWITCH TO EMOJI";
 "AvatarEditor.SwitchToStickers" = "SWITCH TO STICKERS";
 
-"AvatarEditor.SetVideo" = "Set Video";
+"AvatarEditor.SetProfilePhoto" = "Set as Profile Photo";
+"AvatarEditor.SetGroupPhoto" = "Set as Group Photo";
+"AvatarEditor.SetChannelPhoto" = "Set as Group Photo";
 
 "AvatarEditor.Set" = "Set";

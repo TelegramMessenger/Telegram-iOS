@@ -1148,6 +1148,9 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
                 append(strings.RequestPeer_Requirement_Group_ForumOff)
             }
         }
+        if group.botParticipant {
+            append(strings.RequestPeer_Requirement_Group_ParticipantOn)
+        }
         if let adminRights = group.userAdminRights, !group.isCreator {
             var rights: [String] = []
             if adminRights.rights.contains(.canChangeInfo) {

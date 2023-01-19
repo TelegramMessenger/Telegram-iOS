@@ -10,33 +10,25 @@ public struct ChatTranslationState: Codable {
     enum CodingKeys: String, CodingKey {
         case baseLang
         case fromLang
-        case forcedFromLang
         case toLang
         case isEnabled
-        case isHidden
     }
     
     public let baseLang: String
     public let fromLang: String
-    public let forcedFromLang: String?
     public let toLang: String?
     public let isEnabled: Bool
-    public let isHidden: Bool?
     
     public init(
         baseLang: String,
         fromLang: String,
-        forcedFromLang: String?,
         toLang: String?,
-        isEnabled: Bool,
-        isHidden: Bool?
+        isEnabled: Bool
     ) {
         self.baseLang = baseLang
         self.fromLang = fromLang
-        self.forcedFromLang = forcedFromLang
         self.toLang = toLang
         self.isEnabled = isEnabled
-        self.isHidden = isHidden
     }
     
     public init(from decoder: Decoder) throws {
@@ -44,10 +36,8 @@ public struct ChatTranslationState: Codable {
         
         self.baseLang = try container.decode(String.self, forKey: .baseLang)
         self.fromLang = try container.decode(String.self, forKey: .fromLang)
-        self.forcedFromLang = try container.decodeIfPresent(String.self, forKey: .forcedFromLang)
         self.toLang = try container.decodeIfPresent(String.self, forKey: .toLang)
         self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
-        self.isHidden = try container.decodeIfPresent(Bool.self, forKey: .isHidden)
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -55,20 +45,16 @@ public struct ChatTranslationState: Codable {
 
         try container.encode(self.baseLang, forKey: .baseLang)
         try container.encode(self.fromLang, forKey: .fromLang)
-        try container.encodeIfPresent(self.forcedFromLang, forKey: .forcedFromLang)
         try container.encodeIfPresent(self.toLang, forKey: .toLang)
         try container.encode(self.isEnabled, forKey: .isEnabled)
-        try container.encodeIfPresent(self.isHidden, forKey: .isHidden)
     }
 
     public func withToLang(_ toLang: String?) -> ChatTranslationState {
         return ChatTranslationState(
             baseLang: self.baseLang,
             fromLang: self.fromLang,
-            forcedFromLang: self.forcedFromLang,
             toLang: toLang,
-            isEnabled: self.isEnabled,
-            isHidden: self.isHidden
+            isEnabled: self.isEnabled
         )
     }
     
@@ -76,21 +62,8 @@ public struct ChatTranslationState: Codable {
         return ChatTranslationState(
             baseLang: self.baseLang,
             fromLang: self.fromLang,
-            forcedFromLang: self.forcedFromLang,
             toLang: self.toLang,
-            isEnabled: isEnabled,
-            isHidden: self.isHidden
-        )
-    }
-    
-    public func withIsHidden(_ isHidden: Bool) -> ChatTranslationState {
-        return ChatTranslationState(
-            baseLang: self.baseLang,
-            fromLang: self.fromLang,
-            forcedFromLang: self.forcedFromLang,
-            toLang: self.toLang,
-            isEnabled: self.isEnabled,
-            isHidden: isHidden
+            isEnabled: isEnabled
         )
     }
 }
@@ -210,7 +183,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                 }
                             }
                             let fromLang = mostFrequent?.0 ?? ""
-                            let state = ChatTranslationState(baseLang: baseLang, fromLang: fromLang, forcedFromLang: nil, toLang: nil, isEnabled: false, isHidden: false)
+                            let state = ChatTranslationState(baseLang: baseLang, fromLang: fromLang, toLang: nil, isEnabled: false)
                             let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, state: state).start()
                             return state
                         }

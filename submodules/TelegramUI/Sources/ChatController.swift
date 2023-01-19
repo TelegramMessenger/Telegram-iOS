@@ -6699,11 +6699,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                self.translationStateDisposable = (chatTranslationState(context: self.context, peerId: peerId)
-                |> deliverOnMainQueue).start(next: { [weak self] translationState in
+                self.translationStateDisposable = combineLatest(
+                    queue: .mainQueue(),
+                    chatTranslationState(context: self.context, peerId: peerId),
+                    self.chatDisplayNode.historyNode.cachedPeerDataAndMessages
+                ).start(next: { [weak self] translationState, cachedDataAndMessages in
                     if let strongSelf = self {
+                        let (cachedData, _) = cachedDataAndMessages
+                        var isHidden = false
+                        if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.translationHidden) {
+                            isHidden = true
+                        }
                         var chatTranslationState: ChatPresentationTranslationState?
-                        if let translationState, translationState.isHidden != true && !translationState.fromLang.isEmpty {
+                        if let translationState, !isHidden && !translationState.fromLang.isEmpty {
                             chatTranslationState = ChatPresentationTranslationState(isEnabled: translationState.isEnabled, fromLang: translationState.fromLang, toLang: translationState.toLang ?? strongSelf.presentationData.strings.baseLanguageCode)
                         }
                         strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
@@ -10055,16 +10063,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let context = strongSelf.context
-            let _ = updateChatTranslationStateInteractively(engine: context.engine, peerId: peerId, { current in
-                return current?.withIsHidden(true)
-            }).start()
-            
+            let _ = context.engine.messages.togglePeerMessagesTranslationHidden(peerId: peerId, hidden: true).start()
+
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_TranslationBarHiddenText, round: false, undoText: presentationData.strings.Undo_Undo), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     if case .undo = action {
-                        let _ = updateChatTranslationStateInteractively(engine: context.engine, peerId: peerId, { current in
-                            return current?.withIsHidden(false)
-                        }).start()
+                        let _ = context.engine.messages.togglePeerMessagesTranslationHidden(peerId: peerId, hidden: false).start()
                     }
                     return true
             }), in: .current)

@@ -74,23 +74,29 @@ final class AvatarEditorScreenComponent: Component {
     
     let context: AccountContext
     let ready: Promise<Bool>
+    let peerType: AvatarEditorScreen.PeerType
     let initialFileId: Int64?
     let initialBackgroundColors: [Int32]?
     
     init(
         context: AccountContext,
         ready: Promise<Bool>,
+        peerType: AvatarEditorScreen.PeerType,
         initialFileId: Int64?,
         initialBackgroundColors: [Int32]?
     ) {
         self.context = context
         self.ready = ready
+        self.peerType = peerType
         self.initialFileId = initialFileId
         self.initialBackgroundColors = initialBackgroundColors
     }
     
     static func ==(lhs: AvatarEditorScreenComponent, rhs: AvatarEditorScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peerType != rhs.peerType {
             return false
         }
         if lhs.initialFileId != rhs.initialFileId {
@@ -241,6 +247,7 @@ final class AvatarEditorScreenComponent: Component {
                 }
                 
                 let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 if query.isEmpty {
                     strongSelf.emojiSearchDisposable.set(nil)
@@ -351,7 +358,7 @@ final class AvatarEditorScreenComponent: Component {
                                     EmojiPagerContentComponent.ItemGroup(
                                         supergroupId: "search",
                                         groupId: "emoji",
-                                        title: "Emoji",
+                                        title: presentationData.strings.AvatarEditor_Emoji,
                                         subtitle: nil,
                                         actionButtonTitle: nil,
                                         isFeatured: false,
@@ -370,7 +377,7 @@ final class AvatarEditorScreenComponent: Component {
                                     EmojiPagerContentComponent.ItemGroup(
                                         supergroupId: "search",
                                         groupId: "stickers",
-                                        title: "Stickers",
+                                        title: presentationData.strings.AvatarEditor_Stickers,
                                         subtitle: nil,
                                         actionButtonTitle: nil,
                                         isFeatured: false,
@@ -1136,11 +1143,21 @@ final class AvatarEditorScreenComponent: Component {
                 contentHeight += 16.0
             }
             
+            let buttonText: String
+            switch component.peerType {
+            case .user:
+                buttonText = strings.AvatarEditor_SetProfilePhoto
+            case .group:
+                buttonText = strings.AvatarEditor_SetGroupPhoto
+            case .channel:
+                buttonText = strings.AvatarEditor_SetChannelPhoto
+            }
+            
             let buttonSize = self.buttonView.update(
                 transition: transition,
                 component: AnyComponent(
                     SolidRoundedButtonComponent(
-                        title: strings.AvatarEditor_SetVideo,
+                        title: buttonText,
                         theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                         fontSize: 17.0,
                         height: 50.0,
@@ -1179,7 +1196,7 @@ final class AvatarEditorScreenComponent: Component {
             entity.scale = 3.3
             
             var documentId: Int64 = 0
-            if case let .file(file) = entity.content, !file.isCustomEmoji {
+            if case let .file(file) = entity.content, file.isCustomEmoji {
                 documentId = file.fileId.id
             }
             
@@ -1192,7 +1209,7 @@ final class AvatarEditorScreenComponent: Component {
                 entitiesData: entitiesData,
                 image: nil,
                 stillImage: nil,
-                hasAnimation: true,
+                hasAnimation: entity.isAnimated,
                 stickers: []
             )
             
@@ -1238,6 +1255,11 @@ final class AvatarEditorScreenComponent: Component {
 }
 
 public final class AvatarEditorScreen: ViewControllerComponentContainer {
+    public enum PeerType {
+        case user
+        case group
+        case channel
+    }
     fileprivate let context: AccountContext
     
     private let readyValue = Promise<Bool>()
@@ -1247,16 +1269,18 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
     
     public var completion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
         
-    public init(context: AccountContext, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
+    public init(context: AccountContext, peerType: PeerType, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
         self.context = context
         
         let componentReady = Promise<Bool>()
-        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)
+        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, peerType: peerType, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)
         self.navigationPresentation = .modal
             
         self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     required public init(coder aDecoder: NSCoder) {
