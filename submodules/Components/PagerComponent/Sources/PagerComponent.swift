@@ -67,6 +67,7 @@ public final class PagerComponentChildEnvironment: Equatable {
 }
 
 public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatable {
+    public let isContentInFocus: Bool
     public let contentOffset: CGFloat
     public let contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>]
     public let contentIcons: [PagerComponentContentIcon]
@@ -78,6 +79,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
     public let isExpandedUpdated: (Bool, Transition) -> Void
     
     init(
+        isContentInFocus: Bool,
         contentOffset: CGFloat,
         contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>],
         contentIcons: [PagerComponentContentIcon],
@@ -88,6 +90,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
         visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>,
         isExpandedUpdated: @escaping (Bool, Transition) -> Void
     ) {
+        self.isContentInFocus = isContentInFocus
         self.contentOffset = contentOffset
         self.contentTopPanels = contentTopPanels
         self.contentIcons = contentIcons
@@ -100,6 +103,9 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
     }
     
     public static func ==(lhs: PagerComponentPanelEnvironment, rhs: PagerComponentPanelEnvironment) -> Bool {
+        if lhs.isContentInFocus != rhs.isContentInFocus {
+            return false
+        }
         if lhs.contentOffset != rhs.contentOffset {
             return false
         }
@@ -171,6 +177,7 @@ public final class PagerComponentContentIcon: Equatable {
 public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvironment: Equatable>: Component {
     public typealias EnvironmentType = ChildEnvironmentType
     
+    public let isContentInFocus: Bool
     public let contentInsets: UIEdgeInsets
     public let contents: [AnyComponentWithIdentity<(ChildEnvironmentType, PagerComponentChildEnvironment)>]
     public let contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>]
@@ -191,6 +198,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let clipContentToTopPanel: Bool
     
     public init(
+        isContentInFocus: Bool,
         contentInsets: UIEdgeInsets,
         contents: [AnyComponentWithIdentity<(ChildEnvironmentType, PagerComponentChildEnvironment)>],
         contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>],
@@ -210,6 +218,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         panelHideBehavior: PagerComponentPanelHideBehavior,
         clipContentToTopPanel: Bool
     ) {
+        self.isContentInFocus = isContentInFocus
         self.contentInsets = contentInsets
         self.contents = contents
         self.contentTopPanels = contentTopPanels
@@ -231,6 +240,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     }
     
     public static func ==(lhs: PagerComponent, rhs: PagerComponent) -> Bool {
+        if lhs.isContentInFocus != rhs.isContentInFocus {
+            return false
+        }
         if lhs.contentInsets != rhs.contentInsets {
             return false
         }
@@ -504,6 +516,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     component: topPanel,
                     environment: {
                         PagerComponentPanelEnvironment(
+                            isContentInFocus: component.isContentInFocus,
                             contentOffset: 0.0,
                             contentTopPanels: component.contentTopPanels,
                             contentIcons: [],
@@ -596,6 +609,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     component: bottomPanel,
                     environment: {
                         PagerComponentPanelEnvironment<TopPanelEnvironment>(
+                            isContentInFocus: component.isContentInFocus,
                             contentOffset: 0.0,
                             contentTopPanels: [],
                             contentIcons: component.contentIcons,

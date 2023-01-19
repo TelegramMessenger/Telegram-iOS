@@ -706,6 +706,7 @@ public final class EntityKeyboardComponent: Component {
             let pagerSize = self.pagerView.update(
                 transition: transition,
                 component: AnyComponent(PagerComponent(
+                    isContentInFocus: component.isContentInFocus,
                     contentInsets: component.containerInsets,
                     contents: contents,
                     contentTopPanels: contentTopPanels,
