@@ -812,7 +812,8 @@ public final class EmojiStatusSelectionController: ViewController {
                                 cache: animationCache,
                                 renderer: animationRenderer,
                                 placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                                pointSize: CGSize(width: 32.0, height: 32.0)
+                                pointSize: CGSize(width: 32.0, height: 32.0),
+                                dynamicColor: self.presentationData.theme.list.itemAccentColor
                             )
                             switch item.tintMode {
                             case .accent:

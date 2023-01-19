@@ -2217,7 +2217,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 interaction.copyEmoji(file)
                             }
                             
-                            if let _ = strongSelf.chatPeerId, !isLocked {
+                            if let _ = strongSelf.chatPeerId {
                                 //TODO:localize
                                 menuItems.append(.action(ContextMenuActionItem(text: "Send Emoji", icon: { theme in
                                     if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) {
