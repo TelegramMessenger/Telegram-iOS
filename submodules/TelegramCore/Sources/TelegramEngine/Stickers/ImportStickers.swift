@@ -24,7 +24,7 @@ private enum UploadedStickerDataContent {
 }
 
 private func uploadedSticker(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedStickerData, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .file), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .stickers, userContentType: .sticker), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> map { result -> UploadedStickerData in
         return UploadedStickerData(resource: resource, content: .result(result))
     }

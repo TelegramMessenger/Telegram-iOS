@@ -440,19 +440,29 @@ final class PieChartComponent: Component {
                 let beforeSpacingFraction: CGFloat = 1.0
                 let afterSpacingFraction: CGFloat = 1.0
                 
-                let innerStartAngle = startAngle + innerAngleSpacing * 0.5
-                let arcInnerStartAngle = startAngle + innerAngleSpacing * 0.5 * beforeSpacingFraction
+                let itemInnerAngleSpacing: CGFloat
+                let itemAngleSpacing: CGFloat
+                if abs(angleValue - CGFloat.pi * 2.0) <= 0.0001 {
+                    itemInnerAngleSpacing = 0.0
+                    itemAngleSpacing = 0.0
+                } else {
+                    itemInnerAngleSpacing = innerAngleSpacing
+                    itemAngleSpacing = angleSpacing
+                }
                 
-                var innerEndAngle = startAngle + angleValue - innerAngleSpacing * 0.5
+                let innerStartAngle = startAngle + itemInnerAngleSpacing * 0.5
+                let arcInnerStartAngle = startAngle + itemInnerAngleSpacing * 0.5 * beforeSpacingFraction
+                
+                var innerEndAngle = startAngle + angleValue - itemInnerAngleSpacing * 0.5
                 innerEndAngle = max(innerEndAngle, innerStartAngle)
-                var arcInnerEndAngle = startAngle + angleValue - innerAngleSpacing * 0.5 * afterSpacingFraction
+                var arcInnerEndAngle = startAngle + angleValue - itemInnerAngleSpacing * 0.5 * afterSpacingFraction
                 arcInnerEndAngle = max(arcInnerEndAngle, arcInnerStartAngle)
                 
-                let outerStartAngle = startAngle + angleSpacing * 0.5
-                let arcOuterStartAngle = startAngle + angleSpacing * 0.5 * beforeSpacingFraction
-                var outerEndAngle = startAngle + angleValue - angleSpacing * 0.5
+                let outerStartAngle = startAngle + itemAngleSpacing * 0.5
+                let arcOuterStartAngle = startAngle + itemAngleSpacing * 0.5 * beforeSpacingFraction
+                var outerEndAngle = startAngle + angleValue - itemAngleSpacing * 0.5
                 outerEndAngle = max(outerEndAngle, outerStartAngle)
-                var arcOuterEndAngle = startAngle + angleValue - angleSpacing * 0.5 * afterSpacingFraction
+                var arcOuterEndAngle = startAngle + angleValue - itemAngleSpacing * 0.5 * afterSpacingFraction
                 arcOuterEndAngle = max(arcOuterEndAngle, arcOuterStartAngle)
                 
                 let itemColor: UIColor = isEmpty ? emptyColor : item.color

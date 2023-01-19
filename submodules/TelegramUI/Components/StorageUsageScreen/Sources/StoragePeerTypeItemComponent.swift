@@ -225,29 +225,42 @@ final class StoragePeerTypeItemComponent: Component {
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
+                    titleView.layer.anchorPoint = CGPoint()
                     self.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: titleFrame)
+                
+                transition.setPosition(view: titleView, position: titleFrame.topLeft)
+                titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             if let subtitleView = self.subtitle?.view, let subtitleFrame {
                 if subtitleView.superview == nil {
                     subtitleView.isUserInteractionEnabled = false
+                    subtitleView.layer.anchorPoint = CGPoint()
                     self.addSubview(subtitleView)
                 }
-                transition.setFrame(view: subtitleView, frame: subtitleFrame)
+                transition.setPosition(view: subtitleView, position: subtitleFrame.topLeft)
+                subtitleView.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
             }
             if let labelView = self.label.view {
                 if labelView.superview == nil {
                     labelView.isUserInteractionEnabled = false
+                    labelView.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
                     self.addSubview(labelView)
                 }
-                transition.setFrame(view: labelView, frame: labelFrame)
+                
+                transition.setPosition(view: labelView, position: labelFrame.topRight)
+                labelView.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
             }
             
             if themeUpdated {
                 self.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
                 self.iconView.image = UIImage(bundleImageName: component.iconName)
-                self.arrowIconView.image = PresentationResourcesItemList.disclosureOptionArrowsImage(component.theme)
+             
+                if component.value.isEmpty {
+                    self.arrowIconView.image = PresentationResourcesItemList.disclosureArrowImage(component.theme)
+                } else {
+                    self.arrowIconView.image = PresentationResourcesItemList.disclosureOptionArrowsImage(component.theme)
+                }
             }
             
             if let image = self.iconView.image {

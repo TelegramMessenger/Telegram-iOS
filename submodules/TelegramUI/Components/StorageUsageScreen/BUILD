@@ -41,6 +41,7 @@ swift_library(
         "//submodules/LegacyComponents",
         "//submodules/GalleryData",
         "//submodules/SegmentedControlNode",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",
