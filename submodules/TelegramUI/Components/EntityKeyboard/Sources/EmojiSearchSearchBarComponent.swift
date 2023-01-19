@@ -12,20 +12,76 @@ import AccountContext
 import AsyncDisplayKit
 import ComponentDisplayAdapters
 import LottieAnimationComponent
+import EmojiStatusComponent
+import LottieComponent
+import LottieComponentEmojiContent
+
+private final class RoundMaskView: UIImageView {
+    private var currentDiameter: CGFloat?
+    
+    func update(diameter: CGFloat) {
+        if self.currentDiameter != diameter {
+            self.currentDiameter = diameter
+            
+            let shadowWidth: CGFloat = 6.0
+            self.image = generateImage(CGSize(width: shadowWidth * 2.0 + diameter, height: diameter), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                let shadowColor = UIColor.black
+
+                let stepCount = 10
+                var colors: [CGColor] = []
+                var locations: [CGFloat] = []
+
+                for i in 0 ... stepCount {
+                    let t = CGFloat(i) / CGFloat(stepCount)
+                    colors.append(shadowColor.withAlphaComponent(t * t).cgColor)
+                    locations.append(t)
+                }
+
+                let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
+                
+                let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+                let gradientWidth = shadowWidth
+                context.drawRadialGradient(gradient, startCenter: center, startRadius: size.width / 2.0, endCenter: center, endRadius: size.width / 2.0 - gradientWidth, options: [])
+                
+                context.setFillColor(shadowColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowWidth, y: 0.0), size: CGSize(width: size.height, height: size.height)).insetBy(dx: -0.5, dy: -0.5))
+            })?.stretchableImage(withLeftCapWidth: Int(shadowWidth * 0.5 + diameter * 0.5), topCapHeight: Int(diameter * 0.5))
+        }
+    }
+}
 
 final class EmojiSearchSearchBarComponent: Component {
+    enum TextInputState: Equatable {
+        case inactive
+        case active(hasText: Bool)
+    }
+    
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let textInputState: TextInputState
+    let categories: EmojiSearchCategories?
     let searchTermUpdated: (String?) -> Void
+    let activateTextInput: () -> Void
 
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        searchTermUpdated: @escaping (String?) -> Void
+        textInputState: TextInputState,
+        categories: EmojiSearchCategories?,
+        searchTermUpdated: @escaping (String?) -> Void,
+        activateTextInput: @escaping () -> Void
     ) {
+        self.context = context
         self.theme = theme
         self.strings = strings
+        self.textInputState = textInputState
+        self.categories = categories
         self.searchTermUpdated = searchTermUpdated
+        self.activateTextInput = activateTextInput
     }
     
     static func ==(lhs: EmojiSearchSearchBarComponent, rhs: EmojiSearchSearchBarComponent) -> Bool {
@@ -33,6 +89,12 @@ final class EmojiSearchSearchBarComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.textInputState != rhs.textInputState {
+            return false
+        }
+        if lhs.categories != rhs.categories {
             return false
         }
         return true
@@ -44,20 +106,29 @@ final class EmojiSearchSearchBarComponent: Component {
         let itemSize: CGSize
         let itemSpacing: CGFloat
         let contentSize: CGSize
-        let sideInset: CGFloat
+        let leftInset: CGFloat
+        let rightInset: CGFloat
         
-        init(containerSize: CGSize, itemCount: Int) {
+        let textSpacing: CGFloat
+        let textFrame: CGRect
+        
+        init(containerSize: CGSize, textSize: CGSize, itemCount: Int) {
             self.containerSize = containerSize
             self.itemCount = itemCount
             self.itemSpacing = 8.0
-            self.sideInset = 8.0
+            self.leftInset = 6.0
+            self.rightInset = 8.0
             self.itemSize = CGSize(width: 24.0, height: 24.0)
+            self.textSpacing = 8.0
             
-            self.contentSize = CGSize(width: self.sideInset * 2.0 + self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1)), height: containerSize.height)
+            self.textFrame = CGRect(origin: CGPoint(x: self.leftInset, y: floor((containerSize.height - textSize.height) * 0.5)), size: textSize)
+            
+            self.contentSize = CGSize(width: self.leftInset + textSize.width + self.textSpacing + self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1)) + self.rightInset, height: containerSize.height)
         }
         
         func visibleItems(for rect: CGRect) -> Range<Int>? {
-            let offsetRect = rect.offsetBy(dx: -self.sideInset, dy: 0.0)
+            let baseItemX: CGFloat = self.textFrame.maxX + self.textSpacing
+            let offsetRect = rect.offsetBy(dx: -baseItemX, dy: 0.0)
             var minVisibleIndex = Int(floor((offsetRect.minX - self.itemSpacing) / (self.itemSize.width + self.itemSpacing)))
             minVisibleIndex = max(0, minVisibleIndex)
             var maxVisibleIndex = Int(ceil((offsetRect.maxX - self.itemSpacing) / (self.itemSize.height + self.itemSpacing)))
@@ -71,17 +142,54 @@ final class EmojiSearchSearchBarComponent: Component {
         }
         
         func frame(at index: Int) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.sideInset + CGFloat(index) * (self.itemSize.width + self.itemSpacing), y: floor((self.containerSize.height - self.itemSize.height) * 0.5)), size: self.itemSize)
+            return CGRect(origin: CGPoint(x: self.textFrame.maxX + self.textSpacing + CGFloat(index) * (self.itemSize.width + self.itemSpacing), y: floor((self.containerSize.height - self.itemSize.height) * 0.5)), size: self.itemSize)
+        }
+    }
+    
+    private final class ContentScrollView: UIScrollView, PagerExpandableScrollView {
+        override static var layerClass: AnyClass {
+            return EmojiPagerContentComponent.View.ContentScrollLayer.self
+        }
+        
+        private let mirrorView: UIView
+        
+        init(mirrorView: UIView) {
+            self.mirrorView = mirrorView
+            
+            super.init(frame: CGRect())
+            
+            (self.layer as? EmojiPagerContentComponent.View.ContentScrollLayer)?.mirrorLayer = mirrorView.layer
+            self.canCancelContentTouches = true
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+    }
+    
+    private final class ItemView {
+        let view = ComponentView<Empty>()
+        let tintView = UIImageView()
+        
+        init() {
         }
     }
     
     final class View: UIView, UIScrollViewDelegate {
-        private let scrollView: UIScrollView
+        let tintContainerView: UIView
+        private let scrollView: ContentScrollView
+        private let tintScrollView: UIView
         
-        private var visibleItemViews: [AnyHashable: ComponentView<Empty>] = [:]
+        private let tintTextView = ComponentView<Empty>()
+        private let textView = ComponentView<Empty>()
+        
+        private var visibleItemViews: [AnyHashable: ItemView] = [:]
         private let selectedItemBackground: SimpleLayer
-        
-        private var items: [String] = []
+        private let selectedItemTintBackground: SimpleLayer
         
         private var component: EmojiSearchSearchBarComponent?
         private weak var state: EmptyComponentState?
@@ -89,15 +197,23 @@ final class EmojiSearchSearchBarComponent: Component {
         private var itemLayout: ItemLayout?
         private var ignoreScrolling: Bool = false
         
-        private let maskLayer: SimpleLayer
+        private let roundMaskView: RoundMaskView
+        private let tintRoundMaskView: RoundMaskView
         
-        private var selectedItem: String?
+        private var selectedItem: AnyHashable?
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
-            self.maskLayer = SimpleLayer()
+            self.tintContainerView = UIView()
+            
+            self.tintScrollView = UIView()
+            self.tintScrollView.clipsToBounds = true
+            self.scrollView = ContentScrollView(mirrorView: self.tintScrollView)
+            
+            self.roundMaskView = RoundMaskView()
+            self.tintRoundMaskView = RoundMaskView()
             
             self.selectedItemBackground = SimpleLayer()
+            self.selectedItemTintBackground = SimpleLayer()
             
             super.init(frame: frame)
             
@@ -111,20 +227,20 @@ final class EmojiSearchSearchBarComponent: Component {
             self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.delegate = self
-            self.scrollView.clipsToBounds = false
+            self.scrollView.clipsToBounds = true
             self.scrollView.scrollsToTop = false
             
             self.addSubview(self.scrollView)
             
-            //self.layer.mask = self.maskLayer
-            self.layer.addSublayer(self.maskLayer)
-            self.layer.masksToBounds = true
+            self.tintContainerView.addSubview(self.tintScrollView)
+            
+            self.mask = self.roundMaskView
+            self.tintContainerView.mask = self.tintRoundMaskView
             
             self.scrollView.layer.addSublayer(self.selectedItemBackground)
+            self.tintScrollView.layer.addSublayer(self.selectedItemTintBackground)
             
-            self.scrollView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-            
-            self.items = ["Smile", "🤔", "😝", "😡", "😐", "🏌️‍♀️", "🎉", "😨", "❤️", "😄", "👍", "☹️", "👎", "⛔", "💤", "💼", "🍔", "🏠", "🛁", "🏖", "⚽️", "🕔"]
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
@@ -133,18 +249,28 @@ final class EmojiSearchSearchBarComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
+                guard let component = self.component, let itemLayout = self.itemLayout else {
+                    return
+                }
                 let location = recognizer.location(in: self.scrollView)
-                for (id, itemView) in self.visibleItemViews {
-                    if let itemComponentView = itemView.view, itemComponentView.frame.contains(location), let item = id.base as? String {
-                        if self.selectedItem == item {
-                            self.selectedItem = nil
-                        } else {
-                            self.selectedItem = item
+                if location.x <= itemLayout.textFrame.maxX + itemLayout.textSpacing {
+                    component.activateTextInput()
+                } else {
+                    for (id, itemView) in self.visibleItemViews {
+                        if let itemComponentView = itemView.view.view, itemComponentView.frame.contains(location), let itemId = id.base as? Int64 {
+                            if self.selectedItem == AnyHashable(id) {
+                                self.selectedItem = nil
+                            } else {
+                                self.selectedItem = AnyHashable(id)
+                            }
+                            self.state?.updated(transition: .immediate)
+                            
+                            if let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
+                                component.searchTermUpdated(group.identifiers.joined(separator: ""))
+                            }
+                            
+                            break
                         }
-                        self.state?.updated(transition: .immediate)
-                        self.component?.searchTermUpdated(self.selectedItem)
-                        
-                        break
                     }
                 }
             }
@@ -155,7 +281,7 @@ final class EmojiSearchSearchBarComponent: Component {
                 self.selectedItem = nil
                 self.state?.updated(transition: .immediate)
                 if dispatchEvent {
-                    self.component?.searchTermUpdated(self.selectedItem)
+                    self.component?.searchTermUpdated(nil)
                 }
             }
         }
@@ -171,6 +297,14 @@ final class EmojiSearchSearchBarComponent: Component {
                 return
             }
             
+            let itemAlpha: CGFloat
+            switch component.textInputState {
+            case .active:
+                itemAlpha = 0.0
+            case .inactive:
+                itemAlpha = 1.0
+            }
+            
             var validItemIds = Set<AnyHashable>()
             let visibleBounds = self.scrollView.bounds
             
@@ -179,70 +313,49 @@ final class EmojiSearchSearchBarComponent: Component {
                 animateAppearingItems = true
             }
             
-            let items = self.items
+            let items = component.categories?.groups ?? []
             
             for i in 0 ..< items.count {
                 let itemFrame = itemLayout.frame(at: i)
                 if visibleBounds.intersects(itemFrame) {
                     let item = items[i]
-                    validItemIds.insert(AnyHashable(item))
+                    validItemIds.insert(AnyHashable(item.id))
                     
                     var animateItem = false
                     var itemTransition = transition
-                    let itemView: ComponentView<Empty>
-                    if let current = self.visibleItemViews[item] {
+                    let itemView: ItemView
+                    if let current = self.visibleItemViews[AnyHashable(item.id)] {
                         itemView = current
                     } else {
                         animateItem = animateAppearingItems
                         itemTransition = .immediate
-                        itemView = ComponentView<Empty>()
-                        self.visibleItemViews[item] = itemView
+                        itemView = ItemView()
+                        self.visibleItemViews[AnyHashable(item.id)] = itemView
                     }
                     
-                    let animationName: String
+                    let color = component.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
                     
-                    switch EmojiPagerContentComponent.StaticEmojiSegment.allCases[i % EmojiPagerContentComponent.StaticEmojiSegment.allCases.count] {
-                    case .people:
-                        animationName = "emojicat_smiles"
-                    case .animalsAndNature:
-                        animationName = "emojicat_animals"
-                    case .foodAndDrink:
-                        animationName = "emojicat_food"
-                    case .activityAndSport:
-                        animationName = "emojicat_activity"
-                    case .travelAndPlaces:
-                        animationName = "emojicat_places"
-                    case .objects:
-                        animationName = "emojicat_objects"
-                    case .symbols:
-                        animationName = "emojicat_symbols"
-                    case .flags:
-                        animationName = "emojicat_flags"
-                    }
-                    
-                    let baseColor: UIColor
-                    baseColor = component.theme.chat.inputMediaPanel.panelIconColor
-                    
-                    let baseHighlightedColor = component.theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.blitOver(component.theme.chat.inputPanel.panelBackgroundColor, alpha: 1.0)
-                    let color = baseColor.blitOver(baseHighlightedColor, alpha: 1.0)
-                    
-                    let _ = itemTransition
-                    let _ = itemView.update(
+                    let _ = itemView.view.update(
                         transition: .immediate,
-                        component: AnyComponent(LottieAnimationComponent(
-                            animation: LottieAnimationComponent.AnimationItem(
-                                name: animationName,
-                                mode: .still(position: .end)
+                        component: AnyComponent(LottieComponent(
+                            content: LottieComponent.EmojiContent(
+                                context: component.context,
+                                fileId: item.id
                             ),
-                            colors: ["__allcolors__": color],
-                            size: itemLayout.itemSize
+                            color: color
                         )),
                         environment: {},
                         containerSize: itemLayout.itemSize
                     )
-                    if let view = itemView.view {
+                    
+                    itemView.tintView.tintColor = .white
+                    
+                    if let view = itemView.view.view as? LottieComponent.View {
                         if view.superview == nil {
                             self.scrollView.addSubview(view)
+                            
+                            view.output = itemView.tintView
+                            self.tintScrollView.addSubview(itemView.tintView)
                         }
                         
                         itemTransition.setPosition(view: view, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
@@ -250,18 +363,24 @@ final class EmojiSearchSearchBarComponent: Component {
                         let scaleFactor = itemFrame.width / itemLayout.itemSize.width
                         itemTransition.setSublayerTransform(view: view, transform: CATransform3DMakeScale(scaleFactor, scaleFactor, 1.0))
                         
+                        itemTransition.setPosition(view: itemView.tintView, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
+                        itemTransition.setBounds(view: itemView.tintView, bounds: CGRect(origin: CGPoint(), size: CGSize(width: itemLayout.itemSize.width, height: itemLayout.itemSize.height)))
+                        itemTransition.setSublayerTransform(view: itemView.tintView, transform: CATransform3DMakeScale(scaleFactor, scaleFactor, 1.0))
+                        
+                        itemTransition.setAlpha(view: view, alpha: itemAlpha)
+                        itemTransition.setAlpha(view: itemView.tintView, alpha: itemAlpha)
+                        
                         let isHidden = !visibleBounds.intersects(itemFrame)
                         if isHidden != view.isHidden {
                             view.isHidden = isHidden
+                            itemView.tintView.isHidden = true
                             
                             if !isHidden {
-                                if let view = view as? LottieAnimationComponent.View {
-                                    view.playOnce()
-                                }
+                                view.playOnce()
                             }
                         } else if animateItem {
-                            if let view = view as? LottieAnimationComponent.View {
-                                view.playOnce()
+                            if fromScrolling {
+                                view.playOnce(delay: 0.08)
                             }
                         }
                     }
@@ -272,25 +391,32 @@ final class EmojiSearchSearchBarComponent: Component {
             for (id, itemView) in self.visibleItemViews {
                 if !validItemIds.contains(id) {
                     removedItemIds.append(id)
-                    itemView.view?.removeFromSuperview()
+                    itemView.view.view?.removeFromSuperview()
+                    itemView.tintView.removeFromSuperview()
                 }
             }
             for id in removedItemIds {
                 self.visibleItemViews.removeValue(forKey: id)
             }
             
-            if let selectedItem = self.selectedItem, let index = self.items.firstIndex(of: selectedItem) {
+            if let selectedItem = self.selectedItem, let index = items.firstIndex(where: { AnyHashable($0.id) == selectedItem }) {
                 self.selectedItemBackground.isHidden = false
+                self.selectedItemTintBackground.isHidden = false
                 
                 let selectedItemCenter = itemLayout.frame(at: index).center
                 let selectionSize = CGSize(width: 28.0, height: 28.0)
                 
-                self.selectedItemBackground.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
+                self.selectedItemBackground.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
+                self.selectedItemTintBackground.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
                 self.selectedItemBackground.cornerRadius = selectionSize.height * 0.5
+                self.selectedItemTintBackground.cornerRadius = selectionSize.height * 0.5
                 
-                self.selectedItemBackground.frame = CGRect(origin: CGPoint(x: floor(selectedItemCenter.x - selectionSize.width * 0.5), y: floor(selectedItemCenter.y - selectionSize.height * 0.5)), size: selectionSize)
+                let selectionFrame = CGRect(origin: CGPoint(x: floor(selectedItemCenter.x - selectionSize.width * 0.5), y: floor(selectedItemCenter.y - selectionSize.height * 0.5)), size: selectionSize)
+                self.selectedItemBackground.frame = selectionFrame
+                self.selectedItemTintBackground.frame = selectionFrame
             } else {
                 self.selectedItemBackground.isHidden = true
+                self.selectedItemTintBackground.isHidden = true
             }
         }
         
@@ -298,10 +424,42 @@ final class EmojiSearchSearchBarComponent: Component {
             self.component = component
             self.state = state
             
-            transition.setCornerRadius(layer: self.layer, cornerRadius: availableSize.height * 0.5)
+            let textSize = self.textView.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: component.strings.Common_Search,
+                    font: Font.regular(17.0),
+                    color: component.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 32.0, height: 100.0)
+            )
+            let _ = self.tintTextView.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: component.strings.Common_Search,
+                    font: Font.regular(17.0),
+                    color: .white
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 32.0, height: 100.0)
+            )
             
-            let itemLayout = ItemLayout(containerSize: availableSize, itemCount: self.items.count)
+            let itemLayout = ItemLayout(containerSize: availableSize, textSize: textSize, itemCount: component.categories?.groups.count ?? 0)
             self.itemLayout = itemLayout
+            
+            if let textComponentView = self.textView.view {
+                if textComponentView.superview == nil {
+                    self.scrollView.addSubview(textComponentView)
+                }
+                transition.setFrame(view: textComponentView, frame: itemLayout.textFrame)
+            }
+            if let tintTextComponentView = self.tintTextView.view {
+                if tintTextComponentView.superview == nil {
+                    self.tintScrollView.addSubview(tintTextComponentView)
+                }
+                transition.setFrame(view: tintTextComponentView, frame: itemLayout.textFrame)
+            }
             
             self.ignoreScrolling = true
             if self.scrollView.bounds.size != availableSize {
@@ -312,7 +470,24 @@ final class EmojiSearchSearchBarComponent: Component {
             }
             self.ignoreScrolling = false
             
+            let maskFrame = CGRect(origin: CGPoint(), size: availableSize)
+            transition.setFrame(view: self.roundMaskView, frame: maskFrame)
+            self.roundMaskView.update(diameter: maskFrame.height)
+            transition.setFrame(view: self.tintRoundMaskView, frame: maskFrame)
+            self.tintRoundMaskView.update(diameter: maskFrame.height)
+            
             self.updateScrolling(transition: transition, fromScrolling: false)
+            
+            switch component.textInputState {
+            case let .active(hasText):
+                self.isUserInteractionEnabled = false
+                self.textView.view?.isHidden = hasText
+                self.tintTextView.view?.isHidden = hasText
+            case .inactive:
+                self.isUserInteractionEnabled = true
+                self.textView.view?.isHidden = false
+                self.tintTextView.view?.isHidden = false
+            }
             
             return availableSize
         }

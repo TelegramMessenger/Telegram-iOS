@@ -221,6 +221,56 @@ public extension Api {
     }
 }
 public extension Api {
+    enum EmojiGroup: TypeConstructorDescription {
+        case emojiGroup(title: String, iconEmojiId: Int64, emoticons: [String])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiGroup(let title, let iconEmojiId, let emoticons):
+                    if boxed {
+                        buffer.appendInt32(2056961449)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeInt64(iconEmojiId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(emoticons.count))
+                    for item in emoticons {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiGroup(let title, let iconEmojiId, let emoticons):
+                return ("emojiGroup", [("title", title as Any), ("iconEmojiId", iconEmojiId as Any), ("emoticons", emoticons as Any)])
+    }
+    }
+    
+        public static func parse_emojiGroup(_ reader: BufferReader) -> EmojiGroup? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: [String]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.EmojiGroup.emojiGroup(title: _1!, iconEmojiId: _2!, emoticons: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum EmojiKeyword: TypeConstructorDescription {
         case emojiKeyword(keyword: String, emoticons: [String])
         case emojiKeywordDeleted(keyword: String, emoticons: [String])
@@ -1046,50 +1096,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum FileHash: TypeConstructorDescription {
-        case fileHash(offset: Int64, limit: Int32, hash: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .fileHash(let offset, let limit, let hash):
-                    if boxed {
-                        buffer.appendInt32(-207944868)
-                    }
-                    serializeInt64(offset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .fileHash(let offset, let limit, let hash):
-                return ("fileHash", [("offset", offset as Any), ("limit", limit as Any), ("hash", hash as Any)])
-    }
-    }
-    
-        public static func parse_fileHash(_ reader: BufferReader) -> FileHash? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.FileHash.fileHash(offset: _1!, limit: _2!, hash: _3!)
             }
             else {
                 return nil

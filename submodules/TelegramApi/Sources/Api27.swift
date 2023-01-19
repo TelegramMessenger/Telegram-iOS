@@ -1,4 +1,102 @@
 public extension Api.messages {
+    enum InactiveChats: TypeConstructorDescription {
+        case inactiveChats(dates: [Int32], chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inactiveChats(let dates, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1456996667)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(dates.count))
+                    for item in dates {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inactiveChats(let dates, let chats, let users):
+                return ("inactiveChats", [("dates", dates as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_inactiveChats(_ reader: BufferReader) -> InactiveChats? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _2: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.InactiveChats.inactiveChats(dates: _1!, chats: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum MessageEditData: TypeConstructorDescription {
+        case messageEditData(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageEditData(let flags):
+                    if boxed {
+                        buffer.appendInt32(649453030)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageEditData(let flags):
+                return ("messageEditData", [("flags", flags as Any)])
+    }
+    }
+    
+        public static func parse_messageEditData(_ reader: BufferReader) -> MessageEditData? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.MessageEditData.messageEditData(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum MessageReactionsList: TypeConstructorDescription {
         case messageReactionsList(flags: Int32, count: Int32, reactions: [Api.MessagePeerReaction], chats: [Api.Chat], users: [Api.User], nextOffset: String?)
     
@@ -1246,18 +1344,10 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum TranslatedText: TypeConstructorDescription {
-        case translateNoResult
         case translateResult(result: [Api.TextWithEntities])
-        case translateResultText(text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .translateNoResult:
-                    if boxed {
-                        buffer.appendInt32(1741309751)
-                    }
-                    
-                    break
                 case .translateResult(let result):
                     if boxed {
                         buffer.appendInt32(870003448)
@@ -1268,29 +1358,16 @@ public extension Api.messages {
                         item.serialize(buffer, true)
                     }
                     break
-                case .translateResultText(let text):
-                    if boxed {
-                        buffer.appendInt32(-1575684144)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
-                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .translateNoResult:
-                return ("translateNoResult", [])
                 case .translateResult(let result):
                 return ("translateResult", [("result", result as Any)])
-                case .translateResultText(let text):
-                return ("translateResultText", [("text", text as Any)])
     }
     }
     
-        public static func parse_translateNoResult(_ reader: BufferReader) -> TranslatedText? {
-            return Api.messages.TranslatedText.translateNoResult
-        }
         public static func parse_translateResult(_ reader: BufferReader) -> TranslatedText? {
             var _1: [Api.TextWithEntities]?
             if let _ = reader.readInt32() {
@@ -1299,17 +1376,6 @@ public extension Api.messages {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.messages.TranslatedText.translateResult(result: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_translateResultText(_ reader: BufferReader) -> TranslatedText? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.TranslatedText.translateResultText(text: _1!)
             }
             else {
                 return nil

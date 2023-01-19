@@ -207,6 +207,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1383932651] = { return Api.EmailVerifyPurpose.parse_emailVerifyPurposeLoginChange($0) }
     dict[1128644211] = { return Api.EmailVerifyPurpose.parse_emailVerifyPurposeLoginSetup($0) }
     dict[-1141565819] = { return Api.EmailVerifyPurpose.parse_emailVerifyPurposePassport($0) }
+    dict[2056961449] = { return Api.EmojiGroup.parse_emojiGroup($0) }
     dict[-709641735] = { return Api.EmojiKeyword.parse_emojiKeyword($0) }
     dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
@@ -1031,6 +1032,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-253500010] = { return Api.messages.Dialogs.parse_dialogsNotModified($0) }
     dict[1910543603] = { return Api.messages.Dialogs.parse_dialogsSlice($0) }
     dict[-1506535550] = { return Api.messages.DiscussionMessage.parse_discussionMessage($0) }
+    dict[-2011186869] = { return Api.messages.EmojiGroups.parse_emojiGroups($0) }
+    dict[1874111879] = { return Api.messages.EmojiGroups.parse_emojiGroupsNotModified($0) }
     dict[410107472] = { return Api.messages.ExportedChatInvite.parse_exportedChatInvite($0) }
     dict[572915951] = { return Api.messages.ExportedChatInvite.parse_exportedChatInviteReplaced($0) }
     dict[-1111085620] = { return Api.messages.ExportedChatInvites.parse_exportedChatInvites($0) }
@@ -1074,9 +1077,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[816245886] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
     dict[-1821037486] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
-    dict[1741309751] = { return Api.messages.TranslatedText.parse_translateNoResult($0) }
     dict[870003448] = { return Api.messages.TranslatedText.parse_translateResult($0) }
-    dict[-1575684144] = { return Api.messages.TranslatedText.parse_translateResultText($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     dict[-1362048039] = { return Api.payments.ExportedInvoice.parse_exportedInvoice($0) }
@@ -1294,6 +1295,8 @@ public extension Api {
             case let _1 as Api.EmailVerification:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmailVerifyPurpose:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.EmojiGroup:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiKeyword:
                 _1.serialize(buffer, boxed)
@@ -1822,6 +1825,8 @@ public extension Api {
             case let _1 as Api.messages.Dialogs:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.DiscussionMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.EmojiGroups:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ExportedChatInvite:
                 _1.serialize(buffer, boxed)

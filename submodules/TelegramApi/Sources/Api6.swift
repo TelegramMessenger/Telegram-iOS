@@ -1,4 +1,48 @@
 public extension Api {
+    enum FileHash: TypeConstructorDescription {
+        case fileHash(offset: Int64, limit: Int32, hash: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .fileHash(let offset, let limit, let hash):
+                    if boxed {
+                        buffer.appendInt32(-207944868)
+                    }
+                    serializeInt64(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeBytes(hash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .fileHash(let offset, let limit, let hash):
+                return ("fileHash", [("offset", offset as Any), ("limit", limit as Any), ("hash", hash as Any)])
+    }
+    }
+    
+        public static func parse_fileHash(_ reader: BufferReader) -> FileHash? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.FileHash.fileHash(offset: _1!, limit: _2!, hash: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Folder: TypeConstructorDescription {
         case folder(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto?)
     

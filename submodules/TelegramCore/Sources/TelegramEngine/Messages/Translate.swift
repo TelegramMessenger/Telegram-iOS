@@ -5,6 +5,10 @@ import TelegramApi
 import MtProtoKit
 
 func _internal_translate(network: Network, text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
+    #if DEBUG
+    return .single(nil)
+    #else
+    
     var flags: Int32 = 0
     flags |= (1 << 1)
 
@@ -30,6 +34,7 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
             }
         }
     }
+    #endif
 }
 
 func _internal_translateMessages(postbox: Postbox, network: Network, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {

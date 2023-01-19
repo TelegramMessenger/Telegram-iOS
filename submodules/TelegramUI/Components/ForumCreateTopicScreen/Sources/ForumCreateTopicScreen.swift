@@ -963,7 +963,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         },
                         requestUpdate: { _ in
                         },
-                        updateSearchQuery: { _, _ in
+                        updateSearchQuery: { _ in
                         },
                         updateScrollingToItemGroup: {
                         },

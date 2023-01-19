@@ -1111,6 +1111,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeEmojiKeywordsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedApplyPendingScheduledMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeAvailableReactions(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeEmojiSearchCategories(postbox: self.postbox, network: self.network, kind: .emoji).start())
+        self.managedOperationsDisposable.add(managedSynchronizeEmojiSearchCategories(postbox: self.postbox, network: self.network, kind: .status).start())
         self.managedOperationsDisposable.add(managedSynchronizeAttachMenuBots(postbox: self.postbox, network: self.network, force: true).start())
         self.managedOperationsDisposable.add(managedSynchronizeNotificationSoundList(postbox: self.postbox, network: self.network).start())
 

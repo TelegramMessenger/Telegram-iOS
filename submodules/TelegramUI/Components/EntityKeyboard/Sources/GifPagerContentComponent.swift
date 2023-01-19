@@ -971,7 +971,7 @@ public final class GifPagerContentComponent: Component {
                         }
                         strongSelf.component?.inputInteraction.openSearch()
                     }, deactivated: { _ in
-                    }, updateQuery: {_, _ in
+                    }, updateQuery: { _ in
                     })
                     self.visibleSearchHeader = visibleSearchHeader
                     self.scrollView.addSubview(visibleSearchHeader)
@@ -979,7 +979,7 @@ public final class GifPagerContentComponent: Component {
                 }
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
-                visibleSearchHeader.update(theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: false, isActive: false, size: searchHeaderFrame.size, canFocus: false, hasSearchItems: true, transition: transition)
+                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: false, isActive: false, size: searchHeaderFrame.size, canFocus: false, searchCategories: nil, transition: transition)
                 transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame, completion: { [weak self] completed in
                     guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
                         return

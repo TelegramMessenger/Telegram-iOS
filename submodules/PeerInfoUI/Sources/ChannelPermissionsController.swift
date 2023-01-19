@@ -65,10 +65,11 @@ private enum ChannelPermissionsEntryStableId: Hashable {
     case peer(PeerId)
 }
 
-private struct SubPermission: Equatable {
+struct SubPermission: Equatable {
     var title: String
     var flags: TelegramChatBannedRightsFlags
     var isSelected: Bool
+    var isEnabled: Bool
 }
 
 private enum ChannelPermissionsEntry: ItemListNodeEntry {
@@ -270,7 +271,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                         return ItemListExpandableSwitchItem.SubItem(
                             id: AnyHashable(item.flags.rawValue),
                             title: item.title,
-                            isSelected: item.isSelected
+                            isSelected: item.isSelected,
+                            isEnabled: item.isEnabled
                         )
                     }, type: .icon, enableInteractiveChanges: enabled != nil, enabled: enabled ?? true, sectionId: self.section, style: .blocks, updated: { value in
                         if let _ = enabled {
@@ -533,7 +535,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for (rights, correspondingAdminRight) in allGroupPermissionList(peer: .channel(channel)) {
-            var enabled: Bool? = true
+            var enabled = true
             if channel.addressName != nil && publicGroupRestrictedPermissions.contains(rights) {
                 enabled = false
             }
@@ -552,7 +554,9 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
                 isSelected = banSendMediaSubList().allSatisfy({ !effectiveRightsFlags.contains($0.0) })
                 
                 for (subRight, _) in banSendMediaSubList() {
-                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: channel.isForum), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight)))
+                    let subRightEnabled = true
+                    
+                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: channel.isForum), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight), isEnabled: enabled && subRightEnabled))
                 }
             }
             
@@ -596,7 +600,9 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             var subItems: [SubPermission] = []
             if rights == .banSendMedia {
                 for (subRight, _) in banSendMediaSubList() {
-                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: false), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight)))
+                    let subRightEnabled = true
+                    
+                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: false), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight), isEnabled: subRightEnabled))
                 }
             }
             
@@ -793,7 +799,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerId, _ in
             var dismissController: (() -> Void)?
-            let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .ban, openPeer: { peer, participant in
+            let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .ban, filters: [.disable([context.account.peerId])], openPeer: { peer, participant in
                 if let participant = participant {
                     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                     switch participant.participant {

@@ -615,7 +615,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         self.addSubnode(self.messageTransitionNode)
         self.contentContainerNode.addSubnode(self.navigateButtons)
-        self.contentContainerNode.addSubnode(self.presentationContextMarker)
+        self.addSubnode(self.presentationContextMarker)
         self.contentContainerNode.addSubnode(self.contentDimNode)
 
         self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)

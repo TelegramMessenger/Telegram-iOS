@@ -8,6 +8,7 @@ extension TelegramChatBannedRights {
             case let .chatBannedRights(flags, untilDate):
                 var effectiveFlags = TelegramChatBannedRightsFlags(rawValue: flags)
                 effectiveFlags.remove(.banSendMedia)
+                effectiveFlags.remove(TelegramChatBannedRightsFlags(rawValue: 1 << 1))
                 self.init(flags: effectiveFlags, untilDate: untilDate)
         }
     }

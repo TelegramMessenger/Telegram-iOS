@@ -18,15 +18,18 @@ public class ItemListExpandableSwitchItem: ListViewItem, ItemListItem {
         public var id: AnyHashable
         public var title: String
         public var isSelected: Bool
+        public var isEnabled: Bool
         
         public init(
             id: AnyHashable,
             title: String,
-            isSelected: Bool
+            isSelected: Bool,
+            isEnabled: Bool
         ) {
             self.id = id
             self.title = title
             self.isSelected = isSelected
+            self.isEnabled = isEnabled
         }
     }
     
@@ -140,7 +143,7 @@ private final class SubItemNode: HighlightTrackingButtonNode {
     }
     
     @objc private func pressed() {
-        guard let item = self.item, let action = self.action else {
+        guard let item = self.item, item.isEnabled, let action = self.action else {
             return
         }
         action(item)
@@ -180,6 +183,8 @@ private final class SubItemNode: HighlightTrackingButtonNode {
         self.textNode.attributedText = NSAttributedString(string: item.title, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
         let titleSize = self.textNode.updateLayout(CGSize(width: size.width - leftInset, height: 100.0))
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+        
+        self.alpha = item.isEnabled ? 1.0 : 0.5
     }
 }
 
