@@ -15,45 +15,15 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
     }
     switch chatPresentationInterfaceState.inputMode {
     case .media:
-        if "".isEmpty {
-            if let currentNode = currentNode as? ChatEntityKeyboardInputNode {
-                return currentNode
-            } else if let inputMediaNode = inputMediaNode {
-                return inputMediaNode
-            } else if let inputMediaNode = makeMediaInputNode() {
-                inputMediaNode.interfaceInteraction = interfaceInteraction
-                return inputMediaNode
-            } else {
-                return nil
-            }
+        if let currentNode = currentNode as? ChatEntityKeyboardInputNode {
+            return currentNode
+        } else if let inputMediaNode = inputMediaNode {
+            return inputMediaNode
+        } else if let inputMediaNode = makeMediaInputNode() {
+            inputMediaNode.interfaceInteraction = interfaceInteraction
+            return inputMediaNode
         } else {
-            if let currentNode = currentNode as? ChatMediaInputNode {
-                return currentNode
-            } else if let inputMediaNode = inputMediaNode {
-                return inputMediaNode
-            } else {
-                var peerId: PeerId?
-                if case let .peer(id) = chatPresentationInterfaceState.chatLocation {
-                    peerId = id
-                }
-                let inputNode = ChatMediaInputNode(context: context, peerId: peerId, chatLocation: chatPresentationInterfaceState.chatLocation, controllerInteraction: controllerInteraction, chatWallpaper: chatPresentationInterfaceState.chatWallpaper, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, gifPaneIsActiveUpdated: { [weak interfaceInteraction] value in
-                    if let interfaceInteraction = interfaceInteraction {
-                        interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
-                            if case let .media(_, expanded, focused) = state.inputMode {
-                                if value {
-                                    return (.media(mode: .gif, expanded: expanded, focused: focused), nil)
-                                } else {
-                                    return (.media(mode: .other, expanded: expanded, focused: focused), nil)
-                                }
-                            } else {
-                                return (state.inputMode, nil)
-                            }
-                        }
-                    }
-                })
-                inputNode.interfaceInteraction = interfaceInteraction
-                return inputNode
-            }
+            return nil
         }
     case .inputButtons:
         if chatPresentationInterfaceState.forceInputCommandsHidden {

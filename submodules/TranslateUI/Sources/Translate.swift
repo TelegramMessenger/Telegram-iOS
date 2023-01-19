@@ -127,7 +127,6 @@ public var popularTranslationLanguages = [
     "en",
     "ar",
     "zh",
-//    "zh-Hant",
     "fr",
     "de",
     "it",
@@ -135,7 +134,8 @@ public var popularTranslationLanguages = [
     "ko",
     "pt",
     "ru",
-    "es"
+    "es",
+    "uk"
 ]
 
 @available(iOS 12.0, *)

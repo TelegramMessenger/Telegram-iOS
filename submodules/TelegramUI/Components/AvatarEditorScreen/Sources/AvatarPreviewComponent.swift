@@ -59,6 +59,7 @@ final class AvatarPreviewComponent: Component {
         private weak var state: EmptyComponentState?
         
         private let stickerFetchedDisposable = MetaDisposable()
+        private let cachedDisposable = MetaDisposable()
         
         override init(frame: CGRect) {
             self.imageView = UIImageView()
@@ -84,6 +85,7 @@ final class AvatarPreviewComponent: Component {
         
         deinit {
             self.stickerFetchedDisposable.dispose()
+            self.cachedDisposable.dispose()
         }
         
         @objc func tapped() {
@@ -200,8 +202,11 @@ final class AvatarPreviewComponent: Component {
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
             let source = AnimatedStickerResourceSource(account: component.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
-            self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .count(2), mode: .direct(cachePathPrefix: nil))
+            self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .count(1), mode: .direct(cachePathPrefix: nil))
             self.animationNode?.visibility = true
+            
+            self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
+            |> deliverOn(Queue.concurrentDefaultQueue())).start())
         }
     }
 

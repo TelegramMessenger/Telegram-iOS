@@ -316,8 +316,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.window = window
         self.nativeWindow = window
         
-        let launchIconSize = CGSize(width: 120.0, height: 120.0)
-        let launchIconView = UIImageView(image: UIImage(bundleImageName: "Chat/Links/QrLogo"))
+        let launchIconSize = CGSize(width: 99.0, height: 99.0)
+        let launchIconView = UIImageView(image: UIImage(bundleImageName: "Components/LaunchLogo"))
         launchIconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((hostView.containerView.frame.width - launchIconSize.width) / 2.0), y: floorToScreenPixels((hostView.containerView.frame.height - launchIconSize.height) / 2.0)), size: launchIconSize)
         hostView.containerView.addSubview(launchIconView)
         

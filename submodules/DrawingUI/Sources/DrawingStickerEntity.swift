@@ -48,7 +48,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var isAnimated: Bool {
         switch self.content {
         case let .file(file):
-            return file.isAnimatedSticker || file.isVideoSticker
+            return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
         case .image:
             return false
         }

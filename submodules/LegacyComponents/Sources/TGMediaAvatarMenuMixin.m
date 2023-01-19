@@ -194,7 +194,7 @@
     [itemViews addObject:galleryItem];
     
     if (!_signup) {
-        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:@"Emoji or Sticker" type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SetEmoji") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
                                                {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)

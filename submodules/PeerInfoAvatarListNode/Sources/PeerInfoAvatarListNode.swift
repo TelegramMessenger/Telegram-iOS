@@ -91,7 +91,7 @@ private struct CustomListItemResourceId {
 public enum PeerInfoAvatarListItem: Equatable {
     case custom(ASDisplayNode)
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
-    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?, Bool)
+    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?, Bool, TelegramMediaImage.EmojiMarkup?)
     
     var id: MediaResourceId {
         switch self {
@@ -100,7 +100,7 @@ public enum PeerInfoAvatarListItem: Equatable {
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return representation.resource.id
-        case let .image(_, representations, _, _, _):
+        case let .image(_, representations, _, _, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return representation.resource.id
         }
@@ -115,7 +115,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 } else {
                     return false
                 }
-            } else if case let .image(_, rhsRepresentations, _, _, _) = self {
+            } else if case let .image(_, rhsRepresentations, _, _, _, _) = self {
                 if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
                     let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
                     return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
@@ -125,7 +125,7 @@ public enum PeerInfoAvatarListItem: Equatable {
             } else {
                 return false
             }
-        } else if case let .image(_, lhsRepresentations, _, _, _) = self {
+        } else if case let .image(_, lhsRepresentations, _, _, _, _) = self {
             if case let .topImage(rhsRepresentations, _, _) = self {
                 if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
                     let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
@@ -133,7 +133,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 } else {
                     return false
                 }
-            } else if case let .image(_, rhsRepresentations, _, _, _) = self {
+            } else if case let .image(_, rhsRepresentations, _, _, _, _) = self {
                 if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
                     let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
                     return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
@@ -154,7 +154,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 return []
             case let .topImage(representations, _, _):
                 return representations
-            case let .image(_, representations, _, _, _):
+            case let .image(_, representations, _, _, _, _):
                 return representations
         }
     }
@@ -166,7 +166,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 return []
             case let .topImage(_, videoRepresentations, _):
                 return videoRepresentations
-            case let .image(_, _, videoRepresentations, _, _):
+            case let .image(_, _, videoRepresentations, _, _, _):
                 return videoRepresentations
         }
     }
@@ -175,8 +175,17 @@ public enum PeerInfoAvatarListItem: Equatable {
         switch self {
             case .custom, .topImage:
                 return false
-            case let .image(_, _, _, _, isFallback):
+            case let .image(_, _, _, _, isFallback, _):
                 return isFallback
+        }
+    }
+    
+    var emojiMarkup: TelegramMediaImage.EmojiMarkup? {
+        switch self {
+            case let .image(_, _, _, _, _, emojiMarkup):
+                return emojiMarkup
+            default:
+                return nil
         }
     }
     
@@ -184,11 +193,11 @@ public enum PeerInfoAvatarListItem: Equatable {
         switch entry {
             case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                 self = .topImage(representations, videoRepresentations, immediateThumbnailData)
-            case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback):
+            case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback, emojiMarkup):
                 if representations.isEmpty {
                     return nil
                 }
-                self = .image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback)
+                self = .image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup)
         }
     }
 }
@@ -451,7 +460,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                 id = id &+ resource.photoId
             }
-        case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _):
+        case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _, _):
             representations = imageRepresentations
             videoRepresentations = videoRepresentationsValue
             immediateThumbnailData = immediateThumbnail
@@ -1000,7 +1009,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     func setMainItem(_ item: PeerInfoAvatarListItem) {
-        guard case let .image(imageReference, _, _, _, _) = item else {
+        guard case let .image(imageReference, _, _, _, _, _) = item else {
             return
         }
         var items: [PeerInfoAvatarListItem] = []
@@ -1010,16 +1019,16 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                     entries.append(entry)
                     items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
-                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback):
+                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback, emojiMarkup):
                     if representations.isEmpty {
                         continue
                     }
                     if imageReference == reference {
                         entries.insert(entry, at: 0)
-                        items.insert(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback), at: 0)
+                        items.insert(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup), at: 0)
                     } else {
                         entries.append(entry)
-                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback))
+                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup))
                     }
             }
         }
@@ -1038,7 +1047,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     public func deleteItem(_ item: PeerInfoAvatarListItem) -> Bool {
-        guard case let .image(imageReference, _, _, _, _) = item else {
+        guard case let .image(imageReference, _, _, _, _, _) = item else {
             return false
         }
                 
@@ -1053,13 +1062,13 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                     entries.append(entry)
                     items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
-                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback):
+                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback, emojiMarkup):
                     if representations.isEmpty {
                         continue
                     }
                     if imageReference != reference {
                         entries.append(entry)
-                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback))
+                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup))
                     } else {
                         deletedIndex = index
                     }
@@ -1125,8 +1134,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
                 
                 var synchronous = false
-                if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(mediaId, reference, _, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, _) = updated, !videoRepresentations.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(representations, _, _, _, _, _) = previous {
-                    let firstEntry = AvatarGalleryEntry.image(mediaId, reference, representations, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, false)
+                if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(mediaId, reference, _, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, _, emojiMarkup) = updated, !videoRepresentations.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(representations, _, _, _, _, _) = previous {
+                    let firstEntry = AvatarGalleryEntry.image(mediaId, reference, representations, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, false, emojiMarkup)
                     entries.remove(at: 0)
                     entries.insert(firstEntry, at: 0)
                     synchronous = true

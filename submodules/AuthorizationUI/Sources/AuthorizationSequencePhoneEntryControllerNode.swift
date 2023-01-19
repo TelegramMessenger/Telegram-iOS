@@ -968,7 +968,12 @@ final class PhoneConfirmationController: ViewController {
             if case .regular = layout.metrics.widthClass {
                 originY = floorToScreenPixels((layout.size.height - backgroundSize.height) / 2.0)
             } else {
-                originY = layout.size.height - backgroundSize.height - 260.0
+                let hasOnScreenNavigation = layout.deviceMetrics.onScreenNavigationHeight(inLandscape: false, systemOnScreenNavigationHeight: nil) != nil
+                if hasOnScreenNavigation || layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland {
+                    originY = layout.size.height - backgroundSize.height - 260.0
+                } else {
+                    originY = floorToScreenPixels((layout.size.height - backgroundSize.height) / 2.0)
+                }
             }
             
             let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: originY), size: backgroundSize)

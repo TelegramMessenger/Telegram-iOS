@@ -415,7 +415,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
         if let hasUsername = requestPeer.hasUsername, hasUsername {
             let currentUsername = state.editingPublicLinkText ?? ""
             entries.append(.usernameHeader(presentationData.theme, presentationData.strings.CreateGroup_PublicLinkTitle.uppercased()))
-            entries.append(.username(presentationData.theme, "link", currentUsername))
+            entries.append(.username(presentationData.theme, presentationData.strings.Group_PublicLink_Placeholder, currentUsername))
             
             if let status = state.addressNameValidationStatus {
                 let statusText: String
@@ -530,7 +530,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     return entries
 }
 
-public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
+public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, willComplete: @escaping (String, @escaping () -> Void) -> Void = { _, complete in complete() }, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     var location: PeerGeoLocation?
     if case let .locatedGroup(latitude, longitude, address) = mode {
         location = PeerGeoLocation(latitude: latitude, longitude: longitude, address: address ?? "")
@@ -591,52 +591,26 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         }
         
         if !creating && !title.isEmpty {
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalAutoremoveTimeout())
-            |> deliverOnMainQueue).start(next: { maybeGlobalAutoremoveTimeout in
-                updateState { current in
-                    var current = current
-                    current.creating = true
-                    return current
-                }
-                endEditingImpl?()
-                
-                let globalAutoremoveTimeout: Int32 = maybeGlobalAutoremoveTimeout ?? 0
-                let autoremoveTimeout = stateValue.with({ $0 }).autoremoveTimeout ?? globalAutoremoveTimeout
-                let ttlPeriod: Int32? = autoremoveTimeout == 0 ? nil : autoremoveTimeout
-                
-                var createSignal: Signal<PeerId?, CreateGroupError>
-                switch mode {
-                case .generic:
-                    createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
-                case .supergroup:
-                    createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
-                    |> map(Optional.init)
-                    |> mapError { error -> CreateGroupError in
-                        switch error {
-                        case .generic:
-                            return .generic
-                        case .restricted:
-                            return .restricted
-                        case .tooMuchJoined:
-                            return .tooMuchJoined
-                        case .tooMuchLocationBasedGroups:
-                            return .tooMuchLocationBasedGroups
-                        case let .serverProvided(error):
-                            return .serverProvided(error)
-                        }
+            willComplete(title, {
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalAutoremoveTimeout())
+                |> deliverOnMainQueue).start(next: { maybeGlobalAutoremoveTimeout in
+                    updateState { current in
+                        var current = current
+                        current.creating = true
+                        return current
                     }
-                case .locatedGroup:
-                    guard let location = location else {
-                        return
-                    }
+                    endEditingImpl?()
                     
-                    createSignal = addressPromise.get()
-                    |> castError(CreateGroupError.self)
-                    |> mapToSignal { address -> Signal<PeerId?, CreateGroupError> in
-                        guard let address = address else {
-                            return .complete()
-                        }
-                        return context.engine.peers.createSupergroup(title: title, description: nil, location: (location.latitude, location.longitude, address))
+                    let globalAutoremoveTimeout: Int32 = maybeGlobalAutoremoveTimeout ?? 0
+                    let autoremoveTimeout = stateValue.with({ $0 }).autoremoveTimeout ?? globalAutoremoveTimeout
+                    let ttlPeriod: Int32? = autoremoveTimeout == 0 ? nil : autoremoveTimeout
+                    
+                    var createSignal: Signal<PeerId?, CreateGroupError>
+                    switch mode {
+                    case .generic:
+                        createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
+                    case .supergroup:
+                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                         |> map(Optional.init)
                         |> mapError { error -> CreateGroupError in
                             switch error {
@@ -652,50 +626,18 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                 return .serverProvided(error)
                             }
                         }
-                    }
-                case let .requestPeer(group):
-                    var isForum = false
-                    if let isForumRequested = group.isForum, isForumRequested {
-                        isForum = true
-                    }
-                    
-                    if isForum {
-                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil, isForum: true)
-                        |> map(Optional.init)
-                        |> mapError { error -> CreateGroupError in
-                            switch error {
-                            case .generic:
-                                return .generic
-                            case .restricted:
-                                return .restricted
-                            case .tooMuchJoined:
-                                return .tooMuchJoined
-                            case .tooMuchLocationBasedGroups:
-                                return .tooMuchLocationBasedGroups
-                            case let .serverProvided(error):
-                                return .serverProvided(error)
-                            }
+                    case .locatedGroup:
+                        guard let location = location else {
+                            return
                         }
                         
-                        if let publicLink, !publicLink.isEmpty {
-                            createSignal = createSignal
-                            |> mapToSignal { peerId in
-                                if let peerId = peerId {
-                                    return context.engine.peers.updateAddressName(domain: .peer(peerId), name: publicLink)
-                                    |> mapError { _ in
-                                        return .generic
-                                    }
-                                    |> map { _ in
-                                        return peerId
-                                    }
-                                } else {
-                                    return .fail(.generic)
-                                }
+                        createSignal = addressPromise.get()
+                        |> castError(CreateGroupError.self)
+                        |> mapToSignal { address -> Signal<PeerId?, CreateGroupError> in
+                            guard let address = address else {
+                                return .complete()
                             }
-                        }
-                    } else {
-                        if let publicLink, !publicLink.isEmpty {
-                            createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
+                            return context.engine.peers.createSupergroup(title: title, description: nil, location: (location.latitude, location.longitude, address))
                             |> map(Optional.init)
                             |> mapError { error -> CreateGroupError in
                                 switch error {
@@ -711,6 +653,33 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                     return .serverProvided(error)
                                 }
                             }
+                        }
+                    case let .requestPeer(group):
+                        var isForum = false
+                        if let isForumRequested = group.isForum, isForumRequested {
+                            isForum = true
+                        }
+                        
+                        let createGroupSignal: (Bool) -> Signal<PeerId?, CreateGroupError> = { isForum in
+                            return context.engine.peers.createSupergroup(title: title, description: nil, isForum: isForum)
+                            |> map(Optional.init)
+                            |> mapError { error -> CreateGroupError in
+                                switch error {
+                                case .generic:
+                                    return .generic
+                                case .restricted:
+                                    return .restricted
+                                case .tooMuchJoined:
+                                    return .tooMuchJoined
+                                case .tooMuchLocationBasedGroups:
+                                    return .tooMuchLocationBasedGroups
+                                case let .serverProvided(error):
+                                    return .serverProvided(error)
+                                }
+                            }
+                        }
+                        if let publicLink, !publicLink.isEmpty {
+                            createSignal = createGroupSignal(isForum)
                             |> mapToSignal { peerId in
                                 if let peerId = peerId {
                                     return context.engine.peers.updateAddressName(domain: .peer(peerId), name: publicLink)
@@ -724,82 +693,101 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                     return .fail(.generic)
                                 }
                             }
+                        } else if isForum || group.userAdminRights != nil {
+                            createSignal = createGroupSignal(isForum)
                         } else {
                             createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: nil)
                         }
-                    }
-                }
-                
-                actionsDisposable.add((createSignal
-                |> mapToSignal { peerId -> Signal<PeerId?, CreateGroupError> in
-                    guard let peerId = peerId else {
-                        return .single(nil)
-                    }
-                    let updatingAvatar = stateValue.with {
-                        return $0.avatar
-                    }
-                    if let _ = updatingAvatar {
-                        return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
-                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
-                        })
-                        |> ignoreValues
-                        |> `catch` { _ -> Signal<Never, CreateGroupError> in
-                            return .complete()
-                        }
-                        |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
-                        }
-                        |> then(.single(peerId))
-                    } else {
-                        return .single(peerId)
-                    }
-                }
-                |> deliverOnMainQueue
-                |> afterDisposed {
-                    Queue.mainQueue().async {
-                        updateState { current in
-                            var current = current
-                            current.creating = false
-                            return current
+
+                        if group.userAdminRights?.rights.contains(.canBeAnonymous) == true {
+                            createSignal = createSignal
+                            |> mapToSignal { peerId in
+                                if let peerId = peerId {
+                                    return context.engine.peers.updateChannelAdminRights(peerId: peerId, adminId: context.account.peerId, rights: TelegramChatAdminRights(rights: .canBeAnonymous), rank: nil)
+                                    |> mapError { _ in
+                                        return .generic
+                                    }
+                                    |> map { _ in
+                                        return peerId
+                                    }
+                                } else {
+                                    return .fail(.generic)
+                                }
+                            }
                         }
                     }
-                }).start(next: { peerId in
-                    if let peerId = peerId {
-                        if let completion = completion {
-                            completion(peerId, {
-                                dismissImpl?()
+                    
+                    actionsDisposable.add((createSignal
+                    |> mapToSignal { peerId -> Signal<PeerId?, CreateGroupError> in
+                        guard let peerId = peerId else {
+                            return .single(nil)
+                        }
+                        let updatingAvatar = stateValue.with {
+                            return $0.avatar
+                        }
+                        if let _ = updatingAvatar {
+                            return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                                return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                             })
+                            |> ignoreValues
+                            |> `catch` { _ -> Signal<Never, CreateGroupError> in
+                                return .complete()
+                            }
+                            |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
+                            }
+                            |> then(.single(peerId))
                         } else {
-                            let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: peerId))
-                            replaceControllerImpl?(controller)
+                            return .single(peerId)
                         }
                     }
-                }, error: { error in
-                    if case .serverProvided = error {
-                        return
-                    }
-                    
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let text: String?
-                    switch error {
-                    case .privacy:
-                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelMultipleError
-                    case .generic:
-                        text = presentationData.strings.Login_UnknownError
-                    case .restricted:
-                        text = presentationData.strings.Common_ActionNotAllowedError
-                    case .tooMuchJoined:
-                        pushImpl?(oldChannelsController(context: context, intent: .create))
-                        return
-                    case .tooMuchLocationBasedGroups:
-                        text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
-                    default:
-                        text = nil
-                    }
-                    
-                    if let text = text {
-                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                    }
-                }))
+                    |> deliverOnMainQueue
+                    |> afterDisposed {
+                        Queue.mainQueue().async {
+                            updateState { current in
+                                var current = current
+                                current.creating = false
+                                return current
+                            }
+                        }
+                    }).start(next: { peerId in
+                        if let peerId = peerId {
+                            if let completion = completion {
+                                completion(peerId, {
+                                    dismissImpl?()
+                                })
+                            } else {
+                                let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: peerId))
+                                replaceControllerImpl?(controller)
+                            }
+                        }
+                    }, error: { error in
+                        if case .serverProvided = error {
+                            return
+                        }
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let text: String?
+                        switch error {
+                        case .privacy:
+                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelMultipleError
+                        case .generic:
+                            text = presentationData.strings.Login_UnknownError
+                        case .restricted:
+                            text = presentationData.strings.Common_ActionNotAllowedError
+                        case .tooMuchJoined:
+                            pushImpl?(oldChannelsController(context: context, intent: .create))
+                            return
+                        case .tooMuchLocationBasedGroups:
+                            text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
+                        default:
+                            text = nil
+                        }
+                        
+                        if let text = text {
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        }
+                    }))
+                })
             })
         }
     }, changeProfilePhoto: {
@@ -1192,7 +1180,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         if state.creating {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+            var isEnabled = true
+            if state.editingName.composedTitle.isEmpty {
+                isEnabled = false
+            }
+            if case let .requestPeer(peerType) = mode, let hasUsername = peerType.hasUsername, hasUsername, (state.editingPublicLinkText ?? "").isEmpty {
+                isEnabled = false
+            }
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: isEnabled, action: {
                 arguments.done()
             })
         }

@@ -55,6 +55,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var shimmeringNode: ShimmeringLinkNode?
     private var textSelectionNode: TextSelectionNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
@@ -210,7 +211,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     statusType = nil
                 }
                 
-                let rawText: String
+                var rawText: String
                 var attributedText: NSAttributedString
                 var messageEntities: [MessageTextEntity]?
                 
@@ -228,6 +229,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                var isTranslating = false
                 if isUnsupportedMedia {
                     rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
                     messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
@@ -257,6 +259,18 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     if let updatingMedia = item.attributes.updatingMedia {
                         messageEntities = updatingMedia.entities?.entities ?? []
+                    }
+                    
+                    if let translateToLanguage = item.associatedData.translateToLanguage {
+                        isTranslating = true
+                        for attribute in item.message.attributes {
+                            if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
+                                rawText = attribute.text
+                                messageEntities = attribute.entities
+                                isTranslating = false
+                                break
+                            }
+                        }
                     }
                 }
                 
@@ -510,6 +524,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                     
+                            strongSelf.updateIsTranslating(isTranslating)
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
@@ -616,6 +631,33 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         return super.hitTest(point, with: event)
     }
     
+    private func updateIsTranslating(_ isTranslating: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        let rects = self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []
+        
+        if isTranslating, !rects.isEmpty {
+            let shimmeringNode: ShimmeringLinkNode
+            if let current = self.shimmeringNode {
+                shimmeringNode = current
+            } else {
+                shimmeringNode = ShimmeringLinkNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.secondaryTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1))
+                shimmeringNode.updateRects(rects)
+                shimmeringNode.frame = self.textNode.textNode.frame
+                shimmeringNode.updateLayout(self.textNode.textNode.frame.size)
+                shimmeringNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.shimmeringNode = shimmeringNode
+                self.insertSubnode(shimmeringNode, belowSubnode: self.textNode.textNode)
+            }
+        } else if let shimmeringNode = self.shimmeringNode {
+            self.shimmeringNode = nil
+            shimmeringNode.alpha = 0.0
+            shimmeringNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak shimmeringNode] _ in
+                shimmeringNode?.removeFromSupernode()
+            })
+        }
+    }
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [CGRect]?

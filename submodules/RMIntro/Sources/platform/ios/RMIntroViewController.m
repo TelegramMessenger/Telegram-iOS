@@ -243,7 +243,7 @@ typedef enum {
     CGPoint buttonTargetPosition = _startButton.center;
     _startButton.center = CGPointMake(buttonTargetPosition.x, buttonTargetPosition.y + 220.0);
     
-    _glkView.transform = CGAffineTransformMakeScale(0.68, 0.68);
+    _glkView.transform = CGAffineTransformMakeScale(0.66, 0.66);
         
     [UIView animateWithDuration:0.65 delay:0.15 usingSpringWithDamping:1.2f initialSpringVelocity:0.0 options:kNilOptions animations:^{
         _glkView.center = logoTargetPosition;

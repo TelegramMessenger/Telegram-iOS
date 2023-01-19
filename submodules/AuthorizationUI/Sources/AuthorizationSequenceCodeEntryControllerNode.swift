@@ -414,7 +414,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             prefix: codePrefix,
             count: codeLength,
             width: maximumWidth - 28.0,
-            compact: layout.size.width <= 320.0
+            compact: layout.size.width <= 320.0 || (layout.size.width <= 375.0 && codeLength > 5)
         )
         
         var items: [AuthorizationLayoutItem] = []

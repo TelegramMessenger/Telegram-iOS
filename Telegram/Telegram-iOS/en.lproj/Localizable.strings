@@ -8648,18 +8648,19 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Group.HasUsernameOff" = "The group should be private.";
 "RequestPeer.Requirement.Group.HasUsernameOn" = "The group should be public.";
 
-"RequestPeer.Requirement.Group.ForumOff" = "The group should have topics off.";
-"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics on.";
+"RequestPeer.Requirement.Group.ForumOff" = "The group should have topics turned off.";
+"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics turned  on.";
 
+"RequestPeer.Requirement.Group.ParticipantOn" = "Bot should be in the group.";
 "RequestPeer.Requirement.Group.CreatorOn" = "You should be the owner of the group.";
 
 "RequestPeer.Requirement.Group.Rights" = "You have the admin rights to %@.";
 "RequestPeer.Requirement.Group.Rights.Info" = "change group info";
 "RequestPeer.Requirement.Group.Rights.Send" = "post messages";
 "RequestPeer.Requirement.Group.Rights.Delete" = "delete messages";
-"RequestPeer.Requirement.Group.Rights.Edit" = "delete messages";
+"RequestPeer.Requirement.Group.Rights.Edit" = "edit messages";
 "RequestPeer.Requirement.Group.Rights.Ban" = "ban users";
-"RequestPeer.Requirement.Group.Rights.Invite" = "invite users via link";
+"RequestPeer.Requirement.Group.Rights.Invite" = "add members";
 "RequestPeer.Requirement.Group.Rights.Pin" = "pin messages";
 "RequestPeer.Requirement.Group.Rights.Topics" = "manage topics";
 "RequestPeer.Requirement.Group.Rights.VideoChats" = "manage video chats";
@@ -8672,30 +8673,29 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Channel.CreatorOn" = "You should be the owner of the channel.";
 
 "RequestPeer.Requirement.Channel.Rights" = "You have the admin rights to %@.";
-"RequestPeer.Requirement.Channel.Rights.Info" = "change group info";
+"RequestPeer.Requirement.Channel.Rights.Info" = "change channel info";
 "RequestPeer.Requirement.Channel.Rights.Send" = "post messages";
 "RequestPeer.Requirement.Channel.Rights.Delete" = "delete messages";
-"RequestPeer.Requirement.Channel.Rights.Edit" = "delete messages";
-"RequestPeer.Requirement.Channel.Rights.Ban" = "ban users";
+"RequestPeer.Requirement.Channel.Rights.Edit" = "edit messages";
 "RequestPeer.Requirement.Channel.Rights.Invite" = "invite users via link";
 "RequestPeer.Requirement.Channel.Rights.Pin" = "pin messages";
 "RequestPeer.Requirement.Channel.Rights.Topics" = "manage topics";
-"RequestPeer.Requirement.Channel.Rights.VideoChats" = "manage video chats";
+"RequestPeer.Requirement.Channel.Rights.VideoChats" = "manage live streams";
 "RequestPeer.Requirement.Channel.Rights.Anonymous" = "remain anonymous";
 "RequestPeer.Requirement.Channel.Rights.AddAdmins" = "add new admins";
 
 "RequestPeer.SelectionConfirmationTitle" = "Are you sure you want to send %1$@ to %2$@?";
 "RequestPeer.SelectionConfirmationInviteText" = "This will also add %1$@ to %2$@.";
-"RequestPeer.SelectionConfirmationInviteWithRightsText" = "This will also add %1$@ to %2$@ with the following rights:\n\n%3$@.";
+"RequestPeer.SelectionConfirmationInviteAdminText" = "This will also add %1$@ to %2$@ as an admin.";
+"RequestPeer.SelectionConfirmationInviteWithRightsText" = "This will also add %1$@ to %2$@ with the following rights:\n\n%3$@";
 "RequestPeer.SelectionConfirmationSend" = "Send";
 
 "CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
 "CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
 
-"Notification.RequestedPeer" = "You shared %@ with the bot.";
+"Notification.RequestedPeer" = "You shared %1$@ with %2$@.";
 
 "Conversation.ViewInChannel" = "View in Channel";
-
 
 "Conversation.HoldForAudioOnly" = "Hold to record audio.";
 "Conversation.HoldForVideoOnly" = "Hold to record video.";
@@ -8706,3 +8706,18 @@ Sorry for the inconvenience.";
 "Conversation.Translation.Hide" = "Hide";
 "Conversation.Translation.AddedToDoNotTranslateText" = "**%@** is added to the Do Not Translate list.";
 "Conversation.Translation.TranslationBarHiddenText" = "Translation bar is now hidden for this channel.";
+
+"ProfilePhoto.SetEmoji" = "Set Emoji";
+
+"AvatarEditor.Background" = "BACKGROUND";
+"AvatarEditor.EmojiOrSticker" = "EMOJI OR STICKER";
+"AvatarEditor.Emoji" = "Emoji";
+"AvatarEditor.Stickers" = "Stickers";
+"AvatarEditor.SwitchToEmoji" = "SWITCH TO EMOJI";
+"AvatarEditor.SwitchToStickers" = "SWITCH TO STICKERS";
+
+"AvatarEditor.SetProfilePhoto" = "Set as Profile Photo";
+"AvatarEditor.SetGroupPhoto" = "Set as Group Photo";
+"AvatarEditor.SetChannelPhoto" = "Set as Group Photo";
+
+"AvatarEditor.Set" = "Set";

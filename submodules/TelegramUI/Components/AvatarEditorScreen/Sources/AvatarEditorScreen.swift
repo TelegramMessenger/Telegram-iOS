@@ -74,23 +74,29 @@ final class AvatarEditorScreenComponent: Component {
     
     let context: AccountContext
     let ready: Promise<Bool>
+    let peerType: AvatarEditorScreen.PeerType
     let initialFileId: Int64?
     let initialBackgroundColors: [Int32]?
     
     init(
         context: AccountContext,
         ready: Promise<Bool>,
+        peerType: AvatarEditorScreen.PeerType,
         initialFileId: Int64?,
         initialBackgroundColors: [Int32]?
     ) {
         self.context = context
         self.ready = ready
+        self.peerType = peerType
         self.initialFileId = initialFileId
         self.initialBackgroundColors = initialBackgroundColors
     }
     
     static func ==(lhs: AvatarEditorScreenComponent, rhs: AvatarEditorScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peerType != rhs.peerType {
             return false
         }
         if lhs.initialFileId != rhs.initialFileId {
@@ -127,13 +133,13 @@ final class AvatarEditorScreenComponent: Component {
             super.init()
             
             if let initialFileId, let initialBackgroundColors {
-                let _ = context.engine.stickers.resolveInlineStickers(fileIds: [initialFileId])
-                |> map { [weak self] files in
+                let _ = (context.engine.stickers.resolveInlineStickers(fileIds: [initialFileId])
+                |> deliverOnMainQueue).start(next: { [weak self] files in
                     if let strongSelf = self, let file = files.values.first {
                         strongSelf.selectedFile = file
                         strongSelf.updated(transition: .immediate)
                     }
-                }
+                })
                 self.selectedBackground = .gradient(initialBackgroundColors.map { UInt32(bitPattern: $0) })
                 self.previousColor = self.selectedBackground
             } else {
@@ -227,9 +233,12 @@ final class AvatarEditorScreenComponent: Component {
         }
         
         private func updateData(_ data: KeyboardInputData) {
+            let wasEmpty = self.data == nil
             self.data = data
             
-            self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
+            if wasEmpty && self.state?.selectedFile == nil {
+                self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
+            }
             self.state?.updated(transition: .immediate)
             
             let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void = { [weak self] query in
@@ -504,11 +513,24 @@ final class AvatarEditorScreenComponent: Component {
                     guard let strongSelf = self, let controller = strongSelf.controller?() else {
                         return
                     }
-                    if groupId == AnyHashable("popular") {
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    let context = controller.context
+                    let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                    if groupId == AnyHashable("recent") {
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
-                        let context = controller.context
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    } else if groupId == AnyHashable("popular") {
+                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                        var items: [ActionSheetItem] = []
                         items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -627,7 +649,7 @@ final class AvatarEditorScreenComponent: Component {
                     }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
@@ -696,6 +718,7 @@ final class AvatarEditorScreenComponent: Component {
             self.state = state
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            let strings = environment.strings
             
             let controller = environment.controller
             self.controller = {
@@ -743,7 +766,7 @@ final class AvatarEditorScreenComponent: Component {
             let navigationDoneButtonSize = self.navigationDoneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: "Set", font: Font.semibold(17.0), color: state.isSearchActive ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
+                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.isSearchActive ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
                     action: { [weak self] in
                         guard let self else {
                             return
@@ -763,8 +786,8 @@ final class AvatarEditorScreenComponent: Component {
             }
                         
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
-            self.backgroundContainerView.backgroundColor = environment.theme.list.plainBackgroundColor
-            self.keyboardContainerView.backgroundColor = environment.theme.list.plainBackgroundColor
+            self.backgroundContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
+            self.keyboardContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
             self.panelSeparatorView.backgroundColor = environment.theme.list.itemPlainSeparatorColor
                         
             if self.dataDisposable == nil {
@@ -885,7 +908,7 @@ final class AvatarEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
                     text: .markdown(
-                        text: "Background".uppercased(), attributes: MarkdownAttributes(
+                        text: strings.AvatarEditor_Background.uppercased(), attributes: MarkdownAttributes(
                             body: body,
                             bold: bold,
                             link: body,
@@ -995,14 +1018,14 @@ final class AvatarEditorScreenComponent: Component {
             let keyboardSwitchTitle: String
             
             if state.isSearchActive {
-                keyboardTitle = "Emoji or Sticker"
+                keyboardTitle = strings.AvatarEditor_EmojiOrSticker
                 keyboardSwitchTitle = " "
             } else if state.keyboardContentId == AnyHashable("emoji") {
-                keyboardTitle = "Emoji"
-                keyboardSwitchTitle = "Switch to Stickers"
+                keyboardTitle = strings.AvatarEditor_Emoji
+                keyboardSwitchTitle = strings.AvatarEditor_SwitchToStickers
             } else if state.keyboardContentId == AnyHashable("stickers") {
-                keyboardTitle = "Stickers"
-                keyboardSwitchTitle = "Switch to Emoji"
+                keyboardTitle = strings.AvatarEditor_Stickers
+                keyboardSwitchTitle = strings.AvatarEditor_SwitchToEmoji
             } else {
                 keyboardTitle = " "
                 keyboardSwitchTitle = " "
@@ -1172,11 +1195,21 @@ final class AvatarEditorScreenComponent: Component {
                 contentHeight += 16.0
             }
             
+            let buttonText: String
+            switch component.peerType {
+            case .user:
+                buttonText = strings.AvatarEditor_SetProfilePhoto
+            case .group:
+                buttonText = strings.AvatarEditor_SetGroupPhoto
+            case .channel:
+                buttonText = strings.AvatarEditor_SetChannelPhoto
+            }
+            
             let buttonSize = self.buttonView.update(
                 transition: transition,
                 component: AnyComponent(
                     SolidRoundedButtonComponent(
-                        title: "Set Video",
+                        title: buttonText,
                         theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                         fontSize: 17.0,
                         height: 50.0,
@@ -1215,7 +1248,7 @@ final class AvatarEditorScreenComponent: Component {
             entity.scale = 3.3
             
             var documentId: Int64 = 0
-            if case let .file(file) = entity.content {
+            if case let .file(file) = entity.content, file.isCustomEmoji {
                 documentId = file.fileId.id
             }
             
@@ -1228,7 +1261,7 @@ final class AvatarEditorScreenComponent: Component {
                 entitiesData: entitiesData,
                 image: nil,
                 stillImage: nil,
-                hasAnimation: true,
+                hasAnimation: entity.isAnimated,
                 stickers: []
             )
             
@@ -1274,6 +1307,11 @@ final class AvatarEditorScreenComponent: Component {
 }
 
 public final class AvatarEditorScreen: ViewControllerComponentContainer {
+    public enum PeerType {
+        case user
+        case group
+        case channel
+    }
     fileprivate let context: AccountContext
     
     private let readyValue = Promise<Bool>()
@@ -1283,16 +1321,18 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
     
     public var completion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
         
-    public init(context: AccountContext, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
+    public init(context: AccountContext, peerType: PeerType, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
         self.context = context
         
         let componentReady = Promise<Bool>()
-        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)
+        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, peerType: peerType, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)
         self.navigationPresentation = .modal
             
         self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     required public init(coder aDecoder: NSCoder) {

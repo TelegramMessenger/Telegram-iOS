@@ -705,6 +705,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, insertText: { _ in
         }, backwardsDeleteText: {
         }, restartTopic: {
+        }, toggleTranslation: { _ in
+        }, changeTranslationLanguage: { _ in
+        }, addDoNotTranslateLanguage: { _ in
+        }, hideTranslationPanel: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil
