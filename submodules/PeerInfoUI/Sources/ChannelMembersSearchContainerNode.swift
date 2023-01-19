@@ -826,7 +826,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
-                                                for (rights, _) in allGroupPermissionList(peer: .channel(channel)) {
+                                                for (rights, _) in allGroupPermissionList(peer: .channel(channel), expandMedia: true) {
                                                     if banInfo.rights.flags.contains(rights) {
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
@@ -1086,7 +1086,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
-                                                for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
+                                                for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: true) {
                                                     if banInfo.rights.flags.contains(rights) {
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
