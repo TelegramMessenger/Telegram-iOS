@@ -8677,11 +8677,10 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Channel.Rights.Send" = "post messages";
 "RequestPeer.Requirement.Channel.Rights.Delete" = "delete messages";
 "RequestPeer.Requirement.Channel.Rights.Edit" = "edit messages";
-"RequestPeer.Requirement.Channel.Rights.Ban" = "ban users";
-"RequestPeer.Requirement.Channel.Rights.Invite" = "invite users via link";
+"RequestPeer.Requirement.Channel.Rights.Invite" = "add subscribers";
 "RequestPeer.Requirement.Channel.Rights.Pin" = "pin messages";
 "RequestPeer.Requirement.Channel.Rights.Topics" = "manage topics";
-"RequestPeer.Requirement.Channel.Rights.VideoChats" = "manage video chats";
+"RequestPeer.Requirement.Channel.Rights.VideoChats" = "manage live streams";
 "RequestPeer.Requirement.Channel.Rights.Anonymous" = "remain anonymous";
 "RequestPeer.Requirement.Channel.Rights.AddAdmins" = "add new admins";
 

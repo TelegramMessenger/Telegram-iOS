@@ -1216,9 +1216,6 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
             if adminRights.rights.contains(.canEditMessages) {
                 rights.append(strings.RequestPeer_Requirement_Channel_Rights_Edit)
             }
-            if adminRights.rights.contains(.canBanUsers) {
-                rights.append(strings.RequestPeer_Requirement_Channel_Rights_Ban)
-            }
             if adminRights.rights.contains(.canInviteUsers) {
                 rights.append(strings.RequestPeer_Requirement_Channel_Rights_Invite)
             }
