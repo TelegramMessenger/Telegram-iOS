@@ -30,6 +30,7 @@ import MultiplexedVideoNode
 import ChatControllerInteraction
 import FeaturedStickersScreen
 import Pasteboard
+import StickerPackPreviewUI
 
 public struct ChatMediaInputPaneScrollState {
     let absoluteOffset: CGFloat?
@@ -107,7 +108,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         let animationCache = context.animationCache
         let animationRenderer = context.animationRenderer
         
-        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: true, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
+        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: true, hasTrending: true, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
@@ -645,7 +646,42 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         return
                     }
                     
-                    if let file = item.itemFile {
+                    if groupId == AnyHashable("featuredTop"), let file = item.itemFile {
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                        let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak interfaceInteraction, weak controllerInteraction] views in
+                            guard let controllerInteraction = controllerInteraction else {
+                                return
+                            }
+                            guard let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
+                                    let controller = StickerPackScreen(
+                                        context: context,
+                                        updatedPresentationData: controllerInteraction.updatedPresentationData,
+                                        mode: .default,
+                                        mainStickerPack: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash),
+                                        stickerPacks: [.id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash)],
+                                        loadedStickerPacks: [.result(info: featuredStickerPack.info, items: featuredStickerPack.topItems, installed: false)],
+                                        parentNavigationController: controllerInteraction.navigationController(),
+                                        sendSticker: nil,
+                                        sendEmoji: { [weak interfaceInteraction] text, emojiAttribute in
+                                            guard let interfaceInteraction else {
+                                                return
+                                            }
+                                            interfaceInteraction.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
+                                        }
+                                    )
+                                    controllerInteraction.presentController(controller, nil)
+                                    
+                                    break
+                                }
+                            }
+                        })
+                    } else if let file = item.itemFile {
                         var text = "."
                         var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                         loop: for attribute in file.attributes {
@@ -807,6 +843,20 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         })
                     ])])
                     controllerInteraction.presentController(actionSheet, nil)
+                } else if groupId == AnyHashable("featuredTop") {
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { views in
+                        guard let view = views.views[viewKey] as? OrderedItemListView else {
+                            return
+                        }
+                        var emojiPackIds: [Int64] = []
+                        for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            emojiPackIds.append(featuredEmojiPack.info.id.id)
+                        }
+                        let _ = ApplicationSpecificNotice.setDismissedTrendingEmojiPacks(accountManager: context.sharedContext.accountManager, values: emojiPackIds).start()
+                    })
                 }
             },
             pushController: { [weak controllerInteraction] controller in
@@ -2017,9 +2067,11 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                         return
                     }
                     
-                    if let file = item.itemFile {
-                        var text = "."
-                        var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                    if groupId == AnyHashable("featuredTop") {
+                    } else {
+                        if let file = item.itemFile {
+                            var text = "."
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                         loop: for attribute in file.attributes {
                             switch attribute {
                             case let .CustomEmoji(_, _, displayText, _):
@@ -2034,34 +2086,35 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                                 break
                             }
                         }
-                        
-                        if file.isPremiumEmoji && !hasPremium {
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            strongSelf.presentController?(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: {
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                
-                                var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
-                                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .animatedEmoji)
-                                    replaceImpl?(controller)
-                                })
-                                replaceImpl = { [weak controller] c in
-                                    controller?.replace(with: c)
-                                }
-                                strongSelf.presentController?(controller)
-                            }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
-                            return
-                        }
-                        
-                        if let emojiAttribute = emojiAttribute {
+                            
+                            if file.isPremiumEmoji && !hasPremium {
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                strongSelf.presentController?(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
+                                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .animatedEmoji)
+                                        replaceImpl?(controller)
+                                    })
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
+                                    }
+                                    strongSelf.presentController?(controller)
+                                }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+                                return
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute {
+                                AudioServicesPlaySystemSound(0x450)
+                                strongSelf.insertText?(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
+                            }
+                        } else if case let .staticEmoji(staticEmoji) = item.content {
                             AudioServicesPlaySystemSound(0x450)
-                            strongSelf.insertText?(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
+                            strongSelf.insertText?(NSAttributedString(string: staticEmoji, attributes: [:]))
                         }
-                    } else if case let .staticEmoji(staticEmoji) = item.content {
-                        AudioServicesPlaySystemSound(0x450)
-                        strongSelf.insertText?(NSAttributedString(string: staticEmoji, attributes: [:]))
                     }
                 })
             },
@@ -2126,7 +2179,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium).start(next: { value in
+        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, hasTrending: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2141,7 +2194,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, hasTrending: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

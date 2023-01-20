@@ -6532,6 +6532,7 @@ public final class EmojiPagerContentComponent: Component {
         isStatusSelection: Bool,
         isReactionSelection: Bool,
         isEmojiSelection: Bool,
+        hasTrending: Bool,
         isTopicIconSelection: Bool = false,
         isQuickReactionSelection: Bool = false,
         isProfilePhotoEmojiSelection: Bool = false,
@@ -6612,9 +6613,10 @@ public final class EmojiPagerContentComponent: Component {
             context.account.viewTracker.featuredEmojiPacks(),
             availableReactions,
             searchCategories,
-            iconStatusEmoji
+            iconStatusEmoji,
+            ApplicationSpecificNotice.dismissedTrendingEmojiPacks(accountManager: context.sharedContext.accountManager)
         )
-        |> map { view, hasPremium, featuredEmojiPacks, availableReactions, searchCategories, iconStatusEmoji -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredEmojiPacks, availableReactions, searchCategories, iconStatusEmoji, dismissedTrendingEmojiPacks -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -6629,6 +6631,81 @@ public final class EmojiPagerContentComponent: Component {
             }
             var itemGroups: [ItemGroup] = []
             var itemGroupIndexById: [AnyHashable: Int] = [:]
+            
+            var installedCollectionIds = Set<ItemCollectionId>()
+            for (id, _, _) in view.collectionInfos {
+                installedCollectionIds.insert(id)
+            }
+            
+            let dismissedTrendingEmojiPacksSet = Set(dismissedTrendingEmojiPacks ?? [])
+            let featuredEmojiPacksSet = Set(featuredEmojiPacks.map(\.info.id.id))
+            
+            if dismissedTrendingEmojiPacksSet != featuredEmojiPacksSet {
+                for featuredEmojiPack in featuredEmojiPacks {
+                    if installedCollectionIds.contains(featuredEmojiPack.info.id) {
+                        continue
+                    }
+                    
+                    guard let item = featuredEmojiPack.topItems.first else {
+                        continue
+                    }
+                    
+                    let animationData: EntityKeyboardAnimationData
+                    
+                    if let thumbnail = featuredEmojiPack.info.thumbnail {
+                        let type: EntityKeyboardAnimationData.ItemType
+                        if item.file.isAnimatedSticker {
+                            type = .lottie
+                        } else if item.file.isVideoEmoji || item.file.isVideoSticker {
+                            type = .video
+                        } else {
+                            type = .still
+                        }
+                        
+                        animationData = EntityKeyboardAnimationData(
+                            id: .stickerPackThumbnail(featuredEmojiPack.info.id),
+                            type: type,
+                            resource: .stickerPackThumbnail(stickerPack: .id(id: featuredEmojiPack.info.id.id, accessHash: featuredEmojiPack.info.accessHash), resource: thumbnail.resource),
+                            dimensions: thumbnail.dimensions.cgSize,
+                            immediateThumbnailData: featuredEmojiPack.info.immediateThumbnailData,
+                            isReaction: false,
+                            isTemplate: false
+                        )
+                    } else {
+                        animationData = EntityKeyboardAnimationData(file: item.file)
+                    }
+                    
+                    var tintMode: Item.TintMode = .none
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
+                    }
+                    
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        animationData: animationData,
+                        content: .animation(animationData),
+                        itemFile: item.file,
+                        subgroupId: nil,
+                        icon: .none,
+                        tintMode: tintMode
+                    )
+                    
+                    let supergroupId = "featuredTop"
+                    let groupId: AnyHashable = supergroupId
+                    let isPremiumLocked: Bool = item.file.isPremiumSticker && !hasPremium
+                    if isPremiumLocked && isPremiumDisabled {
+                        continue
+                    }
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        
+                        //TODO:localize
+                        let title = "TRENDING EMOJI"
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 0, isClearable: false, headerItem: nil, items: [resultItem]))
+                    }
+                }
+            }
             
             var recentEmoji: OrderedItemListView?
             var featuredStatusEmoji: OrderedItemListView?
@@ -7137,11 +7214,6 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
-            var installedCollectionIds = Set<ItemCollectionId>()
-            for (id, _, _) in view.collectionInfos {
-                installedCollectionIds.insert(id)
-            }
-            
             if areCustomEmojiEnabled {
                 for entry in view.entries {
                     guard let item = entry.item as? StickerPackItem else {
@@ -7325,6 +7397,13 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             let allItemGroups = itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
+                var hasClear = group.isClearable
+                var isEmbedded = false
+                if group.id == AnyHashable("featuredTop") {
+                    hasClear = true
+                    isEmbedded = true
+                }
+                
                 var headerItem = group.headerItem
                 
                 if let groupId = group.id.base as? ItemCollectionId {
@@ -7350,8 +7429,8 @@ public final class EmojiPagerContentComponent: Component {
                     actionButtonTitle: nil,
                     isFeatured: group.isFeatured,
                     isPremiumLocked: group.isPremiumLocked,
-                    isEmbedded: false,
-                    hasClear: group.isClearable,
+                    isEmbedded: isEmbedded,
+                    hasClear: hasClear,
                     collapsedLineCount: group.collapsedLineCount,
                     displayPremiumBadges: false,
                     headerItem: headerItem,

@@ -662,6 +662,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     isStatusSelection: false,
                     isReactionSelection: false,
                     isEmojiSelection: true,
+                    hasTrending: false,
                     topReactionItems: [],
                     areUnicodeEmojiEnabled: true,
                     areCustomEmojiEnabled: true,

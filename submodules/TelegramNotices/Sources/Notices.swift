@@ -166,6 +166,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case emojiTooltip = 32
     case audioTranscriptionSuggestion = 33
     case clearStorageDismissedTipSize = 34
+    case dismissedTrendingEmojiPacks = 35
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -353,6 +354,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func clearStorageDismissedTipSize() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.clearStorageDismissedTipSize.key)
+    }
+    
+    static func dismissedTrendingEmojiPacks() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedTrendingEmojiPacks.key)
     }
 }
 
@@ -1007,6 +1012,25 @@ public struct ApplicationSpecificNotice {
         return accountManager.transaction { transaction -> Void in
             if let entry = CodableEntry(ApplicationSpecificInt64ArrayNotice(values: values)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedTrendingStickerPacks(), entry)
+            }
+        }
+    }
+    
+    public static func dismissedTrendingEmojiPacks(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<[Int64]?, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedTrendingEmojiPacks())
+        |> map { view -> [Int64]? in
+            if let value = view.value?.get(ApplicationSpecificInt64ArrayNotice.self) {
+                return value.values
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public static func setDismissedTrendingEmojiPacks(accountManager: AccountManager<TelegramAccountManagerTypes>, values: [Int64]) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificInt64ArrayNotice(values: values)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedTrendingEmojiPacks(), entry)
             }
         }
     }

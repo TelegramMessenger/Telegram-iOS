@@ -800,6 +800,7 @@ final class AvatarEditorScreenComponent: Component {
                     isStatusSelection: false,
                     isReactionSelection: false,
                     isEmojiSelection: false,
+                    hasTrending: false,
                     isProfilePhotoEmojiSelection: true,
                     topReactionItems: [],
                     areUnicodeEmojiEnabled: false,
