@@ -6640,7 +6640,7 @@ public final class EmojiPagerContentComponent: Component {
             let dismissedTrendingEmojiPacksSet = Set(dismissedTrendingEmojiPacks ?? [])
             let featuredEmojiPacksSet = Set(featuredEmojiPacks.map(\.info.id.id))
             
-            if dismissedTrendingEmojiPacksSet != featuredEmojiPacksSet {
+            if dismissedTrendingEmojiPacksSet != featuredEmojiPacksSet && hasTrending {
                 for featuredEmojiPack in featuredEmojiPacks {
                     if installedCollectionIds.contains(featuredEmojiPack.info.id) {
                         continue
