@@ -108,6 +108,7 @@ final class EmojiSearchSearchBarComponent: Component {
         let contentSize: CGSize
         let leftInset: CGFloat
         let rightInset: CGFloat
+        let itemStartX: CGFloat
         
         let textSpacing: CGFloat
         let textFrame: CGRect
@@ -123,11 +124,13 @@ final class EmojiSearchSearchBarComponent: Component {
             
             self.textFrame = CGRect(origin: CGPoint(x: self.leftInset, y: floor((containerSize.height - textSize.height) * 0.5)), size: textSize)
             
-            self.contentSize = CGSize(width: self.leftInset + textSize.width + self.textSpacing + self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1)) + self.rightInset, height: containerSize.height)
+            self.itemStartX = max(self.textFrame.maxX + self.textSpacing, self.leftInset + floor(((containerSize.width - self.leftInset - self.rightInset) / 2.0) - self.itemSize.width))
+            
+            self.contentSize = CGSize(width: self.itemStartX + self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1)) + self.rightInset, height: containerSize.height)
         }
         
         func visibleItems(for rect: CGRect) -> Range<Int>? {
-            let baseItemX: CGFloat = self.textFrame.maxX + self.textSpacing
+            let baseItemX: CGFloat = self.itemStartX
             let offsetRect = rect.offsetBy(dx: -baseItemX, dy: 0.0)
             var minVisibleIndex = Int(floor((offsetRect.minX - self.itemSpacing) / (self.itemSize.width + self.itemSpacing)))
             minVisibleIndex = max(0, minVisibleIndex)
@@ -142,7 +145,7 @@ final class EmojiSearchSearchBarComponent: Component {
         }
         
         func frame(at index: Int) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.textFrame.maxX + self.textSpacing + CGFloat(index) * (self.itemSize.width + self.itemSpacing), y: floor((self.containerSize.height - self.itemSize.height) * 0.5)), size: self.itemSize)
+            return CGRect(origin: CGPoint(x: self.itemStartX + CGFloat(index) * (self.itemSize.width + self.itemSpacing), y: floor((self.containerSize.height - self.itemSize.height) * 0.5)), size: self.itemSize)
         }
     }
     
@@ -184,8 +187,11 @@ final class EmojiSearchSearchBarComponent: Component {
         private let scrollView: ContentScrollView
         private let tintScrollView: UIView
         
-        private let tintTextView = ComponentView<Empty>()
         private let textView = ComponentView<Empty>()
+        private let textContainerView: UIView
+        
+        private let tintTextView = ComponentView<Empty>()
+        private let tintTextContainerView: UIView
         
         private var visibleItemViews: [AnyHashable: ItemView] = [:]
         private let selectedItemBackground: SimpleLayer
@@ -209,6 +215,11 @@ final class EmojiSearchSearchBarComponent: Component {
             self.tintScrollView.clipsToBounds = true
             self.scrollView = ContentScrollView(mirrorView: self.tintScrollView)
             
+            self.textContainerView = UIView()
+            self.textContainerView.isUserInteractionEnabled = false
+            self.tintTextContainerView = UIView()
+            self.tintTextContainerView.isUserInteractionEnabled = false
+            
             self.roundMaskView = RoundMaskView()
             self.tintRoundMaskView = RoundMaskView()
             
@@ -231,8 +242,10 @@ final class EmojiSearchSearchBarComponent: Component {
             self.scrollView.scrollsToTop = false
             
             self.addSubview(self.scrollView)
+            self.addSubview(self.textContainerView)
             
             self.tintContainerView.addSubview(self.tintScrollView)
+            self.tintContainerView.addSubview(self.tintTextContainerView)
             
             self.mask = self.roundMaskView
             self.tintContainerView.mask = self.tintRoundMaskView
@@ -253,7 +266,7 @@ final class EmojiSearchSearchBarComponent: Component {
                     return
                 }
                 let location = recognizer.location(in: self.scrollView)
-                if location.x <= itemLayout.textFrame.maxX + itemLayout.textSpacing {
+                if (component.categories?.groups ?? []).isEmpty || location.x <= itemLayout.itemStartX - itemLayout.textSpacing {
                     component.activateTextInput()
                 } else {
                     for (id, itemView) in self.visibleItemViews {
@@ -265,8 +278,10 @@ final class EmojiSearchSearchBarComponent: Component {
                             }
                             self.state?.updated(transition: .immediate)
                             
-                            if let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
+                            if let _ = self.selectedItem, let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
                                 component.searchTermUpdated(group.identifiers.joined(separator: ""))
+                            } else {
+                                component.searchTermUpdated(nil)
                             }
                             
                             break
@@ -418,6 +433,15 @@ final class EmojiSearchSearchBarComponent: Component {
                 self.selectedItemBackground.isHidden = true
                 self.selectedItemTintBackground.isHidden = true
             }
+            
+            let scrollBounds = self.scrollView.bounds
+            let textOffset = max(0.0, scrollBounds.minX - (itemLayout.itemStartX - itemLayout.textFrame.maxX - itemLayout.textSpacing))
+            
+            transition.setPosition(view: self.textContainerView, position: self.scrollView.center)
+            transition.setBounds(view: self.textContainerView, bounds: CGRect(origin: CGPoint(x: textOffset, y: 0.0), size: scrollBounds.size))
+            
+            transition.setPosition(view: self.tintTextContainerView, position: self.scrollView.center)
+            transition.setBounds(view: self.tintTextContainerView, bounds: CGRect(origin: CGPoint(x: textOffset, y: 0.0), size: scrollBounds.size))
         }
         
         func update(component: EmojiSearchSearchBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -450,13 +474,13 @@ final class EmojiSearchSearchBarComponent: Component {
             
             if let textComponentView = self.textView.view {
                 if textComponentView.superview == nil {
-                    self.scrollView.addSubview(textComponentView)
+                    self.textContainerView.addSubview(textComponentView)
                 }
                 transition.setFrame(view: textComponentView, frame: itemLayout.textFrame)
             }
             if let tintTextComponentView = self.tintTextView.view {
                 if tintTextComponentView.superview == nil {
-                    self.tintScrollView.addSubview(tintTextComponentView)
+                    self.tintTextContainerView.addSubview(tintTextComponentView)
                 }
                 transition.setFrame(view: tintTextComponentView, frame: itemLayout.textFrame)
             }
@@ -464,6 +488,9 @@ final class EmojiSearchSearchBarComponent: Component {
             self.ignoreScrolling = true
             if self.scrollView.bounds.size != availableSize {
                 transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            }
+            if case .active = component.textInputState {
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             }
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
@@ -483,6 +510,10 @@ final class EmojiSearchSearchBarComponent: Component {
                 self.isUserInteractionEnabled = false
                 self.textView.view?.isHidden = hasText
                 self.tintTextView.view?.isHidden = hasText
+                
+                /*if self.scrollView.contentOffset.x != 0.0 {
+                    self.scrollView.setContentOffset(CGPoint(), animated: true)
+                }*/
             case .inactive:
                 self.isUserInteractionEnabled = true
                 self.textView.view?.isHidden = false
