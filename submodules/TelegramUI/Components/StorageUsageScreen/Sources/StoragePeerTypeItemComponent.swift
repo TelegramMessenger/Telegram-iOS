@@ -156,6 +156,7 @@ final class StoragePeerTypeItemComponent: Component {
         func update(component: StoragePeerTypeItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
+            let previousComponent = self.component
             self.component = component
             
             let leftInset: CGFloat = 62.0
@@ -252,7 +253,7 @@ final class StoragePeerTypeItemComponent: Component {
                 labelView.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
             }
             
-            if themeUpdated {
+            if themeUpdated || previousComponent?.iconName != component.iconName {
                 self.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
                 self.iconView.image = UIImage(bundleImageName: component.iconName)
              
