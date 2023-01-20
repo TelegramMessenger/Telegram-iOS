@@ -80,7 +80,7 @@ private final class BottomPanelIconComponent: Component {
             
             self.component = component
             
-            let textInset: CGFloat = 18.0
+            let textInset: CGFloat = 12.0
             
             let textSize = self.contentView.image?.size ?? CGSize()
             let size = CGSize(width: textSize.width + textInset * 2.0, height: 28.0)

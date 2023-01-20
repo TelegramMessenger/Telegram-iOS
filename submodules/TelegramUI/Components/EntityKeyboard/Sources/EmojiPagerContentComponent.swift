@@ -1852,13 +1852,19 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         let isActiveWithText = isActive && self.currentPresetSearchTerm == nil
         
         if self.params?.theme !== theme {
-            self.searchIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor)
+            self.searchIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)?.withRenderingMode(.alwaysTemplate)
+            self.searchIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+            
             self.searchIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)
             
-            self.backIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor)
+            self.backIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: .white)?.withRenderingMode(.alwaysTemplate)
+            self.backIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+            
             self.backIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: .white)
             
-            self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor)
+            self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)?.withRenderingMode(.alwaysTemplate)
+            self.clearIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+            
             self.clearIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)
         }
         
@@ -1948,6 +1954,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                 context: context,
                 theme: theme,
                 strings: strings,
+                useOpaqueTheme: useOpaqueTheme,
                 textInputState: textInputState,
                 categories: searchCategories,
                 searchTermUpdated: { [weak self] term in
@@ -6470,22 +6477,22 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             if animateContentCrossfade {
-                for (_, itemLayer) in self.visibleItemLayers {
+                /*for (_, itemLayer) in self.visibleItemLayers {
                     if let snapshotLayer = itemLayer.snapshotContentTree() {
                         itemLayer.superlayer?.insertSublayer(snapshotLayer, above: itemLayer)
                         snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
                             snapshotLayer?.removeFromSuperlayer()
                         })
                     }
-                }
+                }*/
             }
             
             self.updateVisibleItems(transition: itemTransition, attemptSynchronousLoads: attemptSynchronousLoads, previousItemPositions: previousItemPositions, previousAbsoluteItemPositions: previousAbsoluteItemPositions, updatedItemPositions: updatedItemPositions, hintDisappearingGroupFrame: hintDisappearingGroupFrame)
             
             if animateContentCrossfade {
-                for (_, itemLayer) in self.visibleItemLayers {
+                /*for (_, itemLayer) in self.visibleItemLayers {
                     itemLayer.animateAlpha(from: 0.0, to: CGFloat(itemLayer.opacity), duration: 0.2)
-                }
+                }*/
             }
             
             return availableSize

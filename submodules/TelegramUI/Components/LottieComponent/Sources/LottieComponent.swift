@@ -229,7 +229,7 @@ public final class LottieComponent: Component {
             }
             
             if self.tintColor != component.color {
-                self.tintColor = component.color
+                transition.setTintColor(view: self, color: component.color)
             }
             
             return availableSize

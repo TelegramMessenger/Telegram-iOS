@@ -61,6 +61,7 @@ final class EmojiSearchSearchBarComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let useOpaqueTheme: Bool
     let textInputState: TextInputState
     let categories: EmojiSearchCategories?
     let searchTermUpdated: (String?) -> Void
@@ -70,6 +71,7 @@ final class EmojiSearchSearchBarComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        useOpaqueTheme: Bool,
         textInputState: TextInputState,
         categories: EmojiSearchCategories?,
         searchTermUpdated: @escaping (String?) -> Void,
@@ -78,6 +80,7 @@ final class EmojiSearchSearchBarComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.useOpaqueTheme = useOpaqueTheme
         self.textInputState = textInputState
         self.categories = categories
         self.searchTermUpdated = searchTermUpdated
@@ -89,6 +92,9 @@ final class EmojiSearchSearchBarComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.useOpaqueTheme != rhs.useOpaqueTheme {
             return false
         }
         if lhs.textInputState != rhs.textInputState {
@@ -116,15 +122,15 @@ final class EmojiSearchSearchBarComponent: Component {
         init(containerSize: CGSize, textSize: CGSize, itemCount: Int) {
             self.containerSize = containerSize
             self.itemCount = itemCount
-            self.itemSpacing = 8.0
+            self.itemSpacing = 11.0
             self.leftInset = 6.0
             self.rightInset = 8.0
             self.itemSize = CGSize(width: 24.0, height: 24.0)
-            self.textSpacing = 8.0
+            self.textSpacing = 11.0
             
             self.textFrame = CGRect(origin: CGPoint(x: self.leftInset, y: floor((containerSize.height - textSize.height) * 0.5)), size: textSize)
             
-            self.itemStartX = max(self.textFrame.maxX + self.textSpacing, self.leftInset + floor(((containerSize.width - self.leftInset - self.rightInset) / 2.0) - self.itemSize.width))
+            self.itemStartX = self.textFrame.maxX + self.textSpacing
             
             self.contentSize = CGSize(width: self.itemStartX + self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1)) + self.rightInset, height: containerSize.height)
         }
@@ -348,7 +354,12 @@ final class EmojiSearchSearchBarComponent: Component {
                         self.visibleItemViews[AnyHashable(item.id)] = itemView
                     }
                     
-                    let color = component.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+                    let color: UIColor
+                    if component.useOpaqueTheme {
+                        color = self.selectedItem == AnyHashable(item.id) ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlaySelectedColor : component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor
+                    } else {
+                        color = self.selectedItem == AnyHashable(item.id) ? component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlaySelectedColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+                    }
                     
                     let _ = itemView.view.update(
                         transition: .immediate,
@@ -421,8 +432,8 @@ final class EmojiSearchSearchBarComponent: Component {
                 let selectedItemCenter = itemLayout.frame(at: index).center
                 let selectionSize = CGSize(width: 28.0, height: 28.0)
                 
-                self.selectedItemBackground.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-                self.selectedItemTintBackground.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+                self.selectedItemBackground.backgroundColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayHighlightColor.cgColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayHighlightColor.cgColor
+                self.selectedItemTintBackground.backgroundColor = UIColor(white: 1.0, alpha: 0.15).cgColor
                 self.selectedItemBackground.cornerRadius = selectionSize.height * 0.5
                 self.selectedItemTintBackground.cornerRadius = selectionSize.height * 0.5
                 
@@ -453,7 +464,7 @@ final class EmojiSearchSearchBarComponent: Component {
                 component: AnyComponent(Text(
                     text: component.strings.Common_Search,
                     font: Font.regular(17.0),
-                    color: component.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+                    color: component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 32.0, height: 100.0)

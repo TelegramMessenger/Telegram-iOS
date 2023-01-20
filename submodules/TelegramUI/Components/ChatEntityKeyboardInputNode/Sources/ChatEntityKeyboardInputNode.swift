@@ -1762,7 +1762,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return emoji.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.contentItemGroups), itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults)
             },
             stickers: inputData.stickers.flatMap { stickers in
-                return stickers.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.contentItemGroups), itemContentUniqueId: nil, emptySearchResults: nil)
+                return stickers.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.contentItemGroups), itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: nil)
             },
             gifs: inputData.gifs,
             availableGifSearchEmojies: inputData.availableGifSearchEmojies
