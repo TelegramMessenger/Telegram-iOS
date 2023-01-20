@@ -68,13 +68,13 @@ public final class EntityKeyboardGifContent: Equatable {
 
 public final class ChatEntityKeyboardInputNode: ChatInputNode {
     public struct InputData: Equatable {
-        public var emoji: EmojiPagerContentComponent
+        public var emoji: EmojiPagerContentComponent?
         public var stickers: EmojiPagerContentComponent?
         public var gifs: EntityKeyboardGifContent?
         public var availableGifSearchEmojies: [EntityKeyboardComponent.GifSearchEmoji]
         
         public init(
-            emoji: EmojiPagerContentComponent,
+            emoji: EmojiPagerContentComponent?,
             stickers: EmojiPagerContentComponent?,
             gifs: EntityKeyboardGifContent?,
             availableGifSearchEmojies: [EntityKeyboardComponent.GifSearchEmoji]
@@ -159,6 +159,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             loadMore: { _ in
             },
             openSearch: {
+            },
+            updateSearchQuery: { _ in
             }
         )
         
@@ -173,6 +175,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 isLoading: false,
                 loadMoreToken: nil,
                 displaySearchWithPlaceholder: nil,
+                searchCategories: nil,
                 searchInitiallyHidden: true
             )
         ))
@@ -242,6 +245,9 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private let emojiSearchDisposable = MetaDisposable()
     private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+    
+    private let stickerSearchDisposable = MetaDisposable()
+    private let stickerSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
     
     private let controllerInteraction: ChatControllerInteraction?
     
@@ -320,12 +326,17 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return !savedGifs.isEmpty
             }
             
+            let searchCategories: Signal<EmojiSearchCategories?, NoError> = context.engine.stickers.emojiSearchCategories(kind: .emoji)
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let gifItems: Signal<EntityKeyboardGifContent, NoError>
             switch subject {
             case .recent:
-                gifItems = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
-                |> map { savedGifs -> EntityKeyboardGifContent in
+                gifItems = combineLatest(
+                    context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs)),
+                    searchCategories
+                )
+                |> map { savedGifs, searchCategories -> EntityKeyboardGifContent in
                     var items: [GifPagerContentComponent.Item] = []
                     for gifItem in savedGifs {
                         items.append(GifPagerContentComponent.Item(
@@ -342,14 +353,15 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: false,
                             loadMoreToken: nil,
-                            displaySearchWithPlaceholder: presentationData.strings.GifSearch_SearchGifPlaceholder,
+                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            searchCategories: searchCategories,
                             searchInitiallyHidden: true
                         )
                     )
                 }
             case .trending:
-                gifItems = combineLatest(hasRecentGifs, trendingGifs)
-                |> map { hasRecentGifs, trendingGifs -> EntityKeyboardGifContent in
+                gifItems = combineLatest(hasRecentGifs, trendingGifs, searchCategories)
+                |> map { hasRecentGifs, trendingGifs, searchCategories -> EntityKeyboardGifContent in
                     var items: [GifPagerContentComponent.Item] = []
                     
                     var isLoading = false
@@ -373,14 +385,19 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: isLoading,
                             loadMoreToken: nil,
-                            displaySearchWithPlaceholder: nil,
+                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            searchCategories: searchCategories,
                             searchInitiallyHidden: true
                         )
                     )
                 }
             case let .emojiSearch(query):
-                gifItems = combineLatest(hasRecentGifs, paneGifSearchForQuery(context: context, query: query, offset: nil, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil))
-                |> map { hasRecentGifs, result -> EntityKeyboardGifContent in
+                gifItems = combineLatest(
+                    hasRecentGifs,
+                    paneGifSearchForQuery(context: context, query: query, offset: nil, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil),
+                    searchCategories
+                )
+                |> map { hasRecentGifs, result, searchCategories -> EntityKeyboardGifContent in
                     var items: [GifPagerContentComponent.Item] = []
                     
                     var loadMoreToken: String?
@@ -406,7 +423,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: isLoading,
                             loadMoreToken: loadMoreToken,
-                            displaySearchWithPlaceholder: nil,
+                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            searchCategories: searchCategories,
                             searchInitiallyHidden: true
                         )
                     )
@@ -448,9 +466,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     return !savedGifs.isEmpty
                 }
                 
+                let searchCategories: Signal<EmojiSearchCategories?, NoError> = context.engine.stickers.emojiSearchCategories(kind: .emoji)
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
                 let gifItems: Signal<EntityKeyboardGifContent, NoError>
-                gifItems = combineLatest(hasRecentGifs, paneGifSearchForQuery(context: context, query: query, offset: token, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil))
-                |> map { hasRecentGifs, result -> EntityKeyboardGifContent in
+                gifItems = combineLatest(hasRecentGifs, paneGifSearchForQuery(context: context, query: query, offset: token, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil), searchCategories)
+                |> map { hasRecentGifs, result, searchCategories -> EntityKeyboardGifContent in
                     var items: [GifPagerContentComponent.Item] = []
                     var existingIds = Set<MediaId>()
                     for item in componentValue.component.items {
@@ -487,7 +508,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: isLoading,
                             loadMoreToken: loadMoreToken,
-                            displaySearchWithPlaceholder: nil,
+                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            searchCategories: searchCategories,
                             searchInitiallyHidden: true
                         )
                     )
@@ -1002,7 +1024,6 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }
                         
                     strongSelf.emojiSearchDisposable.set((resultSignal
-                    |> delay(0.15, queue: .mainQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let strongSelf = self else {
                             return
@@ -1214,7 +1235,66 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             requestUpdate: { _ in
             },
-            updateSearchQuery: { _ in
+            updateSearchQuery: { [weak self] query in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                switch query {
+                case .none:
+                    strongSelf.stickerSearchDisposable.set(nil)
+                    strongSelf.stickerSearchResult.set(.single(nil))
+                case .text:
+                    strongSelf.stickerSearchDisposable.set(nil)
+                    strongSelf.stickerSearchResult.set(.single(nil))
+                case let .category(value):
+                    let resultSignal = strongSelf.context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
+                    |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                        var items: [EmojiPagerContentComponent.Item] = []
+                        
+                        var existingIds = Set<MediaId>()
+                        for item in files {
+                            let itemFile = item.file
+                            if existingIds.contains(itemFile.fileId) {
+                                continue
+                            }
+                            existingIds.insert(itemFile.fileId)
+                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                            let item = EmojiPagerContentComponent.Item(
+                                animationData: animationData,
+                                content: .animation(animationData),
+                                itemFile: itemFile, subgroupId: nil,
+                                icon: .none,
+                                tintMode: animationData.isTemplate ? .primary : .none
+                            )
+                            items.append(item)
+                        }
+                        
+                        return .single([EmojiPagerContentComponent.ItemGroup(
+                            supergroupId: "search",
+                            groupId: "search",
+                            title: nil,
+                            subtitle: nil,
+                            actionButtonTitle: nil,
+                            isFeatured: false,
+                            isPremiumLocked: false,
+                            isEmbedded: false,
+                            hasClear: false,
+                            collapsedLineCount: nil,
+                            displayPremiumBadges: false,
+                            headerItem: nil,
+                            items: items
+                        )])
+                    }
+                        
+                    strongSelf.stickerSearchDisposable.set((resultSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.stickerSearchResult.set(.single((result, AnyHashable(value))))
+                    }))
+                }
             },
             updateScrollingToItemGroup: {
             },
@@ -1230,9 +1310,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
             updatedInputData,
             self.gifComponent.get(),
-            self.emojiSearchResult.get()
+            self.emojiSearchResult.get(),
+            self.stickerSearchResult.get()
         )
-        |> deliverOnMainQueue).start(next: { [weak self] inputData, gifs, emojiSearchResult in
+        |> deliverOnMainQueue).start(next: { [weak self] inputData, gifs, emojiSearchResult, stickerSearchResult in
             guard let strongSelf = self else {
                 return
             }
@@ -1249,7 +1330,23 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         iconFile: nil
                     )
                 }
-                inputData.emoji = inputData.emoji.withUpdatedItemGroups(panelItemGroups: inputData.emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults)
+                if let emoji = inputData.emoji {
+                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults)
+                }
+            }
+            
+            if let stickerSearchResult = stickerSearchResult {
+                var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                    //TODO:localize
+                    stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                        text: "No stickers found",
+                        iconFile: nil
+                    )
+                }
+                if let stickers = inputData.stickers {
+                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: stickerSearchResult.id, emptySearchResults: stickerSearchResults)
+                }
             }
             
             var transition: Transition = .immediate
@@ -1338,6 +1435,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 if let strongSelf = self, let pagerView = strongSelf.entityKeyboardView.componentView as? EntityKeyboardComponent.View {
                     pagerView.openSearch()
                 }
+            },
+            updateSearchQuery: { [weak self] query in
+                guard let self else {
+                    return
+                }
+                if let query {
+                    self.gifMode = .emojiSearch(query)
+                } else {
+                    self.gifMode = .recent
+                }
             }
         )
         
@@ -1377,6 +1484,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.inputDataDisposable?.dispose()
         self.hasRecentGifsDisposable?.dispose()
         self.emojiSearchDisposable.dispose()
+        self.stickerSearchDisposable.dispose()
     }
     
     private func reloadGifContext() {
@@ -1439,17 +1547,25 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             mappedTransition = mappedTransition.withUserData(EntityKeyboardComponent.MarkInputCollapsed())
         }
         
+        var emojiContent: EmojiPagerContentComponent? = self.currentInputData.emoji
         var stickerContent: EmojiPagerContentComponent? = self.currentInputData.stickers
         var gifContent: EntityKeyboardGifContent? = self.currentInputData.gifs
         
         var stickersEnabled = true
+        var emojiEnabled = true
         if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
             if peer.hasBannedPermission(.banSendStickers) != nil {
                 stickersEnabled = false
             }
+            if peer.hasBannedPermission(.banSendText) != nil {
+                emojiEnabled = false
+            }
         } else if let peer = interfaceState.renderedPeer?.peer as? TelegramGroup {
             if peer.hasBannedPermission(.banSendStickers) {
                 stickersEnabled = false
+            }
+            if peer.hasBannedPermission(.banSendText) {
+                emojiEnabled = false
             }
         }
         
@@ -1457,9 +1573,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             stickerContent = nil
             gifContent = nil
         }
+        if !emojiEnabled && interfaceState.interfaceState.editMessage == nil {
+            emojiContent = nil
+        }
         
         stickerContent?.inputInteractionHolder.inputInteraction = self.stickerInputInteraction
-        self.currentInputData.emoji.inputInteractionHolder.inputInteraction = self.emojiInputInteraction
+        self.currentInputData.emoji?.inputInteractionHolder.inputInteraction = self.emojiInputInteraction
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
@@ -1471,7 +1590,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 isContentInFocus: isVisible,
                 containerInsets: UIEdgeInsets(top: self.isEmojiSearchActive ? -34.0 : 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
                 topPanelInsets: UIEdgeInsets(),
-                emojiContent: self.currentInputData.emoji,
+                emojiContent: emojiContent,
                 stickerContent: stickerContent,
                 maskContent: nil,
                 gifContent: gifContent?.component,
@@ -1639,7 +1758,9 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private func processInputData(inputData: InputData) -> InputData {
         return InputData(
-            emoji: inputData.emoji.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.contentItemGroups), itemContentUniqueId: inputData.emoji.itemContentUniqueId, emptySearchResults: inputData.emoji.emptySearchResults),
+            emoji: inputData.emoji.flatMap { emoji in
+                return emoji.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.contentItemGroups), itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults)
+            },
             stickers: inputData.stickers.flatMap { stickers in
                 return stickers.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.contentItemGroups), itemContentUniqueId: nil, emptySearchResults: nil)
             },

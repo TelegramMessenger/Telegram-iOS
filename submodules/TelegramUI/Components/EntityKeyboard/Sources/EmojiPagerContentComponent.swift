@@ -1569,7 +1569,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         return PassthroughLayer.self
     }
     
-    private let activated: () -> Void
+    private let activated: (Bool) -> Void
     private let deactivated: (Bool) -> Void
     private let updateQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void
     
@@ -1606,7 +1606,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         return self.textField != nil
     }
     
-    init(activated: @escaping () -> Void, deactivated: @escaping (Bool) -> Void, updateQuery: @escaping (EmojiPagerContentComponent.SearchQuery?) -> Void) {
+    init(activated: @escaping (Bool) -> Void, deactivated: @escaping (Bool) -> Void, updateQuery: @escaping (EmojiPagerContentComponent.SearchQuery?) -> Void) {
         self.activated = activated
         self.deactivated = deactivated
         self.updateQuery = updateQuery
@@ -1735,7 +1735,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             placeholderContentView.clearSelection(dispatchEvent: false)
         }
         
-        self.activated()
+        self.activated(true)
         
         self.textField?.becomeFirstResponder()
     }
@@ -1965,7 +1965,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                         
                         if let term {
                             self.updateQuery(.category(value: term))
-                            self.activated()
+                            self.activated(false)
                         } else {
                             self.deactivated(self.textField?.isFirstResponder ?? false)
                             self.updateQuery(nil)
@@ -6175,7 +6175,7 @@ public final class EmojiPagerContentComponent: Component {
             let scrollSize = CGSize(width: availableSize.width, height: availableSize.height)
             transition.setPosition(view: self.scrollView, position: CGPoint(x: 0.0, y: scrollOriginY))
             
-            let clippingTopInset: CGFloat = itemLayout.searchInsets.top + itemLayout.searchHeight + 2.0
+            let clippingTopInset: CGFloat = itemLayout.searchInsets.top + itemLayout.searchHeight - 1.0
             
             transition.setFrame(view: self.scrollViewClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSearchActivated ? clippingTopInset : 0.0), size: availableSize))
             transition.setBounds(view: self.scrollViewClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: self.isSearchActivated ? clippingTopInset : 0.0), size: availableSize))
@@ -6364,12 +6364,12 @@ public final class EmojiPagerContentComponent: Component {
                         }*/
                     }
                 } else {
-                    visibleSearchHeader = EmojiSearchHeaderView(activated: { [weak self] in
+                    visibleSearchHeader = EmojiSearchHeaderView(activated: { [weak self] isTextInput in
                         guard let strongSelf = self, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
                             return
                         }
                         
-                        if let component = strongSelf.component, component.searchIsPlaceholderOnly {
+                        if let component = strongSelf.component, component.searchIsPlaceholderOnly, isTextInput {
                             component.inputInteractionHolder.inputInteraction?.openSearch()
                         } else {
                             strongSelf.isSearchActivated = true
@@ -7435,15 +7435,18 @@ public final class EmojiPagerContentComponent: Component {
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
+        let searchCategories: Signal<EmojiSearchCategories?, NoError> = context.engine.stickers.emojiSearchCategories(kind: .emoji)
+        
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
             hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
             hasTrending ? context.account.viewTracker.featuredStickerPacks() : .single([]),
             context.engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, id: ValueBoxKey(length: 0))),
             ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager),
-            peerSpecificPack
+            peerSpecificPack,
+            searchCategories
         )
-        |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks, peerSpecificPack -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks, peerSpecificPack, searchCategories -> EmojiPagerContentComponent in
             let actuallyHasPremium = hasPremium
             let hasPremium = forceHasPremium || hasPremium
             struct ItemGroup {
@@ -7880,7 +7883,7 @@ public final class EmojiPagerContentComponent: Component {
                 itemContentUniqueId: nil,
                 warpContentsOnEdges: false,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
-                searchCategories: nil,
+                searchCategories: searchCategories,
                 searchInitiallyHidden: true,
                 searchIsPlaceholderOnly: searchIsPlaceholderOnly,
                 emptySearchResults: nil,

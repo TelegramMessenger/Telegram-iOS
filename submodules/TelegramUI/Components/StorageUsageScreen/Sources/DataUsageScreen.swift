@@ -468,7 +468,17 @@ final class DataUsageScreenComponent: Component {
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
                 
                 if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
-                    animatedTransition.setAlpha(layer: backButtonNode.layer, alpha: navigationButtonAlpha)
+                    if backButtonNode.isHidden {
+                        backButtonNode.alpha = 0.0
+                        backButtonNode.isHidden = false
+                    }
+                    animatedTransition.setAlpha(layer: backButtonNode.layer, alpha: navigationButtonAlpha, completion: { [weak backButtonNode] completed in
+                        if let backButtonNode, completed {
+                            if navigationButtonAlpha.isZero {
+                                backButtonNode.isHidden = true
+                            }
+                        }
+                    })
                 }
             }
         }
