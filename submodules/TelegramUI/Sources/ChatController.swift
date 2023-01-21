@@ -4673,8 +4673,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     threadInfo = .single(nil)
                 }
                 
-                self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, hasScheduledMessages, self.reportIrrelvantGeoNoticePromise.get(), displayedCountSignal, threadInfo)
-                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo in
+                self.peerDisposable.set(combineLatest(
+                    queue: Queue.mainQueue(),
+                    peerView.get(),
+                    context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
+                    onlineMemberCount,
+                    hasScheduledMessages,
+                    self.reportIrrelvantGeoNoticePromise.get(),
+                    displayedCountSignal,
+                    threadInfo
+                ).start(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo in
                     if let strongSelf = self {
                         if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo {
                             return
@@ -4739,6 +4747,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
                             if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                 peerIsMuted = true
+                            } else if case .default = notificationSettings.muteState {
+                                if let peer = peerView.peers[peerView.peerId] {
+                                    if peer is TelegramUser {
+                                        peerIsMuted = !globalNotificationSettings.privateChats.enabled
+                                    } else if peer is TelegramGroup {
+                                        peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                                    } else if let channel = peer as? TelegramChannel {
+                                        switch channel.info {
+                                        case .group:
+                                            peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                                        case .broadcast:
+                                            peerIsMuted = !globalNotificationSettings.channels.enabled
+                                        }
+                                    }
+                                }
                             }
                         }
                         var peerDiscussionId: PeerId?
