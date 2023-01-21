@@ -154,10 +154,12 @@ public enum PagerComponentPanelHideBehavior {
 public final class PagerComponentContentIcon: Equatable {
     public let id: AnyHashable
     public let imageName: String
+    public let title: String
     
-    public init(id: AnyHashable, imageName: String) {
+    public init(id: AnyHashable, imageName: String, title: String) {
         self.id = id
         self.imageName = imageName
+        self.title = title
     }
     
     public static func ==(lhs: PagerComponentContentIcon, rhs: PagerComponentContentIcon) -> Bool {
@@ -168,6 +170,9 @@ public final class PagerComponentContentIcon: Equatable {
             return false
         }
         if lhs.imageName != rhs.imageName {
+            return false
+        }
+        if lhs.title != rhs.title {
             return false
         }
         return true
@@ -301,6 +306,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         
         private struct PaneTransitionGestureState {
             var fraction: CGFloat = 0.0
+            var nextIndex: Int? = nil
         }
         
         private var contentClippingView: UIView
@@ -371,6 +377,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     }
                     paneTransitionGestureState.fraction = fraction
                     
+                    let nextIndex: Int
+                    if fraction > 0.0 {
+                        nextIndex = max(0, centralIndex - 1)
+                    } else {
+                        nextIndex = min(component.contents.count - 1, centralIndex + 1)
+                    }
+                    
+                    paneTransitionGestureState.nextIndex = nextIndex
+                    
                     self.paneTransitionGestureState = paneTransitionGestureState
                     self.state?.updated(transition: .immediate)
                 }
@@ -422,8 +437,26 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         }
         
         public func navigateToContentId(_ id: AnyHashable) {
+            guard let centralId = self.centralId, let component = self.component, let _ = component.contents.firstIndex(where: { $0.id == centralId }), let nextIndex = component.contents.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+            
             var updateTopPanelExpanded = false
             if self.centralId != id {
+                var paneTransitionGestureState = PaneTransitionGestureState()
+                paneTransitionGestureState.fraction = 0.0
+                paneTransitionGestureState.nextIndex = nextIndex
+                
+                self.paneTransitionGestureState = paneTransitionGestureState
+                self.state?.updated(transition: .immediate)
+                
+                self.paneTransitionGestureState = nil
+                
+                /*paneTransitionGestureState.fraction = 1.0
+                
+                self.paneTransitionGestureState = paneTransitionGestureState
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))*/
+                
                 self.centralId = id
                 
                 if self.isTopPanelExpanded {
@@ -470,8 +503,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     }
                 }
                 if centralId == nil {
-                   centralId = component.contents.first?.id
-               }
+                    centralId = component.contents.first?.id
+                }
             }
             
             if self.centralId != centralId {
@@ -494,8 +527,42 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 scrollingPanelOffsetFraction = 0.0
             }
             
+            var topPanelVisibility: CGFloat = 1.0
+            if let centralId = centralId, let index = component.contents.firstIndex(where: { $0.id == centralId }) {
+                if let paneTransitionGestureState = self.paneTransitionGestureState {
+                    var nextIndex: Int
+                    if paneTransitionGestureState.fraction > 0.0 {
+                        nextIndex = max(0, index - 1)
+                    } else {
+                        nextIndex = min(component.contents.count - 1, index + 1)
+                    }
+                    if let nextIndexValue = paneTransitionGestureState.nextIndex {
+                        nextIndex = nextIndexValue
+                    }
+                    
+                    let nextId = component.contents[nextIndex].id
+                    
+                    var centralPanelFraction: CGFloat = 1.0
+                    if !component.contentTopPanels.contains(where: { $0.id == centralId }) {
+                        centralPanelFraction = 0.0
+                    }
+                    var nextPanelFraction: CGFloat = 1.0
+                    if !component.contentTopPanels.contains(where: { $0.id == nextId }) {
+                        nextPanelFraction = 0.0
+                    }
+                    
+                    topPanelVisibility = centralPanelFraction * (1.0 - abs(paneTransitionGestureState.fraction)) + nextPanelFraction * abs(paneTransitionGestureState.fraction)
+                } else {
+                    if !component.contentTopPanels.contains(where: { $0.id == centralId }) {
+                        topPanelVisibility = 0.0
+                    }
+                }
+            }
+            
             var topPanelHeight: CGFloat = 0.0
             if let topPanel = component.topPanel {
+                let effectiveTopPanelOffsetFraction = scrollingPanelOffsetFraction
+                
                 let topPanelView: ComponentHostView<PagerComponentPanelEnvironment<TopPanelEnvironment>>
                 var topPanelTransition = panelStateTransition
                 if let current = self.topPanelView {
@@ -511,6 +578,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     topPanelSuperview.addSubview(topPanelView)
                 }
                 
+                var effectivePanelActiveContentId = centralId
+                if let centralId = centralId, !component.contentTopPanels.contains(where: { $0.id == centralId }) {
+                    effectivePanelActiveContentId = component.contentTopPanels.first?.id
+                }
+                
                 let topPanelSize = topPanelView.update(
                     transition: topPanelTransition,
                     component: topPanel,
@@ -522,7 +594,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                             contentIcons: [],
                             contentAccessoryLeftButtons: [],
                             contentAccessoryRightButtons: [],
-                            activeContentId: centralId,
+                            activeContentId: effectivePanelActiveContentId,
                             navigateToContentId: navigateToContentId,
                             visibilityFractionUpdated: self.topPanelVisibilityFractionUpdated,
                             isExpandedUpdated: { [weak self] isExpanded, transition in
@@ -538,9 +610,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 
                 self.topPanelHeight = topPanelSize.height
                 
-                var topPanelOffset = topPanelSize.height * scrollingPanelOffsetFraction
+                var topPanelOffset = topPanelSize.height * effectiveTopPanelOffsetFraction
                 
-                var topPanelVisibilityFraction: CGFloat = 1.0 - scrollingPanelOffsetFraction
+                topPanelOffset = min(topPanelSize.height, topPanelOffset + topPanelSize.height * (1.0 - topPanelVisibility))
+                
+                var topPanelVisibilityFraction: CGFloat = 1.0 - effectiveTopPanelOffsetFraction
                 switch component.panelHideBehavior {
                 case .hide:
                     topPanelVisibilityFraction = 0.0
@@ -549,6 +623,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 case .hideOnScroll:
                     break
                 }
+                topPanelVisibilityFraction *= topPanelVisibility
                 
                 self.topPanelVisibilityFractionUpdated.invoke((topPanelVisibilityFraction, topPanelTransition))
                 
@@ -645,6 +720,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 self.bottomPanelHeight = 0.0
             }
             
+            contentInsets.top *= topPanelVisibility
+            
             let effectiveTopPanelHeight: CGFloat
             switch component.panelHideBehavior {
             case .hide:
@@ -699,13 +776,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     var checkingContentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(indexOffset), y: 0.0), size: contentSize)
                     var contentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(clippedIndexOffset), y: 0.0), size: contentSize)
                     
+                    var isInBounds = CGRect(origin: CGPoint(), size: availableSize).intersects(checkingContentFrame)
                     if let paneTransitionGestureState = self.paneTransitionGestureState {
                         checkingContentFrame.origin.x += paneTransitionGestureState.fraction * availableSize.width
                         contentFrame.origin.x += paneTransitionGestureState.fraction * availableSize.width
+                        if let nextIndex = paneTransitionGestureState.nextIndex, nextIndex == index {
+                            isInBounds = true
+                        }
                     }
                     let content = component.contents[index]
-                    
-                    let isInBounds = CGRect(origin: CGPoint(), size: availableSize).intersects(checkingContentFrame)
                     
                     var isPartOfTransition = false
                     if case .none = transition.animation {

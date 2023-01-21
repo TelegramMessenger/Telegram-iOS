@@ -8729,3 +8729,6 @@ Sorry for the inconvenience.";
 "ChatList.PremiumAnnualDiscountText" = "Sign up for the annual payment plan for Telegram Premium now to get the discount.";
 "ChatList.PremiumAnnualUpgradeTitle" = "Save on your subscription up to %@";
 "ChatList.PremiumAnnualUpgradeText" = "Upgrade to the annual payment plan for Telegram Premium to enjoy the discount.";
+
+"Premium.Emoji.Description" = "Unlock this emoji and many more by subscribing to Telegram Premium.";
+"Premium.Emoji.Proceed" = "Unlock Premium Emoji";

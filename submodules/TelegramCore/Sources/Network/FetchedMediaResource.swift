@@ -104,7 +104,7 @@ public func fetchedMediaResource(
     if let ranges = ranges {
         let signals = ranges.map { (range, priority) -> Signal<Void, FetchResourceError> in
             return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(
-                tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory),
+                tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory, userContentType: userContentType),
                 info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground),
                 location: location,
                 contentType: userContentType,
@@ -117,7 +117,7 @@ public func fetchedMediaResource(
         |> then(.single(.local))
     } else {
         return mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(
-            tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory),
+            tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory, userContentType: userContentType),
             info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground),
             location: location,
             contentType: userContentType,

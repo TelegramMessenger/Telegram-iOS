@@ -1169,6 +1169,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         isStatusSelection: false,
                                         isReactionSelection: true,
                                         isEmojiSelection: false,
+                                        hasTrending: false,
                                         topReactionItems: reactionItems,
                                         areUnicodeEmojiEnabled: false,
                                         areCustomEmojiEnabled: true,
@@ -7214,6 +7215,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.commitPurposefulAction()
                 
+                var hasDisabledContent = false
+                if "".isEmpty {
+                    hasDisabledContent = false
+                }
+                
                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode {
                     let forwardCount = messages.reduce(0, { count, message -> Int in
                         if case .forward = message {
@@ -7228,6 +7234,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         errorText = strongSelf.presentationData.strings.Chat_AttachmentMultipleForwardDisabled
                     } else if isAnyMessageTextPartitioned {
                         errorText = strongSelf.presentationData.strings.Chat_MultipleTextMessagesDisabled
+                    } else if hasDisabledContent {
+                        errorText = strongSelf.restrictedSendingContentsText()
                     }
                     
                     if let errorText = errorText {
@@ -8533,6 +8541,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
+            strongSelf.dismissAllTooltips()
+            
             strongSelf.mediaRecordingModeTooltipController?.dismiss()
             strongSelf.interfaceInteraction?.updateShowWebView { _ in
                 return false
@@ -8544,14 +8554,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     bannedMediaInput = true
                 } else if channel.hasBannedPermission(.banSendVoice) != nil {
                     if !isVideo {
-                        //TODO:localize
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send voice messages."))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
                         return
                     }
                 } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
                     if isVideo {
-                        //TODO:localize
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send video messages."))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
                         return
                     }
                 }
@@ -8560,22 +8568,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     bannedMediaInput = true
                 } else if group.hasBannedPermission(.banSendVoice) {
                     if !isVideo {
-                        //TODO:localize
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send voice messages."))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
                         return
                     }
                 } else if group.hasBannedPermission(.banSendInstantVideos) {
                     if isVideo {
-                        //TODO:localize
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send video messages."))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
                         return
                     }
                 }
             }
             
             if bannedMediaInput {
-                //TODO:localize
-                strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send video and voice messages."))
+                strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
                 return
             }
                         
@@ -8876,8 +8881,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if bannedMediaInput {
-                //TODO:localize
-                strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send video and voice messages."))
+                strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
                 return
             }
             
@@ -10287,8 +10291,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
                             moreInfo = true
                         case .mediaRestricted:
-                            strongSelf.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .alert)
-                            return
+                            text = strongSelf.restrictedSendingContentsText()
+                            moreInfo = false
                         case .slowmodeActive:
                             text = strongSelf.presentationData.strings.Chat_SlowmodeSendError
                             moreInfo = false
@@ -12393,6 +12397,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.dismissInput()
                 
+        var banSendText: (Int32, Bool)?
         var bannedSendPhotos: (Int32, Bool)?
         var bannedSendVideos: (Int32, Bool)?
         var bannedSendFiles: (Int32, Bool)?
@@ -12412,6 +12417,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let value = channel.hasBannedPermission(.banSendFiles) {
                 bannedSendFiles = value
             }
+            if let value = channel.hasBannedPermission(.banSendText) {
+                banSendText = value
+            }
             if channel.hasBannedPermission(.banSendPolls) != nil {
                 canSendPolls = false
             }
@@ -12425,14 +12433,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if group.hasBannedPermission(.banSendFiles) {
                 bannedSendFiles = (Int32.max, false)
             }
+            if group.hasBannedPermission(.banSendText) {
+                banSendText = (Int32.max, false)
+            }
             if group.hasBannedPermission(.banSendPolls) {
                 canSendPolls = false
             }
         }
         
-        var availableButtons: [AttachmentButtonType] = [.gallery, .file, .location, .contact]
+        var availableButtons: [AttachmentButtonType] = [.gallery, .file]
+        if banSendText == nil {
+            availableButtons.append(.location)
+            availableButtons.append(.contact)
+        }
         if canSendPolls {
-            availableButtons.insert(.poll, at: availableButtons.count - 1)
+            availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
         }
         
         let presentationData = self.presentationData
@@ -13556,22 +13571,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         switch itemType {
                         case .image:
                             if bannedSendPhotos != nil {
-                                //TODO:localize
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "Sending photos is not allowed", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
                                 return false
                             }
                         case .video:
                             if bannedSendVideos != nil {
-                                //TODO:localize
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "Sending videos is not allowed", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
                                 return false
                             }
                         case .gif:
                             if bannedSendGifs != nil {
-                                //TODO:localize
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "Sending gifs is not allowed", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
                                 return false
                             }
@@ -18135,6 +18147,83 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let scale: CGFloat = isPushed ? 0.94 : 1.0
         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0))
         transition.updateTransformScale(node: self.chatDisplayNode.historyNodeContainer, scale: scale)
+    }
+    
+    func restrictedSendingContentsText() -> String {
+        //TODO:localize
+        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+            return "Sending messages is disabled in this chat"
+        }
+        
+        var itemList: [String] = []
+        
+        var flags: TelegramChatBannedRightsFlags = []
+        if let channel = peer as? TelegramChannel {
+            if let bannedRights = channel.bannedRights {
+                flags = bannedRights.flags
+            }
+        } else if let group = peer as? TelegramGroup {
+            if let bannedRights = group.defaultBannedRights {
+                flags = bannedRights.flags
+            }
+        }
+        
+        let order: [TelegramChatBannedRightsFlags] = [
+            .banSendText,
+            .banSendPhotos,
+            .banSendVideos,
+            .banSendVoice,
+            .banSendInstantVideos,
+            .banSendFiles,
+            .banSendMusic,
+            .banSendStickers
+        ]
+        
+        for right in order {
+            if !flags.contains(right) {
+                var title: String?
+                switch right {
+                case .banSendText:
+                    title = "text messages"
+                case .banSendPhotos:
+                    title = "photos"
+                case .banSendVideos:
+                    title = "videos"
+                case .banSendVoice:
+                    title = "voice messages"
+                case .banSendInstantVideos:
+                    title = "video messages"
+                case .banSendFiles:
+                    title = "files"
+                case .banSendMusic:
+                    title = "music"
+                case .banSendStickers:
+                    title = "Stickers & GIFs"
+                default:
+                    break
+                }
+                if let title {
+                    itemList.append(title)
+                }
+            }
+        }
+        
+        if itemList.isEmpty {
+            return "Sending messages is disabled in this chat"
+        }
+        
+        var itemListString = ""
+        for i in 0 ..< itemList.count {
+            if i != 0 {
+                itemListString.append(", ")
+            }
+            if i == itemList.count - 1 && i != 0 {
+                itemListString.append("and ")
+            }
+            itemListString.append(itemList[i])
+        }
+        
+        return "The admins of this group only allow to send \(itemListString)."
     }
 }
 

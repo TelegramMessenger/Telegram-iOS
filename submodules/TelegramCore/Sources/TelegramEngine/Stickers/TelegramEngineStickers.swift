@@ -105,6 +105,10 @@ public extension TelegramEngine {
             return _internal_cachedAvailableReactions(postbox: self.account.postbox)
         }
         
+        public func emojiSearchCategories(kind: EmojiSearchCategories.Kind) -> Signal<EmojiSearchCategories?, NoError> {
+            return _internal_cachedEmojiSearchCategories(postbox: self.account.postbox, kind: kind)
+        }
+        
         public func updateQuickReaction(reaction: MessageReaction.Reaction) -> Signal<Never, NoError> {
             let _ = updateReactionSettingsInteractively(postbox: self.account.postbox, { settings in
                 var settings = settings
@@ -178,6 +182,34 @@ public extension TelegramEngine {
         
         public func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
             return _internal_resolveInlineStickers(postbox: self.account.postbox, network: self.account.network, fileIds: fileIds)
+        }
+        
+        public func searchEmoji(emojiString: String) -> Signal<[TelegramMediaFile], NoError> {
+            return self.account.network.request(Api.functions.messages.searchCustomEmoji(emoticon: emojiString, hash: 0))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.EmojiList?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<[TelegramMediaFile], NoError> in
+                guard let result = result else {
+                    return .single([])
+                }
+                switch result {
+                case let .emojiList(_, documentIds):
+                    return self.resolveInlineStickers(fileIds: documentIds)
+                    |> map { result -> [TelegramMediaFile] in
+                        var files: [TelegramMediaFile] = []
+                        for id in documentIds {
+                            if let file = result[id] {
+                                files.append(file)
+                            }
+                        }
+                        return files
+                    }
+                default:
+                    return .single([])
+                }
+            }
         }
     }
 }

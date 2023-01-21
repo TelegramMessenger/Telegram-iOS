@@ -277,7 +277,7 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
         
         entries.append(.videoSizeHeader("MAXIMUM VIDEO SIZE"))
         entries.append(.videoSize(decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, text: text, value: configuration.maximumVideoSize))
-        entries.append(.videoInfo("All downloaded videos in private chats less than 100 MB will be saved to Cameral Roll."))
+        entries.append(.videoInfo("All downloaded videos in private chats less than \(sizeText) will be saved to Cameral Roll."))
     }
     
     if case let .peerType(peerType) = scope {
@@ -332,7 +332,7 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
                 if !label.isEmpty {
                     label.append(", ")
                 }
-                label.append("Videos up to \(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))")
+                label.append("Videos up to \(dataSizeString(Int(exceptionConfiguration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))")
             } else {
                 if !label.isEmpty {
                     label.append(", ")
@@ -381,6 +381,7 @@ func saveIncomingMediaController(context: AccountContext, scope: SaveIncomingMed
     }
     
     var pushController: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
     var dismiss: (() -> Void)?
     
     let arguments = SaveIncomingMediaControllerArguments(
@@ -584,13 +585,27 @@ func saveIncomingMediaController(context: AccountContext, scope: SaveIncomingMed
             }).start()
         },
         deleteAllExceptions: {
-            let _ = updateMediaAutoSaveSettingsInteractively(account: context.account, { settings in
-                var settings = settings
-                
-                settings.exceptions.removeAll()
-                
-                return settings
-            }).start()
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let actionSheet = ActionSheetController(presentationData: presentationData)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                //ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
+                ActionSheetButtonItem(title: "Delete All Exceptions", color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    let _ = updateMediaAutoSaveSettingsInteractively(account: context.account, { settings in
+                        var settings = settings
+                        
+                        settings.exceptions.removeAll()
+                        
+                        return settings
+                    }).start()
+                })
+            ]), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            presentControllerImpl?(actionSheet)
         }
     )
     
@@ -722,6 +737,9 @@ func saveIncomingMediaController(context: AccountContext, scope: SaveIncomingMed
     
     pushController = { [weak controller] c in
         controller?.push(c)
+    }
+    presentControllerImpl = { [weak controller] c in
+        controller?.present(c, in: .window(.root))
     }
     dismiss = { [weak controller] in
         controller?.dismiss()

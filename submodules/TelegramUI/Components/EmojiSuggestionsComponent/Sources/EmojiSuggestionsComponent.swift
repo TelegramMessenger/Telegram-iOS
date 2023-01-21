@@ -281,6 +281,7 @@ public final class EmojiSuggestionsComponent: Component {
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.visibleLayers[item.fileId] {
                         itemLayer = current
+                        itemLayer.dynamicColor = component.theme.list.itemPrimaryTextColor
                     } else {
                         itemLayer = InlineStickerItemLayer(
                             context: component.context,
@@ -291,7 +292,8 @@ public final class EmojiSuggestionsComponent: Component {
                             cache: component.animationCache,
                             renderer: component.animationRenderer,
                             placeholderColor: component.theme.list.mediaPlaceholderColor,
-                            pointSize: itemFrame.size
+                            pointSize: itemFrame.size,
+                            dynamicColor: component.theme.list.itemPrimaryTextColor
                         )
                         self.visibleLayers[item.fileId] = itemLayer
                         self.scrollView.layer.addSublayer(itemLayer)

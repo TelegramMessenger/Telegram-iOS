@@ -23,19 +23,26 @@ import TelegramAnimatedStickerNode
 import TelegramStringFormatting
 import GalleryData
 import AnimatedTextComponent
+import TelegramUIPreferences
 
 final class DataUsageScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let statsSet: StatsSet
+    let mediaAutoDownloadSettings: MediaAutoDownloadSettings
+    let makeAutodownloadSettingsController: (Bool) -> ViewController
     
     init(
         context: AccountContext,
-        statsSet: StatsSet
+        statsSet: StatsSet,
+        mediaAutoDownloadSettings: MediaAutoDownloadSettings,
+        makeAutodownloadSettingsController: @escaping (Bool) -> ViewController
     ) {
         self.context = context
         self.statsSet = statsSet
+        self.mediaAutoDownloadSettings = mediaAutoDownloadSettings
+        self.makeAutodownloadSettingsController = makeAutodownloadSettingsController
     }
     
     static func ==(lhs: DataUsageScreenComponent, rhs: DataUsageScreenComponent) -> Bool {
@@ -43,6 +50,9 @@ final class DataUsageScreenComponent: Component {
             return false
         }
         if lhs.statsSet != rhs.statsSet {
+            return false
+        }
+        if lhs.mediaAutoDownloadSettings != rhs.mediaAutoDownloadSettings {
             return false
         }
         return true
@@ -278,6 +288,22 @@ final class DataUsageScreenComponent: Component {
         case wifi
     }
     
+    private final class HeaderContainer: UIView {
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            var result: UIView?
+            for subview in self.subviews.reversed() {
+                if let value = subview.hitTest(self.convert(point, to: subview), with: event) {
+                    result = value
+                    break
+                }
+            }
+            if result == self {
+                return nil
+            }
+            return result
+        }
+    }
+    
     class View: UIView, UIScrollViewDelegate {
         private let scrollView: ScrollViewImpl
         
@@ -285,12 +311,15 @@ final class DataUsageScreenComponent: Component {
         private var selectedStats: SelectedStats = .all
         private var expandedCategories: Set<Category> = Set()
         
+        private var mediaAutoDownloadSettings: MediaAutoDownloadSettings = .defaultSettings
+        private var mediaAutoDownloadSettingsDisposable: Disposable?
+        
         private let navigationBackgroundView: BlurredBackgroundView
         private let navigationSeparatorLayer: SimpleLayer
         private let navigationSeparatorLayerContainer: SimpleLayer
         
         private let headerView = ComponentView<Empty>()
-        private let headerOffsetContainer: UIView
+        private let headerOffsetContainer: HeaderContainer
         private let headerDescriptionView = ComponentView<Empty>()
         
         private var doneLabel: ComponentView<Empty>?
@@ -311,6 +340,10 @@ final class DataUsageScreenComponent: Component {
         private let totalCategoriesTitleView = ComponentView<Empty>()
         private let totalCategoriesView = ComponentView<Empty>()
         
+        private let autoDownloadSettingsContainerView: UIView
+        private let autoDownloadSettingsView = ComponentView<Empty>()
+        private let autoDownloadSettingsDescriptionView = ComponentView<Empty>()
+        
         private var component: DataUsageScreenComponent?
         private weak var state: EmptyComponentState?
         private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
@@ -323,20 +356,23 @@ final class DataUsageScreenComponent: Component {
         private var ignoreScrolling: Bool = false
         
         override init(frame: CGRect) {
-            self.headerOffsetContainer = UIView()
-            self.headerOffsetContainer.isUserInteractionEnabled = false
+            self.headerOffsetContainer = HeaderContainer()
             
             self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
             self.navigationBackgroundView.alpha = 0.0
             
             self.navigationSeparatorLayer = SimpleLayer()
-            self.navigationSeparatorLayer.opacity = 0.0
+            self.navigationSeparatorLayer.opacity = 1.0
             self.navigationSeparatorLayerContainer = SimpleLayer()
             self.navigationSeparatorLayerContainer.opacity = 0.0
             
             self.scrollContainerView = UIView()
             
             self.scrollView = ScrollViewImpl()
+            
+            self.autoDownloadSettingsContainerView = UIView()
+            self.autoDownloadSettingsContainerView.clipsToBounds = true
+            self.autoDownloadSettingsContainerView.layer.cornerRadius = 10.0
             
             super.init(frame: frame)
             
@@ -359,6 +395,8 @@ final class DataUsageScreenComponent: Component {
             
             self.scrollView.addSubview(self.scrollContainerView)
             
+            self.scrollContainerView.addSubview(self.autoDownloadSettingsContainerView)
+            
             self.addSubview(self.navigationBackgroundView)
             
             self.navigationSeparatorLayerContainer.addSublayer(self.navigationSeparatorLayer)
@@ -372,6 +410,7 @@ final class DataUsageScreenComponent: Component {
         }
         
         deinit {
+            self.mediaAutoDownloadSettingsDisposable?.dispose()
         }
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -399,7 +438,7 @@ final class DataUsageScreenComponent: Component {
         private func updateScrolling(transition: Transition) {
             let scrollBounds = self.scrollView.bounds
             
-            if let headerView = self.headerView.view, let navigationMetrics = self.navigationMetrics {
+            if let headerView = self.segmentedControlView.view, let navigationMetrics = self.navigationMetrics {
                 var headerOffset: CGFloat = scrollBounds.minY
                 
                 let minY = navigationMetrics.statusBarHeight + floor((navigationMetrics.navigationHeight - navigationMetrics.statusBarHeight) / 2.0)
@@ -411,20 +450,36 @@ final class DataUsageScreenComponent: Component {
                 let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
                 let navigationBackgroundAlpha: CGFloat = abs(headerOffset - minOffset) < 4.0 ? 1.0 : 0.0
                 
+                let navigationButtonAlpha: CGFloat = abs(headerOffset - minOffset) < 62.0 ? 0.0 : 1.0
+                
                 animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
                 animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
                 
-                let expansionDistance: CGFloat = 32.0
+                /*let expansionDistance: CGFloat = 32.0
                 var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
                 expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
                 
-                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
+                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)*/
                 
-                var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
+                /*var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
                 offsetFraction = min(1.0, max(0.0, offsetFraction))
-                transition.setScale(view: headerView, scale: 1.0 * offsetFraction + 0.8 * (1.0 - offsetFraction))
+                transition.setScale(view: headerView, scale: 1.0 * offsetFraction + 0.8 * (1.0 - offsetFraction))*/
                 
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
+                
+                if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
+                    if backButtonNode.isHidden {
+                        backButtonNode.alpha = 0.0
+                        backButtonNode.isHidden = false
+                    }
+                    animatedTransition.setAlpha(layer: backButtonNode.layer, alpha: navigationButtonAlpha, completion: { [weak backButtonNode] completed in
+                        if let backButtonNode, completed {
+                            if navigationButtonAlpha.isZero {
+                                backButtonNode.isHidden = true
+                            }
+                        }
+                    })
+                }
             }
         }
         
@@ -434,6 +489,27 @@ final class DataUsageScreenComponent: Component {
             
             if self.allStats == nil {
                 self.allStats = component.statsSet
+            }
+            if self.mediaAutoDownloadSettingsDisposable == nil {
+                self.mediaAutoDownloadSettingsDisposable = (component.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+                    |> map { sharedData -> MediaAutoDownloadSettings in
+                    var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+                    if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                        automaticMediaDownloadSettings = value
+                    } else {
+                        automaticMediaDownloadSettings = .defaultSettings
+                    }
+                    return automaticMediaDownloadSettings
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] settings in
+                    guard let self else {
+                        return
+                    }
+                    if self.mediaAutoDownloadSettings != settings {
+                        self.mediaAutoDownloadSettings = settings
+                        self.state?.updated(transition: .immediate)
+                    }
+                })
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -574,7 +650,7 @@ final class DataUsageScreenComponent: Component {
                 }
                 emptyValue = 1.0
             }
-            if let allStats = self.allStats, allStats.wifi.isEmpty && allStats.cellular.isEmpty {
+            if totalSize == 0 {
                 chartItems.removeAll()
             } else {
                 chartItems.append(PieChartComponent.ChartData.Item(id: "empty", displayValue: 0.0, displaySize: 0, value: emptyValue, color: UIColor(rgb: 0xC4C4C6), particle: nil, title: "", mergeable: false, mergeFactor: 1.0))
@@ -635,7 +711,7 @@ final class DataUsageScreenComponent: Component {
                 
                 pieChartTransition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
             }
-            if let allStats = self.allStats, allStats.wifi.isEmpty && allStats.cellular.isEmpty {
+            if totalSize == 0 {
                 let checkColor = environment.theme.list.itemAccentColor
                 
                 var doneLabelTransition = transition
@@ -709,7 +785,7 @@ final class DataUsageScreenComponent: Component {
                 headerText = "Data Usage"
             }
             let headerViewSize = self.headerView.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(Text(text: headerText, font: Font.semibold(20.0), color: environment.theme.list.itemPrimaryTextColor)),
                 environment: {},
                 containerSize: CGSize(width: floor((availableSize.width) / 0.8), height: 100.0)
@@ -717,10 +793,10 @@ final class DataUsageScreenComponent: Component {
             let headerViewFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - headerViewSize.width) / 2.0), y: contentHeight), size: headerViewSize)
             if let headerComponentView = self.headerView.view {
                 if headerComponentView.superview == nil {
-                    self.headerOffsetContainer.addSubview(headerComponentView)
+                    self.scrollContainerView.addSubview(headerComponentView)
                 }
                 transition.setPosition(view: headerComponentView, position: headerViewFrame.center)
-                transition.setBounds(view: headerComponentView, bounds: CGRect(origin: CGPoint(), size: headerViewFrame.size))
+                headerComponentView.bounds = CGRect(origin: CGPoint(), size: headerViewFrame.size)
             }
             contentHeight += headerViewSize.height
             
@@ -747,7 +823,7 @@ final class DataUsageScreenComponent: Component {
             
             let totalUsageText: String = timestampString
             let headerDescriptionSize = self.headerDescriptionView.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(text: .markdown(text: totalUsageText, attributes: MarkdownAttributes(
                     body: body,
                     bold: bold,
@@ -762,16 +838,22 @@ final class DataUsageScreenComponent: Component {
                 if headerDescriptionComponentView.superview == nil {
                     self.scrollContainerView.addSubview(headerDescriptionComponentView)
                 }
-                transition.setFrame(view: headerDescriptionComponentView, frame: headerDescriptionFrame)
+                transition.setPosition(view: headerDescriptionComponentView, position: headerDescriptionFrame.center)
+                headerDescriptionComponentView.bounds = CGRect(origin: CGPoint(), size: headerDescriptionFrame.size)
             }
             contentHeight += headerDescriptionSize.height
             contentHeight += 8.0
             
             contentHeight += 12.0
             
-            if let allStats = self.allStats, allStats.wifi.isEmpty && allStats.cellular.isEmpty {
+            if totalSize == 0 {
                 if let chartTotalLabelView = self.chartTotalLabel.view {
-                    chartTotalLabelView.removeFromSuperview()
+                    transition.setAlpha(view: chartTotalLabelView, alpha: 0.0)
+                    
+                    let chartTotalLabelSize = chartTotalLabelView.bounds.size
+                    let chartAreaHeight: CGFloat = 100.0
+                    let totalLabelFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((chartAreaHeight - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
+                    transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
                 }
             } else {
                 let sizeText = dataSizeString(Int(totalSize), forceDecimal: true, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: "."))
@@ -810,9 +892,17 @@ final class DataUsageScreenComponent: Component {
                     if chartTotalLabelView.superview == nil {
                         self.scrollContainerView.addSubview(chartTotalLabelView)
                     }
-                    let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
+                    
+                    let chartAreaHeight: CGFloat
+                    if totalSize == 0 {
+                        chartAreaHeight = 100.0
+                    } else {
+                        chartAreaHeight = pieChartFrame.height
+                    }
+                    
+                    let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((chartAreaHeight - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
                     labelTransition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
-                    labelTransition.setAlpha(view: chartTotalLabelView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
+                    transition.setAlpha(view: chartTotalLabelView, alpha: 1.0)
                 }
             }
             
@@ -831,7 +921,7 @@ final class DataUsageScreenComponent: Component {
                             return
                         }
                         self.selectedStats = id
-                        self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .modeChanged)))
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .modeChanged)))
                     })),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -839,7 +929,7 @@ final class DataUsageScreenComponent: Component {
             let segmentedControlFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - segmentedSize.width) * 0.5), y: contentHeight), size: segmentedSize)
             if let segmentedControlComponentView = self.segmentedControlView.view {
                 if segmentedControlComponentView.superview == nil {
-                    self.scrollContainerView.addSubview(segmentedControlComponentView)
+                    self.headerOffsetContainer.addSubview(segmentedControlComponentView)
                 }
                 transition.setFrame(view: segmentedControlComponentView, frame: segmentedControlFrame)
             }
@@ -893,9 +983,11 @@ final class DataUsageScreenComponent: Component {
             let categoriesDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: categoriesDescriptionSize)
             if let categoriesDescriptionComponentView = self.categoriesDescriptionView.view {
                 if categoriesDescriptionComponentView.superview == nil {
+                    categoriesDescriptionComponentView.layer.anchorPoint = CGPoint()
                     self.scrollContainerView.addSubview(categoriesDescriptionComponentView)
                 }
-                transition.setFrame(view: categoriesDescriptionComponentView, frame: categoriesDescriptionFrame)
+                transition.setPosition(view: categoriesDescriptionComponentView, position: categoriesDescriptionFrame.topLeft)
+                categoriesDescriptionComponentView.bounds = CGRect(origin: CGPoint(), size: categoriesDescriptionFrame.size)
             }
             contentHeight += categoriesDescriptionSize.height
             contentHeight += 40.0
@@ -924,9 +1016,12 @@ final class DataUsageScreenComponent: Component {
             let totalCategoriesTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: totalCategoriesTitleSize)
             if let totalCategoriesTitleComponentView = self.totalCategoriesTitleView.view {
                 if totalCategoriesTitleComponentView.superview == nil {
+                    totalCategoriesTitleComponentView.layer.anchorPoint = CGPoint()
                     self.scrollContainerView.addSubview(totalCategoriesTitleComponentView)
                 }
-                transition.setFrame(view: totalCategoriesTitleComponentView, frame: totalCategoriesTitleFrame)
+                
+                transition.setPosition(view: totalCategoriesTitleComponentView, position: totalCategoriesTitleFrame.topLeft)
+                totalCategoriesTitleComponentView.bounds = CGRect(origin: CGPoint(), size: totalCategoriesTitleFrame.size)
             }
             contentHeight += totalCategoriesTitleSize.height
             contentHeight += 8.0
@@ -954,32 +1049,103 @@ final class DataUsageScreenComponent: Component {
             contentHeight += totalCategoriesSize.height
             contentHeight += 40.0
             
-            if let allStats = self.allStats, !(allStats.wifi.isEmpty && allStats.cellular.isEmpty) {
-                let clearButtonSize = self.clearButtonView.update(
+            var autoDownloadSettingsContentHeight: CGFloat = 0.0
+            //TODO:localize
+            let autoDownloadSettingsSize: CGSize
+            if case .all = self.selectedStats, let autoDownloadSettingsComponentView = self.autoDownloadSettingsView.view {
+                autoDownloadSettingsSize = autoDownloadSettingsComponentView.bounds.size
+            } else {
+                autoDownloadSettingsSize = self.autoDownloadSettingsView.update(
                     transition: transition,
-                    component: AnyComponent(DataButtonComponent(
+                    component: AnyComponent(StoragePeerTypeItemComponent(
                         theme: environment.theme,
-                        title: "Reset Statistics",
-                        action: { [weak self] in
-                            self?.requestClear()
+                        iconName: self.selectedStats == .mobile ? "Settings/Menu/Cellular" : "Settings/Menu/WiFi",
+                        title: "Auto-Download Settings",
+                        subtitle: stringForAutoDownloadSetting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator, settings: self.mediaAutoDownloadSettings, isCellular: self.selectedStats == .mobile),
+                        value: "",
+                        hasNext: false,
+                        action: { [weak self] sourceView in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.controller?()?.push(component.makeAutodownloadSettingsController(self.selectedStats == .mobile))
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
                 )
-                let clearButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: clearButtonSize)
-                if let clearButtonComponentView = self.clearButtonView.view {
-                    if clearButtonComponentView.superview == nil {
-                        self.scrollContainerView.addSubview(clearButtonComponentView)
-                    }
-                    transition.setFrame(view: clearButtonComponentView, frame: clearButtonFrame)
+            }
+            let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: autoDownloadSettingsContentHeight), size: autoDownloadSettingsSize)
+            if let itemView = self.autoDownloadSettingsView.view {
+                if itemView.superview == nil {
+                    self.autoDownloadSettingsContainerView.addSubview(itemView)
                 }
+                transition.setFrame(view: itemView, frame: itemFrame)
+            }
+            autoDownloadSettingsContentHeight += autoDownloadSettingsSize.height
+            self.autoDownloadSettingsContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
+            transition.setFrame(view: self.autoDownloadSettingsContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: autoDownloadSettingsContentHeight)))
+            
+            let autoDownloadSettingsDescriptionSize: CGSize
+            if case .all = self.selectedStats, let autoDownloadSettingsDescriptionComponentView = self.autoDownloadSettingsDescriptionView.view {
+                autoDownloadSettingsDescriptionSize = autoDownloadSettingsDescriptionComponentView.bounds.size
+            } else {
+                autoDownloadSettingsDescriptionSize = self.autoDownloadSettingsDescriptionView.update(
+                    transition: transition,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(
+                            text: self.selectedStats == .mobile ? "You can change your auto-download settings for media to reduce data usage when cellular." : "You can change your auto-download settings for media to reduce data usage when on wifi.", attributes: MarkdownAttributes(
+                                body: body,
+                                bold: bold,
+                                link: body,
+                                linkAttribute: { _ in nil }
+                            )
+                        ),
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                )
+            }
+            let autoDownloadSettingsDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight + autoDownloadSettingsContentHeight + 8.0), size: autoDownloadSettingsDescriptionSize)
+            if let autoDownloadSettingsDescriptionComponentView = self.autoDownloadSettingsDescriptionView.view {
+                if autoDownloadSettingsDescriptionComponentView.superview == nil {
+                    self.scrollContainerView.addSubview(autoDownloadSettingsDescriptionComponentView)
+                }
+                transition.setFrame(view: autoDownloadSettingsDescriptionComponentView, frame: autoDownloadSettingsDescriptionFrame)
+                transition.setAlpha(view: autoDownloadSettingsDescriptionComponentView, alpha: self.selectedStats == .all ? 0.0 : 1.0)
+            }
+            
+            transition.setAlpha(view: self.autoDownloadSettingsContainerView, alpha: self.selectedStats == .all ? 0.0 : 1.0)
+            
+            let combinedAutoDownloadSettingsContentHeight = autoDownloadSettingsContentHeight + 8.0 + autoDownloadSettingsDescriptionSize.height + 40.0
+            if self.selectedStats != .all {
+                contentHeight += combinedAutoDownloadSettingsContentHeight
+            }
+            
+            let clearButtonSize = self.clearButtonView.update(
+                transition: transition,
+                component: AnyComponent(DataButtonComponent(
+                    theme: environment.theme,
+                    title: "Reset Statistics",
+                    action: { [weak self] in
+                        self?.requestClear()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+            )
+            let clearButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: clearButtonSize)
+            if let clearButtonComponentView = self.clearButtonView.view {
+                if clearButtonComponentView.superview == nil {
+                    self.scrollContainerView.addSubview(clearButtonComponentView)
+                }
+                transition.setFrame(view: clearButtonComponentView, frame: clearButtonFrame)
+                transition.setAlpha(view: clearButtonComponentView, alpha: totalSize != 0 ? 1.0 : 0.0)
+            }
+            if totalSize != 0 {
                 contentHeight += clearButtonSize.height
                 contentHeight += 40.0
-            } else {
-                if let clearButtonComponentView = self.clearButtonView.view {
-                    clearButtonComponentView.isHidden = true
-                }
             }
             
             contentHeight += bottomInset
@@ -1037,7 +1203,28 @@ final class DataUsageScreenComponent: Component {
         }
         
         private func requestClear() {
-            self.commitClear()
+            guard let component = self.component else {
+                return
+            }
+            
+            let context = component.context
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let actionSheet = ActionSheetController(presentationData: presentationData)
+            
+            //TODO:localize
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: "Reset Statistics", color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    self?.commitClear()
+                })
+            ]), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            self.controller?()?.present(actionSheet, in: .window(.root))
         }
         
         private func commitClear() {
@@ -1073,13 +1260,11 @@ public final class DataUsageScreen: ViewControllerComponentContainer {
         return self.readyValue
     }
     
-    fileprivate var childCompleted: ((@escaping () -> Void) -> Void)?
-    
-    public init(context: AccountContext, stats: NetworkUsageStats) {
+    public init(context: AccountContext, stats: NetworkUsageStats, mediaAutoDownloadSettings: MediaAutoDownloadSettings, makeAutodownloadSettingsController: @escaping (Bool) -> ViewController) {
         self.context = context
         
         //let componentReady = Promise<Bool>()
-        super.init(context: context, component: DataUsageScreenComponent(context: context, statsSet: DataUsageScreenComponent.StatsSet(stats: stats)), navigationBarAppearance: .transparent)
+        super.init(context: context, component: DataUsageScreenComponent(context: context, statsSet: DataUsageScreenComponent.StatsSet(stats: stats), mediaAutoDownloadSettings: mediaAutoDownloadSettings, makeAutodownloadSettingsController: makeAutodownloadSettingsController), navigationBarAppearance: .transparent)
         
         //self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
         self.readyValue.set(.single(true))
@@ -1091,5 +1276,73 @@ public final class DataUsageScreen: ViewControllerComponentContainer {
     
     override public func viewDidLoad() {
         super.viewDidLoad()
+    }
+}
+
+public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
+    if size >= 1024 * 1024 * 1024 {
+        let remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
+        if remainder != 0 {
+            return "\(size / (1024 * 1024 * 1024))\(decimalSeparator)\(remainder) GB"
+        } else {
+            return "\(size / (1024 * 1024 * 1024)) GB"
+        }
+    } else if size >= 1024 * 1024 {
+        let remainder = (size % (1024 * 1024)) / (1024 * 102)
+        if size < 10 * 1024 * 1024 {
+            return "\(size / (1024 * 1024))\(decimalSeparator)\(remainder) MB"
+        } else {
+            return "\(size / (1024 * 1024)) MB"
+        }
+    } else if size >= 1024 {
+        return "\(size / 1024) KB"
+    } else {
+        return "\(size) B"
+    }
+}
+
+private func stringForAutoDownloadTypes(strings: PresentationStrings, decimalSeparator: String, photo: Bool, videoSize: Int64?, fileSize: Int64?) -> String {
+    var types: [String] = []
+    if photo && videoSize == nil {
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypePhoto)
+    }
+    if let videoSize = videoSize {
+        if photo {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeMedia(autodownloadDataSizeString(videoSize, decimalSeparator: decimalSeparator)).string)
+        } else {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo(autodownloadDataSizeString(videoSize, decimalSeparator: decimalSeparator)).string)
+        }
+    }
+    if let fileSize = fileSize {
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile(autodownloadDataSizeString(fileSize, decimalSeparator: decimalSeparator)).string)
+    }
+
+    if types.isEmpty {
+        return strings.ChatSettings_AutoDownloadSettings_OffForAll
+    }
+    
+    var string: String = ""
+    for i in 0 ..< types.count {
+        if !string.isEmpty {
+            string.append(strings.ChatSettings_AutoDownloadSettings_Delimeter)
+        }
+        string.append(types[i])
+    }
+    return string
+}
+
+
+private func stringForAutoDownloadSetting(strings: PresentationStrings, decimalSeparator: String, settings: MediaAutoDownloadSettings, isCellular: Bool) -> String {
+    let connection: MediaAutoDownloadConnection = isCellular ? settings.cellular : settings.wifi
+    if !connection.enabled {
+        return strings.ChatSettings_AutoDownloadSettings_OffForAll
+    } else {
+        let categories = effectiveAutodownloadCategories(settings: settings, networkType: isCellular ? .cellular : .wifi)
+        
+        let photo = isAutodownloadEnabledForAnyPeerType(category: categories.photo)
+        let video = isAutodownloadEnabledForAnyPeerType(category: categories.video)
+        let file = isAutodownloadEnabledForAnyPeerType(category: categories.file)
+    
+        return stringForAutoDownloadTypes(strings: strings, decimalSeparator: decimalSeparator, photo: photo, videoSize: video ? categories.video.sizeLimit : nil, fileSize: file ? categories.file.sizeLimit : nil)
     }
 }

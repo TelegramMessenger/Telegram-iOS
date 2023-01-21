@@ -15,7 +15,7 @@ public class NavigationBackButtonNode: ASControlNode {
     }
     
     let arrow: ASDisplayNode
-    let label: ImmediateTextNode
+    public let label: ImmediateTextNode
     
     private let arrowSpacing: CGFloat = 4.0
     

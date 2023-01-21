@@ -368,7 +368,8 @@ public final class EntityKeyboardComponent: Component {
                         strongSelf.reorderPacks(category: .masks, items: items)
                     }
                 ))))
-                contentIcons.append(PagerComponentContentIcon(id: "masks", imageName: "Chat/Input/Media/EntityInputMasksIcon"))
+                //TODO:localize
+                contentIcons.append(PagerComponentContentIcon(id: "masks", imageName: "Chat/Input/Media/EntityInputMasksIcon", title: "Masks"))
                 if let _ = component.maskContent?.inputInteractionHolder.inputInteraction?.openStickerSettings {
                     contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "masks", component: AnyComponent(Button(
                         content: AnyComponent(BundleIconComponent(
@@ -385,7 +386,7 @@ public final class EntityKeyboardComponent: Component {
             
             if let gifContent = component.gifContent {
                 contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(gifContent)))
-                var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
+                /*var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
                 if component.hasRecentGifs {
                     topGifItems.append(EntityKeyboardTopPanelComponent.Item(
                         id: "recent",
@@ -453,8 +454,9 @@ public final class EntityKeyboardComponent: Component {
                     activeContentItemIdUpdated: gifsContentItemIdUpdated,
                     reorderItems: { _ in
                     }
-                ))))
-                contentIcons.append(PagerComponentContentIcon(id: "gifs", imageName: "Chat/Input/Media/EntityInputGifsIcon"))
+                ))))*/
+                //TODO:localize
+                contentIcons.append(PagerComponentContentIcon(id: "gifs", imageName: "Chat/Input/Media/EntityInputGifsIcon", title: "GIFs"))
             }
             
             if let stickerContent = component.stickerContent {
@@ -560,7 +562,8 @@ public final class EntityKeyboardComponent: Component {
                         strongSelf.reorderPacks(category: .stickers, items: items)
                     }
                 ))))
-                contentIcons.append(PagerComponentContentIcon(id: "stickers", imageName: "Chat/Input/Media/EntityInputStickersIcon"))
+                //TODO:localize
+                contentIcons.append(PagerComponentContentIcon(id: "stickers", imageName: "Chat/Input/Media/EntityInputStickersIcon", title: "Stickers"))
                 if let _ = component.stickerContent?.inputInteractionHolder.inputInteraction?.openStickerSettings {
                     contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
                         content: AnyComponent(BundleIconComponent(
@@ -659,7 +662,8 @@ public final class EntityKeyboardComponent: Component {
                         strongSelf.reorderPacks(category: .emoji, items: items)
                     }
                 ))))
-                contentIcons.append(PagerComponentContentIcon(id: "emoji", imageName: "Chat/Input/Media/EntityInputEmojiIcon"))
+                //TODO:localize
+                contentIcons.append(PagerComponentContentIcon(id: "emoji", imageName: "Chat/Input/Media/EntityInputEmojiIcon", title: "Emoji"))
                 if let _ = deleteBackwards {
                     contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
                         content: AnyComponent(BundleIconComponent(

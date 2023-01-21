@@ -46,7 +46,7 @@ enum UploadedPeerPhotoDataContent {
 }
 
 func _internal_uploadedPeerPhoto(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> map { result -> UploadedPeerPhotoData in
         return UploadedPeerPhotoData(resource: resource, content: .result(result))
     }
@@ -57,7 +57,7 @@ func _internal_uploadedPeerPhoto(postbox: Postbox, network: Network, resource: M
 
 func _internal_uploadedPeerVideo(postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager?, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
     if let messageMediaPreuploadManager = messageMediaPreuploadManager {
-        return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false)
+        return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video), hintFileSize: nil, hintFileIsLarge: false)
         |> map { result -> UploadedPeerPhotoData in
             return UploadedPeerPhotoData(resource: resource, content: .result(result))
         }
@@ -65,7 +65,7 @@ func _internal_uploadedPeerVideo(postbox: Postbox, network: Network, messageMedi
             return .single(UploadedPeerPhotoData(resource: resource, content: .error))
         }
     } else {
-        return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+        return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
        |> map { result -> UploadedPeerPhotoData in
            return UploadedPeerPhotoData(resource: resource, content: .result(result))
        }

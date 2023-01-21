@@ -792,6 +792,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 isStatusSelection: true,
                 isReactionSelection: false,
                 isEmojiSelection: false,
+                hasTrending: false,
                 topReactionItems: [],
                 areUnicodeEmojiEnabled: false,
                 areCustomEmojiEnabled: true,

@@ -724,4 +724,60 @@ public struct Transition {
             )
         }
     }
+    
+    public func setTintColor(view: UIView, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let current = view.tintColor, current == color {
+            completion?(true)
+            return
+        }
+        
+        switch self.animation {
+        case .none:
+            view.tintColor = color
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousColor: UIColor = view.tintColor ?? UIColor.clear
+            view.tintColor = color
+            
+            view.layer.animate(
+                from: previousColor,
+                to: color.cgColor,
+                keyPath: "contentsMultiplyColor",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setTintColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let current = layer.layerTintColor, current == color.cgColor {
+            completion?(true)
+            return
+        }
+        
+        switch self.animation {
+        case .none:
+            layer.layerTintColor = color.cgColor
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousColor: CGColor = layer.layerTintColor ?? UIColor.clear.cgColor
+            layer.layerTintColor = color.cgColor
+            
+            layer.animate(
+                from: previousColor,
+                to: color.cgColor,
+                keyPath: "contentsMultiplyColor",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
 }

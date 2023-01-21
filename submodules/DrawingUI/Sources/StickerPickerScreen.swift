@@ -365,7 +365,7 @@ class StickerPickerScreen: ViewController {
                 },
                 requestUpdate: { _ in
                 },
-                updateSearchQuery: { _, _ in
+                updateSearchQuery: { _ in
                 },
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
@@ -442,7 +442,7 @@ class StickerPickerScreen: ViewController {
                 },
                 requestUpdate: { _ in
                 },
-                updateSearchQuery: { _, _ in
+                updateSearchQuery: { _ in
                 },
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
@@ -566,7 +566,7 @@ class StickerPickerScreen: ViewController {
                 },
                 requestUpdate: { _ in
                 },
-                updateSearchQuery: { _, _ in
+                updateSearchQuery: { _ in
                 },
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))

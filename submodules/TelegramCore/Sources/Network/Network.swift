@@ -186,6 +186,10 @@ private struct UsageCalculationTag {
                 return 4 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
             case .call:
                 return 5 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .stickers:
+                return 6 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .voiceMessages:
+                return 7 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
         }
     }
 }
@@ -311,7 +315,17 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
             UsageCalculationTag(connection: .cellular, direction: .incoming, category: .call),
             UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .call),
             UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call),
-            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call)
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .stickers),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .stickers),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .stickers),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .stickers),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .voiceMessages),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .voiceMessages),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .voiceMessages),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .voiceMessages)
         ]
         
         var keys: [NSNumber] = rawKeys.map { $0.key as NSNumber }
@@ -386,18 +400,18 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
                         outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call).key]!)),
                 sticker: NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
-                        incoming: 0,
-                        outgoing: 0),
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .stickers).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .stickers).key]!),
                     wifi: NetworkUsageStatsDirectionsEntry(
-                        incoming: 0,
-                        outgoing: 0)),
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .stickers).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .stickers).key]!)),
                 voiceMessage: NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
-                        incoming: 0,
-                        outgoing: 0),
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .voiceMessages).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .voiceMessages).key]!),
                     wifi: NetworkUsageStatsDirectionsEntry(
-                        incoming: 0,
-                        outgoing: 0)),
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .voiceMessages).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .voiceMessages).key]!)),
                 resetWifiTimestamp: Int32(dict[UsageCalculationResetKey.wifi.rawValue]!),
                 resetCellularTimestamp: Int32(dict[UsageCalculationResetKey.cellular.rawValue]!)
             ))

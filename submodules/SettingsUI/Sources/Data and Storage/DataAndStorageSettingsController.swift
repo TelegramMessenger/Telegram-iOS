@@ -785,9 +785,23 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
             return storageUsageExceptionsScreen(context: context, category: category)
         }))
     }, openNetworkUsage: {
-        let _ = (accountNetworkUsageStats(account: context.account, reset: [])
+        let mediaAutoDownloadSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+        |> map { sharedData -> MediaAutoDownloadSettings in
+            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                automaticMediaDownloadSettings = value
+            } else {
+                automaticMediaDownloadSettings = .defaultSettings
+            }
+            return automaticMediaDownloadSettings
+        }
+        
+        let _ = (combineLatest(
+            accountNetworkUsageStats(account: context.account, reset: []),
+            mediaAutoDownloadSettings
+        )
         |> take(1)
-        |> deliverOnMainQueue).start(next: { stats in
+        |> deliverOnMainQueue).start(next: { stats, mediaAutoDownloadSettings in
             var stats = stats
             
             if stats.resetWifiTimestamp == 0 {
@@ -797,7 +811,9 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
                 }
             }
             
-            pushControllerImpl?(DataUsageScreen(context: context, stats: stats))
+            pushControllerImpl?(DataUsageScreen(context: context, stats: stats, mediaAutoDownloadSettings: mediaAutoDownloadSettings, makeAutodownloadSettingsController: { isCellular in
+                return autodownloadMediaConnectionTypeController(context: context, connectionType: isCellular ? .cellular : .wifi)
+            }))
         })
     }, openProxy: {
         pushControllerImpl?(proxySettingsController(context: context))

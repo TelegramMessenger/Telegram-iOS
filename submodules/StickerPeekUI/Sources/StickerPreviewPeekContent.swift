@@ -73,7 +73,9 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     
     public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isLocked {
-            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, proceed: self.openPremiumIntro)
+            let isEmoji = self.item.file.isCustomEmoji
+            
+            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, isEmoji: isEmoji, proceed: self.openPremiumIntro)
         } else {
             return nil
         }
@@ -266,17 +268,17 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
     let proceedButton: SolidRoundedButtonNode
     let cancelButton: HighlightableButtonNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings, proceed: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, isEmoji: Bool, proceed: @escaping () -> Void) {
         self.proceed = proceed
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: isEmoji ? strings.Premium_Stickers_Description : strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
         self.textNode.lineSpacing = 0.1
         
-        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, theme: SolidRoundedButtonTheme(
+        self.proceedButton = SolidRoundedButtonNode(title: isEmoji ? strings.Premium_Emoji_Proceed: strings.Premium_Stickers_Proceed, theme: SolidRoundedButtonTheme(
             backgroundColor: .white,
             backgroundColors: [
             UIColor(rgb: 0x0077ff),

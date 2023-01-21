@@ -157,6 +157,8 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
                             emojiView.center = emojiFrame.center
                             emojiView.bounds = CGRect(origin: CGPoint(), size: emojiFrame.size)
                         }
+                        
+                        emojiView.updateTextColor(item.theme.list.itemPrimaryTextColor)
                     } else {
                         strongSelf.symbolNode.isHidden = false
                         

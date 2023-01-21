@@ -1263,7 +1263,7 @@ final class StorageUsageScreenComponent: Component {
             if let aggregatedData = self.aggregatedData {
                 for (key, value) in aggregatedData.contextStats.categories {
                     totalSize += value.size
-                    if aggregatedData.selectedCategories.contains(Category(key)) {
+                    if aggregatedData.selectedCategories.isEmpty || aggregatedData.selectedCategories.contains(Category(key)) {
                         totalSelectedCategorySize += value.size
                     }
                 }
@@ -1295,7 +1295,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     let categoryFraction: Double
-                    if !aggregatedData.selectedCategories.contains(category) {
+                    if !aggregatedData.selectedCategories.isEmpty && !aggregatedData.selectedCategories.contains(category) {
                         categoryFraction = 0.0
                     } else if categorySize == 0 || totalSelectedCategorySize == 0 {
                         categoryFraction = 0.0
@@ -1770,7 +1770,6 @@ final class StorageUsageScreenComponent: Component {
                 }
                 contentHeight += keepDurationTitleSize.height
                 contentHeight += 8.0
-                
                 
                 var keepContentHeight: CGFloat = 0.0
                 for i in 0 ..< 3 {
@@ -3011,82 +3010,6 @@ final class StorageUsageScreenComponent: Component {
                     })
                 }
             }
-            
-            /*if !aggregatedData.selectedCategories.isEmpty {
-                let peerId: EnginePeer.Id? = component.peer?.id
-                
-                var mappedCategories: [StorageUsageStats.CategoryKey] = []
-                for category in categories {
-                    switch category {
-                    case .photos:
-                        mappedCategories.append(.photos)
-                    case .videos:
-                        mappedCategories.append(.videos)
-                    case .files:
-                        mappedCategories.append(.files)
-                    case .music:
-                        mappedCategories.append(.music)
-                    case .other:
-                        break
-                    case .stickers:
-                        mappedCategories.append(.stickers)
-                    case .avatars:
-                        mappedCategories.append(.avatars)
-                    case .misc:
-                        mappedCategories.append(.misc)
-                    }
-                }
-                
-                self.isClearing = true
-                self.state?.updated(transition: .immediate)
-                
-                let _ = (component.context.engine.resources.clearStorage(peerId: peerId, categories: mappedCategories, includeMessages: [], excludeMessages: [])
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    guard let self, let _ = self.component, let aggregatedData = self.aggregatedData else {
-                        return
-                    }
-                    var totalSize: Int64 = 0
-                    
-                    let contextStats = aggregatedData.contextStats
-                    
-                    for category in categories {
-                        let mappedCategory: StorageUsageStats.CategoryKey
-                        switch category {
-                        case .photos:
-                            mappedCategory = .photos
-                        case .videos:
-                            mappedCategory = .videos
-                        case .files:
-                            mappedCategory = .files
-                        case .music:
-                            mappedCategory = .music
-                        case .other:
-                            continue
-                        case .stickers:
-                            mappedCategory = .stickers
-                        case .avatars:
-                            mappedCategory = .avatars
-                        case .misc:
-                            mappedCategory = .misc
-                        }
-                        
-                        if let value = contextStats.categories[mappedCategory] {
-                            totalSize += value.size
-                        }
-                    }
-                    
-                    self.reloadStats(firstTime: false, completion: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        if totalSize != 0 {
-                            self.reportClearedStorage(size: totalSize)
-                        }
-                    })
-                })
-            } else if !peers.isEmpty || !messages.isEmpty {
-                
-            }*/
         }
         
         private func openKeepMediaCategory(mappedCategory: CacheStorageSettings.PeerStorageCategory, sourceView: StoragePeerTypeItemComponent.View) {
