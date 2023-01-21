@@ -18157,17 +18157,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         var itemList: [String] = []
         
-        var flags: TelegramChatBannedRightsFlags = []
-        if let channel = peer as? TelegramChannel {
-            if let bannedRights = channel.bannedRights {
-                flags = bannedRights.flags
-            }
-        } else if let group = peer as? TelegramGroup {
-            if let bannedRights = group.defaultBannedRights {
-                flags = bannedRights.flags
-            }
-        }
-        
         let order: [TelegramChatBannedRightsFlags] = [
             .banSendText,
             .banSendPhotos,
@@ -18180,31 +18169,39 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         ]
         
         for right in order {
-            if !flags.contains(right) {
-                var title: String?
-                switch right {
-                case .banSendText:
-                    title = "text messages"
-                case .banSendPhotos:
-                    title = "photos"
-                case .banSendVideos:
-                    title = "videos"
-                case .banSendVoice:
-                    title = "voice messages"
-                case .banSendInstantVideos:
-                    title = "video messages"
-                case .banSendFiles:
-                    title = "files"
-                case .banSendMusic:
-                    title = "music"
-                case .banSendStickers:
-                    title = "Stickers & GIFs"
-                default:
-                    break
+            if let channel = peer as? TelegramChannel {
+                if channel.hasBannedPermission(right) != nil {
+                    continue
                 }
-                if let title {
-                    itemList.append(title)
+            } else if let group = peer as? TelegramGroup {
+                if group.hasBannedPermission(right) {
+                    continue
                 }
+            }
+            
+            var title: String?
+            switch right {
+            case .banSendText:
+                title = "text messages"
+            case .banSendPhotos:
+                title = "photos"
+            case .banSendVideos:
+                title = "videos"
+            case .banSendVoice:
+                title = "voice messages"
+            case .banSendInstantVideos:
+                title = "video messages"
+            case .banSendFiles:
+                title = "files"
+            case .banSendMusic:
+                title = "music"
+            case .banSendStickers:
+                title = "Stickers & GIFs"
+            default:
+                break
+            }
+            if let title {
+                itemList.append(title)
             }
         }
         

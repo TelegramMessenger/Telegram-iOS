@@ -128,6 +128,9 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         scope = [.installed]
                 }
                 return context.engine.stickers.searchStickers(query: query.basicEmoji.0, scope: scope)
+                |> map { items -> [FoundStickerItem] in
+                    return items.items
+                }
                 |> castError(ChatContextQueryError.self)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in

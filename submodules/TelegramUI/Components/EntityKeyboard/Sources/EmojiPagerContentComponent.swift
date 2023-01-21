@@ -5005,6 +5005,14 @@ public final class EmojiPagerContentComponent: Component {
                 scrollView.bounds = presentation.bounds
                 scrollView.layer.removeAllAnimations()
             }
+            
+            if self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+                scrollView.isScrollEnabled = false
+                DispatchQueue.main.async {
+                    scrollView.isScrollEnabled = true
+                }
+                self.visibleSearchHeader?.deactivate()
+            }
         }
         
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -5015,10 +5023,6 @@ public final class EmojiPagerContentComponent: Component {
             self.updateVisibleItems(transition: .immediate, attemptSynchronousLoads: false, previousItemPositions: nil, updatedItemPositions: nil)
             
             self.updateScrollingOffset(isReset: false, transition: .immediate)
-            
-            if self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
-                self.visibleSearchHeader?.deactivate()
-            }
         }
         
         public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
@@ -6363,7 +6367,7 @@ public final class EmojiPagerContentComponent: Component {
                             }
                         }
                     } else {
-                        /*if component.inputInteractionHolder.inputInteraction?.externalBackground == nil {
+                        /*if useOpaqueTheme {
                             if visibleSearchHeader.superview != self.scrollView {
                                 self.scrollView.addSubview(visibleSearchHeader)
                                 self.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
@@ -6419,7 +6423,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
                 visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, transition: transition)
-                transition.attachAnimation(view: visibleSearchHeader, completion: { [weak self] completed in
+                /*transition.attachAnimation(view: visibleSearchHeader, id: "search_transition", completion: { [weak self] completed in
                     guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
                         return
                     }
@@ -6428,8 +6432,41 @@ public final class EmojiPagerContentComponent: Component {
                         strongSelf.scrollView.addSubview(visibleSearchHeader)
                         strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
                     }
-                })
-                transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
+                })*/
+                if visibleSearchHeader.frame != searchHeaderFrame {
+                    transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame, completion: { [weak self] completed in
+                        if !useOpaqueTheme {
+                            guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
+                                return
+                            }
+                            
+                            if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
+                                strongSelf.scrollView.addSubview(visibleSearchHeader)
+                                strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
+                            }
+                        }
+                    })
+                    // Temporary workaround for status selection; use a separate search container (see GIF)
+                    if useOpaqueTheme {
+                        if case let .curve(duration, _) = transition.animation, duration != 0.0 {
+                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + duration, execute: { [weak self] in
+                                guard let strongSelf = self, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
+                                    return
+                                }
+                                
+                                if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
+                                    strongSelf.scrollView.addSubview(visibleSearchHeader)
+                                    strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
+                                }
+                            })
+                        } else {
+                            if !self.isSearchActivated && visibleSearchHeader.superview != self.scrollView {
+                                self.scrollView.addSubview(visibleSearchHeader)
+                                self.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
+                            }
+                        }
+                    }
+                }
             } else {
                 if let visibleSearchHeader = self.visibleSearchHeader {
                     self.visibleSearchHeader = nil

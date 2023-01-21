@@ -81,9 +81,9 @@ func _internal_randomGreetingSticker(account: Account) -> Signal<FoundStickerIte
     }
 }
 
-func _internal_searchStickers(account: Account, query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
+func _internal_searchStickers(account: Account, query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> {
     if scope.isEmpty {
-        return .single([])
+        return .single(([], true))
     }
     var query = query
     if query == "\u{2764}" {
@@ -203,9 +203,10 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
         }
         
         return (result, cached, isPremium, searchStickersConfiguration)
-    } |> mapToSignal { localItems, cached, isPremium, searchStickersConfiguration -> Signal<[FoundStickerItem], NoError> in
+    }
+    |> mapToSignal { localItems, cached, isPremium, searchStickersConfiguration -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> in
         if !scope.contains(.remote) {
-            return .single(localItems)
+            return .single((localItems, true))
         }
         
         var tempResult: [FoundStickerItem] = []
@@ -281,8 +282,8 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
         |> `catch` { _ -> Signal<Api.messages.Stickers, NoError> in
             return .single(.stickersNotModified)
         }
-        |> mapToSignal { result -> Signal<[FoundStickerItem], NoError> in
-            return account.postbox.transaction { transaction -> [FoundStickerItem] in
+        |> mapToSignal { result -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> in
+            return account.postbox.transaction { transaction -> (items: [FoundStickerItem], isFinalResult: Bool) in
                 switch result {
                     case let .stickers(hash, stickers):
                         var result: [FoundStickerItem] = []
@@ -358,14 +359,14 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                             transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: entry)
                         }
                     
-                        return result
+                        return (result, true)
                     case .stickersNotModified:
                         break
                 }
-                return tempResult
+                return (tempResult, true)
             }
         }
-        return .single(tempResult)
+        return .single((tempResult, false))
         |> then(remote)
     }
 }

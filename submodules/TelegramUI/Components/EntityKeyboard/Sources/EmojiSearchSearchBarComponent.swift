@@ -288,6 +288,7 @@ final class EmojiSearchSearchBarComponent: Component {
                                 component.searchTermUpdated(group.identifiers.joined(separator: ""))
                             } else {
                                 component.searchTermUpdated(nil)
+                                self.scrollView.setContentOffset(CGPoint(), animated: true)
                             }
                             
                             break
@@ -301,6 +302,7 @@ final class EmojiSearchSearchBarComponent: Component {
             if self.selectedItem != nil {
                 self.selectedItem = nil
                 self.state?.updated(transition: .immediate)
+                self.scrollView.setContentOffset(CGPoint(), animated: true)
                 if dispatchEvent {
                     self.component?.searchTermUpdated(nil)
                 }

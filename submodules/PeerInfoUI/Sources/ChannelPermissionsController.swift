@@ -523,11 +523,11 @@ let publicGroupRestrictedPermissions: TelegramChatBannedRightsFlags = [
 ]
 
 func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
-    if right.contains(.banSendMedia) || banSendMediaSubList().contains(where: { $0.0 == right }) {
+    if right.contains(.banEmbedLinks) {
+        return [.banSendText]
+    } else if right.contains(.banSendMedia) || banSendMediaSubList().contains(where: { $0.0 == right }) {
         return []
     } else if right.contains(.banSendGifs) {
-        return []
-    } else if right.contains(.banEmbedLinks) {
         return []
     } else if right.contains(.banSendPolls) {
         return []
@@ -758,6 +758,11 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                         } else {
                             effectiveRightsFlags.insert(rights)
                             for (right, _) in allGroupPermissionList(peer: .channel(channel), expandMedia: false) {
+                                if groupPermissionDependencies(right).contains(rights) {
+                                    effectiveRightsFlags.insert(right)
+                                }
+                            }
+                            for (right, _) in banSendMediaSubList() {
                                 if groupPermissionDependencies(right).contains(rights) {
                                     effectiveRightsFlags.insert(right)
                                 }
