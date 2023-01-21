@@ -4859,7 +4859,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 self?.openStats()
                             })))
                         }
-                        
                         if cachedData.flags.contains(.translationHidden) {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
@@ -7247,6 +7246,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 confirmationAction = nil
             }
             
+            let keyboardInputData = Promise<AvatarKeyboardInputData>()
+            keyboardInputData.set(AvatarEditorScreen.inputData(context: strongSelf.context, isGroup: peer.id.namespace != Namespaces.Peer.CloudUser))
+            
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: [.custom, .suggest].contains(mode))!
             mixin.stickersContext = LegacyPaintStickersContext(context: strongSelf.context)
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
@@ -7265,8 +7267,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     completion(nil)
                 }
             }
-            mixin.requestAvatarEditor = { [weak self] completion in
-                guard let strongSelf = self, let completion else {
+            mixin.requestAvatarEditor = { [weak self] imageCompletion, videoCompletion in
+                guard let strongSelf = self, let imageCompletion, let videoCompletion else {
                     return
                 }
                 let peerType: AvatarEditorScreen.PeerType
@@ -7274,15 +7276,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     peerType = .group
                 } else if case let .channel(channel) = peer {
                     if case .group = channel.info {
-                        peerType = .group
+                        peerType = channel.flags.contains(.isForum) ? .forum : .group
                     } else {
                         peerType = .channel
                     }
                 } else {
                     peerType = .user
                 }
-                let controller = AvatarEditorScreen(context: strongSelf.context, peerType: peerType, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
-                controller.completion = completion
+                let controller = AvatarEditorScreen(context: strongSelf.context, inputData: keyboardInputData.get(), peerType: peerType, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
+                controller.imageCompletion = imageCompletion
+                controller.videoCompletion = videoCompletion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
             }
 

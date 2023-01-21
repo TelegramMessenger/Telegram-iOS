@@ -484,6 +484,14 @@ private struct PremiumProduct: Equatable {
     var pricePerMonth: String {
         return self.storeProduct.pricePerMonth(Int(self.months))
     }
+    
+    var isCurrent: Bool {
+        return self.option.isCurrent
+    }
+    
+    var transactionId: String? {
+        return self.option.transactionId
+    }
 }
 
 final class PremiumOptionComponent: CombinedComponent {
@@ -815,10 +823,12 @@ private final class CheckComponent: Component {
 final class SectionGroupComponent: Component {
     public final class Item: Equatable {
         public let content: AnyComponentWithIdentity<Empty>
+        public let isEnabled: Bool
         public let action: () -> Void
         
-        public init(_ content: AnyComponentWithIdentity<Empty>, action: @escaping () -> Void) {
+        public init(_ content: AnyComponentWithIdentity<Empty>, isEnabled: Bool = true, action: @escaping () -> Void) {
             self.content = content
+            self.isEnabled = isEnabled
             self.action = action
         }
         
@@ -826,7 +836,9 @@ final class SectionGroupComponent: Component {
             if lhs.content != rhs.content {
                 return false
             }
-            
+            if lhs.isEnabled != rhs.isEnabled {
+                return false
+            }
             return true
         }
     }
@@ -931,6 +943,8 @@ final class SectionGroupComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: size.width - sideInset, height: .greatestFiniteMagnitude)
                 )
+                buttonView.isEnabled = item.isEnabled
+                itemView.alpha = item.isEnabled ? 1.0 : 0.3
                 
                 let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height), size: itemSize)
                 buttonView.frame = CGRect(origin: itemFrame.origin, size: CGSize(width: availableSize.width, height: itemSize.height + UIScreenPixel))
@@ -1159,22 +1173,26 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     let context: AccountContext
     let source: PremiumSource
     let isPremium: Bool?
+    let justBought: Bool
     let otherPeerName: String?
     let products: [PremiumProduct]?
     let selectedProductId: String?
+    let validTransactionIds: [String]
     let promoConfiguration: PremiumPromoConfiguration?
     let present: (ViewController) -> Void
     let selectProduct: (String) -> Void
     let buy: () -> Void
     let updateIsFocused: (Bool) -> Void
     
-    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, otherPeerName: String?, products: [PremiumProduct]?, selectedProductId: String?, promoConfiguration: PremiumPromoConfiguration?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
+    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, justBought: Bool, otherPeerName: String?, products: [PremiumProduct]?, selectedProductId: String?, validTransactionIds: [String], promoConfiguration: PremiumPromoConfiguration?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
         self.context = context
         self.source = source
         self.isPremium = isPremium
+        self.justBought = justBought
         self.otherPeerName = otherPeerName
         self.products = products
         self.selectedProductId = selectedProductId
+        self.validTransactionIds = validTransactionIds
         self.promoConfiguration = promoConfiguration
         self.present = present
         self.selectProduct = selectProduct
@@ -1192,6 +1210,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         if lhs.isPremium != rhs.isPremium {
             return false
         }
+        if lhs.justBought != rhs.justBought {
+            return false
+        }
         if lhs.otherPeerName != rhs.otherPeerName {
             return false
         }
@@ -1199,6 +1220,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             return false
         }
         if lhs.selectedProductId != rhs.selectedProductId {
+            return false
+        }
+        if lhs.validTransactionIds != rhs.validTransactionIds {
             return false
         }
         if lhs.promoConfiguration != rhs.promoConfiguration {
@@ -1213,6 +1237,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     
         var products: [PremiumProduct]?
         var selectedProductId: String?
+        var validTransactionIds: [String] = []
         
         var isPremium: Bool?
         
@@ -1228,6 +1253,18 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         var isAnnual: Bool {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.id.hasSuffix(".annual") ?? false
+        }
+        
+        var canUpgrade: Bool {
+            if let products = self.products, let current = products.first(where: { $0.isCurrent }), let transactionId = current.transactionId {
+                if self.validTransactionIds.contains(transactionId) {
+                    return products.first(where: { $0.months > current.months }) != nil
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
         }
         
         init(context: AccountContext, source: PremiumSource) {
@@ -1317,6 +1354,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let state = context.state
             state.products = context.component.products
             state.selectedProductId = context.component.selectedProductId
+            state.validTransactionIds = context.component.validTransactionIds
             state.isPremium = context.component.isPremium
             
             let theme = environment.theme
@@ -1378,7 +1416,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     textString = strings.Premium_PersonalDescription
                 }
             } else if context.component.isPremium == true {
-                textString = strings.Premium_SubscribedDescription
+                if !context.component.justBought, let products = state.products, let current = products.first(where: { $0.isCurrent }), current.months == 1 {
+                    textString = strings.Premium_UpgradeDescription
+                } else {
+                    textString = strings.Premium_SubscribedDescription
+                }
             } else {
                 textString = strings.Premium_Description
             }
@@ -1398,11 +1440,22 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     lineSpacing: 0.2
                 ),
                 environment: {},
-                availableSize: CGSize(width: availableWidth - sideInsets, height: 240.0),
-                transition: context.transition
+                availableSize: CGSize(width: availableWidth - sideInsets - 8.0, height: 240.0),
+                transition: .immediate
             )
             context.add(text
                 .position(CGPoint(x: size.width / 2.0, y: size.height + text.size.height / 2.0))
+//                .update(Transition.Update { _, view, _ in
+//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
+//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+//                        view.superview?.addSubview(snapshot)
+//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
+//                            snapshot?.removeFromSuperview()
+//                        })
+//                        snapshot.frame = view.frame
+//                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+//                    }
+//                })
             )
             size.height += text.size.height
             size.height += 21.0
@@ -1430,9 +1483,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let updateIsFocused = context.component.updateIsFocused
             
             let layoutOptions = {
-                if state.isPremium == true {
-                    
-                } else if let products = state.products, products.count > 1 {
+                if let products = state.products, products.count > 1, state.isPremium == false || (!context.component.justBought && state.canUpgrade) {
                     var optionsItems: [SectionGroupComponent.Item] = []
                     let gradientColors: [UIColor] = [
                         UIColor(rgb: 0x8e77ff),
@@ -1447,11 +1498,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
                     }
                     
+                    let currentProductMonths = state.products?.first(where: { $0.isCurrent })?.months ?? 0
+                    
                     var i = 0
                     for product in products {
                         let giftTitle: String
-                        let months = product.months
-                        
                         if product.id.hasSuffix(".monthly") {
                             giftTitle = strings.Premium_Monthly
                         } else if product.id.hasSuffix(".semiannual") {
@@ -1459,8 +1510,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         } else {
                             giftTitle = strings.Premium_Annual
                         }
-                                            
-                        let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(months) / Float(shortestOptionPrice.0)) * 100.0)
+                        
+                        let fraction = Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(shortestOptionPrice.0)
+                        let discountValue = Int(round((1.0 - fraction) * 20.0) * 5.0)
                         let discount: String
                         if discountValue > 0 {
                             discount = "-\(discountValue)%"
@@ -1468,21 +1520,24 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             discount = ""
                         }
                         
-                        let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(months))
+                        let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
                         
                         var subtitle = ""
                         var pricePerMonth = product.price
-                        if months > 1 {
-                            pricePerMonth = product.storeProduct.pricePerMonth(Int(months))
+                        if product.months > 1 {
+                            pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
                             
                             if discountValue > 0 {
                                 subtitle = "**\(defaultPrice)** \(product.price)"
-                                if months == 12 {
+                                if product.months == 12 {
                                     subtitle = environment.strings.Premium_PricePerYear(subtitle).string
                                 }
                             } else {
                                 subtitle = product.price
                             }
+                        }
+                        if product.isCurrent {
+                            subtitle = environment.strings.Premium_CurrentPlan
                         }
                         pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
                         
@@ -1496,7 +1551,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                             subtitle: subtitle,
                                             labelPrice: pricePerMonth,
                                             discount: discount,
-                                            selected: product.id == state.selectedProductId,
+                                            selected: !product.isCurrent && product.id == state.selectedProductId,
                                             primaryTextColor: textColor,
                                             secondaryTextColor: subtitleColor,
                                             accentColor: gradientColors[i],
@@ -1505,6 +1560,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         )
                                     )
                                 ),
+                                isEnabled: product.months > currentProductMonths,
                                 action: {
                                     selectProduct(product.id)
                                 }
@@ -1738,6 +1794,38 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     )
                 }
                 
+                let controller = environment.controller
+                let termsTapActionImpl: ([NSAttributedString.Key: Any]) -> Void = { attributes in
+                    if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
+                        let controller = controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
+                        if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
+                            controller.context.sharedContext.applicationBindings.openSubscriptions()
+                        } else if url.hasPrefix("https://") || url.hasPrefix("tg://") {
+                            controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: !url.hasPrefix("tg://"), presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
+                        } else {
+                            let context = controller.context
+                            let signal: Signal<ResolvedUrl, NoError>?
+                            switch url {
+                                case "terms":
+                                    signal = cachedTermsPage(context: context)
+                                case "privacy":
+                                    signal = cachedPrivacyPage(context: context)
+                                default:
+                                    signal = nil
+                            }
+                            if let signal = signal {
+                                let _ = (signal
+                                |> deliverOnMainQueue).start(next: { resolvedUrl in
+                                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                                    }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
+                                        controller?.push(c)
+                                    }, dismissInput: {}, contentContext: nil)
+                                })
+                            }
+                        }
+                    }
+                }
+                
                 let termsText = termsText.update(
                     component: MultilineTextComponent(
                         text: termsString,
@@ -1752,35 +1840,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 return nil
                             }
                         },
-                        tapAction: { [weak environment] attributes, _ in
-                            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
-                                let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
-                                if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
-                                    controller.context.sharedContext.applicationBindings.openSubscriptions()
-                                } else if url.hasPrefix("https://") || url.hasPrefix("tg://") {
-                                    controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: !url.hasPrefix("tg://"), presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
-                                } else {
-                                    let context = controller.context
-                                    let signal: Signal<ResolvedUrl, NoError>?
-                                    switch url {
-                                        case "terms":
-                                            signal = cachedTermsPage(context: context)
-                                        case "privacy":
-                                            signal = cachedPrivacyPage(context: context)
-                                        default:
-                                            signal = nil
-                                    }
-                                    if let signal = signal {
-                                        let _ = (signal
-                                        |> deliverOnMainQueue).start(next: { resolvedUrl in
-                                            context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
-                                            }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
-                                                controller?.push(c)
-                                            }, dismissInput: {}, contentContext: nil)
-                                        })
-                                    }
-                                }
-                            }
+                        tapAction: { attributes, _ in
+                            termsTapActionImpl(attributes)
                         }
                     ),
                     environment: {},
@@ -1903,9 +1964,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         private(set) var products: [PremiumProduct]?
         private(set) var selectedProductId: String?
+        fileprivate var validTransactionIds: [String] = []
         
         var isPremium: Bool?
         var otherPeerName: String?
+        var justBought = false
         
         let animationCache: AnimationCache
         let animationRenderer: MultiAnimationRenderer
@@ -1928,6 +1991,18 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.id.hasSuffix(".annual") ?? false
         }
         
+        var canUpgrade: Bool {
+            if let products = self.products, let current = products.first(where: { $0.isCurrent }), let transactionId = current.transactionId {
+                if self.validTransactionIds.contains(transactionId) {
+                    return products.first(where: { $0.months > current.months }) != nil
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+        }
+        
         init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
             self.context = context
             self.updateInProgress = updateInProgress
@@ -1938,6 +2013,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.animationRenderer = context.animationRenderer
             
             super.init()
+            
+            self.validTransactionIds = context.inAppPurchaseManager?.getValidTransactionIds() ?? []
             
             let availableProducts: Signal<[InAppPurchaseManager.Product], NoError>
             if let inAppPurchaseManager = context.inAppPurchaseManager {
@@ -1995,7 +2072,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     strongSelf.otherPeerName = otherPeerName
                     
                     if !hadProducts {
-                        strongSelf.selectedProductId = strongSelf.products?.last?.id
+                        if let _ = products.first(where: { $0.isCurrent }) {
+                            strongSelf.selectedProductId = strongSelf.products?.first?.id
+                        } else {
+                            strongSelf.selectedProductId = strongSelf.products?.last?.id
+                        }
                         
                         for (_, video) in promoConfiguration.videos {
                             strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
@@ -2037,18 +2118,19 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                   let premiumProduct = self.products?.first(where: { $0.id == self.selectedProductId }), !self.inProgress else {
                 return
             }
+            let isUpgrade = self.products?.first(where: { $0.isCurrent }) != nil
                         
             addAppLogEvent(postbox: self.context.account.postbox, type: "premium.promo_screen_accept")
 
             self.inProgress = true
             self.updateInProgress(true)
             self.updated(transition: .immediate)
-
-            let _ = (self.context.engine.payments.canPurchasePremium(purpose: .subscription)
+            
+            let _ = (self.context.engine.payments.canPurchasePremium(purpose: isUpgrade ? .upgrade : .subscription)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
-                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct.storeProduct)
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct.storeProduct, isUpgrade: isUpgrade)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let strongSelf = self, case .purchased = status {
                                 strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
@@ -2085,6 +2167,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                         strongSelf.updateInProgress(false)
                                         
                                         strongSelf.isPremium = true
+                                        strongSelf.justBought = true
+                                                                                
                                         strongSelf.updated(transition: .easeInOut(duration: 0.25))
                                         strongSelf.completion()
                                     }
@@ -2226,7 +2310,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             } else if case .gift = context.component.source {
                 titleString = environment.strings.Premium_GiftedTitle
             } else if state.isPremium == true {
-                titleString = environment.strings.Premium_SubscribedTitle
+                if !state.justBought && state.canUpgrade {
+                    titleString = environment.strings.Premium_Title
+                } else {
+                    titleString = environment.strings.Premium_SubscribedTitle
+                }
             } else {
                 titleString = environment.strings.Premium_Title
             }
@@ -2357,7 +2445,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             let bottomPanelPadding: CGFloat = 12.0
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
-            let bottomPanelHeight: CGFloat = state.isPremium == true ? bottomInset : bottomPanelPadding + 50.0 + bottomInset
+            let bottomPanelHeight: CGFloat = state.isPremium == true && !state.canUpgrade ? bottomInset : bottomPanelPadding + 50.0 + bottomInset
                        
             let scrollContent = scrollContent.update(
                 component: ScrollComponent<EnvironmentType>(
@@ -2365,9 +2453,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         context: context.component.context,
                         source: context.component.source,
                         isPremium: state.isPremium,
+                        justBought: state.justBought,
                         otherPeerName: state.otherPeerName,
                         products: state.products,
                         selectedProductId: state.selectedProductId,
+                        validTransactionIds: state.validTransactionIds,
                         promoConfiguration: state.promoConfiguration,
                         present: context.component.present,
                         selectProduct: { [weak state] productId in
@@ -2454,6 +2544,17 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
                 .opacity(titleAlpha)
+//                .update(Transition.Update { _, view, _ in
+//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
+//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+//                        view.superview?.addSubview(snapshot)
+//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
+//                            snapshot?.removeFromSuperview()
+//                        })
+//                        snapshot.frame = view.frame
+//                        transition.animateAlpha(view: view, from: 0.0, to: titleAlpha)
+//                    }
+//                })
             )
             
             context.add(secondaryTitle
@@ -2469,14 +2570,20 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 }
             }
                         
-            if state.isPremium == true || isGiftView {
+            if (state.isPremium == true && (!state.canUpgrade || state.justBought)) || isGiftView {
                 
             } else {
+                let buttonTitle: String
+                if state.isPremium == true && state.canUpgrade {
+                    buttonTitle = state.isAnnual ? environment.strings.Premium_UpgradeForAnnual(state.price ?? "—").string : environment.strings.Premium_UpgradeFor(state.price ?? "—").string
+                } else {
+                    buttonTitle = state.isAnnual ? environment.strings.Premium_SubscribeForAnnual(state.price ?? "—").string : environment.strings.Premium_SubscribeFor(state.price ?? "—").string
+                }
                 
                 let sideInset: CGFloat = 16.0
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
-                        title: state.isAnnual ? environment.strings.Premium_SubscribeForAnnual(state.price ?? "—").string : environment.strings.Premium_SubscribeFor(state.price ?? "—").string,
+                        title: buttonTitle,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: UIColor(rgb: 0x8878ff),
                             backgroundColors: [

@@ -272,7 +272,7 @@ public extension Api {
     enum InputChatPhoto: TypeConstructorDescription {
         case inputChatPhoto(id: Api.InputPhoto)
         case inputChatPhotoEmpty
-        case inputChatUploadedPhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?)
+        case inputChatUploadedPhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?, videoEmojiMarkup: Api.VideoSize?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -288,14 +288,15 @@ public extension Api {
                     }
                     
                     break
-                case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs):
+                case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs, let videoEmojiMarkup):
                     if boxed {
-                        buffer.appendInt32(-968723890)
+                        buffer.appendInt32(-1110593856)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {videoEmojiMarkup!.serialize(buffer, true)}
                     break
     }
     }
@@ -306,8 +307,8 @@ public extension Api {
                 return ("inputChatPhoto", [("id", id as Any)])
                 case .inputChatPhotoEmpty:
                 return ("inputChatPhotoEmpty", [])
-                case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs):
-                return ("inputChatUploadedPhoto", [("flags", flags as Any), ("file", file as Any), ("video", video as Any), ("videoStartTs", videoStartTs as Any)])
+                case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs, let videoEmojiMarkup):
+                return ("inputChatUploadedPhoto", [("flags", flags as Any), ("file", file as Any), ("video", video as Any), ("videoStartTs", videoStartTs as Any), ("videoEmojiMarkup", videoEmojiMarkup as Any)])
     }
     }
     
@@ -340,12 +341,17 @@ public extension Api {
             } }
             var _4: Double?
             if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readDouble() }
+            var _5: Api.VideoSize?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.VideoSize
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputChatPhoto.inputChatUploadedPhoto(flags: _1!, file: _2, video: _3, videoStartTs: _4)
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputChatPhoto.inputChatUploadedPhoto(flags: _1!, file: _2, video: _3, videoStartTs: _4, videoEmojiMarkup: _5)
             }
             else {
                 return nil

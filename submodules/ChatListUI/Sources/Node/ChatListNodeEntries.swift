@@ -49,6 +49,8 @@ public enum ChatListNodeEntryPromoInfo: Equatable {
 enum ChatListNotice: Equatable {
     case clearStorage(sizeFraction: Double)
     case setupPassword
+    case premiumUpgrade(discount: Int32)
+    case premiumAnnualDiscount(discount: Int32)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
@@ -404,7 +406,7 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, storageInfo: Double?, suggestPasswordSetup: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -666,10 +668,9 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             if displayArchiveIntro {
                 result.append(.ArchiveIntro(presentationData: state.presentationData))
             }
-            if suggestPasswordSetup {
-                result.append(.Notice(presentationData: state.presentationData, notice: .setupPassword))
-            } else if let storageInfo {
-                result.append(.Notice(presentationData: state.presentationData, notice: .clearStorage(sizeFraction: storageInfo)))
+            
+            if let notice {
+                result.append(.Notice(presentationData: state.presentationData, notice: notice))
             }
             
             result.append(.HeaderEntry)

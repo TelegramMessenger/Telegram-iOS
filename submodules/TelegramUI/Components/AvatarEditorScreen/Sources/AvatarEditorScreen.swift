@@ -21,6 +21,8 @@ import GradientBackground
 import LegacyComponents
 import DrawingUI
 import SolidRoundedButtonComponent
+import AnimationCache
+import EmojiTextAttachmentView
 
 enum AvatarBackground: Equatable {
     case gradient([UInt32])
@@ -56,7 +58,7 @@ private let defaultBackgrounds: [AvatarBackground] = [
     .gradient([0x82b1ff, 0x665fff]),
 ]
 
-private struct KeyboardInputData: Equatable {
+public struct AvatarKeyboardInputData: Equatable {
     var emoji: EmojiPagerContentComponent
     var stickers: EmojiPagerContentComponent?
     
@@ -110,7 +112,8 @@ final class AvatarEditorScreenComponent: Component {
 
     final class State: ComponentState {
         let context: AccountContext
-                
+        let ready: Promise<Bool>
+        
         var selectedBackground: AvatarBackground
         var selectedFile: TelegramMediaFile?
         
@@ -124,8 +127,9 @@ final class AvatarEditorScreenComponent: Component {
         
         var isSearchActive: Bool = false
         
-        init(context: AccountContext, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
+        init(context: AccountContext, ready: Promise<Bool>, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
             self.context = context
+            self.ready = ready
          
             self.selectedBackground = defaultBackgrounds.first!
             self.previousColor = self.selectedBackground
@@ -153,6 +157,7 @@ final class AvatarEditorScreenComponent: Component {
     func makeState() -> State {
         return State(
             context: self.context,
+            ready: self.ready,
             initialFileId: self.initialFileId,
             initialBackgroundColors: self.initialBackgroundColors
         )
@@ -187,7 +192,7 @@ final class AvatarEditorScreenComponent: Component {
         private var controller: (() -> AvatarEditorScreen?)?
         
         private var dataDisposable: Disposable?
-        private var data: KeyboardInputData?
+        private var data: AvatarKeyboardInputData?
 
         private let emojiSearchDisposable = MetaDisposable()
         private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
@@ -232,7 +237,7 @@ final class AvatarEditorScreenComponent: Component {
             self.emojiSearchDisposable.dispose()
         }
         
-        private func updateData(_ data: KeyboardInputData) {
+        private func updateData(_ data: AvatarKeyboardInputData) {
             let wasEmpty = self.data == nil
             self.data = data
             
@@ -240,6 +245,7 @@ final class AvatarEditorScreenComponent: Component {
                 self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
             }
             self.state?.updated(transition: .immediate)
+            self.state?.ready.set(.single(true))
             
             let updateSearchQuery: (String, String) -> Void = { [weak self] rawQuery, languageCode in
                 guard let strongSelf = self, let context = strongSelf.state?.context else {
@@ -424,7 +430,7 @@ final class AvatarEditorScreenComponent: Component {
                         return
                     }
                     let context = controller.context
-                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { views in
@@ -664,7 +670,7 @@ final class AvatarEditorScreenComponent: Component {
         func update(component: AvatarEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
-            
+                        
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let strings = environment.strings
             
@@ -738,45 +744,12 @@ final class AvatarEditorScreenComponent: Component {
             self.keyboardContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
             self.panelSeparatorView.backgroundColor = environment.theme.list.itemPlainSeparatorColor
                         
-            if self.dataDisposable == nil {
+            if self.dataDisposable == nil, let controller = controller() as? AvatarEditorScreen {
                 let context = component.context
-                let emojiItems = EmojiPagerContentComponent.emojiInputData(
-                    context: context,
-                    animationCache: context.animationCache,
-                    animationRenderer: context.animationRenderer,
-                    isStandalone: false,
-                    isStatusSelection: false,
-                    isReactionSelection: false,
-                    isEmojiSelection: false,
-                    isProfilePhotoEmojiSelection: true,
-                    topReactionItems: [],
-                    areUnicodeEmojiEnabled: false,
-                    areCustomEmojiEnabled: true,
-                    chatPeerId: context.account.peerId,
-                    hasSearch: true,
-                    forceHasPremium: true
-                )
-                
-                let stickerItems = EmojiPagerContentComponent.stickerInputData(
-                    context: context,
-                    animationCache: context.animationCache,
-                    animationRenderer: context.animationRenderer,
-                    stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
-                    stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
-                    chatPeerId: context.account.peerId,
-                    hasSearch: true,
-                    hasTrending: false,
-                    forceHasPremium: true,
-                    searchIsPlaceholderOnly: false
-                )
-                
                 let signal = combineLatest(queue: .mainQueue(),
-                    emojiItems,
-                    stickerItems,
+                    controller.inputData |> delay(0.01, queue: .mainQueue()),
                     self.emojiSearchResult.get()
-                ) |> map { emoji, stickers, searchResult -> (KeyboardInputData, (groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?) in
-                    return (KeyboardInputData(emoji: emoji, stickers: stickers), searchResult)
-                }
+                )
                 self.dataDisposable = (signal
                 |> deliverOnMainQueue
                 ).start(next: { [weak self, weak state] data, searchResult in
@@ -819,7 +792,7 @@ final class AvatarEditorScreenComponent: Component {
                         tapped: { [weak state] in
                             if let state, !state.editingColor {
                                 state.expanded = !state.expanded
-                                state.updated(transition: .easeInOut(duration: 0.3))
+                                state.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                             }
                         }
                     )
@@ -833,7 +806,7 @@ final class AvatarEditorScreenComponent: Component {
                 }
                 
                 let previewScale = effectiveIsExpanded ? 1.0 : collapsedAvatarSize.width / avatarPreviewSize.width
-                let cornerRadius = effectiveIsExpanded ? 0.0 : availableSize.width / 2.0
+                let cornerRadius = effectiveIsExpanded ? 0.0 : availableSize.width / (component.peerType == .forum ? 4.0 : 2.0)
                 let position = effectiveIsExpanded ? avatarPreviewSize.height / 2.0 : environment.navigationHeight + 10.0
                                 
                 transition.setBounds(view: previewView, bounds: CGRect(origin: .zero, size: avatarPreviewSize))
@@ -1095,6 +1068,9 @@ final class AvatarEditorScreenComponent: Component {
                         hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
                             if let strongSelf = self {
                                 strongSelf.state?.isSearchActive = hideTopPanel
+                                if hideTopPanel {
+                                    strongSelf.state?.expanded = false
+                                }
                                 strongSelf.state?.updated(transition: transition)
                             }
                         },
@@ -1147,7 +1123,7 @@ final class AvatarEditorScreenComponent: Component {
             switch component.peerType {
             case .user:
                 buttonText = strings.AvatarEditor_SetProfilePhoto
-            case .group:
+            case .group, .forum:
                 buttonText = strings.AvatarEditor_SetGroupPhoto
             case .channel:
                 buttonText = strings.AvatarEditor_SetChannelPhoto
@@ -1180,66 +1156,106 @@ final class AvatarEditorScreenComponent: Component {
             return availableSize
         }
         
+        private let queue = Queue()
         func complete() {
-            guard let state = self.state, let itemFile = state.selectedFile, let previewView = self.previewView.view else {
+            guard let state = self.state, let file = state.selectedFile, let controller = self.controller?() else {
                 return
             }
-            let size = CGSize(width: 1920.0, height: 1920.0)
-            let image = state.selectedBackground.generateImage(size: size)
-            let tempPath = NSTemporaryDirectory() + "/\(UInt64.random(in: 0 ... UInt64.max)).jpg"
-            let tempUrl = NSURL(fileURLWithPath: tempPath) as URL
-            try? image.jpegData(compressionQuality: 1.0)?.write(to: tempUrl)
-            
-            let entity = DrawingStickerEntity(content: .file(itemFile))
-            entity.referenceDrawingSize = size
-            entity.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-            entity.scale = 3.3
-            
-            var documentId: Int64 = 0
-            if case let .file(file) = entity.content, file.isCustomEmoji {
-                documentId = file.fileId.id
-            }
-            
-            let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
-            
-            let entitiesData = DrawingEntitiesView.encodeEntities([entity])
-            
-            let paintingData = TGPaintingData(
-                drawing: nil,
-                entitiesData: entitiesData,
-                image: nil,
-                stillImage: nil,
-                hasAnimation: entity.isAnimated,
-                stickers: []
-            )
-            
-            let adjustments = PGPhotoEditorValues(
-                originalSize: size,
-                cropRect: CGRect(origin: .zero, size: size),
-                cropRotation: 0.0,
-                cropOrientation: .up,
-                cropLockedAspectRatio: 1.0,
-                cropMirrored: false,
-                toolValues: [:],
-                paintingData: paintingData,
-                sendAsGif: true
-            )
-            let preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetProfileHigh
-            
-            let combinedImage = generateImage(previewView.bounds.size, contextGenerator: { size, context in
-                let bounds = CGRect(origin: .zero, size: size)
-                if let cgImage = image.cgImage {
-                    context.draw(cgImage, in: bounds)
+            let context = controller.context
+            let _ = context.animationCache.getFirstFrame(queue: self.queue, sourceId: file.resource.id.stringRepresentation, size: CGSize(width: 640.0, height: 640.0), fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: nil), completion: { result in
+                guard let item = result.item else {
+                    return
                 }
-                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-                context.scaleBy(x: 1.0, y: -1.0)
-                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                var image: UIImage?
+                if let frame = item.advance(advance: .frames(1), requestedFormat: .rgba) {
+                    switch frame.frame.format {
+                    case let .rgba(data, width, height, bytesPerRow):
+                        guard let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow) else {
+                            return
+                        }
+                        
+                        data.withUnsafeBytes { bytes -> Void in
+                            memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
+                        }
+                        
+                        image = context.generateImage()
+                    default:
+                        return
+                    }
+                }
                 
-                previewView.layer.render(in: context)
-            }, opaque: false)!
-            
-            self.controller?()?.completion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, documentId: documentId, colors: colors), { [weak self] in
-                self?.controller?()?.dismiss()
+                Queue.mainQueue().async {
+                    guard let image else {
+                        return
+                    }
+                    
+                    let size = CGSize(width: 800.0, height: 800.0)
+                    let backgroundImage = state.selectedBackground.generateImage(size: size)
+                    let tempPath = NSTemporaryDirectory() + "/\(UInt64.random(in: 0 ... UInt64.max)).jpg"
+                    let tempUrl = NSURL(fileURLWithPath: tempPath) as URL
+                    try? backgroundImage.jpegData(compressionQuality: 0.8)?.write(to: tempUrl)
+                    
+                    let drawingSize = CGSize(width: 1920.0, height: 1920.0)
+                    let entity = DrawingStickerEntity(content: .file(file))
+                    entity.referenceDrawingSize = drawingSize
+                    entity.position = CGPoint(x: drawingSize.width / 2.0, y: drawingSize.height / 2.0)
+                    entity.scale = 3.3
+                    
+                    var documentId: Int64 = 0
+                    if case let .file(file) = entity.content, file.isCustomEmoji {
+                        documentId = file.fileId.id
+                    }
+                    
+                    let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
+                    
+                    let entitiesData = DrawingEntitiesView.encodeEntities([entity])
+                    
+                    let paintingData = TGPaintingData(
+                        drawing: nil,
+                        entitiesData: entitiesData,
+                        image: nil,
+                        stillImage: nil,
+                        hasAnimation: entity.isAnimated,
+                        stickers: []
+                    )
+                    
+                    let adjustments = PGPhotoEditorValues(
+                        originalSize: size,
+                        cropRect: CGRect(origin: .zero, size: size),
+                        cropRotation: 0.0,
+                        cropOrientation: .up,
+                        cropLockedAspectRatio: 1.0,
+                        cropMirrored: false,
+                        toolValues: [:],
+                        paintingData: paintingData,
+                        sendAsGif: true
+                    )
+                    let preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetProfileHigh
+                    
+                    let combinedImage = generateImage(size, contextGenerator: { size, context in
+                        let bounds = CGRect(origin: .zero, size: size)
+                        if let cgImage = backgroundImage.cgImage {
+                            context.draw(cgImage, in: bounds)
+                        }
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 0.67, y: 0.67)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                        
+                        if let cgImage = image.cgImage {
+                            context.draw(cgImage, in: bounds)
+                        }
+                    }, opaque: false)!
+                    
+                    if entity.isAnimated {
+                        controller.videoCompletion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, documentId: documentId, colors: colors), { [weak controller] in
+                            controller?.dismiss()
+                        })
+                    } else {
+                        controller.imageCompletion(combinedImage, { [weak controller] in
+                            controller?.dismiss()
+                        })
+                    }
+                }
             })
         }
     }
@@ -1259,18 +1275,65 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
         case user
         case group
         case channel
+        case forum
     }
     fileprivate let context: AccountContext
+    fileprivate let inputData: Signal<AvatarKeyboardInputData, NoError>
     
     private let readyValue = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self.readyValue
     }
     
-    public var completion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
+    public var imageCompletion: (UIImage, @escaping () -> Void) -> Void = { _, _ in }
+    public var videoCompletion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
         
-    public init(context: AccountContext, peerType: PeerType, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
+    public static func inputData(context: AccountContext, isGroup: Bool) -> Signal<AvatarKeyboardInputData, NoError> {
+        let emojiItems = EmojiPagerContentComponent.emojiInputData(
+            context: context,
+            animationCache: context.animationCache,
+            animationRenderer: context.animationRenderer,
+            isStandalone: false,
+            isStatusSelection: false,
+            isReactionSelection: false,
+            isEmojiSelection: false,
+            isProfilePhotoEmojiSelection: !isGroup,
+            isGroupPhotoEmojiSelection: isGroup,
+            topReactionItems: [],
+            areUnicodeEmojiEnabled: false,
+            areCustomEmojiEnabled: true,
+            chatPeerId: context.account.peerId,
+            hasSearch: true,
+            forceHasPremium: true
+        )
+        
+        let stickerItems = EmojiPagerContentComponent.stickerInputData(
+            context: context,
+            animationCache: context.animationCache,
+            animationRenderer: context.animationRenderer,
+            stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
+            stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
+            chatPeerId: context.account.peerId,
+            hasSearch: true,
+            hasTrending: false,
+            forceHasPremium: true,
+            searchIsPlaceholderOnly: false,
+            isProfilePhotoEmojiSelection: !isGroup,
+            isGroupPhotoEmojiSelection: isGroup
+        )
+        
+        let signal = combineLatest(queue: .mainQueue(),
+            emojiItems,
+            stickerItems
+        ) |> map { emoji, stickers -> AvatarKeyboardInputData in
+            return AvatarKeyboardInputData(emoji: emoji, stickers: stickers)
+        }
+        return signal
+    }
+    
+    public init(context: AccountContext, inputData: Signal<AvatarKeyboardInputData, NoError>, peerType: PeerType, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
         self.context = context
+        self.inputData = inputData
         
         let componentReady = Promise<Bool>()
         super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, peerType: peerType, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)

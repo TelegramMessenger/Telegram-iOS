@@ -141,6 +141,26 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
                 //TODO:localize
                 titleString = NSAttributedString(string: "Protect Your Account", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
                 textString = NSAttributedString(string: "Set a password that will be required each time you log in with this phone number.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .premiumUpgrade(discount):
+                let discountString = "\(discount)%"
+                let rawTitleString = item.strings.ChatList_PremiumAnnualUpgradeTitle(discountString)
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                if let range = rawTitleString.ranges.first {
+                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+                }
+                titleString = titleStringValue
+                
+                textString = NSAttributedString(string: item.strings.ChatList_PremiumAnnualUpgradeText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .premiumAnnualDiscount(discount):
+                let discountString = "\(discount)%"
+                let rawTitleString = item.strings.ChatList_PremiumAnnualDiscountTitle(discountString)
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                if let range = rawTitleString.ranges.first {
+                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+                }
+                titleString = titleStringValue
+                
+                textString = NSAttributedString(string: item.strings.ChatList_PremiumAnnualDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))

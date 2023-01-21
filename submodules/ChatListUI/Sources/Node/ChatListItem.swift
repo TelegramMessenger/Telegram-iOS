@@ -1846,7 +1846,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let messageString: NSAttributedString
                         if !message.text.isEmpty && entities.count > 0 {
-                            messageString = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: authorAttributedString == nil ? 2 : 1), entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
+                            var messageText = message.text
+                            var entities = entities
+                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                                messageText = translation.text
+                                entities = translation.entities
+                            }
+                            
+                            messageString = stringWithAppliedEntities(trimToLineCount(messageText, lineCount: authorAttributedString == nil ? 2 : 1), entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
                         } else if spoilers != nil || customEmojiRanges != nil {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                             if let spoilers = spoilers {

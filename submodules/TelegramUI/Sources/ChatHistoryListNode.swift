@@ -234,7 +234,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                         case .allButLast:
                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != lastHeaderId
                         }
-                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .MessageGroupEntry(_, messages, presentationData):
@@ -279,7 +279,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                         case .allButLast:
                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != lastHeaderId
                         }
-                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .MessageGroupEntry(_, messages, presentationData):
@@ -1293,7 +1293,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 )
                 
                 var translateToLanguage: String?
-                if let translationState, translationState.isEnabled {
+                if let translationState, isPremium && translationState.isEnabled {
                     translateToLanguage = translationState.toLang ?? presentationData.strings.baseLanguageCode
                 }
                 
@@ -3472,7 +3472,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         case .allButLast:
                                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != historyView.lastHeaderId
                                         }
-                                        item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                                        item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                                 }
                                 let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
                                 
@@ -3528,7 +3528,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         case .allButLast:
                                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != historyView.lastHeaderId
                                         }
-                                        item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                                        item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, translateToLanguage: associatedData.translateToLanguage, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                                 }
                                 let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
                                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })

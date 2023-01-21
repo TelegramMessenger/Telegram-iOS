@@ -8715,9 +8715,17 @@ Sorry for the inconvenience.";
 "AvatarEditor.Stickers" = "Stickers";
 "AvatarEditor.SwitchToEmoji" = "SWITCH TO EMOJI";
 "AvatarEditor.SwitchToStickers" = "SWITCH TO STICKERS";
-
 "AvatarEditor.SetProfilePhoto" = "Set as Profile Photo";
 "AvatarEditor.SetGroupPhoto" = "Set as Group Photo";
 "AvatarEditor.SetChannelPhoto" = "Set as Group Photo";
-
 "AvatarEditor.Set" = "Set";
+
+"Premium.UpgradeDescription" = "Your current **Telegram Premium** plan can be upgraded at a **discount**.";
+"Premium.CurrentPlan" = "your current plan";
+"Premium.UpgradeFor" = "Upgrade for %@ / month";
+"Premium.UpgradeForAnnual" = "Upgrade for %@ / year";
+
+"ChatList.PremiumAnnualDiscountTitle" = "Telegram Premium with a discount of %@";
+"ChatList.PremiumAnnualDiscountText" = "Sign up for the annual payment plan for Telegram Premium now to get the discount.";
+"ChatList.PremiumAnnualUpgradeTitle" = "Save on your subscription up to %@";
+"ChatList.PremiumAnnualUpgradeText" = "Upgrade to the annual payment plan for Telegram Premium to enjoy the discount.";

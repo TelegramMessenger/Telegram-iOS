@@ -7332,7 +7332,7 @@ public final class EmojiPagerContentComponent: Component {
                 contentItemGroups: allItemGroups,
                 itemLayoutType: .compact,
                 itemContentUniqueId: nil,
-                warpContentsOnEdges: isReactionSelection || isStatusSelection,
+                warpContentsOnEdges: isReactionSelection || isStatusSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
                 displaySearchWithPlaceholder: displaySearchWithPlaceholder,
                 searchInitiallyHidden: searchInitiallyHidden,
                 searchIsPlaceholderOnly: false,
@@ -7354,7 +7354,9 @@ public final class EmojiPagerContentComponent: Component {
         hasSearch: Bool,
         hasTrending: Bool,
         forceHasPremium: Bool,
-        searchIsPlaceholderOnly: Bool = true
+        searchIsPlaceholderOnly: Bool = true,
+        isProfilePhotoEmojiSelection: Bool = false,
+        isGroupPhotoEmojiSelection: Bool = false
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7846,7 +7848,7 @@ public final class EmojiPagerContentComponent: Component {
                 contentItemGroups: allItemGroups,
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
-                warpContentsOnEdges: false,
+                warpContentsOnEdges: isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchInitiallyHidden: true,
                 searchIsPlaceholderOnly: searchIsPlaceholderOnly,

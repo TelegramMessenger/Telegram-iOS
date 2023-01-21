@@ -917,7 +917,8 @@ public extension Api {
 public extension Api {
     enum VideoSize: TypeConstructorDescription {
         case videoSize(flags: Int32, type: String, w: Int32, h: Int32, size: Int32, videoStartTs: Double?)
-        case videoSizeEmojiMarkup(type: String, emojiId: Int64, backgroundColors: [Int32])
+        case videoSizeEmojiMarkup(emojiId: Int64, backgroundColors: [Int32])
+        case videoSizeStickerMarkup(stickerset: Api.InputStickerSet, stickerId: Int64, backgroundColors: [Int32])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -932,12 +933,23 @@ public extension Api {
                     serializeInt32(size, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
                     break
-                case .videoSizeEmojiMarkup(let type, let emojiId, let backgroundColors):
+                case .videoSizeEmojiMarkup(let emojiId, let backgroundColors):
                     if boxed {
-                        buffer.appendInt32(195933766)
+                        buffer.appendInt32(-128171716)
                     }
-                    serializeString(type, buffer: buffer, boxed: false)
                     serializeInt64(emojiId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(backgroundColors.count))
+                    for item in backgroundColors {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .videoSizeStickerMarkup(let stickerset, let stickerId, let backgroundColors):
+                    if boxed {
+                        buffer.appendInt32(228623102)
+                    }
+                    stickerset.serialize(buffer, true)
+                    serializeInt64(stickerId, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(backgroundColors.count))
                     for item in backgroundColors {
@@ -951,8 +963,10 @@ public extension Api {
         switch self {
                 case .videoSize(let flags, let type, let w, let h, let size, let videoStartTs):
                 return ("videoSize", [("flags", flags as Any), ("type", type as Any), ("w", w as Any), ("h", h as Any), ("size", size as Any), ("videoStartTs", videoStartTs as Any)])
-                case .videoSizeEmojiMarkup(let type, let emojiId, let backgroundColors):
-                return ("videoSizeEmojiMarkup", [("type", type as Any), ("emojiId", emojiId as Any), ("backgroundColors", backgroundColors as Any)])
+                case .videoSizeEmojiMarkup(let emojiId, let backgroundColors):
+                return ("videoSizeEmojiMarkup", [("emojiId", emojiId as Any), ("backgroundColors", backgroundColors as Any)])
+                case .videoSizeStickerMarkup(let stickerset, let stickerId, let backgroundColors):
+                return ("videoSizeStickerMarkup", [("stickerset", stickerset as Any), ("stickerId", stickerId as Any), ("backgroundColors", backgroundColors as Any)])
     }
     }
     
@@ -983,8 +997,26 @@ public extension Api {
             }
         }
         public static func parse_videoSizeEmojiMarkup(_ reader: BufferReader) -> VideoSize? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.VideoSize.videoSizeEmojiMarkup(emojiId: _1!, backgroundColors: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_videoSizeStickerMarkup(_ reader: BufferReader) -> VideoSize? {
+            var _1: Api.InputStickerSet?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputStickerSet
+            }
             var _2: Int64?
             _2 = reader.readInt64()
             var _3: [Int32]?
@@ -995,7 +1027,7 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.VideoSize.videoSizeEmojiMarkup(type: _1!, emojiId: _2!, backgroundColors: _3!)
+                return Api.VideoSize.videoSizeStickerMarkup(stickerset: _1!, stickerId: _2!, backgroundColors: _3!)
             }
             else {
                 return nil

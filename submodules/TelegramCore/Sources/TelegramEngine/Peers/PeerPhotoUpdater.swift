@@ -4,7 +4,6 @@ import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
 
-
 public enum UpdatePeerPhotoStatus {
     case progress(Float)
     case complete([TelegramMediaImageRepresentation])
@@ -153,7 +152,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                     
                                     var videoEmojiMarkup: Api.VideoSize?
                                     if let fileId, let backgroundColors {
-                                        videoEmojiMarkup = .videoSizeEmojiMarkup(type: "e", emojiId: fileId, backgroundColors: backgroundColors)
+                                        videoEmojiMarkup = .videoSizeEmojiMarkup(emojiId: fileId, backgroundColors: backgroundColors)
                                         flags |= (1 << 4)
                                     }
                                     
@@ -217,7 +216,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                                 resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: Int64(size), fileReference: fileReference.makeData())
                                                                 
                                                                 videoRepresentations.append(TelegramMediaImage.VideoRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, startTimestamp: videoStartTs))
-                                                            case .videoSizeEmojiMarkup:
+                                                            case .videoSizeEmojiMarkup, .videoSizeStickerMarkup:
                                                                 break
                                                             }
                                                         }
@@ -280,9 +279,9 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                     
                                     let request: Signal<Api.Updates, MTRpcError>
                                     if let peer = peer as? TelegramGroup {
-                                        request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id._internalGetInt64Value(), photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
+                                        request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id._internalGetInt64Value(), photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: nil)))
                                     } else if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                                        request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
+                                        request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: nil)))
                                     } else {
                                         assertionFailure()
                                         request = .complete()

@@ -56,6 +56,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2104224014] = { return Api.AttachMenuPeerType.parse_attachMenuPeerTypeSameBotPM($0) }
     dict[-1392388579] = { return Api.Authorization.parse_authorization($0) }
     dict[-1896171181] = { return Api.AutoDownloadSettings.parse_autoDownloadSettings($0) }
+    dict[-2124403385] = { return Api.AutoSaveException.parse_autoSaveException($0) }
+    dict[-934791986] = { return Api.AutoSaveSettings.parse_autoSaveSettings($0) }
     dict[-1065882623] = { return Api.AvailableReaction.parse_availableReaction($0) }
     dict[-177732982] = { return Api.BankCardOpenUrl.parse_bankCardOpenUrl($0) }
     dict[1527845466] = { return Api.BaseTheme.parse_baseThemeArctic($0) }
@@ -273,7 +275,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1536380829] = { return Api.InputChannel.parse_inputChannelFromMessage($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
     dict[480546647] = { return Api.InputChatPhoto.parse_inputChatPhotoEmpty($0) }
-    dict[-968723890] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
+    dict[-1110593856] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
     dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
     dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
     dict[1968737087] = { return Api.InputClientProxy.parse_inputClientProxy($0) }
@@ -777,6 +779,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[511092620] = { return Api.TopPeerCategory.parse_topPeerCategoryPhoneCalls($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[397910539] = { return Api.Update.parse_updateAttachMenuBots($0) }
+    dict[-335171433] = { return Api.Update.parse_updateAutoSaveSettings($0) }
     dict[-1177566067] = { return Api.Update.parse_updateBotCallbackQuery($0) }
     dict[299870598] = { return Api.Update.parse_updateBotChatInviteRequester($0) }
     dict[1299263278] = { return Api.Update.parse_updateBotCommands($0) }
@@ -908,7 +911,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-496024847] = { return Api.UserStatus.parse_userStatusRecently($0) }
     dict[-1274595769] = { return Api.Username.parse_username($0) }
     dict[-567037804] = { return Api.VideoSize.parse_videoSize($0) }
-    dict[195933766] = { return Api.VideoSize.parse_videoSizeEmojiMarkup($0) }
+    dict[-128171716] = { return Api.VideoSize.parse_videoSizeEmojiMarkup($0) }
+    dict[228623102] = { return Api.VideoSize.parse_videoSizeStickerMarkup($0) }
     dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-528465642] = { return Api.WallPaper.parse_wallPaperNoFile($0) }
     dict[499236004] = { return Api.WallPaperSettings.parse_wallPaperSettings($0) }
@@ -925,6 +929,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1389486888] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
     dict[1275039392] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[1674235686] = { return Api.account.AutoDownloadSettings.parse_autoDownloadSettings($0) }
+    dict[1279133341] = { return Api.account.AutoSaveSettings.parse_autoSaveSettings($0) }
     dict[1474462241] = { return Api.account.ContentSettings.parse_contentSettings($0) }
     dict[731303195] = { return Api.account.EmailVerified.parse_emailVerified($0) }
     dict[-507835039] = { return Api.account.EmailVerified.parse_emailVerifiedLogin($0) }
@@ -1201,6 +1206,10 @@ public extension Api {
             case let _1 as Api.Authorization:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AutoDownloadSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AutoSaveException:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AutoSaveSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AvailableReaction:
                 _1.serialize(buffer, boxed)
@@ -1695,6 +1704,8 @@ public extension Api {
             case let _1 as Api.account.Authorizations:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.AutoDownloadSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.AutoSaveSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.ContentSettings:
                 _1.serialize(buffer, boxed)

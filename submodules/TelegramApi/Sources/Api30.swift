@@ -188,6 +188,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func deleteAutoSaveExceptions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1404829728)
+                    
+                    return (FunctionDescription(name: "account.deleteAutoSaveExceptions", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func deleteSecureValue(types: [Api.SecureValueType]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1199522741)
@@ -293,6 +308,21 @@ public extension Api.functions.account {
                         var result: Api.account.AutoDownloadSettings?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.AutoDownloadSettings
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func getAutoSaveSettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.AutoSaveSettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1379156774)
+                    
+                    return (FunctionDescription(name: "account.getAutoSaveSettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.AutoSaveSettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.AutoSaveSettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.AutoSaveSettings
                         }
                         return result
                     })
@@ -880,6 +910,23 @@ public extension Api.functions.account {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     settings.serialize(buffer, true)
                     return (FunctionDescription(name: "account.saveAutoDownloadSettings", parameters: [("flags", String(describing: flags)), ("settings", String(describing: settings))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func saveAutoSaveSettings(flags: Int32, peer: Api.InputPeer?, settings: Api.AutoSaveSettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-694451359)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {peer!.serialize(buffer, true)}
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.saveAutoSaveSettings", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("settings", String(describing: settings))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

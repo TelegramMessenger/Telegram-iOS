@@ -195,7 +195,7 @@
     
     if (!_signup) {
         TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SetEmoji") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-                                               {
+                                                   {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
@@ -205,8 +205,26 @@
                 return;
             
             [strongController dismissAnimated:true];
-            if (strongSelf != nil)
-                strongSelf.requestAvatarEditor(^(UIImage *image, NSURL *asset, TGVideoEditAdjustments *adjustments, void (^commit)(void)) {
+            if (strongSelf != nil) {
+                strongSelf.requestAvatarEditor(^(UIImage *image, void (^commit)(void)) {
+                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    if (strongSelf.willFinishWithImage != nil) {
+                        strongSelf.willFinishWithImage(image, ^{
+                            if (strongSelf.didFinishWithImage != nil)
+                                strongSelf.didFinishWithImage(image);
+                            
+                            commit();
+                        });
+                    } else {
+                        if (strongSelf.didFinishWithImage != nil)
+                            strongSelf.didFinishWithImage(image);
+                        
+                        commit();
+                    }
+                }, ^(UIImage *image, NSURL *asset, TGVideoEditAdjustments *adjustments, void (^commit)(void)) {
                     __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                     if (strongSelf == nil)
                         return;
@@ -225,6 +243,7 @@
                         commit();
                     }
                 });
+            }
         }];
         [itemViews addObject:viewItem];
     }

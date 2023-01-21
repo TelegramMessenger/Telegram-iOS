@@ -1789,8 +1789,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame, beginWithCurrentState: true)
 
         if let navigationBarBackgroundContent = self.navigationBarBackgroundContent {
-            transition.updateFrame(node: navigationBarBackgroundContent, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0))), beginWithCurrentState: true)
-            navigationBarBackgroundContent.update(rect: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0))), within: layout.size, transition: transition)
+            transition.updateFrame(node: navigationBarBackgroundContent, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0) + (translationPanelHeight ?? 0.0))), beginWithCurrentState: true)
+            navigationBarBackgroundContent.update(rect: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0) + (translationPanelHeight ?? 0.0))), within: layout.size, transition: transition)
         }
         
         if let inputPanelBackgroundContent = self.inputPanelBackgroundContent {

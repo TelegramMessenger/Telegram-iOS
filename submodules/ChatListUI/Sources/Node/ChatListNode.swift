@@ -94,6 +94,7 @@ public final class ChatListNodeInteraction {
     let openForumThread: (EnginePeer.Id, Int64) -> Void
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
+    let openPremiumIntro: () -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -137,7 +138,8 @@ public final class ChatListNodeInteraction {
         present: @escaping (ViewController) -> Void,
         openForumThread: @escaping (EnginePeer.Id, Int64) -> Void,
         openStorageManagement: @escaping () -> Void,
-        openPasswordSetup: @escaping () -> Void
+        openPasswordSetup: @escaping () -> Void,
+        openPremiumIntro: @escaping () -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -169,6 +171,7 @@ public final class ChatListNodeInteraction {
         self.openForumThread = openForumThread
         self.openStorageManagement = openStorageManagement
         self.openPasswordSetup = openPasswordSetup
+        self.openPremiumIntro = openPremiumIntro
     }
 }
 
@@ -615,6 +618,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         nodeInteraction?.openStorageManagement()
                     case .setupPassword:
                         nodeInteraction?.openPasswordSetup()
+                    case .premiumUpgrade, .premiumAnnualDiscount:
+                        nodeInteraction?.openPremiumIntro()
                     }
                 }), directionHint: entry.directionHint)
         }
@@ -866,6 +871,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         nodeInteraction?.openStorageManagement()
                     case .setupPassword:
                         nodeInteraction?.openPasswordSetup()
+                    case .premiumUpgrade, .premiumAnnualDiscount:
+                        nodeInteraction?.openPremiumIntro()
                     }
                 }), directionHint: entry.directionHint)
             case .HeaderEntry:
@@ -1363,15 +1370,24 @@ public final class ChatListNode: ListView {
             guard let self else {
                 return
             }
-            
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.6, execute: { [weak self] in
-                guard let self else {
-                    return
+            Queue.mainQueue().after(0.6) { [weak self] in
+                if let self {
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).start()
                 }
-                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).start()
-            })
-            
+            }
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
+            self.push?(controller)
+        }, openPremiumIntro: { [weak self] in
+            guard let self else {
+                return
+            }
+            Queue.mainQueue().after(0.6) { [weak self] in
+                if let self {
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .annualPremium).start()
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .upgradePremium).start()
+                }
+            }
+            let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads)
             self.push?(controller)
         })
         nodeInteraction.isInlineMode = isInlineMode
@@ -1437,31 +1453,66 @@ public final class ChatListNode: ListView {
         } else {
             displayArchiveIntro = .single(false)
         }
-        
-        let suggestPasswordSetup: Signal<Bool, NoError>
+    
+        let suggestedChatListNotice: Signal<ChatListNotice?, NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
-            suggestPasswordSetup = .single(false) |> then(combineLatest(
-                getServerProvidedSuggestions(account: context.account),
-                context.engine.auth.twoStepVerificationConfiguration()
-            )
-            |> map { suggestions, configuration -> Bool in
-                var notSet = false
-                switch configuration {
-                case let .notSet(pendingEmail):
-                    if pendingEmail == nil {
-                        notSet = true
+            suggestedChatListNotice = .single(nil)
+            |> then (
+                combineLatest(
+                    getServerProvidedSuggestions(account: context.account),
+                    context.engine.auth.twoStepVerificationConfiguration()
+                )
+                |> mapToSignal { suggestions, configuration -> Signal<ChatListNotice?, NoError> in
+                    if suggestions.contains(.setupPassword) {
+                        var notSet = false
+                        switch configuration {
+                        case let .notSet(pendingEmail):
+                            if pendingEmail == nil {
+                                notSet = true
+                            }
+                        case .set:
+                            break
+                        }
+                        if notSet {
+                            return .single(.setupPassword)
+                        }
                     }
-                case .set:
-                    break
+                    if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
+                        return inAppPurchaseManager.availableProducts
+                        |> map { products -> ChatListNotice? in
+                            if products.count > 1 {
+                                let shortestOptionPrice: (Int64, NSDecimalNumber)
+                                if let product = products.first(where: { $0.id.hasSuffix(".monthly") }) {
+                                    shortestOptionPrice = (Int64(Float(product.priceCurrencyAndAmount.amount)), product.priceValue)
+                                } else {
+                                    shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
+                                }
+                                for product in products {
+                                    if product.id.hasSuffix(".annual") {
+                                        let fraction = Float(product.priceCurrencyAndAmount.amount) / Float(12) / Float(shortestOptionPrice.0)
+                                        let discount = Int32(round((1.0 - fraction) * 20.0) * 5.0)
+                                        if suggestions.contains(.annualPremium) {
+                                            return .premiumAnnualDiscount(discount: discount)
+                                        } else if suggestions.contains(.upgradePremium) {
+                                            return .premiumUpgrade(discount: discount)
+                                        }
+                                        break
+                                    }
+                                }
+                                
+                                return nil
+                            } else {
+                                return nil
+                            }
+                        }
+                    } else {
+                        return .single(nil)
+                    }
                 }
-                if !notSet {
-                    return false
-                }
-                return suggestions.contains(.setupPassword)
-            })
+            )
             |> distinctUntilChanged
         } else {
-            suggestPasswordSetup = .single(false)
+            suggestedChatListNotice = .single(nil)
         }
         
         let storageInfo: Signal<Double?, NoError>
@@ -1553,13 +1604,31 @@ public final class ChatListNode: ListView {
         
         let currentPeerId: EnginePeer.Id = context.account.peerId
         
-        let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestPasswordSetup, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestPasswordSetup, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        let chatListNodeViewTransition = combineLatest(
+            queue: viewProcessingQueue,
+            hideArchivedFolderByDefault,
+            displayArchiveIntro,
+            storageInfo,
+            suggestedChatListNotice,
+            savedMessagesPeer,
+            chatListViewUpdate,
+            self.statePromise.get()
+        )
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, storageInfo: storageInfo, suggestPasswordSetup: suggestPasswordSetup, mode: mode, chatListLocation: location)
+            let notice: ChatListNotice?
+            if let suggestedChatListNotice {
+                notice = suggestedChatListNotice
+            } else if let storageInfo {
+                notice = .clearStorage(sizeFraction: storageInfo)
+            } else {
+                notice = nil
+            }
+            
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location)
             var isEmpty = true
             var entries = rawEntries.filter { entry in
                 switch entry {

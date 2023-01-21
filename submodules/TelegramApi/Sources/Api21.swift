@@ -723,6 +723,7 @@ public extension Api {
 public extension Api {
     indirect enum Update: TypeConstructorDescription {
         case updateAttachMenuBots
+        case updateAutoSaveSettings
         case updateBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, peer: Api.Peer, msgId: Int32, chatInstance: Int64, data: Buffer?, gameShortName: String?)
         case updateBotChatInviteRequester(peer: Api.Peer, date: Int32, userId: Int64, about: String, invite: Api.ExportedChatInvite, qts: Int32)
         case updateBotCommands(peer: Api.Peer, botId: Int64, commands: [Api.BotCommand])
@@ -837,6 +838,12 @@ public extension Api {
                 case .updateAttachMenuBots:
                     if boxed {
                         buffer.appendInt32(397910539)
+                    }
+                    
+                    break
+                case .updateAutoSaveSettings:
+                    if boxed {
+                        buffer.appendInt32(-335171433)
                     }
                     
                     break
@@ -1785,6 +1792,8 @@ public extension Api {
         switch self {
                 case .updateAttachMenuBots:
                 return ("updateAttachMenuBots", [])
+                case .updateAutoSaveSettings:
+                return ("updateAutoSaveSettings", [])
                 case .updateBotCallbackQuery(let flags, let queryId, let userId, let peer, let msgId, let chatInstance, let data, let gameShortName):
                 return ("updateBotCallbackQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("peer", peer as Any), ("msgId", msgId as Any), ("chatInstance", chatInstance as Any), ("data", data as Any), ("gameShortName", gameShortName as Any)])
                 case .updateBotChatInviteRequester(let peer, let date, let userId, let about, let invite, let qts):
@@ -2006,6 +2015,9 @@ public extension Api {
     
         public static func parse_updateAttachMenuBots(_ reader: BufferReader) -> Update? {
             return Api.Update.updateAttachMenuBots
+        }
+        public static func parse_updateAutoSaveSettings(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateAutoSaveSettings
         }
         public static func parse_updateBotCallbackQuery(_ reader: BufferReader) -> Update? {
             var _1: Int32?

@@ -18,6 +18,7 @@ import PeerInfoUI
 import MapResourceToAvatarSizes
 import LegacyMediaPickerUI
 import TextFormat
+import AvatarEditorScreen
 
 private struct CreateChannelArguments {
     let context: AccountContext
@@ -623,6 +624,9 @@ public func createChannelController(context: AccountContext, mode: CreateChannel
                 }
             }
             
+            let keyboardInputData = Promise<AvatarKeyboardInputData>()
+            keyboardInputData.set(AvatarEditorScreen.inputData(context: context, isGroup: true))
+            
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: false, title: nil, isSuggesting: false)!
             mixin.stickersContext = LegacyPaintStickersContext(context: context)
             let _ = currentAvatarMixin.swap(mixin)
@@ -632,6 +636,27 @@ public func createChannelController(context: AccountContext, mode: CreateChannel
                     completedChannelPhotoImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }
+            mixin.requestAvatarEditor = { imageCompletion, videoCompletion in
+                guard let imageCompletion, let videoCompletion else {
+                    return
+                }
+                let peerType: AvatarEditorScreen.PeerType
+                if case .legacyGroup = peer {
+                    peerType = .group
+                } else if case let .channel(channel) = peer {
+                    if case .group = channel.info {
+                        peerType = channel.flags.contains(.isForum) ? .forum : .group
+                    } else {
+                        peerType = .channel
+                    }
+                } else {
+                    peerType = .user
+                }
+                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: peerType, initialFileId: nil, initialBackgroundColors: nil)
+                controller.imageCompletion = imageCompletion
+                controller.videoCompletion = videoCompletion
+                pushControllerImpl?(controller)
             }
             mixin.didFinishWithImage = { image in
                 if let image = image {

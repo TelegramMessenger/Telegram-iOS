@@ -69,8 +69,13 @@ func _internal_canPurchasePremium(account: Account, purpose: AppStoreTransaction
     switch purpose {
     case .subscription, .restore, .upgrade:
         var flags: Int32 = 0
-        if case .restore = purpose {
+        switch purpose {
+        case .upgrade:
+            flags |= (1 << 1)
+        case .restore:
             flags |= (1 << 0)
+        default:
+            break
         }
         purposeSignal = .single(.inputStorePaymentPremiumSubscription(flags: flags))
     case let .gift(peerId, currency, amount):

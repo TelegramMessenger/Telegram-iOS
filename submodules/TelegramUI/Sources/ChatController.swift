@@ -6699,21 +6699,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                self.translationStateDisposable = combineLatest(
-                    queue: .mainQueue(),
-                    chatTranslationState(context: self.context, peerId: peerId),
+                let baseLanguageCode = self.presentationData.strings.baseLanguageCode
+                let isPremium = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                |> map { peer -> Bool in
+                    return peer?.isPremium ?? false
+                }
+                self.translationStateDisposable = (combineLatest(
+                    queue: .concurrentDefaultQueue(),
+                    isPremium,
                     self.chatDisplayNode.historyNode.cachedPeerDataAndMessages
-                ).start(next: { [weak self] translationState, cachedDataAndMessages in
+                ) |> mapToSignal { isPremium, cachedDataAndMessages -> Signal<ChatPresentationTranslationState?, NoError> in
+                    let (cachedData, _) = cachedDataAndMessages
+                    var isHidden = false
+                    if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.translationHidden) {
+                        isHidden = true
+                    }
+                    
+                    if isPremium && !isHidden {
+                        return chatTranslationState(context: context, peerId: peerId)
+                        |> map { translationState -> ChatPresentationTranslationState? in
+                            if let translationState, !translationState.fromLang.isEmpty {
+                                return ChatPresentationTranslationState(isEnabled: translationState.isEnabled, fromLang: translationState.fromLang, toLang: translationState.toLang ?? baseLanguageCode)
+                            } else {
+                                return nil
+                            }
+                        }
+                    } else {
+                        return .single(nil)
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] chatTranslationState in
                     if let strongSelf = self {
-                        let (cachedData, _) = cachedDataAndMessages
-                        var isHidden = false
-                        if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.translationHidden) {
-                            isHidden = true
-                        }
-                        var chatTranslationState: ChatPresentationTranslationState?
-                        if let translationState, !isHidden && !translationState.fromLang.isEmpty {
-                            chatTranslationState = ChatPresentationTranslationState(isEnabled: translationState.isEnabled, fromLang: translationState.fromLang, toLang: translationState.toLang ?? strongSelf.presentationData.strings.baseLanguageCode)
-                        }
                         strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
                             return state.updatedTranslationState(chatTranslationState)
                         })

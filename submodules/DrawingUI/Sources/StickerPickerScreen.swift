@@ -281,7 +281,7 @@ class StickerPickerScreen: ViewController {
                         return
                     }
                     let context = controller.context
-                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { views in

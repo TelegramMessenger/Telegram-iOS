@@ -309,6 +309,86 @@ public extension Api.account {
     }
 }
 public extension Api.account {
+    enum AutoSaveSettings: TypeConstructorDescription {
+        case autoSaveSettings(usersSettings: Api.AutoSaveSettings, chatsSettings: Api.AutoSaveSettings, broadcastsSettings: Api.AutoSaveSettings, exceptions: [Api.AutoSaveException], chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .autoSaveSettings(let usersSettings, let chatsSettings, let broadcastsSettings, let exceptions, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(1279133341)
+                    }
+                    usersSettings.serialize(buffer, true)
+                    chatsSettings.serialize(buffer, true)
+                    broadcastsSettings.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(exceptions.count))
+                    for item in exceptions {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .autoSaveSettings(let usersSettings, let chatsSettings, let broadcastsSettings, let exceptions, let chats, let users):
+                return ("autoSaveSettings", [("usersSettings", usersSettings as Any), ("chatsSettings", chatsSettings as Any), ("broadcastsSettings", broadcastsSettings as Any), ("exceptions", exceptions as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_autoSaveSettings(_ reader: BufferReader) -> AutoSaveSettings? {
+            var _1: Api.AutoSaveSettings?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.AutoSaveSettings
+            }
+            var _2: Api.AutoSaveSettings?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.AutoSaveSettings
+            }
+            var _3: Api.AutoSaveSettings?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.AutoSaveSettings
+            }
+            var _4: [Api.AutoSaveException]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AutoSaveException.self)
+            }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.account.AutoSaveSettings.autoSaveSettings(usersSettings: _1!, chatsSettings: _2!, broadcastsSettings: _3!, exceptions: _4!, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.account {
     enum ContentSettings: TypeConstructorDescription {
         case contentSettings(flags: Int32)
     
