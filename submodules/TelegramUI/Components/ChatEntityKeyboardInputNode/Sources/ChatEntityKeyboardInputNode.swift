@@ -1084,6 +1084,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             updateScrollingToItemGroup: {
             },
+            onScroll: {},
             chatPeerId: chatPeerId,
             peekBehavior: stickerPeekBehavior,
             customLayout: nil,
@@ -1348,6 +1349,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             updateScrollingToItemGroup: {
             },
+            onScroll: {},
             chatPeerId: chatPeerId,
             peekBehavior: stickerPeekBehavior,
             customLayout: nil,
@@ -2168,6 +2170,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             },
             updateScrollingToItemGroup: {
             },
+            onScroll: {},
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: nil,

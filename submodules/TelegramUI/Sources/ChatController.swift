@@ -6727,18 +6727,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let isPremium = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                 |> map { peer -> Bool in
                     return peer?.isPremium ?? false
-                }
-                self.translationStateDisposable = (combineLatest(
-                    queue: .concurrentDefaultQueue(),
-                    isPremium,
-                    self.chatDisplayNode.historyNode.cachedPeerDataAndMessages
-                ) |> mapToSignal { isPremium, cachedDataAndMessages -> Signal<ChatPresentationTranslationState?, NoError> in
+                } |> distinctUntilChanged
+                
+                let isHidden = self.chatDisplayNode.historyNode.cachedPeerDataAndMessages
+                |> map { cachedDataAndMessages -> Bool in
                     let (cachedData, _) = cachedDataAndMessages
                     var isHidden = false
                     if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.translationHidden) {
                         isHidden = true
                     }
-                    
+                    return isHidden
+                } |> distinctUntilChanged
+                self.translationStateDisposable = (combineLatest(
+                    queue: .concurrentDefaultQueue(),
+                    isPremium,
+                    isHidden
+                ) |> mapToSignal { isPremium, isHidden -> Signal<ChatPresentationTranslationState?, NoError> in
                     if isPremium && !isHidden {
                         return chatTranslationState(context: context, peerId: peerId)
                         |> map { translationState -> ChatPresentationTranslationState? in

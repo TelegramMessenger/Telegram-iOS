@@ -577,6 +577,12 @@ final class AvatarEditorScreenComponent: Component {
                 },
                 updateScrollingToItemGroup: {
                 },
+                onScroll: { [weak self] in
+                    if let self, let state = self.state, state.expanded {
+                        state.expanded = false
+                        state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                    }
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
@@ -585,18 +591,6 @@ final class AvatarEditorScreenComponent: Component {
                 useOpaqueTheme: false,
                 hideBackground: true
             )
-            
-//            var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
-//            if let controller = self.controller {
-//                stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
-//                    context: controller.context,
-//                    interaction: nil,
-//                    chatPeerId: nil,
-//                    present: { [weak controller] c, a in
-//                        controller?.presentInGlobalOverlay(c, with: a)
-//                    }
-//                )
-//            }
             
             data.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] _, item, _, _, _, _ in
@@ -707,6 +701,12 @@ final class AvatarEditorScreenComponent: Component {
                 },
                 updateScrollingToItemGroup: {
                 },
+                onScroll: { [weak self] in
+                    if let self, let state = self.state, state.expanded {
+                        state.expanded = false
+                        state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                    }
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
@@ -747,10 +747,12 @@ final class AvatarEditorScreenComponent: Component {
                 }
             }
             
+            let backgroundIsBright = UIColor(rgb: state.selectedBackground.colors.first ?? 0).lightness > 0.8
+            
             let navigationCancelButtonSize = self.navigationCancelButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: state.expanded ? .white : environment.theme.rootController.navigationBar.accentTextColor)),
+                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: state.expanded && !backgroundIsBright ? .white : environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
                         guard let self else {
                             return
@@ -772,7 +774,7 @@ final class AvatarEditorScreenComponent: Component {
             let navigationDoneButtonSize = self.navigationDoneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.isSearchActive ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
+                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.isSearchActive || (state.expanded && backgroundIsBright) ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
                     action: { [weak self] in
                         guard let self else {
                             return
@@ -841,8 +843,13 @@ final class AvatarEditorScreenComponent: Component {
                         context: component.context,
                         background: state.selectedBackground,
                         file: state.selectedFile,
-                        tapped: { [weak state] in
+                        tapped: { [weak state, weak self] in
                             if let state, !state.editingColor {
+                                if let emojiView = self?.keyboardView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
+                                    emojiView.ensureSearchUnfocused()
+                                } else if let emojiView = self?.keyboardView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("stickers"))) as? EmojiPagerContentComponent.View {
+                                    emojiView.ensureSearchUnfocused()
+                                }
                                 state.expanded = !state.expanded
                                 state.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                             }

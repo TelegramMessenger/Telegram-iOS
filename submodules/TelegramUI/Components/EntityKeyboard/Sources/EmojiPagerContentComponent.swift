@@ -2248,6 +2248,7 @@ public final class EmojiPagerContentComponent: Component {
         public let requestUpdate: (Transition) -> Void
         public let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void
         public let updateScrollingToItemGroup: () -> Void
+        public let onScroll: () -> Void
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
@@ -2271,6 +2272,7 @@ public final class EmojiPagerContentComponent: Component {
             requestUpdate: @escaping (Transition) -> Void,
             updateSearchQuery: @escaping (SearchQuery?) -> Void,
             updateScrollingToItemGroup: @escaping () -> Void,
+            onScroll: @escaping () -> Void,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
@@ -2293,6 +2295,7 @@ public final class EmojiPagerContentComponent: Component {
             self.requestUpdate = requestUpdate
             self.updateSearchQuery = updateSearchQuery
             self.updateScrollingToItemGroup = updateScrollingToItemGroup
+            self.onScroll = onScroll
             self.chatPeerId = chatPeerId
             self.peekBehavior = peekBehavior
             self.customLayout = customLayout
@@ -5007,6 +5010,14 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
+        public func ensureSearchUnfocused() {
+            if self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+                self.visibleSearchHeader?.deactivate()
+            } else {
+                self.visibleSearchHeader?.endEditing(true)
+            }
+        }
+        
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if self.ignoreScrolling {
                 return
@@ -5019,6 +5030,7 @@ public final class EmojiPagerContentComponent: Component {
             if self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
                 self.visibleSearchHeader?.deactivate()
             }
+            self.component?.inputInteractionHolder.inputInteraction?.onScroll()
         }
         
         public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {

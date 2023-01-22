@@ -155,8 +155,11 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             var fromLangs: [String: Int] = [:]
                             var count = 0
                             for message in messages {
+                                if let _ = URL(string: message.text) {
+                                    continue
+                                }
                                 if message.text.count > 10 {
-                                    let text = String(message.text.prefix(64))
+                                    let text = String(message.text.prefix(100))
                                     languageRecognizer.processString(text)
                                     let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
                                     languageRecognizer.reset()

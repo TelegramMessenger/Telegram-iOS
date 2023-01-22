@@ -610,6 +610,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     updateScrollingToItemGroup: {
                     },
+                    onScroll: {},
                     chatPeerId: nil,
                     peekBehavior: nil,
                     customLayout: nil,
