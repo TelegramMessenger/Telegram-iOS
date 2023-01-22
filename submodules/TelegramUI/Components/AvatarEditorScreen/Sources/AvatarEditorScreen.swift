@@ -749,6 +749,13 @@ final class AvatarEditorScreenComponent: Component {
                     })
                     self.addSubview(snapshotView)
                 }
+                
+                if let navigationDoneButton = self.navigationDoneButton.view, !navigationDoneButton.alpha.isZero, let snapshotView = self.navigationDoneButton.view?.snapshotContentTree() {
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    self.addSubview(snapshotView)
+                }
             }
             
             let backgroundIsBright = UIColor(rgb: state.selectedBackground.colors.first ?? 0).lightness > 0.8
@@ -1184,6 +1191,8 @@ final class AvatarEditorScreenComponent: Component {
             
             let buttonText: String
             switch component.peerType {
+            case .suggest:
+                buttonText = strings.AvatarEditor_SuggestProfilePhoto
             case .user:
                 buttonText = strings.AvatarEditor_SetProfilePhoto
             case .group, .forum:
@@ -1335,6 +1344,7 @@ final class AvatarEditorScreenComponent: Component {
 
 public final class AvatarEditorScreen: ViewControllerComponentContainer {
     public enum PeerType {
+        case suggest
         case user
         case group
         case channel

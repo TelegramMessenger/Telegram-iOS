@@ -7273,7 +7273,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 let peerType: AvatarEditorScreen.PeerType
-                if case .legacyGroup = peer {
+                if mode == .suggest {
+                    peerType = .suggest
+                } else if case .legacyGroup = peer {
                     peerType = .group
                 } else if case let .channel(channel) = peer {
                     if case .group = channel.info {

@@ -8716,6 +8716,7 @@ Sorry for the inconvenience.";
 "AvatarEditor.SwitchToEmoji" = "SWITCH TO EMOJI";
 "AvatarEditor.SwitchToStickers" = "SWITCH TO STICKERS";
 "AvatarEditor.SetProfilePhoto" = "Set as Profile Photo";
+"AvatarEditor.SuggestProfilePhoto" = "Suggest as Profile Photo";
 "AvatarEditor.SetGroupPhoto" = "Set as Group Photo";
 "AvatarEditor.SetChannelPhoto" = "Set as Group Photo";
 "AvatarEditor.Set" = "Set";

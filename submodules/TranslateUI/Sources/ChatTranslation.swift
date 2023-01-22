@@ -114,7 +114,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
     return context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var messageIdsToTranslate: [EngineMessage.Id] = []
         for messageId in messageIds {
-            if let message = transaction.getMessage(messageId), let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+            if let message = transaction.getMessage(messageId), !message.text.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
             } else {
                 messageIdsToTranslate.append(messageId)
             }

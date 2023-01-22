@@ -425,7 +425,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         
                                         if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
                                             var messageText = message.text
-                                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang {
+                                            if !messageText.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang {
                                                 messageText = translation.text
                                             }
                                             

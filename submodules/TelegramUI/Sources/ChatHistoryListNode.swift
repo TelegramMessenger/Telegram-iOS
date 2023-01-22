@@ -2006,6 +2006,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         var isTopReplyThreadMessageShownValue = false
         var topVisibleMessageRange: ChatTopVisibleMessageRange?
         let isLoading = historyView.originalView.isLoading
+        let translateToLanguage = transactionState.historyView.associatedData.translateToLanguage
         
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
@@ -2070,6 +2071,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             }
                         }
+                        
+                        if let translateToLanguage {
+                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                            } else if !message.text.isEmpty {
+                                messageIdsToTranslate.append(message.id)
+                            }
+                        }
+                        
                         for media in message.media {
                             if let _ = media as? TelegramMediaUnsupported {
                                 contentRequiredValidation = true
@@ -2144,6 +2153,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     }
                                 }
                             }
+                            if let translateToLanguage {
+                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                } else if !message.text.isEmpty {
+                                    messageIdsToTranslate.append(message.id)
+                                }
+                            }
                             for media in message.media {
                                 if let telegramFile = media as? TelegramMediaFile {
                                     downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
@@ -2194,7 +2209,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
             
-            let translateToLanguage = transactionState.historyView.associatedData.translateToLanguage
             var messageIdsWithPossibleReactions: [MessageId] = []
             for entry in historyView.filteredEntries {
                 switch entry {
@@ -2211,13 +2225,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             messageIdsWithPossibleReactions.append(message.id)
                         default:
                             break
-                        }
-                        
-                        if let translateToLanguage {
-                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                            } else {
-                                messageIdsToTranslate.append(message.id)
-                            }
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
