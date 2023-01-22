@@ -191,7 +191,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     return ("URL", contents)
                 }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
-                self.textNode.maximumNumberOfLines = 2
+                self.textNode.maximumNumberOfLines = 10
                 displayUndo = false
                 self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
             

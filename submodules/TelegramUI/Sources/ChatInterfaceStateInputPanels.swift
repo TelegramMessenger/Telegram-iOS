@@ -196,15 +196,15 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
                         
-            if isMember && channel.hasBannedPermission(.banSendText) != nil && !channel.flags.contains(.isGigagroup) {
-                /*if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+            if isMember && !channel.hasPermission(.sendSomething) && !channel.flags.contains(.isGigagroup) {
+                if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                     return (currentPanel, nil)
                 } else {
                     let panel = ChatRestrictedInputPanelNode()
                     panel.context = context
                     panel.interfaceInteraction = interfaceInteraction
                     return (panel, nil)
-                }*/
+                }
             }
             
             switch channel.info {
@@ -280,15 +280,15 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 break
             }
             
-            if group.hasBannedPermission(.banSendText) {
-                /*if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+            if !group.hasPermission(.sendSomething) {
+                if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                     return (currentPanel, nil)
                 } else {
                     let panel = ChatRestrictedInputPanelNode()
                     panel.context = context
                     panel.interfaceInteraction = interfaceInteraction
                     return (panel, nil)
-                }*/
+                }
             }
         }
         

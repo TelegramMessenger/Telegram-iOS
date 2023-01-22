@@ -30,7 +30,7 @@ public extension TelegramEngine {
             return _internal_randomGreetingSticker(account: self.account)
         }
 
-        public func searchStickers(query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
+        public func searchStickers(query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> {
             return _internal_searchStickers(account: self.account, query: query, scope: scope)
         }
 

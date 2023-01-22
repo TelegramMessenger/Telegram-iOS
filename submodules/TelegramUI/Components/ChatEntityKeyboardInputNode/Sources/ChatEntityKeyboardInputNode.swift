@@ -1300,11 +1300,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     strongSelf.stickerSearchResult.set(.single(nil))
                 case let .category(value):
                     let resultSignal = strongSelf.context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
-                    |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                    |> mapToSignal { files -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
                         var existingIds = Set<MediaId>()
-                        for item in files {
+                        for item in files.items {
                             let itemFile = item.file
                             if existingIds.contains(itemFile.fileId) {
                                 continue
@@ -1321,7 +1321,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items.append(item)
                         }
                         
-                        return .single([EmojiPagerContentComponent.ItemGroup(
+                        return .single(([EmojiPagerContentComponent.ItemGroup(
                             supergroupId: "search",
                             groupId: "search",
                             title: nil,
@@ -1335,7 +1335,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             displayPremiumBadges: false,
                             headerItem: nil,
                             items: items
-                        )])
+                        )], files.isFinalResult))
                     }
                         
                     strongSelf.stickerSearchDisposable.set((resultSignal
@@ -1343,7 +1343,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.stickerSearchResult.set(.single((result, AnyHashable(value))))
+                        guard let group = result.items.first else {
+                            return
+                        }
+                        if group.items.isEmpty && !result.isFinalResult {
+                            return
+                        }
+                        strongSelf.stickerSearchResult.set(.single((result.items, AnyHashable(value))))
                     }))
                 }
             },

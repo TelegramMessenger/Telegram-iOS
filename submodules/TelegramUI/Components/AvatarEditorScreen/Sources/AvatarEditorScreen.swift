@@ -281,7 +281,11 @@ final class AvatarEditorScreenComponent: Component {
                         |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                             return combineLatest(
                                 context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
-                                combineLatest(keywords.map { context.engine.stickers.searchStickers(query: $0.emoticons.first!) })
+                                combineLatest(keywords.map { context.engine.stickers.searchStickers(query: $0.emoticons.first!)
+                                    |> map { items -> [FoundStickerItem] in
+                                        return items.items
+                                    }
+                                })
                             )
                             |> map { view, stickers -> [EmojiPagerContentComponent.ItemGroup] in
                                 let hasPremium = true

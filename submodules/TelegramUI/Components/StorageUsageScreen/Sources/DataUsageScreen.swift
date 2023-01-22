@@ -447,10 +447,10 @@ final class DataUsageScreenComponent: Component {
                 
                 headerOffset = min(headerOffset, minOffset)
                 
-                let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+                let animatedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 let navigationBackgroundAlpha: CGFloat = abs(headerOffset - minOffset) < 4.0 ? 1.0 : 0.0
                 
-                let navigationButtonAlpha: CGFloat = abs(headerOffset - minOffset) < 62.0 ? 0.0 : 1.0
+                let navigationButtonAlpha: CGFloat = scrollBounds.minY >= navigationMetrics.navigationHeight ? 0.0 : 1.0
                 
                 animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
                 animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
@@ -468,17 +468,19 @@ final class DataUsageScreenComponent: Component {
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
                 
                 if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
-                    if backButtonNode.isHidden {
-                        backButtonNode.alpha = 0.0
-                        backButtonNode.isHidden = false
-                    }
-                    animatedTransition.setAlpha(layer: backButtonNode.layer, alpha: navigationButtonAlpha, completion: { [weak backButtonNode] completed in
-                        if let backButtonNode, completed {
-                            if navigationButtonAlpha.isZero {
-                                backButtonNode.isHidden = true
-                            }
+                    if backButtonNode.alpha != navigationButtonAlpha {
+                        if backButtonNode.isHidden {
+                            backButtonNode.alpha = 0.0
+                            backButtonNode.isHidden = false
                         }
-                    })
+                        animatedTransition.setAlpha(layer: backButtonNode.layer, alpha: navigationButtonAlpha, completion: { [weak backButtonNode] completed in
+                            if let backButtonNode, completed {
+                                if navigationButtonAlpha.isZero {
+                                    backButtonNode.isHidden = true
+                                }
+                            }
+                        })
+                    }
                 }
             }
         }

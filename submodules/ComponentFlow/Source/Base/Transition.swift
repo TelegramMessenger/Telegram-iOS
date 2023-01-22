@@ -299,7 +299,7 @@ public struct Transition {
         }
     }
     
-    public func attachAnimation(view: UIView, completion: @escaping (Bool) -> Void) {
+    public func attachAnimation(view: UIView, id: String, completion: @escaping (Bool) -> Void) {
         switch self.animation {
         case .none:
             completion(true)
@@ -307,7 +307,7 @@ public struct Transition {
             view.layer.animate(
                 from: 0.0 as NSNumber,
                 to: 1.0 as NSNumber,
-                keyPath: "attached\(UInt32.random(in: 0 ... UInt32.max))",
+                keyPath: id,
                 duration: duration,
                 delay: 0.0,
                 curve: curve,
