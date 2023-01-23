@@ -111,7 +111,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         self.context = context
         self.avatarNode.setPeer(context: context, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: displayDimensions, storeUnrounded: storeUnrounded)
         
-        if let peer = peer, peer.isPremium || "".isEmpty {
+        if let peer = peer, peer.isPremium {
             self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                 guard let strongSelf = self else {
