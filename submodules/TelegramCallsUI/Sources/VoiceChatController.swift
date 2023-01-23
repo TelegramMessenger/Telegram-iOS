@@ -6245,7 +6245,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             self.updateAvatarPromise.set(.single((representation, 0.0)))
 
             let postbox = self.call.account.postbox
-            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? self.call.accountContext.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
+            let signal = peerId.namespace == Namespaces.Peer.CloudUser ? self.call.accountContext.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, markup: nil, mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
             }) : self.call.accountContext.engine.peers.updatePeerPhoto(peerId: peerId, photo: self.call.accountContext.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
@@ -6365,7 +6365,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             self.updateAvatarDisposable.set((signal
             |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                 if peerId.namespace == Namespaces.Peer.CloudUser {
-                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 } else {

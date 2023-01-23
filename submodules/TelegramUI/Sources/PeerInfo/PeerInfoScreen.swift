@@ -6869,11 +6869,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let signal: Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError>
         if self.isSettings {
             if case .fallback = mode {
-                signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
+                signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, markup: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             } else {
-                signal = self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, fileId: nil, backgroundColors: nil, mapResourceToAvatarSizes: { resource, representations in
+                signal = self.context.engine.accountData.updateAccountPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, markup: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             }
@@ -7092,15 +7092,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let isSettings = self.isSettings
         self.updateAvatarDisposable.set((signal
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
+            let markup: UploadPeerPhotoMarkup? = nil
             if isSettings {
-                let fileId = adjustments?.documentId
-                let backgroundColors = adjustments?.colors as? [Int32]
+//                let fileId = adjustments?.documentId
+//                let backgroundColors = adjustments?.colors as? [Int32]
                 if case .fallback = mode {
-                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: fileId, backgroundColors: backgroundColors, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 } else {
-                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fileId: fileId, backgroundColors: backgroundColors, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                     })
                 }
@@ -7113,7 +7114,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             } else {
-                return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: context.engine.peers.uploadedPeerVideo(resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
+                return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: context.engine.peers.uploadedPeerVideo(resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             }

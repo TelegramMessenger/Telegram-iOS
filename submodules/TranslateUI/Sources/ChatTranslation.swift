@@ -129,6 +129,9 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
         return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
         |> mapToSignal { sharedData in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) ?? TranslationSettings.defaultSettings
+            if !settings.translateChats {
+                return .single(nil)
+            }
             
             var dontTranslateLanguages: [String] = []
             if let ignoredLanguages = settings.ignoredLanguages {
