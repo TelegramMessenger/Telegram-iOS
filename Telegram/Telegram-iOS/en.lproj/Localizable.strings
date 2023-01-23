@@ -8733,3 +8733,10 @@ Sorry for the inconvenience.";
 
 "Premium.Emoji.Description" = "Unlock this emoji and many more by subscribing to Telegram Premium.";
 "Premium.Emoji.Proceed" = "Unlock Premium Emoji";
+
+"Localization.TranslateEntireChat" = "Translate Entire Chat";
+
+"Premium.Translation" = "Real-Time Translation";
+"Premium.TranslationInfo" = "Real-time translation of channels and chats into other languages.";
+"Premium.TranslationStandaloneInfo" = "Subscribe to **Telegram Premium** to be able to translate all messages in a chat at once.";
+"Premium.Translation.Proceed" = "About Telegram Premium";

@@ -522,7 +522,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if let item = self.item, let switchView = self.switchNode.view as? UISwitch, case .ended = recognizer.state {
-            if item.enabled {
+            if item.enabled && !item.displayLocked {
                 let value = switchView.isOn
                 item.updated(!value)
             } else {

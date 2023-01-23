@@ -859,6 +859,7 @@ public enum PremiumIntroSource {
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case voiceToText
     case fasterDownload
+    case translation
 }
 
 public enum PremiumDemoSubject {
@@ -875,6 +876,7 @@ public enum PremiumDemoSubject {
     case appIcons
     case animatedEmoji
     case emojiStatus
+    case translation
 }
 
 public protocol ComposeController: ViewController {

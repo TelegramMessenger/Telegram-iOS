@@ -904,6 +904,23 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.translation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.translation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(AppIconsDemoComponent(
+                                    context: component.context,
+                                    appIcons: appIcons
+                                )),
+                                title: strings.Premium_Translation,
+                                text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
@@ -990,6 +1007,8 @@ private final class DemoSheetContent: CombinedComponent {
                             case .animatedEmoji:
                                 buttonText = strings.Premium_AnimatedEmoji_Proceed
                                 buttonAnimationName = "premium_unlock"
+                            case .translation:
+                                buttonText = strings.Premium_Translation_Proceed
                             default:
                                 buttonText = strings.Common_OK
                         }
@@ -1170,6 +1189,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case appIcons
         case animatedEmoji
         case emojiStatus
+        case translation
     }
     
     public enum Source: Equatable {

@@ -165,6 +165,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .translation:
+            if case .translation = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -191,6 +197,7 @@ public enum PremiumSource: Equatable {
     case giftTerms
     case voiceToText
     case fasterDownload
+    case translation
     
     var identifier: String? {
         switch self {
@@ -242,6 +249,8 @@ public enum PremiumSource: Equatable {
                 } else {
                     return "deeplink"
                 }
+            case .translation:
+                return "translation"
         }
     }
 }
@@ -260,6 +269,7 @@ enum PremiumPerk: CaseIterable {
     case appIcons
     case animatedEmoji
     case emojiStatus
+    case translation
     
     static var allCases: [PremiumPerk] {
         return [
@@ -275,7 +285,8 @@ enum PremiumPerk: CaseIterable {
             .animatedUserpics,
             .appIcons,
             .animatedEmoji,
-            .emojiStatus
+            .emojiStatus,
+            .translation
         ]
     }
     
@@ -317,6 +328,8 @@ enum PremiumPerk: CaseIterable {
                 return "animated_emoji"
             case .emojiStatus:
                 return "emoji_status"
+            case .translation:
+                return "translation"
         }
     }
     
@@ -348,6 +361,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_AnimatedEmoji
             case .emojiStatus:
                 return strings.Premium_EmojiStatus
+            case .translation:
+                return strings.Premium_Translation
         }
     }
     
@@ -379,6 +394,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_AnimatedEmojiInfo
             case .emojiStatus:
                 return strings.Premium_EmojiStatusInfo
+            case .translation:
+                return strings.Premium_TranslationInfo
         }
     }
     
@@ -409,6 +426,8 @@ enum PremiumPerk: CaseIterable {
             case .animatedEmoji:
                 return "Premium/Perk/Emoji"
             case .emojiStatus:
+                return "Premium/Perk/Status"
+            case .translation:
                 return "Premium/Perk/Status"
         }
     }
@@ -1646,6 +1665,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .animatedEmoji
                             case .emojiStatus:
                                 demoSubject = .emojiStatus
+                            case .translation:
+                                demoSubject = .translation
                             }
                             
                             let isPremium = state?.isPremium == true

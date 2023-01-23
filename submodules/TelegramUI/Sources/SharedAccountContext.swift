@@ -1507,6 +1507,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .voiceToText
         case .fasterDownload:
             mappedSource = .fasterDownload
+        case .translation:
+            mappedSource = .translation
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
     }
@@ -1540,6 +1542,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .animatedEmoji
         case .emojiStatus:
             mappedSubject = .emojiStatus
+        case .translation:
+            mappedSubject = .translation
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
