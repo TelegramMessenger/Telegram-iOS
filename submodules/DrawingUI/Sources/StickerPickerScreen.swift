@@ -276,7 +276,7 @@ class StickerPickerScreen: ViewController {
                 openFeatured: nil,
                 openSearch: {
                 },
-                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
@@ -391,7 +391,7 @@ class StickerPickerScreen: ViewController {
                 openStickerSettings: nil,
                 openFeatured: nil,
                 openSearch: {},
-                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
@@ -481,7 +481,7 @@ class StickerPickerScreen: ViewController {
                 openFeatured: nil,
                 openSearch: {
                 },
-                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }

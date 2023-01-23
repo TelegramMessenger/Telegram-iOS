@@ -286,9 +286,28 @@ final class EmojiSearchSearchBarComponent: Component {
                             
                             if let _ = self.selectedItem, let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
                                 component.searchTermUpdated(group.identifiers.joined(separator: ""))
+                                
+                                if let itemComponentView = itemView.view.view {
+                                    var offset = self.scrollView.contentOffset.x
+                                    let maxDistance: CGFloat = 44.0
+                                    if itemComponentView.frame.maxX - offset > self.scrollView.bounds.width - maxDistance {
+                                        offset = itemComponentView.frame.maxX - (self.scrollView.bounds.width - maxDistance)
+                                    }
+                                    if itemComponentView.frame.minX - offset < maxDistance {
+                                        offset = itemComponentView.frame.minX - maxDistance
+                                    }
+                                    offset = max(0.0, min(offset, self.scrollView.contentSize.width - self.scrollView.bounds.width))
+                                    if offset != self.scrollView.contentOffset.x {
+                                        self.scrollView.setContentOffset(CGPoint(x: offset, y: 0.0), animated: true)
+                                    }
+                                }
                             } else {
+                                let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+                                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(), size: self.scrollView.bounds.size))
+                                self.updateScrolling(transition: transition, fromScrolling: false)
+                                //self.scrollView.setContentOffset(CGPoint(), animated: true)
+                                
                                 component.searchTermUpdated(nil)
-                                self.scrollView.setContentOffset(CGPoint(), animated: true)
                             }
                             
                             break
@@ -301,8 +320,13 @@ final class EmojiSearchSearchBarComponent: Component {
         func clearSelection(dispatchEvent: Bool) {
             if self.selectedItem != nil {
                 self.selectedItem = nil
-                self.state?.updated(transition: .immediate)
-                self.scrollView.setContentOffset(CGPoint(), animated: true)
+                
+                let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(), size: self.scrollView.bounds.size))
+                self.updateScrolling(transition: transition, fromScrolling: false)
+                
+                self.state?.updated(transition: transition)
+                
                 if dispatchEvent {
                     self.component?.searchTermUpdated(nil)
                 }
@@ -419,8 +443,18 @@ final class EmojiSearchSearchBarComponent: Component {
             for (id, itemView) in self.visibleItemViews {
                 if !validItemIds.contains(id) {
                     removedItemIds.append(id)
-                    itemView.view.view?.removeFromSuperview()
-                    itemView.tintView.removeFromSuperview()
+                    
+                    if let itemComponentView = itemView.view.view {
+                        transition.attachAnimation(view: itemComponentView, id: "remove", completion: { [weak itemComponentView] _ in
+                            itemComponentView?.removeFromSuperview()
+                        })
+                    }
+                    let tintView = itemView.tintView
+                    transition.attachAnimation(view: tintView, id: "remove", completion: { [weak tintView] _ in
+                        tintView?.removeFromSuperview()
+                    })
+                    //itemView.view.view?.removeFromSuperview()
+                    //itemView.tintView.removeFromSuperview()
                 }
             }
             for id in removedItemIds {
@@ -523,10 +557,6 @@ final class EmojiSearchSearchBarComponent: Component {
                 self.isUserInteractionEnabled = false
                 self.textView.view?.isHidden = hasText
                 self.tintTextView.view?.isHidden = hasText
-                
-                /*if self.scrollView.contentOffset.x != 0.0 {
-                    self.scrollView.setContentOffset(CGPoint(), animated: true)
-                }*/
             case .inactive:
                 self.isUserInteractionEnabled = true
                 self.textView.view?.isHidden = false

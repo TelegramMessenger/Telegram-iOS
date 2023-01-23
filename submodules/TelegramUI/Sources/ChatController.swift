@@ -8662,26 +8662,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let subjectFlags: TelegramChatBannedRightsFlags
+            let subjectFlags: [TelegramChatBannedRightsFlags]
             switch subject {
-                case .stickers:
-                    subjectFlags = .banSendStickers
-                case .mediaRecording, .premiumVoiceMessages:
-                    subjectFlags = .banSendMedia
+            case .stickers:
+                subjectFlags = [.banSendStickers]
+            case .mediaRecording, .premiumVoiceMessages:
+                subjectFlags = [.banSendVoice, .banSendInstantVideos]
             }
                         
-            let bannedPermission: (Int32, Bool)?
+            var bannedPermission: (Int32, Bool)? = nil
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                bannedPermission = channel.hasBannedPermission(subjectFlags)
-            } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-                if group.hasBannedPermission(subjectFlags) {
-                    bannedPermission = (Int32.max, false)
-                } else {
-                    bannedPermission = nil
+                for subjectFlag in subjectFlags {
+                    if let value = channel.hasBannedPermission(subjectFlag) {
+                        bannedPermission = value
+                        break
+                    }
                 }
-            } else {
-                bannedPermission = nil
+            } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                for subjectFlag in subjectFlags {
+                    if group.hasBannedPermission(subjectFlag) {
+                        bannedPermission = (Int32.max, false)
+                        break
+                    }
+                }
             }
+            
+            var displayToast = false
             
             if let (untilDate, personal) = bannedPermission {
                 let banDescription: String
@@ -8700,7 +8706,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else if personal {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
                         } else {
-                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
+                            banDescription = strongSelf.restrictedSendingContentsText()
+                            displayToast = true
                         }
                     case .premiumVoiceMessages:
                         banDescription = ""
@@ -8714,37 +8721,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 switch displayType {
                     case .tooltip:
-                        var rect: CGRect?
-                        let isStickers: Bool = subject == .stickers
-                        switch subject {
-                        case .stickers:
-                            rect = strongSelf.chatDisplayNode.frameForStickersButton()
-                            if var rectValue = rect, let actionRect = strongSelf.chatDisplayNode.frameForInputActionButton() {
-                                rectValue.origin.y = actionRect.minY
-                                rect = rectValue
-                            }
-                        case .mediaRecording, .premiumVoiceMessages:
-                            rect = strongSelf.chatDisplayNode.frameForInputActionButton()
-                        }
-                        
-                        if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
-                            tooltipController.updateContent(.text(banDescription), animated: true, extendTimer: true)
-                        } else if let rect = rect {
-                            strongSelf.mediaRestrictedTooltipController?.dismiss()
-                            let tooltipController = TooltipController(content: .text(banDescription), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
-                            strongSelf.mediaRestrictedTooltipController = tooltipController
-                            strongSelf.mediaRestrictedTooltipControllerMode = isStickers
-                            tooltipController.dismissed = { [weak tooltipController] _ in
-                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
-                                    strongSelf.mediaRestrictedTooltipController = nil
+                        if displayToast {
+                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: banDescription))
+                        } else {
+                            var rect: CGRect?
+                            let isStickers: Bool = subject == .stickers
+                            switch subject {
+                            case .stickers:
+                                rect = strongSelf.chatDisplayNode.frameForStickersButton()
+                                if var rectValue = rect, let actionRect = strongSelf.chatDisplayNode.frameForInputActionButton() {
+                                    rectValue.origin.y = actionRect.minY
+                                    rect = rectValue
                                 }
+                            case .mediaRecording, .premiumVoiceMessages:
+                                rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                             }
-                            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
-                                if let strongSelf = self {
-                                    return (strongSelf.chatDisplayNode, rect)
+                            
+                            if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
+                                tooltipController.updateContent(.text(banDescription), animated: true, extendTimer: true)
+                            } else if let rect = rect {
+                                strongSelf.mediaRestrictedTooltipController?.dismiss()
+                                let tooltipController = TooltipController(content: .text(banDescription), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                                strongSelf.mediaRestrictedTooltipController = tooltipController
+                                strongSelf.mediaRestrictedTooltipControllerMode = isStickers
+                                tooltipController.dismissed = { [weak tooltipController] _ in
+                                    if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
+                                        strongSelf.mediaRestrictedTooltipController = nil
+                                    }
                                 }
-                                return nil
-                            }))
+                                strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                                    if let strongSelf = self {
+                                        return (strongSelf.chatDisplayNode, rect)
+                                    }
+                                    return nil
+                                }))
+                            }
                         }
                     case .alert:
                         strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: banDescription, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))

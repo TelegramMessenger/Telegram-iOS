@@ -641,25 +641,61 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         var premiumToastCounter = 0
         self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] groupId, item, _, _, _, _ in
-                let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                let _ = (
+                combineLatest(
+                    ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
+                    ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false)
+                )
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { hasPremium, hasGlobalPremium in
                     guard let strongSelf = self, let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
                     }
                     
                     if groupId == AnyHashable("featuredTop"), let file = item.itemFile {
                         let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
-                        let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                        let _ = (combineLatest(
+                            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+                            context.account.postbox.combinedView(keys: [viewKey])
+                        )
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak interfaceInteraction, weak controllerInteraction] views in
+                        |> deliverOnMainQueue).start(next: { [weak interfaceInteraction, weak controllerInteraction] emojiPacksView, views in
                             guard let controllerInteraction = controllerInteraction else {
                                 return
                             }
                             guard let view = views.views[viewKey] as? OrderedItemListView else {
                                 return
                             }
-                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            guard let self else {
+                                return
+                            }
+                            
+                            let _ = interfaceInteraction
+                            let _ = controllerInteraction
+                            
+                            var installedCollectionIds = Set<ItemCollectionId>()
+                            for (id, _, _) in emojiPacksView.collectionInfos {
+                                installedCollectionIds.insert(id)
+                            }
+                            
+                            let stickerPacks = view.items.map({ $0.contents.get(FeaturedStickerPackItem.self)! }).filter({
+                                !installedCollectionIds.contains($0.info.id)
+                            })
+                            
+                            for featuredStickerPack in stickerPacks {
                                 if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
-                                    let controller = StickerPackScreen(
+                                    if let pagerView = self.entityKeyboardView.componentView as? EntityKeyboardComponent.View, let emojiInputInteraction = self.emojiInputInteraction {
+                                        pagerView.openCustomSearch(content: EmojiSearchContent(
+                                            context: self.context,
+                                            items: stickerPacks,
+                                            initialFocusId: featuredStickerPack.info.id,
+                                            hasPremiumForUse: hasPremium,
+                                            hasPremiumForInstallation: hasGlobalPremium,
+                                            parentInputInteraction: emojiInputInteraction
+                                        ))
+                                    }
+                                    
+                                    /*let controller = StickerPackScreen(
                                         context: context,
                                         updatedPresentationData: controllerInteraction.updatedPresentationData,
                                         mode: .default,
@@ -675,7 +711,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                             interfaceInteraction.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
                                         }
                                     )
-                                    controllerInteraction.presentController(controller, nil)
+                                    controllerInteraction.presentController(controller, nil)*/
                                     
                                     break
                                 }
@@ -786,7 +822,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             openSearch: {
             },
-            addGroupAction: { [weak self, weak controllerInteraction] groupId, isPremiumLocked in
+            addGroupAction: { [weak self, weak controllerInteraction] groupId, isPremiumLocked, scrollToGroup in
                 guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
                     return
                 }
@@ -815,7 +851,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
                         if featuredEmojiPack.info.id == collectionId {
                             if let strongSelf = self {
-                                strongSelf.scheduledContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                                strongSelf.scheduledContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId, scrollToGroup: scrollToGroup))
                             }
                             let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
                             
@@ -1181,7 +1217,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     pagerView.openSearch()
                 }
             },
-            addGroupAction: { groupId, isPremiumLocked in
+            addGroupAction: { groupId, isPremiumLocked, _ in
                 guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
                     return
                 }
@@ -1479,7 +1515,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.openGifContextMenu(item: item, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                strongSelf.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
             },
             loadMore: { [weak self] token in
                 guard let strongSelf = self, let gifContext = strongSelf.gifContext else {
@@ -1697,7 +1733,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }
                     strongSelf.reorderItems(category: category, items: items)
                 },
-                makeSearchContainerNode: { [weak controllerInteraction] content in
+                makeSearchContainerNode: { [weak self, weak controllerInteraction] content in
                     guard let controllerInteraction = controllerInteraction else {
                         return nil
                     }
@@ -1711,7 +1747,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    return PaneSearchContainerNode(
+                    let searchContainerNode = PaneSearchContainerNode(
                         context: context,
                         theme: presentationData.theme,
                         strings: presentationData.strings,
@@ -1722,6 +1758,14 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         cancel: {
                         }
                     )
+                    searchContainerNode.openGifContextMenu = { item, sourceNode, sourceRect, gesture, isSaved in
+                        guard let self else {
+                            return
+                        }
+                        self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceNode.view, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                    }
+                    
+                    return searchContainerNode
                 },
                 contentIdUpdated: { _ in },
                 deviceMetrics: deviceMetrics,
@@ -1854,17 +1898,15 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         })
     }
     
-    private func openGifContextMenu(item: GifPagerContentComponent.Item, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
-        let file = item
-        
+    private func openGifContextMenu(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
         let canSaveGif: Bool
-        if file.file.media.fileId.namespace == Namespaces.Media.CloudFile {
+        if file.media.fileId.namespace == Namespaces.Media.CloudFile {
             canSaveGif = true
         } else {
             canSaveGif = false
         }
         
-        let _ = (self.context.engine.stickers.isGifSaved(id: file.file.media.fileId)
+        let _ = (self.context.engine.stickers.isGifSaved(id: file.media.fileId)
         |> deliverOnMainQueue).start(next: { [weak self] isGifSaved in
             guard let strongSelf = self else {
                 return
@@ -1875,7 +1917,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
-            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
             
             let gallery = GalleryController(context: strongSelf.context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
             }, baseNavigationController: nil)
@@ -1887,8 +1929,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             }, action: { _, f in
                 f(.default)
                 if isSaved {
-                    let _ = self?.controllerInteraction?.sendGif(file.file, sourceView, sourceRect, false, false)
-                } else if let (collection, result) = file.contextResult {
+                    let _ = self?.controllerInteraction?.sendGif(file, sourceView, sourceRect, false, false)
+                } else if let (collection, result) = contextResult {
                     let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, false)
                 }
             })))
@@ -1908,8 +1950,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             }, action: { _, f in
                                 f(.default)
                                 if isSaved {
-                                    let _ = self?.controllerInteraction?.sendGif(file.file, sourceView, sourceRect, true, false)
-                                } else if let (collection, result) = file.contextResult {
+                                    let _ = self?.controllerInteraction?.sendGif(file, sourceView, sourceRect, true, false)
+                                } else if let (collection, result) = contextResult {
                                     let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, true)
                                 }
                             })))
@@ -1921,7 +1963,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             }, action: { _, f in
                                 f(.default)
                                 
-                                let _ = self?.controllerInteraction?.sendGif(file.file, sourceView, sourceRect, false, true)
+                                let _ = self?.controllerInteraction?.sendGif(file, sourceView, sourceRect, false, true)
                             })))
                         }
                     }
@@ -1937,7 +1979,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.file.media.fileId).start()
+                    let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.media.fileId).start()
                 })))
             } else if canSaveGif && !isGifSaved {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Preview_SaveGif, icon: { theme in
@@ -1951,7 +1993,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     
                     let context = strongSelf.context
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let _ = (toggleGifSaved(account: context.account, fileReference: file.file, saved: true)
+                    let _ = (toggleGifSaved(account: context.account, fileReference: file, saved: true)
                     |> deliverOnMainQueue).start(next: { result in
                         guard let strongSelf = self else {
                             return
@@ -2136,7 +2178,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             },
             openSearch: {
             },
-            addGroupAction: { _, _ in
+            addGroupAction: { _, _, _ in
             },
             clearGroup: { [weak self] groupId in
                 guard let strongSelf = self else {

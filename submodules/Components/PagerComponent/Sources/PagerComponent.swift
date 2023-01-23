@@ -149,6 +149,7 @@ public enum PagerComponentPanelHideBehavior {
     case hideOnScroll
     case show
     case hide
+    case disable
 }
 
 public final class PagerComponentContentIcon: Equatable {
@@ -559,6 +560,10 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 }
             }
             
+            if case .disable = component.panelHideBehavior {
+                topPanelVisibility = 0.0
+            }
+            
             var topPanelHeight: CGFloat = 0.0
             if let topPanel = component.topPanel {
                 let effectiveTopPanelOffsetFraction = scrollingPanelOffsetFraction
@@ -616,7 +621,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 
                 var topPanelVisibilityFraction: CGFloat = 1.0 - effectiveTopPanelOffsetFraction
                 switch component.panelHideBehavior {
-                case .hide:
+                case .hide, .disable:
                     topPanelVisibilityFraction = 0.0
                 case .show:
                     topPanelVisibilityFraction = 1.0
@@ -631,11 +636,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 
                 if case .hide = component.panelHideBehavior {
                     topPanelOffset = topPanelSize.height
+                } else if case .disable = component.panelHideBehavior {
+                    topPanelOffset = topPanelSize.height
                 }
                 
                 if component.externalTopPanelContainer != nil {
                     var visibleTopPanelHeight = max(0.0, topPanelSize.height - topPanelOffset)
                     if case .hide = component.panelHideBehavior {
+                        visibleTopPanelHeight = 0.0
+                    } else if case .disable = component.panelHideBehavior {
                         visibleTopPanelHeight = 0.0
                     }
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(), size: CGSize(width: topPanelSize.width, height: visibleTopPanelHeight)))
@@ -705,6 +714,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 bottomPanelOffset = bottomPanelSize.height * scrollingPanelOffsetFraction
                 if case .hide = component.panelHideBehavior {
                     bottomPanelOffset = bottomPanelSize.height
+                } else if case .disable = component.panelHideBehavior {
+                    bottomPanelOffset = bottomPanelSize.height
                 }
                 
                 panelStateTransition.setFrame(view: bottomPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height + bottomPanelOffset), size: bottomPanelSize))
@@ -724,7 +735,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             
             let effectiveTopPanelHeight: CGFloat
             switch component.panelHideBehavior {
-            case .hide:
+            case .hide, .disable:
                 effectiveTopPanelHeight = 0.0
             case .show, .hideOnScroll:
                 if component.externalTopPanelContainer != nil {

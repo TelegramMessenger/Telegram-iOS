@@ -783,6 +783,8 @@
                                 authInfo = [authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
                                 [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo selector:authInfoSelector];
                             }];
+                            
+                            restartRequest = true;
                         } else if (rpcError.errorCode == 406) {
                             if (_didReceiveSoftAuthResetError) {
                                 _didReceiveSoftAuthResetError();

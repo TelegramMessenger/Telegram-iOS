@@ -395,7 +395,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     openSearch: {
                     },
-                    addGroupAction: { groupId, isPremiumLocked in
+                    addGroupAction: { groupId, isPremiumLocked, _ in
                         guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {
                             return
                         }
@@ -410,7 +410,7 @@ public final class EmojiStatusSelectionController: ViewController {
                             for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
                                 if featuredEmojiPack.info.id == collectionId {
                                     if let strongSelf = self {
-                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId, scrollToGroup: true))
                                     }
                                     let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
                                     

@@ -115,6 +115,7 @@ public final class EntityKeyboardComponent: Component {
     public let displayBottomPanel: Bool
     public let isExpanded: Bool
     public let clipContentToTopPanel: Bool
+    public let hidePanels: Bool
     
     public init(
         theme: PresentationTheme,
@@ -145,7 +146,8 @@ public final class EntityKeyboardComponent: Component {
         inputHeight: CGFloat,
         displayBottomPanel: Bool,
         isExpanded: Bool,
-        clipContentToTopPanel: Bool
+        clipContentToTopPanel: Bool,
+        hidePanels: Bool = false
     ) {
         self.theme = theme
         self.strings = strings
@@ -176,6 +178,7 @@ public final class EntityKeyboardComponent: Component {
         self.displayBottomPanel = displayBottomPanel
         self.isExpanded = isExpanded
         self.clipContentToTopPanel = clipContentToTopPanel
+        self.hidePanels = hidePanels
     }
     
     public static func ==(lhs: EntityKeyboardComponent, rhs: EntityKeyboardComponent) -> Bool {
@@ -701,6 +704,8 @@ public final class EntityKeyboardComponent: Component {
             let panelHideBehavior: PagerComponentPanelHideBehavior
             if self.searchComponent != nil {
                 panelHideBehavior = .hide
+            } else if component.hidePanels {
+                panelHideBehavior = .disable
             } else if component.isExpanded {
                 panelHideBehavior = .show
             } else {
@@ -914,6 +919,25 @@ public final class EntityKeyboardComponent: Component {
             }
         }
         
+        public func openCustomSearch(content: EntitySearchContainerNode) {
+            guard let component = self.component else {
+                return
+            }
+            if self.searchComponent != nil {
+                return
+            }
+            
+            self.searchComponent = EntitySearchContentComponent(
+                makeContainerNode: {
+                    return content
+                },
+                dismissSearch: { [weak self] in
+                    self?.closeSearch()
+                }
+            )
+            component.hideInputUpdated(true, true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
+        }
+        
         private func closeSearch() {
             guard let component = self.component else {
                 return
@@ -926,7 +950,7 @@ public final class EntityKeyboardComponent: Component {
             component.hideInputUpdated(false, false, Transition(animation: .curve(duration: 0.4, curve: .spring)))
         }
         
-        private func scrollToItemGroup(contentId: String, groupId: AnyHashable, subgroupId: Int32?) {
+        public func scrollToItemGroup(contentId: String, groupId: AnyHashable, subgroupId: Int32?, animated: Bool = true) {
             guard let pagerView = self.pagerView.findTaggedView(tag: PagerComponentViewTag()) as? PagerComponent<EntityKeyboardChildEnvironment, EntityKeyboardTopContainerPanelEnvironment>.View else {
                 return
             }
@@ -938,7 +962,7 @@ public final class EntityKeyboardComponent: Component {
             }
             self.component?.emojiContent?.inputInteractionHolder.inputInteraction?.updateScrollingToItemGroup()
             
-            pagerContentView.scrollToItemGroup(id: groupId, subgroupId: subgroupId)
+            pagerContentView.scrollToItemGroup(id: groupId, subgroupId: subgroupId, animated: animated)
             pagerView.collapseTopPanel()
         }
         

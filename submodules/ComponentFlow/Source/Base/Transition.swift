@@ -150,7 +150,7 @@ public struct Transition {
             //view.center = CGPoint(x: frame.midX, y: frame.midY)
 
             self.animatePosition(view: view, from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: CGPoint(x: frame.midX, y: frame.midY), completion: completion)
-            self.animateBounds(view: view, from: CGRect(origin: view.bounds.origin, size: previousFrame.size), to: CGRect(origin: view.bounds.origin, size: frame.size))
+            self.animateBoundsSize(view: view, from: previousFrame.size, to: frame.size)
         }
     }
     
