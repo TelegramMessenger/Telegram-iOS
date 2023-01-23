@@ -1892,7 +1892,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             component: AnyComponent(Text(
                 text: strings.Common_Cancel,
                 font: Font.regular(17.0),
-                color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+                color: useOpaqueTheme ? theme.list.itemAccentColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
             )),
             environment: {},
             containerSize: CGSize(width: size.width - 32.0, height: 100.0)
@@ -2178,7 +2178,7 @@ public final class EmojiPagerContentComponent: Component {
         public enum AnimationType {
             case generic
             case groupExpanded(id: AnyHashable)
-            case groupInstalled(id: AnyHashable)
+            case groupInstalled(id: AnyHashable, scrollToGroup: Bool)
             case groupRemoved(id: AnyHashable)
         }
         
@@ -2239,7 +2239,7 @@ public final class EmojiPagerContentComponent: Component {
         public let openStickerSettings: (() -> Void)?
         public let openFeatured: (() -> Void)?
         public let openSearch: () -> Void
-        public let addGroupAction: (AnyHashable, Bool) -> Void
+        public let addGroupAction: (AnyHashable, Bool, Bool) -> Void
         public let clearGroup: (AnyHashable) -> Void
         public let pushController: (ViewController) -> Void
         public let presentController: (ViewController) -> Void
@@ -2248,6 +2248,7 @@ public final class EmojiPagerContentComponent: Component {
         public let requestUpdate: (Transition) -> Void
         public let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void
         public let updateScrollingToItemGroup: () -> Void
+        public let externalCancel: (() -> Void)?
         public let onScroll: () -> Void
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
@@ -2263,7 +2264,7 @@ public final class EmojiPagerContentComponent: Component {
             openStickerSettings: (() -> Void)?,
             openFeatured: (() -> Void)?,
             openSearch: @escaping () -> Void,
-            addGroupAction: @escaping (AnyHashable, Bool) -> Void,
+            addGroupAction: @escaping (AnyHashable, Bool, Bool) -> Void,
             clearGroup: @escaping (AnyHashable) -> Void,
             pushController: @escaping (ViewController) -> Void,
             presentController: @escaping (ViewController) -> Void,
@@ -2272,6 +2273,7 @@ public final class EmojiPagerContentComponent: Component {
             requestUpdate: @escaping (Transition) -> Void,
             updateSearchQuery: @escaping (SearchQuery?) -> Void,
             updateScrollingToItemGroup: @escaping () -> Void,
+            externalCancel: (() -> Void)? = nil,
             onScroll: @escaping () -> Void,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
@@ -2295,6 +2297,7 @@ public final class EmojiPagerContentComponent: Component {
             self.requestUpdate = requestUpdate
             self.updateSearchQuery = updateSearchQuery
             self.updateScrollingToItemGroup = updateScrollingToItemGroup
+            self.externalCancel = externalCancel
             self.onScroll = onScroll
             self.chatPeerId = chatPeerId
             self.peekBehavior = peekBehavior
@@ -2544,6 +2547,7 @@ public final class EmojiPagerContentComponent: Component {
     public let displaySearchWithPlaceholder: String?
     public let searchCategories: EmojiSearchCategories?
     public let searchInitiallyHidden: Bool
+    public let searchAlwaysActive: Bool
     public let searchIsPlaceholderOnly: Bool
     public let emptySearchResults: EmptySearchResults?
     public let enableLongPress: Bool
@@ -2564,6 +2568,7 @@ public final class EmojiPagerContentComponent: Component {
         displaySearchWithPlaceholder: String?,
         searchCategories: EmojiSearchCategories?,
         searchInitiallyHidden: Bool,
+        searchAlwaysActive: Bool,
         searchIsPlaceholderOnly: Bool,
         emptySearchResults: EmptySearchResults?,
         enableLongPress: Bool,
@@ -2583,6 +2588,7 @@ public final class EmojiPagerContentComponent: Component {
         self.displaySearchWithPlaceholder = displaySearchWithPlaceholder
         self.searchCategories = searchCategories
         self.searchInitiallyHidden = searchInitiallyHidden
+        self.searchAlwaysActive = searchAlwaysActive
         self.searchIsPlaceholderOnly = searchIsPlaceholderOnly
         self.emptySearchResults = emptySearchResults
         self.enableLongPress = enableLongPress
@@ -2605,6 +2611,7 @@ public final class EmojiPagerContentComponent: Component {
             displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
             searchCategories: self.searchCategories,
             searchInitiallyHidden: self.searchInitiallyHidden,
+            searchAlwaysActive: self.searchAlwaysActive,
             searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
@@ -4299,7 +4306,7 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?) {
+        public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?, animated: Bool) {
             guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
@@ -4335,11 +4342,34 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     var scrollPosition = anchorFrame.minY + floor(-itemLayout.verticalGroupDefaultSpacing / 2.0) - pagerEnvironment.containerInsets.top
+                    if !animated {
+                        scrollPosition = floor(anchorFrame.midY - self.scrollView.bounds.height * 0.5)
+                    }
                     if scrollPosition > self.scrollView.contentSize.height - self.scrollView.bounds.height {
                         scrollPosition = self.scrollView.contentSize.height - self.scrollView.bounds.height
                     }
                     if scrollPosition < 0.0 {
                         scrollPosition = 0.0
+                    }
+                    
+                    if !animated, let keyboardChildEnvironment = self.keyboardChildEnvironment, let inputInteraction = component.inputInteractionHolder.inputInteraction, inputInteraction.useOpaqueTheme {
+                        let highlightLayer = SimpleLayer()
+                        highlightLayer.backgroundColor = keyboardChildEnvironment.theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor
+                        highlightLayer.cornerRadius = 20.0
+                        var highlightFrame = group.frame
+                        if highlightFrame.origin.x < 4.0 {
+                            highlightFrame.size.width += (4.0 - highlightFrame.origin.x)
+                            highlightFrame.origin.x = 4.0
+                        }
+                        if highlightFrame.minX + highlightFrame.size.width > self.scrollView.bounds.width - 4.0 {
+                            highlightFrame.size.width = self.scrollView.bounds.width - 4.0 - highlightFrame.minX
+                        }
+                        
+                        highlightLayer.frame = highlightFrame
+                        self.scrollView.layer.insertSublayer(highlightLayer, at: 0)
+                        highlightLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.8, removeOnCompletion: false, completion: { [weak highlightLayer] _ in
+                            highlightLayer?.removeFromSuperlayer()
+                        })
                     }
                     
                     let offsetDirectionSign: Double = scrollPosition < self.scrollView.bounds.minY ? -1.0 : 1.0
@@ -4465,7 +4495,7 @@ public final class EmojiPagerContentComponent: Component {
                         }
                     }
                     
-                    let duration = 0.4
+                    let duration: Double = animated ? 0.4 : 0.0
                     let timingFunction = kCAMediaTimingFunctionSpring
                     
                     if let commonItemOffset = commonItemOffset {
@@ -4782,41 +4812,43 @@ public final class EmojiPagerContentComponent: Component {
                 return
             }
             if case .ended = recognizer.state {
-                let locationInScrollView = recognizer.location(in: self.scrollView)
-                outer: for (id, groupHeader) in self.visibleGroupHeaders {
-                    if groupHeader.frame.insetBy(dx: -10.0, dy: -6.0).contains(locationInScrollView) {
-                        let groupHeaderPoint = self.scrollView.convert(locationInScrollView, to: groupHeader)
-                        if let clearIconLayer = groupHeader.clearIconLayer, clearIconLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(groupHeaderPoint) {
-                            component.inputInteractionHolder.inputInteraction?.clearGroup(id)
-                            return
-                        } else {
-                            if groupHeader.tapGesture(point: recognizer.location(in: groupHeader)) {
+                if self.scrollViewClippingView.bounds.contains(recognizer.location(in: self.scrollViewClippingView)) {
+                    let locationInScrollView = recognizer.location(in: self.scrollView)
+                    outer: for (id, groupHeader) in self.visibleGroupHeaders {
+                        if groupHeader.frame.insetBy(dx: -10.0, dy: -6.0).contains(locationInScrollView) {
+                            let groupHeaderPoint = self.scrollView.convert(locationInScrollView, to: groupHeader)
+                            if let clearIconLayer = groupHeader.clearIconLayer, clearIconLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(groupHeaderPoint) {
+                                component.inputInteractionHolder.inputInteraction?.clearGroup(id)
                                 return
+                            } else {
+                                if groupHeader.tapGesture(point: recognizer.location(in: groupHeader)) {
+                                    return
+                                }
                             }
                         }
                     }
-                }
-                
-                var foundItem = false
-                var foundExactItem = false
-                if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self)), let itemLayer = self.visibleItemLayers[itemKey] {
-                    foundExactItem = true
-                    foundItem = true
-                    if !itemLayer.displayPlaceholder {
-                        component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
-                    }
-                }
-                
-                if !foundExactItem {
-                    if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self), extendedHitRange: true), let itemLayer = self.visibleItemLayers[itemKey] {
+                    
+                    var foundItem = false
+                    var foundExactItem = false
+                    if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self)), let itemLayer = self.visibleItemLayers[itemKey] {
+                        foundExactItem = true
                         foundItem = true
                         if !itemLayer.displayPlaceholder {
                             component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
                         }
                     }
+                    
+                    if !foundExactItem {
+                        if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self), extendedHitRange: true), let itemLayer = self.visibleItemLayers[itemKey] {
+                            foundItem = true
+                            if !itemLayer.displayPlaceholder {
+                                component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
+                            }
+                        }
+                    }
+                    
+                    let _ = foundItem
                 }
-                
-                let _ = foundItem
             }
         }
         
@@ -5009,7 +5041,7 @@ public final class EmojiPagerContentComponent: Component {
                 scrollView.layer.removeAllAnimations()
             }
             
-            if self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+            if self.isSearchActivated, let component = self.component, !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
                 scrollView.isScrollEnabled = false
                 DispatchQueue.main.async {
                     scrollView.isScrollEnabled = true
@@ -5130,8 +5162,10 @@ public final class EmojiPagerContentComponent: Component {
             var transitionHintExpandedGroupId: AnyHashable?
             if let contentAnimation = contentAnimation {
                 switch contentAnimation.type {
-                case let .groupInstalled(groupId):
-                    transitionHintInstalledGroupId = groupId
+                case let .groupInstalled(groupId, scrollToGroup):
+                    if scrollToGroup {
+                        transitionHintInstalledGroupId = groupId
+                    }
                 case let .groupExpanded(groupId):
                     transitionHintExpandedGroupId = groupId
                 case let .groupRemoved(groupId):
@@ -5167,7 +5201,7 @@ public final class EmojiPagerContentComponent: Component {
                                 guard let strongSelf = self, let component = strongSelf.component else {
                                     return
                                 }
-                                component.inputInteractionHolder.inputInteraction?.addGroupAction(groupId, false)
+                                component.inputInteractionHolder.inputInteraction?.addGroupAction(groupId, false, true)
                             },
                             performItemAction: { [weak self] item, view, rect, layer in
                                 guard let strongSelf = self, let component = strongSelf.component else {
@@ -5349,7 +5383,7 @@ public final class EmojiPagerContentComponent: Component {
                                     guard let strongSelf = self, let component = strongSelf.component else {
                                         return
                                     }
-                                    component.inputInteractionHolder.inputInteraction?.addGroupAction(groupId, isPremiumLocked)
+                                    component.inputInteractionHolder.inputInteraction?.addGroupAction(groupId, isPremiumLocked, true)
                                 }
                             )),
                             environment: {},
@@ -5979,6 +6013,10 @@ public final class EmojiPagerContentComponent: Component {
             self.component = component
             self.state = state
             
+            if component.searchAlwaysActive {
+                self.isSearchActivated = true
+            }
+            
             component.inputInteractionHolder.inputInteraction?.peekBehavior?.setGestureRecognizerEnabled(view: self, isEnabled: true, itemAtPoint: { [weak self] point in
                 guard let strongSelf = self else {
                     return nil
@@ -6031,10 +6069,15 @@ public final class EmojiPagerContentComponent: Component {
             
             var transitionHintInstalledGroupId: AnyHashable?
             var transitionHintExpandedGroupId: AnyHashable?
+            var keepOffset = false
             if let contentAnimation = contentAnimation {
                 switch contentAnimation.type {
-                case let .groupInstalled(groupId):
-                    transitionHintInstalledGroupId = groupId
+                case let .groupInstalled(groupId, scrollToGroup):
+                    if scrollToGroup {
+                        transitionHintInstalledGroupId = groupId
+                    } else {
+                        keepOffset = true
+                    }
                 case let .groupExpanded(groupId):
                     transitionHintExpandedGroupId = groupId
                 case let .groupRemoved(groupId):
@@ -6270,7 +6313,7 @@ public final class EmojiPagerContentComponent: Component {
             self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: scrollView.isDragging || scrollView.isDecelerating)
             
             var animatedScrollOffset: CGFloat = 0.0
-            if !anchorItems.isEmpty {
+            if !anchorItems.isEmpty && !keepOffset {
                 let sortedAnchorItems: [(ItemLayer.Key, CGRect)] = anchorItems.sorted(by: { lhs, rhs in
                     if lhs.value.minY != rhs.value.minY {
                         return lhs.value.minY < rhs.value.minY
@@ -6402,20 +6445,24 @@ public final class EmojiPagerContentComponent: Component {
                             strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
                         }
                     }, deactivated: { [weak self] isFirstResponder in
-                        guard let strongSelf = self else {
+                        guard let strongSelf = self, let component = strongSelf.component else {
                             return
                         }
                         
-                        strongSelf.scrollToTop()
-                        
-                        strongSelf.isSearchActivated = false
-                        strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(false)
-                        if strongSelf.component?.searchInitiallyHidden == false {
-                            if !isFirstResponder {
-                                strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.easeInOut(duration: 0.2))
-                            }
+                        if let externalCancel = component.inputInteractionHolder.inputInteraction?.externalCancel {
+                            externalCancel()
                         } else {
-                            strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
+                            strongSelf.scrollToTop()
+                            
+                            strongSelf.isSearchActivated = false
+                            strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(false)
+                            if strongSelf.component?.searchInitiallyHidden == false {
+                                if !isFirstResponder {
+                                    strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.easeInOut(duration: 0.2))
+                                }
+                            } else {
+                                strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
+                            }
                         }
                     }, updateQuery: { [weak self] query in
                         guard let strongSelf = self else {
@@ -7502,6 +7549,7 @@ public final class EmojiPagerContentComponent: Component {
                 displaySearchWithPlaceholder: displaySearchWithPlaceholder,
                 searchCategories: searchCategories,
                 searchInitiallyHidden: searchInitiallyHidden,
+                searchAlwaysActive: false,
                 searchIsPlaceholderOnly: false,
                 emptySearchResults: nil,
                 enableLongPress: (isReactionSelection && !isQuickReactionSelection) || isStatusSelection,
@@ -8022,6 +8070,7 @@ public final class EmojiPagerContentComponent: Component {
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchCategories: searchCategories,
                 searchInitiallyHidden: true,
+                searchAlwaysActive: false,
                 searchIsPlaceholderOnly: searchIsPlaceholderOnly,
                 emptySearchResults: nil,
                 enableLongPress: false,

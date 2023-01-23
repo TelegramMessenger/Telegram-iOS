@@ -928,7 +928,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         },
                         openSearch: {
                         },
-                        addGroupAction: { groupId, isPremiumLocked in
+                        addGroupAction: { groupId, isPremiumLocked, _ in
                             guard let collectionId = groupId.base as? ItemCollectionId else {
                                 return
                             }

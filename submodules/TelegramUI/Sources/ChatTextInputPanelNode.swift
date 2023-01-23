@@ -930,7 +930,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         return
                     }
                     //TODO:localize
-                    controller.controllerInteraction?.displayUndo(.info(title: nil, text: "The admins of this group do not allow to send text messages."))
+                    controller.controllerInteraction?.displayUndo(.info(title: nil, text: controller.restrictedSendingContentsText()))
                 } else {
                     strongSelf.ensureFocused()
                 }

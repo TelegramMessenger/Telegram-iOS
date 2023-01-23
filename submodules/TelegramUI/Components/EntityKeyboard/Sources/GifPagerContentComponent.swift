@@ -289,7 +289,7 @@ public final class GifPagerContentComponent: Component {
                 self.itemSize = floor((itemHorizontalSpace - self.horizontalSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
                 
                 let numRowsInGroup = (itemCount + (self.itemsPerRow - 1)) / self.itemsPerRow
-                self.contentSize = CGSize(width: width, height: self.containerInsets.top + self.containerInsets.bottom + CGFloat(numRowsInGroup) * self.itemSize + CGFloat(max(0, numRowsInGroup - 1)) * self.verticalSpacing)
+                self.contentSize = CGSize(width: width, height: self.searchInsets.top + self.searchHeight + self.containerInsets.top + self.containerInsets.bottom + CGFloat(numRowsInGroup) * self.itemSize + CGFloat(max(0, numRowsInGroup - 1)) * self.verticalSpacing)
             }
             
             func frame(at index: Int) -> CGRect {
@@ -730,13 +730,18 @@ public final class GifPagerContentComponent: Component {
         }
         
         private func updateScrollingOffset(transition: Transition) {
-            let isInteracting = scrollView.isDragging || scrollView.isDecelerating
+            let isInteracting = self.scrollView.isDragging || self.scrollView.isDecelerating
             if let previousScrollingOffsetValue = self.previousScrollingOffset {
-                let currentBounds = scrollView.bounds
-                let offsetToTopEdge = max(0.0, currentBounds.minY - 0.0)
-                let offsetToBottomEdge = max(0.0, scrollView.contentSize.height - currentBounds.maxY)
+                let currentBounds = self.scrollView.bounds
+                var offsetToTopEdge = max(0.0, currentBounds.minY - 0.0)
+                var offsetToBottomEdge = max(0.0, self.scrollView.contentSize.height - currentBounds.maxY)
                 
-                let relativeOffset = scrollView.contentOffset.y - previousScrollingOffsetValue
+                if self.scrollView.contentSize.height < self.scrollView.bounds.height * 2.0 {
+                    offsetToTopEdge = 0.0
+                    offsetToBottomEdge = self.scrollView.contentSize.height
+                }
+                
+                let relativeOffset = self.scrollView.contentOffset.y - previousScrollingOffsetValue
                 self.pagerEnvironment?.onChildScrollingUpdate(PagerComponentChildEnvironment.ContentScrollingUpdate(
                     relativeOffset: relativeOffset,
                     absoluteOffsetToTopEdge: offsetToTopEdge,
@@ -745,19 +750,21 @@ public final class GifPagerContentComponent: Component {
                     isInteracting: isInteracting,
                     transition: transition
                 ))
-                self.previousScrollingOffset = scrollView.contentOffset.y
+                self.previousScrollingOffset = self.scrollView.contentOffset.y
             }
-            self.previousScrollingOffset = scrollView.contentOffset.y
+            self.previousScrollingOffset = self.scrollView.contentOffset.y
         }
         
         private func snappedContentOffset(proposedOffset: CGFloat) -> CGFloat {
-            guard let pagerEnvironment = self.pagerEnvironment else {
+            guard let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return proposedOffset
             }
             
             var proposedOffset = proposedOffset
             let bounds = self.bounds
-            if proposedOffset + bounds.height > self.scrollView.contentSize.height - pagerEnvironment.containerInsets.bottom {
+            if proposedOffset <= itemLayout.searchInsets.top + itemLayout.searchHeight * 0.5 {
+                proposedOffset = 0.0
+            } else if proposedOffset + bounds.height > self.scrollView.contentSize.height - pagerEnvironment.containerInsets.bottom {
                 proposedOffset = self.scrollView.contentSize.height - bounds.height
             }
             if proposedOffset < pagerEnvironment.containerInsets.top {
@@ -775,6 +782,7 @@ public final class GifPagerContentComponent: Component {
             transition.setBounds(view: self.scrollView, bounds: currentBounds)
             
             self.updateScrollingOffset(transition: transition)
+            self.updateVisibleItems(attemptSynchronousLoads: false, transition: transition, fromScrolling: true)
         }
         
         private func updateVisibleItems(attemptSynchronousLoads: Bool, transition: Transition, fromScrolling: Bool) {

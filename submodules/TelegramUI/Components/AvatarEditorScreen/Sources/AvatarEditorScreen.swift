@@ -496,7 +496,7 @@ final class AvatarEditorScreenComponent: Component {
                 openFeatured: nil,
                 openSearch: {
                 },
-                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller?(), let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
@@ -624,7 +624,7 @@ final class AvatarEditorScreenComponent: Component {
                 openFeatured: nil,
                 openSearch: {
                 },
-                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller?(), let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
