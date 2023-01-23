@@ -3077,11 +3077,14 @@ public final class EmojiPagerContentComponent: Component {
             
             override public var contents: Any? {
                 didSet {
+                    self.onContentsUpdate()
                     if let cloneLayer = self.cloneLayer {
                         cloneLayer.contents = self.contents
                     }
                 }
             }
+            
+            public var onContentsUpdate: () -> Void = {}
         
             public init(
                 item: Item,
