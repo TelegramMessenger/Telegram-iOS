@@ -346,7 +346,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             self.keepDataDisposable.set(postbox.mediaBox.keepResource(id: resourceReference.resource.id).start())
         }
         
-        if let storeAfterDownload {
+        if let storeAfterDownload = storeAfterDownload {
             self.autosaveDisposable.set((postbox.mediaBox.resourceData(resourceReference.resource)
             |> take(1)
             |> mapToSignal { initialData -> Signal<Bool, NoError> in
