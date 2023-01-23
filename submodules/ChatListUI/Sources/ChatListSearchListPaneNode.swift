@@ -1652,7 +1652,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 let filteredPeer: (EnginePeer, EnginePeer) -> Bool = { peer, accountPeer in
                     if let peerType = requestPeerType {
-                        guard !peer.isDeleted else {
+                        guard !peer.isDeleted && peer.id != context.account.peerId else {
                             return false
                         }
                         switch peerType {

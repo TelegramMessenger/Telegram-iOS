@@ -1744,7 +1744,7 @@ public final class ChatListNode: ListView {
                         isEmpty = false
                         return true
                     case let .peerType(peerType):
-                        if let peer = peer.peer, !peer.isDeleted {
+                        if let peer = peer.peer, !peer.isDeleted && peer.id != context.account.peerId {
                             switch peerType {
                             case let .user(userType):
                                 if case let .user(user) = peer {
