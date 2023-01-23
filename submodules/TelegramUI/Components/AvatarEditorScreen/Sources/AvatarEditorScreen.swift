@@ -77,21 +77,18 @@ final class AvatarEditorScreenComponent: Component {
     let context: AccountContext
     let ready: Promise<Bool>
     let peerType: AvatarEditorScreen.PeerType
-    let initialFileId: Int64?
-    let initialBackgroundColors: [Int32]?
+    let markup: TelegramMediaImage.EmojiMarkup?
     
     init(
         context: AccountContext,
         ready: Promise<Bool>,
         peerType: AvatarEditorScreen.PeerType,
-        initialFileId: Int64?,
-        initialBackgroundColors: [Int32]?
+        markup: TelegramMediaImage.EmojiMarkup?
     ) {
         self.context = context
         self.ready = ready
         self.peerType = peerType
-        self.initialFileId = initialFileId
-        self.initialBackgroundColors = initialBackgroundColors
+        self.markup = markup
     }
     
     static func ==(lhs: AvatarEditorScreenComponent, rhs: AvatarEditorScreenComponent) -> Bool {
@@ -101,10 +98,7 @@ final class AvatarEditorScreenComponent: Component {
         if lhs.peerType != rhs.peerType {
             return false
         }
-        if lhs.initialFileId != rhs.initialFileId {
-            return false
-        }
-        if lhs.initialBackgroundColors != rhs.initialBackgroundColors {
+        if lhs.markup != rhs.markup {
             return false
         }
         return true
@@ -127,7 +121,9 @@ final class AvatarEditorScreenComponent: Component {
         
         var isSearchActive: Bool = false
         
-        init(context: AccountContext, ready: Promise<Bool>, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
+        private var fileDisposable: Disposable?
+        
+        init(context: AccountContext, ready: Promise<Bool>, markup: TelegramMediaImage.EmojiMarkup?) {
             self.context = context
             self.ready = ready
          
@@ -136,15 +132,33 @@ final class AvatarEditorScreenComponent: Component {
             
             super.init()
             
-            if let initialFileId, let initialBackgroundColors {
-                let _ = (context.engine.stickers.resolveInlineStickers(fileIds: [initialFileId])
-                |> deliverOnMainQueue).start(next: { [weak self] files in
-                    if let strongSelf = self, let file = files.values.first {
-                        strongSelf.selectedFile = file
-                        strongSelf.updated(transition: .immediate)
+            if let markup {
+                switch markup.content {
+                case let .emoji(fileId):
+                    self.fileDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                    |> deliverOnMainQueue).start(next: { [weak self] files in
+                        if let strongSelf = self, let file = files.values.first {
+                            strongSelf.selectedFile = file
+                            strongSelf.updated(transition: .immediate)
+                        }
+                    })
+                case let .sticker(packReference, fileId):
+                    self.fileDisposable = (context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
+                    |> map { pack -> TelegramMediaFile? in
+                        if case let .result(_, items, _) = pack, let item = items.first(where: { $0.file.fileId.id == fileId }) {
+                            return item.file
+                        }
+                        return nil
                     }
-                })
-                self.selectedBackground = .gradient(initialBackgroundColors.map { UInt32(bitPattern: $0) })
+                    |> deliverOnMainQueue).start(next: { [weak self] file in
+                        if let strongSelf = self, let file {
+                            strongSelf.selectedFile = file
+                            strongSelf.updated(transition: .immediate)
+                        }
+                    })
+                }
+
+                self.selectedBackground = .gradient(markup.backgroundColors.map { UInt32(bitPattern: $0) })
                 self.previousColor = self.selectedBackground
             } else {
                 self.selectedBackground = defaultBackgrounds.first!
@@ -152,14 +166,17 @@ final class AvatarEditorScreenComponent: Component {
             
             self.previousColor = self.selectedBackground
         }
+        
+        deinit {
+            self.fileDisposable?.dispose()
+        }
     }
     
     func makeState() -> State {
         return State(
             context: self.context,
             ready: self.ready,
-            initialFileId: self.initialFileId,
-            initialBackgroundColors: self.initialBackgroundColors
+            markup: self.markup
         )
     }
     
@@ -244,8 +261,6 @@ final class AvatarEditorScreenComponent: Component {
             if wasEmpty && self.state?.selectedFile == nil {
                 self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
             }
-            self.state?.updated(transition: .immediate)
-            self.state?.ready.set(.single(true))
             
             let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void = { [weak self] query in
                 guard let strongSelf = self, let context = strongSelf.state?.context else {
@@ -592,7 +607,7 @@ final class AvatarEditorScreenComponent: Component {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false,
+                useOpaqueTheme: true,
                 hideBackground: true
             )
             
@@ -716,9 +731,12 @@ final class AvatarEditorScreenComponent: Component {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false,
+                useOpaqueTheme: true,
                 hideBackground: true
             )
+            
+            self.state?.updated(transition: .immediate)
+            self.state?.ready.set(.single(true))
         }
         
         private var isExpanded = false
@@ -1405,12 +1423,12 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
         return signal
     }
     
-    public init(context: AccountContext, inputData: Signal<AvatarKeyboardInputData, NoError>, peerType: PeerType, initialFileId: Int64?, initialBackgroundColors: [Int32]?) {
+    public init(context: AccountContext, inputData: Signal<AvatarKeyboardInputData, NoError>, peerType: PeerType, markup: TelegramMediaImage.EmojiMarkup?) {
         self.context = context
         self.inputData = inputData
         
         let componentReady = Promise<Bool>()
-        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, peerType: peerType, initialFileId: initialFileId, initialBackgroundColors: initialBackgroundColors), navigationBarAppearance: .transparent)
+        super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, peerType: peerType, markup: markup), navigationBarAppearance: .transparent)
         self.navigationPresentation = .modal
             
         self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))

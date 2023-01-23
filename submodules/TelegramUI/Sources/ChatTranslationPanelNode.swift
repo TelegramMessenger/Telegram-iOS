@@ -85,6 +85,24 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         }
 
         if themeUpdated || isEnabledUpdated {
+            if previousIsEnabled != nil && isEnabledUpdated {
+                var offset: CGFloat = 30.0
+                if interfaceState.translationState?.isEnabled == false {
+                    offset *= -1
+                }
+                if let snapshotView = self.button.view.snapshotContentTree() {
+                    snapshotView.frame = self.button.frame
+                    self.button.supernode?.view.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2,  removeOnCompletion: false, additive: true)
+                    self.button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.button.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
+                }
+            }
+            
             var languageCode = interfaceState.strings.baseLanguageCode
             let rawSuffix = "-raw"
             if languageCode.hasSuffix(rawSuffix) {

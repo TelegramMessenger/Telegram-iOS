@@ -261,7 +261,7 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
                     replyToMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadIds))
                 }
                 var messages = messages
-                if let replyToMessageId {
+                if let replyToMessageId = replyToMessageId {
                     messages = messages.map { ($0.0, $0.1.withUpdatedReplyToMessageId(replyToMessageId)) }
                 }
                 for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages, disableAutoremove: false, transformGroupingKeysWithPeerId: true) {

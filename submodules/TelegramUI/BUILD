@@ -126,6 +126,7 @@ swift_library(
         "//submodules/TelegramBaseController:TelegramBaseController",
         "//submodules/DeviceLocationManager:DeviceLocationManager",
         "//submodules/AvatarNode:AvatarNode",
+        "//submodules/AvatarVideoNode:AvatarVideoNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/LiveLocationManager:LiveLocationManager",

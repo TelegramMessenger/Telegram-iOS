@@ -446,7 +446,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let buttonWidth = floor((width - maxInset * 2.0 - additionalRightInset) / CGFloat(self.buttons.count))
                 var nextButtonOrigin: CGFloat = maxInset
                 for (_, view) in self.buttons {
-                    view.frame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+                    view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                     nextButtonOrigin += buttonWidth
                 }
             } else {

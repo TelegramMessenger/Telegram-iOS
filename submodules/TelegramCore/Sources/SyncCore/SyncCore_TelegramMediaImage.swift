@@ -131,26 +131,42 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     }
     
     public final class EmojiMarkup: Equatable, PostboxCoding {
-        public let fileId: Int64
+        public enum Content: Equatable {
+            case emoji(fileId: Int64)
+            case sticker(packReference: StickerPackReference, fileId: Int64)
+        }
+        public let content: Content
         public let backgroundColors: [Int32]
         
-        public init(fileId: Int64, backgroundColors: [Int32]) {
-            self.fileId = fileId
+        public init(content: Content, backgroundColors: [Int32]) {
+            self.content = content
             self.backgroundColors = backgroundColors
         }
         
         public init(decoder: PostboxDecoder) {
-            self.fileId = decoder.decodeInt64ForKey("f", orElse: 0)
+            if let fileId = decoder.decodeOptionalInt64ForKey("f") {
+                self.content = .emoji(fileId: fileId)
+            } else if let packReference = decoder.decodeObjectForKey("p", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference {
+                self.content = .sticker(packReference: packReference, fileId: decoder.decodeInt64ForKey("sf", orElse: 0))
+            } else {
+                fatalError()
+            }
             self.backgroundColors = decoder.decodeInt32ArrayForKey("b")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeInt64(self.fileId, forKey: "f")
+            switch self.content {
+            case let .emoji(fileId):
+                encoder.encodeInt64(fileId, forKey: "f")
+            case let .sticker(packReference, fileId):
+                encoder.encodeObject(packReference, forKey: "p")
+                encoder.encodeInt64(fileId, forKey: "sf")
+            }
             encoder.encodeInt32Array(self.backgroundColors, forKey: "b")
         }
         
         public static func ==(lhs: EmojiMarkup, rhs: EmojiMarkup) -> Bool {
-            if lhs.fileId != rhs.fileId {
+            if lhs.content != rhs.content {
                 return false
             }
             if lhs.backgroundColors != rhs.backgroundColors {
