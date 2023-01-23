@@ -2249,6 +2249,7 @@ public final class EmojiPagerContentComponent: Component {
         public let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void
         public let updateScrollingToItemGroup: () -> Void
         public let externalCancel: (() -> Void)?
+        public let onScroll: () -> Void
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
@@ -2273,6 +2274,7 @@ public final class EmojiPagerContentComponent: Component {
             updateSearchQuery: @escaping (SearchQuery?) -> Void,
             updateScrollingToItemGroup: @escaping () -> Void,
             externalCancel: (() -> Void)? = nil,
+            onScroll: @escaping () -> Void,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
@@ -2296,6 +2298,7 @@ public final class EmojiPagerContentComponent: Component {
             self.updateSearchQuery = updateSearchQuery
             self.updateScrollingToItemGroup = updateScrollingToItemGroup
             self.externalCancel = externalCancel
+            self.onScroll = onScroll
             self.chatPeerId = chatPeerId
             self.peekBehavior = peekBehavior
             self.customLayout = customLayout
@@ -5044,6 +5047,15 @@ public final class EmojiPagerContentComponent: Component {
                     scrollView.isScrollEnabled = true
                 }
                 self.visibleSearchHeader?.deactivate()
+            }
+            self.component?.inputInteractionHolder.inputInteraction?.onScroll()
+        }
+        
+        public func ensureSearchUnfocused() {
+            if self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+                self.visibleSearchHeader?.deactivate()
+            } else {
+                self.visibleSearchHeader?.endEditing(true)
             }
         }
         

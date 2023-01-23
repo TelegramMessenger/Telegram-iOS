@@ -370,6 +370,7 @@ class StickerPickerScreen: ViewController {
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                 },
+                onScroll: {},
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
@@ -447,6 +448,7 @@ class StickerPickerScreen: ViewController {
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                 },
+                onScroll: {},
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
@@ -571,6 +573,7 @@ class StickerPickerScreen: ViewController {
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                 },
+                onScroll: {},
                 chatPeerId: nil,
                 peekBehavior: stickerPeekBehavior,
                 customLayout: nil,

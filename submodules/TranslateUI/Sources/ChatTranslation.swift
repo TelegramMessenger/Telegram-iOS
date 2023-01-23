@@ -114,7 +114,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
     return context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var messageIdsToTranslate: [EngineMessage.Id] = []
         for messageId in messageIds {
-            if let message = transaction.getMessage(messageId), let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+            if let message = transaction.getMessage(messageId), !message.text.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
             } else {
                 messageIdsToTranslate.append(messageId)
             }
@@ -155,8 +155,11 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             var fromLangs: [String: Int] = [:]
                             var count = 0
                             for message in messages {
+                                if let _ = URL(string: message.text) {
+                                    continue
+                                }
                                 if message.text.count > 10 {
-                                    let text = String(message.text.prefix(64))
+                                    let text = String(message.text.prefix(100))
                                     languageRecognizer.processString(text)
                                     let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
                                     languageRecognizer.reset()
