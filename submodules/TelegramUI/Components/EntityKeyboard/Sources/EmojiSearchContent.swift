@@ -336,6 +336,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 }
                 self.onCancel?()
             },
+            onScroll: {},
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: nil,
