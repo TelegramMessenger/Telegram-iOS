@@ -126,30 +126,34 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
 public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
     if #available(iOS 12.0, *) {
         let baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
-        return cachedChatTranslationState(engine: context.engine, peerId: peerId)
-        |> mapToSignal { cached in
-            if let cached, cached.baseLang == baseLang {
-                return .single(cached)
+        return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+        |> mapToSignal { sharedData in
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) ?? TranslationSettings.defaultSettings
+            
+            var dontTranslateLanguages: [String] = []
+            if let ignoredLanguages = settings.ignoredLanguages {
+                dontTranslateLanguages = ignoredLanguages
             } else {
-                return .single(nil)
-                |> then(
-                    context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
-                    |> mapToSignal { sharedData in
-                        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) ?? TranslationSettings.defaultSettings
-                        
-                        var dontTranslateLanguages: [String] = []
-                        if let ignoredLanguages = settings.ignoredLanguages {
-                            dontTranslateLanguages = ignoredLanguages
-                        } else {
-                            dontTranslateLanguages = [baseLang]
-                        }
-                        
-                        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 10, fixedCombinedReadStates: nil)
+                dontTranslateLanguages = [baseLang]
+            }
+            
+            return cachedChatTranslationState(engine: context.engine, peerId: peerId)
+            |> mapToSignal { cached in
+                if let cached, cached.baseLang == baseLang {
+                    if !dontTranslateLanguages.contains(cached.fromLang) {
+                        return .single(cached)
+                    } else {
+                        return .single(nil)
+                    }
+                } else {
+                    return .single(nil)
+                    |> then(
+                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 10, fixedCombinedReadStates: nil)
                         |> filter { messageHistoryView -> Bool in
                             return messageHistoryView.0.entries.count > 1
                         }
                         |> take(1)
-                        |> map { messageHistoryView, _, _ -> ChatTranslationState in
+                        |> map { messageHistoryView, _, _ -> ChatTranslationState? in
                             let messages = messageHistoryView.entries.map(\.message)
                             
                             var fromLangs: [String: Int] = [:]
@@ -165,16 +169,19 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                     languageRecognizer.reset()
                                     
                                     let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
-                                    if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }), !dontTranslateLanguages.contains(language.key.rawValue) {
+                                    if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
                                         let fromLang = language.key.rawValue
                                         fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + 1
                                     }
                                     count += 1
                                 }
-                                
                                 if count >= 5 {
                                     break
                                 }
+                            }
+                            
+                            if let _ = fromLangs["ru"] {
+                                fromLangs["bg"] = nil
                             }
                             
                             var mostFrequent: (String, Int)?
@@ -188,10 +195,14 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             let fromLang = mostFrequent?.0 ?? ""
                             let state = ChatTranslationState(baseLang: baseLang, fromLang: fromLang, toLang: nil, isEnabled: false)
                             let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, state: state).start()
-                            return state
+                            if !dontTranslateLanguages.contains(fromLang) {
+                                return state
+                            } else {
+                                return nil
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     } else {

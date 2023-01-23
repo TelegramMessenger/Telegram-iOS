@@ -977,7 +977,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 } else {
                     peerType = .user
                 }
-                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: peerType, initialFileId: nil, initialBackgroundColors: nil)
+                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: peerType, markup: nil)
                 controller.imageCompletion = imageCompletion
                 controller.videoCompletion = videoCompletion
                 pushImpl?(controller)

@@ -4157,7 +4157,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 createNewGroupImpl?()
             }))
             
-            let presentConfirmation: (String, @escaping () -> Void) -> Void = { [weak self] peerName, completion in
+            let presentConfirmation: (String, Bool, @escaping () -> Void) -> Void = { [weak self] peerName, isChannel, completion in
                 guard let strongSelf = self else {
                     return
                 }
@@ -4190,7 +4190,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             attributedText = formattedString
                         } else {
-                            let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights))
+                            let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteWithRightsText(botName, peerName, stringForAdminRights(strings: strongSelf.presentationData.strings, adminRights: botAdminRights, isChannel: isChannel))
                             let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
                             for range in stringWithRanges.ranges.prefix(2) {
                                 formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
@@ -4218,9 +4218,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                
+                var isChannel = false
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    isChannel = true
+                }
                 let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-                presentConfirmation(peerName, {
+                presentConfirmation(peerName, isChannel, {
                     let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
                     controller?.dismiss()
                 })
@@ -4231,7 +4234,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 case let .group(group):
                     let createGroupController = createGroupControllerImpl(context: context, peerIds: peerId.flatMap { [$0] } ?? [], mode: .requestPeer(group), willComplete: { peerName, complete in
-                        presentConfirmation(peerName, {
+                        presentConfirmation(peerName, false, {
                             complete()
                         })
                     }, completion: { peerId, dismiss in
@@ -4242,7 +4245,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     controller?.replace(with: createGroupController)
                 case let .channel(channel):
                     let createChannelController = createChannelController(context: context, mode: .requestPeer(channel), willComplete: { peerName, complete in
-                        presentConfirmation(peerName, {
+                        presentConfirmation(peerName, true, {
                             complete()
                         })
                     }, completion: { peerId, dismiss in
@@ -6752,6 +6755,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return nil
                             }
                         }
+                        |> distinctUntilChanged
                     } else {
                         return .single(nil)
                     }
@@ -10077,7 +10081,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let _ = updateTranslationSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                 var updated = current
                 if var ignoredLanguages = updated.ignoredLanguages {
-                    ignoredLanguages.append(langCode)
+                    if !ignoredLanguages.contains(langCode) {
+                        ignoredLanguages.append(langCode)
+                    }
                     updated.ignoredLanguages = ignoredLanguages
                 } else {
                     updated.ignoredLanguages = [strongSelf.presentationData.strings.baseLanguageCode, langCode]

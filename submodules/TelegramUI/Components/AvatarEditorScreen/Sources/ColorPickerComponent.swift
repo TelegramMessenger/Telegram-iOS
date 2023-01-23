@@ -623,6 +623,8 @@ private final class WallpaperColorHueSaturationNode: ASDisplayNode {
             self.initialTouchLocation = touchLocation
             self.previousTouchLocation = nil
         }
+        
+        self.view.window?.endEditing(true)
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -944,6 +946,8 @@ final class WallpaperColorPickerNode: ASDisplayNode {
                 self.colorChanged?(self.color)
             }
         }
+        
+        self.view.window?.endEditing(true)
     }
 }
 

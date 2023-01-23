@@ -50,10 +50,12 @@ func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
                         resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: Int64(size), fileReference: fileReference.makeData())
                         
                         videoRepresentations.append(TelegramMediaImage.VideoRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, startTimestamp: videoStartTs))
-                    case let .videoSizeEmojiMarkup(emojiId, backgroundColors):
-                        emojiMarkup = TelegramMediaImage.EmojiMarkup(fileId: emojiId, backgroundColors: backgroundColors)
-                    case .videoSizeStickerMarkup:
-                        break
+                    case let .videoSizeEmojiMarkup(fileId, backgroundColors):
+                        emojiMarkup = TelegramMediaImage.EmojiMarkup(content: .emoji(fileId: fileId), backgroundColors: backgroundColors)
+                    case let .videoSizeStickerMarkup(stickerSet, fileId, backgroundColors):
+                        if let packReference = StickerPackReference(apiInputSet: stickerSet) {
+                            emojiMarkup = TelegramMediaImage.EmojiMarkup(content: .sticker(packReference: packReference, fileId: fileId), backgroundColors: backgroundColors)
+                        }
                     }
                 }
             }

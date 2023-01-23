@@ -2015,6 +2015,39 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 return
             }
             
+            var messageIdsToTranslate: [MessageId] = []
+            if let translateToLanguage {
+                let extendedRange: Int = 2
+                var wideIndexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex - extendedRange, historyView.filteredEntries.count - 1 - visible.firstIndex + extendedRange)
+                wideIndexRange = (max(0, min(historyView.filteredEntries.count - 1, wideIndexRange.0)), max(0, min(historyView.filteredEntries.count - 1, wideIndexRange.1)))
+                if wideIndexRange.0 > wideIndexRange.1 {
+                    assert(false)
+                    return
+                }
+                
+                if wideIndexRange.0 <= wideIndexRange.1 {
+                    for i in (wideIndexRange.0 ... wideIndexRange.1) {
+                        switch historyView.filteredEntries[i] {
+                        case let .MessageEntry(message, _, _, _, _, _):
+                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                            } else if !message.text.isEmpty {
+                                messageIdsToTranslate.append(message.id)
+                            }
+                        case let .MessageGroupEntry(_, messages, _):
+                            for (message, _, _, _, _) in messages {
+                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                } else if !message.text.isEmpty {
+                                    messageIdsToTranslate.append(message.id)
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+            }
+            
+            
             let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
             
             let toEarlierRange = (0, historyView.filteredEntries.count - 1 - visible.lastIndex - 1)
@@ -2027,7 +2060,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
             var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
-            var messageIdsToTranslate: [MessageId] = []
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             var allVisibleAnchorMessageIds: [(MessageId, Int)] = []
             var visibleAdOpaqueIds: [Data] = []
@@ -2069,13 +2101,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.stableId != ChatHistoryListNode.fixedAdMessageStableId {
                                     visibleAdOpaqueIds.append(attribute.opaqueId)
                                 }
-                            }
-                        }
-                        
-                        if let translateToLanguage {
-                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                            } else if !message.text.isEmpty {
-                                messageIdsToTranslate.append(message.id)
                             }
                         }
                         
@@ -2151,12 +2176,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                                         hasUnconsumedMention = true
                                     }
-                                }
-                            }
-                            if let translateToLanguage {
-                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                                } else if !message.text.isEmpty {
-                                    messageIdsToTranslate.append(message.id)
                                 }
                             }
                             for media in message.media {
@@ -2407,6 +2426,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
         }
+        
+        
         self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
         self.updateTopVisibleMessageRange(topVisibleMessageRange)
         let _ = self.visibleMessageRange.swap(topVisibleMessageRange.flatMap { range in
@@ -2414,7 +2435,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         })
         
         if let loaded = displayedRange.visibleRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
-            
             var mathesFirst = false
             if loaded.firstIndex <= 5 {
                 var firstHasGroups = false

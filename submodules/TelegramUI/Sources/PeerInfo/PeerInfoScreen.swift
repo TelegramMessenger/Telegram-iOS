@@ -7286,7 +7286,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 } else {
                     peerType = .user
                 }
-                let controller = AvatarEditorScreen(context: strongSelf.context, inputData: keyboardInputData.get(), peerType: peerType, initialFileId: emojiMarkup?.fileId, initialBackgroundColors: emojiMarkup?.backgroundColors)
+                let controller = AvatarEditorScreen(context: strongSelf.context, inputData: keyboardInputData.get(), peerType: peerType, markup: emojiMarkup)
                 controller.imageCompletion = imageCompletion
                 controller.videoCompletion = videoCompletion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
