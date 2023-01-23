@@ -4162,7 +4162,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
 
-                let attributedTitle: NSAttributedString?
+                var attributedTitle: NSAttributedString?
                 let attributedText: NSAttributedString
                 
                 let theme = AlertControllerTheme(presentationData: strongSelf.presentationData)
@@ -4198,12 +4198,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             attributedText = formattedString
                         }
                     } else {
-                        let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(botName, peerName)
-                        let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-                        for range in stringWithRanges.ranges.prefix(2) {
-                            formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                        if case let .group(group) = peerType, group.botParticipant {
+                            let stringWithRanges = strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationInviteText(botName, peerName)
+                            let formattedString = NSMutableAttributedString(string: stringWithRanges.string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                            for range in stringWithRanges.ranges.prefix(2) {
+                                formattedString.addAttribute(.font, value: Font.semibold(13.0), range: range.range)
+                            }
+                            attributedText = formattedString
+                        } else {
+                            attributedTitle = nil
+                            attributedText = NSAttributedString(string: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationTitle(peerName, botName).string, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
                         }
-                        attributedText = formattedString
                     }
                 }
                                 
@@ -4233,7 +4238,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case .user:
                     break
                 case let .group(group):
-                    let createGroupController = createGroupControllerImpl(context: context, peerIds: peerId.flatMap { [$0] } ?? [], mode: .requestPeer(group), willComplete: { peerName, complete in
+                    let createGroupController = createGroupControllerImpl(context: context, peerIds: group.botParticipant || group.botAdminRights != nil ? (peerId.flatMap { [$0] } ?? []) : [], mode: .requestPeer(group), willComplete: { peerName, complete in
                         presentConfirmation(peerName, false, {
                             complete()
                         })

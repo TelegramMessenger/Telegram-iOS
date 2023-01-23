@@ -148,7 +148,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 } else {
                     return .single(nil)
                     |> then(
-                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 10, fixedCombinedReadStates: nil)
+                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 16, fixedCombinedReadStates: nil)
                         |> filter { messageHistoryView -> Bool in
                             return messageHistoryView.0.entries.count > 1
                         }
@@ -175,7 +175,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                     }
                                     count += 1
                                 }
-                                if count >= 5 {
+                                if count >= 10 {
                                     break
                                 }
                             }
@@ -186,8 +186,10 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             
                             var mostFrequent: (String, Int)?
                             for (lang, count) in fromLangs {
-                                if let current = mostFrequent, count > current.1 {
-                                    mostFrequent = (lang, count)
+                                if let current = mostFrequent {
+                                    if count > current.1 {
+                                        mostFrequent = (lang, count)
+                                    }
                                 } else {
                                     mostFrequent = (lang, count)
                                 }

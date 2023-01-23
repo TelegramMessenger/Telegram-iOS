@@ -8649,7 +8649,7 @@ Sorry for the inconvenience.";
 "RequestPeer.Requirement.Group.HasUsernameOn" = "The group should be public.";
 
 "RequestPeer.Requirement.Group.ForumOff" = "The group should have topics turned off.";
-"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics turned  on.";
+"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics turned on.";
 
 "RequestPeer.Requirement.Group.ParticipantOn" = "Bot should be in the group.";
 "RequestPeer.Requirement.Group.CreatorOn" = "You should be the owner of the group.";
