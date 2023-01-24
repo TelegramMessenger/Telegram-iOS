@@ -266,10 +266,12 @@ private final class DownloadedMediaStoreManagerPrivateImpl {
 
 final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
     private let queue = Queue()
+    private let postbox: Postbox
     private let impl: QueueLocalObject<DownloadedMediaStoreManagerPrivateImpl>
     
     init(postbox: Postbox, accountManager: AccountManager<TelegramAccountManagerTypes>) {
         let queue = self.queue
+        self.postbox = postbox
         self.impl = QueueLocalObject(queue: queue, generate: {
             return DownloadedMediaStoreManagerPrivateImpl(queue: queue, postbox: postbox, accountManager: accountManager)
         })
@@ -279,5 +281,28 @@ final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
         self.impl.with { impl in
             impl.store(media, timestamp: timestamp, peerId: peerId)
         }
+    }
+    
+    func runTasks() {
+        let _ = (self.postbox.transaction({ transaction -> [(index: Int32, message: Message, mediaId: MediaId)] in
+            return _internal_getSynchronizeAutosaveItemOperations(transaction: transaction)
+        })
+        |> deliverOnMainQueue).start(next: { [weak self] items in
+            guard let self else {
+                return
+            }
+            for item in items {
+                for media in item.message.media {
+                    if let id = media.id, id == item.mediaId {
+                        self.store(.standalone(media: media), timestamp: item.message.timestamp, peerId: item.message.id.peerId)
+                        break
+                    }
+                }
+            }
+            
+            let _ = self.postbox.transaction({ transaction -> Void in
+                return _internal_removeSyncrhonizeAutosaveItemOperations(transaction: transaction, indices: items.map(\.index))
+            }).start()
+        })
     }
 }
