@@ -196,7 +196,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
                         
-            if isMember && !channel.hasPermission(.sendSomething) && !channel.flags.contains(.isGigagroup) {
+            if case .group = channel.info, isMember && !channel.hasPermission(.sendSomething) && !channel.flags.contains(.isGigagroup) {
                 if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                     return (currentPanel, nil)
                 } else {

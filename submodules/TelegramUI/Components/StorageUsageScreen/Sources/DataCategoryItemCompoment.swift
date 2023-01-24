@@ -52,7 +52,7 @@ private final class SubItemComponent: Component {
         return true
     }
     
-    class View: HighlightTrackingButton {
+    class View: UIView {
         private let iconView: UIImageView
         private let title = ComponentView<Empty>()
         private let titleValue = ComponentView<Empty>()
@@ -74,7 +74,7 @@ private final class SubItemComponent: Component {
             
             self.addSubview(self.iconView)
             
-            self.highligthedChanged = { [weak self] isHighlighted in
+            /*self.highligthedChanged = { [weak self] isHighlighted in
                 guard let self, let component = self.component, let highlightBackgroundFrame = self.highlightBackgroundFrame else {
                     return
                 }
@@ -103,7 +103,7 @@ private final class SubItemComponent: Component {
                 }
             }
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-            self.isUserInteractionEnabled = false
+            self.isEnabled = false*/
         }
         
         required init?(coder: NSCoder) {
@@ -243,7 +243,7 @@ final class DataCategoryItemComponent: Component {
     let category: DataCategoriesComponent.CategoryData
     let isExpanded: Bool
     let hasNext: Bool
-    let action: (DataUsageScreenComponent.Category) -> Void
+    let action: ((DataUsageScreenComponent.Category) -> Void)?
     
     init(
         theme: PresentationTheme,
@@ -251,7 +251,7 @@ final class DataCategoryItemComponent: Component {
         category: DataCategoriesComponent.CategoryData,
         isExpanded: Bool,
         hasNext: Bool,
-        action: @escaping (DataUsageScreenComponent.Category) -> Void
+        action: ((DataUsageScreenComponent.Category) -> Void)?
     ) {
         self.theme = theme
         self.strings = strings
@@ -350,14 +350,14 @@ final class DataCategoryItemComponent: Component {
             guard let component = self.component else {
                 return
             }
-            component.action(component.category.key)
+            component.action?(component.category.key)
         }
         
         @objc private func checkPressed() {
             guard let component = self.component else {
                 return
             }
-            component.action(component.category.key)
+            component.action?(component.category.key)
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -596,6 +596,8 @@ final class DataCategoryItemComponent: Component {
             }
             
             transition.setFrame(view: self.subcategoryClippingContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height)))
+            
+            self.isEnabled = component.action != nil
             
             return CGSize(width: availableSize.width, height: height)
         }

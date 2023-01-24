@@ -507,5 +507,17 @@ public extension TelegramEngine {
             return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: threadId)
             |> ignoreValues
         }
+        
+        public func getSynchronizeAutosaveItemOperations() -> Signal<[(index: Int32, message: Message, mediaId: MediaId)], NoError> {
+            return self.account.postbox.transaction { transaction -> [(index: Int32, message: Message, mediaId: MediaId)] in
+                return _internal_getSynchronizeAutosaveItemOperations(transaction: transaction)
+            }
+        }
+
+        func removeSyncrhonizeAutosaveItemOperations(indices: [Int32]) {
+            let _ = (self.account.postbox.transaction { transaction -> Void in
+                _internal_removeSyncrhonizeAutosaveItemOperations(transaction: transaction, indices: indices)
+            }).start()
+        }
     }
 }

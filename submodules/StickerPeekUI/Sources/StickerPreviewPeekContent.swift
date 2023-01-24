@@ -29,7 +29,7 @@ public enum StickerPreviewPeekItem: Equatable {
 }
 
 public final class StickerPreviewPeekContent: PeekControllerContent {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     public let item: StickerPreviewPeekItem
@@ -37,8 +37,8 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     let menu: [ContextMenuItem]
     let openPremiumIntro: () -> Void
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.item = item
@@ -64,7 +64,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     }
     
     public func node() -> PeekControllerContentNode & ASDisplayNode {
-        return StickerPreviewPeekContentNode(account: self.account, item: self.item)
+        return StickerPreviewPeekContentNode(context: self.context, item: self.item, theme: self.theme)
     }
     
     public func topAccessoryNode() -> ASDisplayNode? {
@@ -91,7 +91,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
 }
 
 public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
-    private let account: Account
+    private let context: AccountContext
     private let item: StickerPreviewPeekItem
     
     private var textNode: ASTextNode
@@ -105,8 +105,8 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     
     private let _ready = Promise<Bool>()
     
-    init(account: Account, item: StickerPreviewPeekItem) {
-        self.account = account
+    init(context: AccountContext, item: StickerPreviewPeekItem, theme: PresentationTheme) {
+        self.context = context
         self.item = item
         
         self.textNode = ASTextNode()
@@ -133,14 +133,18 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             }
             let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
             
-            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: isPremiumSticker ? .once : .loop, mode: .direct(cachePathPrefix: nil))
+            if item.file.isCustomTemplateEmoji {
+                animationNode.dynamicColor = theme.list.itemPrimaryTextColor
+            }
+            
+            animationNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: isPremiumSticker ? .once : .loop, mode: .direct(cachePathPrefix: nil))
             animationNode.visibility = true
             animationNode.addSubnode(self.textNode)
             
             if isPremiumSticker, let effect = item.file.videoThumbnails.first {
-                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: item.file), resource: effect.resource).start())
+                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: item.file), resource: effect.resource).start())
                 
-                let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
+                let source = AnimatedStickerResourceSource(account: context.account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
                 additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 additionalAnimationNode.visibility = true
@@ -151,7 +155,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.animationNode = nil
         }
         
-        self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: item.file, small: false, fetched: true))
+        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: item.file, small: false, fetched: true))
         
         super.init()
         

@@ -12,14 +12,22 @@ import AccountContext
 
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {
-        let remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
+        var remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
+        while remainder != 0 && remainder % 10 == 0 {
+            remainder /= 10
+        }
+        
         if remainder != 0 {
             return "\(size / (1024 * 1024 * 1024))\(decimalSeparator)\(remainder) GB"
         } else {
             return "\(size / (1024 * 1024 * 1024)) GB"
         }
     } else if size >= 1024 * 1024 {
-        let remainder = (size % (1024 * 1024)) / (1024 * 102)
+        var remainder = (size % (1024 * 1024)) / (1024 * 102)
+        while remainder != 0 && remainder % 10 == 0 {
+            remainder /= 10
+        }
+        
         if size < 10 * 1024 * 1024 {
             return "\(size / (1024 * 1024))\(decimalSeparator)\(remainder) MB"
         } else {

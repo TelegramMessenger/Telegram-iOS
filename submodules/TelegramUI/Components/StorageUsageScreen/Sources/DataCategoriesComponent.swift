@@ -43,13 +43,13 @@ final class DataCategoriesComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let categories: [CategoryData]
-    let toggleCategoryExpanded: (DataUsageScreenComponent.Category) -> Void
+    let toggleCategoryExpanded: ((DataUsageScreenComponent.Category) -> Void)?
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         categories: [CategoryData],
-        toggleCategoryExpanded: @escaping (DataUsageScreenComponent.Category) -> Void
+        toggleCategoryExpanded: ((DataUsageScreenComponent.Category) -> Void)?
     ) {
         self.theme = theme
         self.strings = strings
@@ -138,11 +138,11 @@ final class DataCategoriesComponent: Component {
                         category: category,
                         isExpanded: category.isExpanded,
                         hasNext: i != component.categories.count - 1,
-                        action: { [weak self] key in
+                        action: component.toggleCategoryExpanded == nil ? nil : { [weak self] key in
                             guard let self, let component = self.component else {
                                 return
                             }
-                            component.toggleCategoryExpanded(key)
+                            component.toggleCategoryExpanded?(key)
                         }
                     )),
                     environment: {},

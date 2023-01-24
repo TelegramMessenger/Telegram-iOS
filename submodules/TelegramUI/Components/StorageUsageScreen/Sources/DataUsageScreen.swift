@@ -468,7 +468,9 @@ final class DataUsageScreenComponent: Component {
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
                 
                 if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
-                    if backButtonNode.alpha != navigationButtonAlpha {
+                    backButtonNode.updateManualAlpha(alpha: navigationButtonAlpha, transition: animatedTransition.containedViewLayoutTransition)
+                    
+                    /*if backButtonNode.alpha != navigationButtonAlpha {
                         if backButtonNode.isHidden {
                             backButtonNode.alpha = 0.0
                             backButtonNode.isHidden = false
@@ -480,7 +482,7 @@ final class DataUsageScreenComponent: Component {
                                 }
                             }
                         })
-                    }
+                    }*/
                 }
             }
         }
@@ -1035,8 +1037,7 @@ final class DataUsageScreenComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     categories: totalCategories,
-                    toggleCategoryExpanded: { _ in
-                    }
+                    toggleCategoryExpanded: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)

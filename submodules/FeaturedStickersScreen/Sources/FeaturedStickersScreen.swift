@@ -552,7 +552,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -640,7 +640,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                 }
                             }))
                         ]
-                        return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
+                        return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }

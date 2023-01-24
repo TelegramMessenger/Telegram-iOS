@@ -1310,6 +1310,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             self.isInForegroundPromise.set(true)
             self.isActiveValue = true
             self.isActivePromise.set(true)
+            
+            self.runForegroundTasks()
         }
         
         if UIApplication.shared.isStatusBarHidden {
@@ -1519,6 +1521,22 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
             }
         }
+        
+        self.runForegroundTasks()
+    }
+    
+    func runForegroundTasks() {
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+             |> take(1)
+             |> deliverOnMainQueue).start(next: { activeAccounts in
+                for (_, context, _) in activeAccounts.accounts {
+                    (context.downloadedMediaStoreManager as? DownloadedMediaStoreManagerImpl)?.runTasks()
+                }
+            })
+        })
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
