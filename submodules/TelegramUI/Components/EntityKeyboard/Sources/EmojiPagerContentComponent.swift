@@ -6633,22 +6633,94 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             if animateContentCrossfade {
-                /*for (_, itemLayer) in self.visibleItemLayers {
+                for (_, itemLayer) in self.visibleItemLayers {
                     if let snapshotLayer = itemLayer.snapshotContentTree() {
                         itemLayer.superlayer?.insertSublayer(snapshotLayer, above: itemLayer)
                         snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
                             snapshotLayer?.removeFromSuperlayer()
                         })
+                        snapshotLayer.animateScale(from: 1.0, to: 0.0001, duration: 0.2, removeOnCompletion: false)
                     }
-                }*/
+                }
+                for (_, placeholderView) in self.visibleItemPlaceholderViews {
+                    if let snapshotLayer = placeholderView.layer.snapshotContentTree() {
+                        placeholderView.layer.superlayer?.insertSublayer(snapshotLayer, above: placeholderView.layer)
+                        snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                        snapshotLayer.animateScale(from: 1.0, to: 0.0001, duration: 0.2, removeOnCompletion: false)
+                    }
+                }
+                for (_, selectionLayer) in self.visibleItemSelectionLayers {
+                    if let snapshotLayer = selectionLayer.snapshotContentTree() {
+                        selectionLayer.superlayer?.insertSublayer(snapshotLayer, above: selectionLayer)
+                        snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                    }
+                }
+                for (_, groupHeader) in self.visibleGroupHeaders {
+                    if let snapshotLayer = groupHeader.layer.snapshotContentTree() {
+                        groupHeader.layer.superlayer?.insertSublayer(snapshotLayer, above: groupHeader.layer)
+                        snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                    }
+                }
+                for (_, borderLayer) in self.visibleGroupBorders {
+                    if let snapshotLayer = borderLayer.snapshotContentTree() {
+                        borderLayer.superlayer?.insertSublayer(snapshotLayer, above: borderLayer)
+                        snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                    }
+                }
+                for (_, button) in self.visibleGroupPremiumButtons {
+                    if let buttonView = button.view, let snapshotLayer = buttonView.layer.snapshotContentTree() {
+                        buttonView.layer.superlayer?.insertSublayer(snapshotLayer, above: buttonView.layer)
+                        snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                    }
+                }
+                for (_, button) in self.visibleGroupExpandActionButtons {
+                    if let snapshotLayer = button.layer.snapshotContentTree() {
+                        button.layer.superlayer?.insertSublayer(snapshotLayer, above: button.layer)
+                        snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                            snapshotLayer?.removeFromSuperlayer()
+                        })
+                    }
+                }
             }
             
             self.updateVisibleItems(transition: itemTransition, attemptSynchronousLoads: attemptSynchronousLoads, previousItemPositions: previousItemPositions, previousAbsoluteItemPositions: previousAbsoluteItemPositions, updatedItemPositions: updatedItemPositions, hintDisappearingGroupFrame: hintDisappearingGroupFrame)
             
             if animateContentCrossfade {
-                /*for (_, itemLayer) in self.visibleItemLayers {
+                for (_, itemLayer) in self.visibleItemLayers {
                     itemLayer.animateAlpha(from: 0.0, to: CGFloat(itemLayer.opacity), duration: 0.2)
-                }*/
+                    itemLayer.animateScale(from: 0.0001, to: 1.0, duration: 0.2)
+                }
+                for (_, placeholderView) in self.visibleItemPlaceholderViews {
+                    placeholderView.layer.animateAlpha(from: 0.0, to: CGFloat(placeholderView.layer.opacity), duration: 0.2)
+                    placeholderView.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.2)
+                }
+                for (_, selectionLayer) in self.visibleItemSelectionLayers {
+                    selectionLayer.animateAlpha(from: 0.0, to: CGFloat(selectionLayer.opacity), duration: 0.2)
+                }
+                for (_, groupHeader) in self.visibleGroupHeaders {
+                    groupHeader.layer.animateAlpha(from: 0.0, to: CGFloat(groupHeader.layer.opacity), duration: 0.2)
+                }
+                for (_, borderLayer) in self.visibleGroupBorders {
+                    borderLayer.animateAlpha(from: 0.0, to: CGFloat(borderLayer.opacity), duration: 0.2)
+                }
+                for (_, button) in self.visibleGroupPremiumButtons {
+                    if let buttonView = button.view {
+                        buttonView.layer.animateAlpha(from: 0.0, to: CGFloat(buttonView.layer.opacity), duration: 0.2)
+                    }
+                }
+                for (_, button) in self.visibleGroupExpandActionButtons {
+                    button.layer.animateAlpha(from: 0.0, to: CGFloat(button.layer.opacity), duration: 0.2)
+                }
             }
             
             return availableSize
