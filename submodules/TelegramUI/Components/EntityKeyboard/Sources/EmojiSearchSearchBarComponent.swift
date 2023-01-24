@@ -15,6 +15,7 @@ import LottieAnimationComponent
 import EmojiStatusComponent
 import LottieComponent
 import LottieComponentEmojiContent
+import AudioToolbox
 
 private final class RoundMaskView: UIImageView {
     private var currentDiameter: CGFloat?
@@ -214,6 +215,10 @@ final class EmojiSearchSearchBarComponent: Component {
         
         private var selectedItem: AnyHashable?
         
+        private lazy var hapticFeedback: HapticFeedback = {
+            return HapticFeedback()
+        }()
+        
         override init(frame: CGRect) {
             self.tintContainerView = UIView()
             
@@ -281,6 +286,8 @@ final class EmojiSearchSearchBarComponent: Component {
                                 self.selectedItem = nil
                             } else {
                                 self.selectedItem = AnyHashable(id)
+                                AudioServicesPlaySystemSound(0x450)
+                                self.hapticFeedback.tap()
                             }
                             self.state?.updated(transition: .immediate)
                             

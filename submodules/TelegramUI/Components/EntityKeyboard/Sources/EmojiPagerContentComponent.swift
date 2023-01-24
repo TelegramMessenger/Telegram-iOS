@@ -6485,17 +6485,19 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
                 visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, transition: transition)
-                /*transition.attachAnimation(view: visibleSearchHeader, id: "search_transition", completion: { [weak self] completed in
-                    guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
-                        return
-                    }
-                    
-                    if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
-                        strongSelf.scrollView.addSubview(visibleSearchHeader)
-                        strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
-                    }
-                })*/
-                if visibleSearchHeader.frame != searchHeaderFrame {
+                if !useOpaqueTheme {
+                    transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
+                    transition.attachAnimation(view: visibleSearchHeader, id: "search_transition", completion: { [weak self] completed in
+                        guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
+                            return
+                        }
+                        
+                        if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
+                            strongSelf.scrollView.addSubview(visibleSearchHeader)
+                            strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
+                        }
+                    })
+                } else {
                     transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame, completion: { [weak self] completed in
                         if !useOpaqueTheme {
                             guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
