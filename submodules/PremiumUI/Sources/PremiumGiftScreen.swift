@@ -386,6 +386,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .animatedEmoji
                         case .emojiStatus:
                             demoSubject = .emojiStatus
+                        case .translation:
+                            demoSubject = .translation
                         }
                         
                         var dismissImpl: (() -> Void)?

@@ -1293,7 +1293,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
             
-            if (peer.isPremium || "".isEmpty) && peer.id != item.context.account.peerId {
+            if peer.isPremium && peer.id != item.context.account.peerId {
                 let context = item.context
                 self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
                 |> deliverOnMainQueue).start(next: { [weak self] peerView in

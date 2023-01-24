@@ -180,7 +180,7 @@ final class AvatarEditorScreenComponent: Component {
         )
     }
     
-    class View: UIView, UIScrollViewDelegate {
+    class View: UIView {
         private let navigationCancelButton = ComponentView<Empty>()
         private let navigationDoneButton = ComponentView<Empty>()
                 

@@ -6700,7 +6700,7 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         let searchCategories: Signal<EmojiSearchCategories?, NoError>
-        if isEmojiSelection || isReactionSelection {
+        if isEmojiSelection || isReactionSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .emoji)
         } else if isStatusSelection {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .status)
