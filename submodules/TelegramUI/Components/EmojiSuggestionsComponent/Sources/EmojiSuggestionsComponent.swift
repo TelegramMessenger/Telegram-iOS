@@ -233,6 +233,31 @@ public final class EmojiSuggestionsComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        public func item(at point: CGPoint) -> (CALayer, TelegramMediaFile)? {
+            let location = self.convert(point, to: self.scrollView)
+            if self.scrollView.bounds.contains(location) {
+                var closestFile: (file: TelegramMediaFile, layer: CALayer, distance: CGFloat)?
+                for (_, itemLayer) in self.visibleLayers {
+                    guard let file = itemLayer.file else {
+                        continue
+                    }
+                    let distance = abs(location.x - itemLayer.position.x)
+                    if let (_, _, currentDistance) = closestFile {
+                        if distance < currentDistance {
+                            closestFile = (file, itemLayer, distance)
+                        }
+                    } else {
+                        closestFile = (file, itemLayer, distance)
+                    }
+                }
+                if let (file, itemLayer, _) = closestFile {
+                    return (itemLayer, file)
+                }
+            }
+            
+            return nil
+        }
+        
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 let location = recognizer.location(in: self.scrollView)
