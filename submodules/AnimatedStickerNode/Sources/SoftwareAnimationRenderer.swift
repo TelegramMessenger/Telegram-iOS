@@ -7,20 +7,30 @@ import YuvConversion
 import Accelerate
 
 final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
+    private let templateImageSupport: Bool
+    
     private var highlightedContentNode: ASDisplayNode?
     private var highlightedColor: UIColor?
     private var highlightReplacesContent = false
+    public var renderAsTemplateImage: Bool = false
     
-    public var currentFrameImage: UIImage? {
-        if let contents = self.contents {
-            return UIImage(cgImage: contents as! CGImage)
-        } else {
-            return nil
+    public private(set) var currentFrameImage: UIImage?
+    
+    init(templateImageSupport: Bool) {
+        self.templateImageSupport = templateImageSupport
+        
+        super.init()
+        
+        if templateImageSupport {
+            self.setViewBlock({
+                return UIImageView()
+            })
         }
     }
         
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, mulAlpha: Bool, completion: @escaping () -> Void) {
         assert(bytesPerRow > 0)
+        let renderAsTemplateImage = self.renderAsTemplateImage
         queue.async { [weak self] in
             switch type {
             case .argb:
@@ -70,13 +80,21 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                         break
                     }
                 })
+                if renderAsTemplateImage {
+                    image = image?.withRenderingMode(.alwaysTemplate)
+                }
             }
             
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.contents = image?.cgImage
+                strongSelf.currentFrameImage = image
+                if strongSelf.templateImageSupport {
+                    (strongSelf.view as? UIImageView)?.image = image
+                } else {
+                    strongSelf.contents = image?.cgImage
+                }
                 strongSelf.updateHighlightedContentNode()
                 if strongSelf.highlightedContentNode?.frame != strongSelf.bounds {
                     strongSelf.highlightedContentNode?.frame = strongSelf.bounds
@@ -90,12 +108,14 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
         guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor else {
             return
         }
-        if let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
-            (highlightedContentNode.view as! UIImageView).image = UIImage(cgImage: contents as! CGImage).withRenderingMode(.alwaysTemplate)
-        }
+        (highlightedContentNode.view as! UIImageView).image = self.currentFrameImage?.withRenderingMode(.alwaysTemplate)
         highlightedContentNode.tintColor = highlightedColor
         if self.highlightReplacesContent {
-            self.contents = nil
+            if self.templateImageSupport {
+                (self.view as? UIImageView)?.image = nil
+            } else {
+                self.contents = nil
+            }
         }
     }
             

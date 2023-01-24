@@ -633,6 +633,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
                 if case .Sticker = attribute {
                     hasSticker = true
                     break
+                } else if case .CustomEmoji = attribute {
+                    hasSticker = true
+                    break
                 }
             }
             return hasSticker

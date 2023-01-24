@@ -1330,6 +1330,15 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
                     self.layer.addSublayer(itemLayer)
                 }
                 
+                switch item.tintMode {
+                case .accent:
+                    itemLayer.layerTintColor = theme.list.itemAccentColor.cgColor
+                case .primary:
+                    itemLayer.layerTintColor = theme.list.itemPrimaryTextColor.cgColor
+                case .none:
+                    itemLayer.layerTintColor = nil
+                }
+                
                 let itemFrame = itemLayout.frame(at: index)
                 itemLayer.frame = itemFrame
                 
@@ -1708,17 +1717,24 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         if case .ended = recognizer.state {
             let location = recognizer.location(in: self)
             if self.backIconView.frame.contains(location) {
-                if let placeholderContentView = self.placeholderContent.view as? EmojiSearchSearchBarComponent.View {
-                    placeholderContentView.clearSelection(dispatchEvent : true)
-                }
+                self.clearCategorySearch()
             } else {
                 self.activateTextInput()
             }
         }
     }
     
+    func clearCategorySearch() {
+        if let placeholderContentView = self.placeholderContent.view as? EmojiSearchSearchBarComponent.View {
+            placeholderContentView.clearSelection(dispatchEvent : true)
+        }
+    }
+    
     private func activateTextInput() {
-        if self.textField == nil, let textFrame = self.textFrame, self.params?.canFocus == true {
+        guard let params = self.params else {
+            return
+        }
+        if self.textField == nil, let textFrame = self.textFrame, params.canFocus == true {
             let backgroundFrame = self.backgroundLayer.frame
             let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
             
@@ -1730,9 +1746,11 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
         }
         
-        self.currentPresetSearchTerm = nil
-        if let placeholderContentView = self.placeholderContent.view as? EmojiSearchSearchBarComponent.View {
-            placeholderContentView.clearSelection(dispatchEvent: false)
+        if params.canFocus {
+            self.currentPresetSearchTerm = nil
+            if let placeholderContentView = self.placeholderContent.view as? EmojiSearchSearchBarComponent.View {
+                placeholderContentView.clearSelection(dispatchEvent: false)
+            }
         }
         
         self.activated(true)
@@ -1968,9 +1986,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                     self.currentPresetSearchTerm = term
                     
                     if shouldChangeActivation {
-                        self.update(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                        
                         if let term {
+                            self.update(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            
                             self.updateQuery(.category(value: term))
                             self.activated(false)
                         } else {
@@ -2049,6 +2067,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                 cancelButtonTitleComponentView.isUserInteractionEnabled = false
             }
             transition.setFrame(view: cancelButtonTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
+            transition.setAlpha(view: cancelButtonTitleComponentView, alpha: isActiveWithText ? 1.0 : 0.0)
         }
         if let cancelButtonTintTitleComponentView = self.cancelButtonTintTitle.view {
             if cancelButtonTintTitleComponentView.superview == nil {
@@ -2056,6 +2075,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                 cancelButtonTintTitleComponentView.isUserInteractionEnabled = false
             }
             transition.setFrame(view: cancelButtonTintTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
+            transition.setAlpha(view: cancelButtonTintTitleComponentView, alpha: isActiveWithText ? 1.0 : 0.0)
         }
         
         var hasText = false
@@ -2103,9 +2123,9 @@ private final class EmptySearchResultsView: UIView {
     func update(context: AccountContext, theme: PresentationTheme, useOpaqueTheme: Bool, text: String, file: TelegramMediaFile?, size: CGSize, searchInitiallyHidden: Bool, transition: Transition) {
         let titleColor: UIColor
         if useOpaqueTheme {
-            titleColor = theme.chat.inputMediaPanel.panelContentControlOpaqueOverlayColor
+            titleColor = theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor
         } else {
-            titleColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor
+            titleColor = theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
         }
         
         let iconSize: CGSize
@@ -2513,6 +2533,12 @@ public final class EmojiPagerContentComponent: Component {
         case detailed
     }
     
+    public enum SearchState {
+        case empty
+        case searching
+        case active
+    }
+    
     public final class EmptySearchResults: Equatable {
         public let text: String
         public let iconFile: TelegramMediaFile?
@@ -2543,6 +2569,7 @@ public final class EmojiPagerContentComponent: Component {
     public let contentItemGroups: [ItemGroup]
     public let itemLayoutType: ItemLayoutType
     public let itemContentUniqueId: AnyHashable?
+    public let searchState: SearchState
     public let warpContentsOnEdges: Bool
     public let displaySearchWithPlaceholder: String?
     public let searchCategories: EmojiSearchCategories?
@@ -2564,6 +2591,7 @@ public final class EmojiPagerContentComponent: Component {
         contentItemGroups: [ItemGroup],
         itemLayoutType: ItemLayoutType,
         itemContentUniqueId: AnyHashable?,
+        searchState: SearchState,
         warpContentsOnEdges: Bool,
         displaySearchWithPlaceholder: String?,
         searchCategories: EmojiSearchCategories?,
@@ -2584,6 +2612,7 @@ public final class EmojiPagerContentComponent: Component {
         self.contentItemGroups = contentItemGroups
         self.itemLayoutType = itemLayoutType
         self.itemContentUniqueId = itemContentUniqueId
+        self.searchState = searchState
         self.warpContentsOnEdges = warpContentsOnEdges
         self.displaySearchWithPlaceholder = displaySearchWithPlaceholder
         self.searchCategories = searchCategories
@@ -2595,7 +2624,7 @@ public final class EmojiPagerContentComponent: Component {
         self.selectedItems = selectedItems
     }
     
-    public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: AnyHashable?, emptySearchResults: EmptySearchResults?) -> EmojiPagerContentComponent {
+    public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: AnyHashable?, emptySearchResults: EmptySearchResults?, searchState: SearchState) -> EmojiPagerContentComponent {
         return EmojiPagerContentComponent(
             id: self.id,
             context: self.context,
@@ -2607,6 +2636,7 @@ public final class EmojiPagerContentComponent: Component {
             contentItemGroups: contentItemGroups,
             itemLayoutType: self.itemLayoutType,
             itemContentUniqueId: itemContentUniqueId,
+            searchState: searchState,
             warpContentsOnEdges: self.warpContentsOnEdges,
             displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
             searchCategories: self.searchCategories,
@@ -2650,6 +2680,12 @@ public final class EmojiPagerContentComponent: Component {
         if lhs.itemLayoutType != rhs.itemLayoutType {
             return false
         }
+        if lhs.itemContentUniqueId != rhs.itemContentUniqueId {
+            return false
+        }
+        if lhs.searchState != rhs.searchState {
+            return false
+        }
         if lhs.warpContentsOnEdges != rhs.warpContentsOnEdges {
             return false
         }
@@ -2660,6 +2696,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.searchInitiallyHidden != rhs.searchInitiallyHidden {
+            return false
+        }
+        if lhs.searchAlwaysActive != rhs.searchAlwaysActive {
             return false
         }
         if lhs.searchIsPlaceholderOnly != rhs.searchIsPlaceholderOnly {
@@ -4313,6 +4352,12 @@ public final class EmojiPagerContentComponent: Component {
             guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
+            
+            if self.isSearchActivated {
+                self.visibleSearchHeader?.clearCategorySearch()
+                return
+            }
+            
             for groupIndex in 0 ..< itemLayout.itemGroupLayouts.count {
                 let group = itemLayout.itemGroupLayouts[groupIndex]
                 
@@ -5044,7 +5089,7 @@ public final class EmojiPagerContentComponent: Component {
                 scrollView.layer.removeAllAnimations()
             }
             
-            if self.isSearchActivated, let component = self.component, !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+            if self.isSearchActivated, let component = self.component, component.searchState == .empty, !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
                 scrollView.isScrollEnabled = false
                 DispatchQueue.main.async {
                     scrollView.isScrollEnabled = true
@@ -6024,6 +6069,9 @@ public final class EmojiPagerContentComponent: Component {
                 guard let strongSelf = self else {
                     return nil
                 }
+                if !strongSelf.scrollViewClippingView.bounds.contains(strongSelf.convert(point, to: strongSelf.scrollViewClippingView)) {
+                    return nil
+                }
                 guard let item = strongSelf.item(atPoint: point), let itemLayer = strongSelf.visibleItemLayers[item.1], let file = item.0.itemFile else {
                     return nil
                 }
@@ -6459,12 +6507,15 @@ public final class EmojiPagerContentComponent: Component {
                             
                             strongSelf.isSearchActivated = false
                             strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(false)
-                            if strongSelf.component?.searchInitiallyHidden == false {
-                                if !isFirstResponder {
-                                    strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.easeInOut(duration: 0.2))
-                                }
+                            
+                            if !isFirstResponder {
+                                strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(
+                                    Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             } else {
-                                strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
+                                DispatchQueue.main.async {
+                                    self?.component?.inputInteractionHolder.inputInteraction?.requestUpdate(
+                                        Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                }
                             }
                         }
                     }, updateQuery: { [weak self] query in
@@ -6550,7 +6601,11 @@ public final class EmojiPagerContentComponent: Component {
                     visibleEmptySearchResultsView = EmptySearchResultsView(frame: CGRect())
                     self.visibleEmptySearchResultsView = visibleEmptySearchResultsView
                     self.addSubview(visibleEmptySearchResultsView)
-                    self.mirrorContentClippingView?.addSubview(visibleEmptySearchResultsView.tintContainerView)
+                    if let mirrorContentClippingView = self.mirrorContentClippingView {
+                        mirrorContentClippingView.addSubview(visibleEmptySearchResultsView.tintContainerView)
+                    } else if let vibrancyEffectView = self.vibrancyEffectView {
+                        vibrancyEffectView.contentView.addSubview(visibleEmptySearchResultsView.tintContainerView)
+                    }
                 }
                 let emptySearchResultsSize = CGSize(width: availableSize.width, height: availableSize.height - itemLayout.searchInsets.top - itemLayout.searchHeight)
                 visibleEmptySearchResultsView.update(
@@ -7550,6 +7605,7 @@ public final class EmojiPagerContentComponent: Component {
                 contentItemGroups: allItemGroups,
                 itemLayoutType: .compact,
                 itemContentUniqueId: nil,
+                searchState: .empty,
                 warpContentsOnEdges: isReactionSelection || isStatusSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
                 displaySearchWithPlaceholder: displaySearchWithPlaceholder,
                 searchCategories: searchCategories,
@@ -8071,6 +8127,7 @@ public final class EmojiPagerContentComponent: Component {
                 contentItemGroups: allItemGroups,
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
+                searchState: .empty,
                 warpContentsOnEdges: isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchCategories: searchCategories,

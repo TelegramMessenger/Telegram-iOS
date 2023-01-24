@@ -98,7 +98,15 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
     }
     
     override init(layer: Any) {
-        preconditionFailure()
+        guard let layer = layer as? GifVideoLayer else {
+            preconditionFailure()
+        }
+        
+        self.context = layer.context
+        self.userLocation = layer.userLocation
+        self.file = layer.file
+        
+        super.init(layer: layer)
     }
     
     required init?(coder: NSCoder) {
@@ -373,6 +381,13 @@ public final class GifPagerContentComponent: Component {
                     let _ = self
                     //self?.updateDisplayPlaceholder(displayPlaceholder: false, duration: 0.2)
                 }
+            }
+            
+            override init(layer: Any) {
+                self.item = nil
+                self.onUpdateDisplayPlaceholder = { _, _ in }
+                
+                super.init(layer: layer)
             }
             
             required init?(coder: NSCoder) {

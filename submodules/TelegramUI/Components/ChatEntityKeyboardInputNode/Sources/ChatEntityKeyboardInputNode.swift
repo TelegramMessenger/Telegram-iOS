@@ -608,7 +608,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         strongSelf.currentUndoOverlayController = controller
                         controllerInteraction.presentController(controller, nil)
                     },
-                    copyEmoji: { file in
+                    copyEmoji: { [weak self] file in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
                         var text = "."
                         var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                         loop: for attribute in file.attributes {
@@ -625,6 +629,20 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         
                         if let _ = emojiAttribute {
                             storeMessageTextInPasteboard(text, entities: [MessageTextEntity(range: 0 ..< (text as NSString).length, type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id))])
+                            
+                            var animateInAsReplacement = false
+                            if let currentUndoOverlayController = strongSelf.currentUndoOverlayController {
+                                currentUndoOverlayController.dismissWithCommitActionAndReplacementAnimation()
+                                strongSelf.currentUndoOverlayController = nil
+                                animateInAsReplacement = true
+                            }
+                                                        
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            //TODO:localize
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Emoji copied to clipboard.", undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                            strongSelf.currentUndoOverlayController = controller
+                            controllerInteraction.presentController(controller, nil)
                         }
                     },
                     presentController: controllerInteraction.presentController,
@@ -1425,7 +1443,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let emoji = inputData.emoji {
-                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults)
+                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults, searchState: .active)
                 }
             }
             
@@ -1439,7 +1457,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let stickers = inputData.stickers {
-                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: stickerSearchResult.id, emptySearchResults: stickerSearchResults)
+                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: stickerSearchResult.id, emptySearchResults: stickerSearchResults, searchState: .active)
                 }
             }
             
@@ -1861,10 +1879,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     private func processInputData(inputData: InputData) -> InputData {
         return InputData(
             emoji: inputData.emoji.flatMap { emoji in
-                return emoji.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.contentItemGroups), itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults)
+                return emoji.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.contentItemGroups), itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults, searchState: emoji.searchState)
             },
             stickers: inputData.stickers.flatMap { stickers in
-                return stickers.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.contentItemGroups), itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: nil)
+                return stickers.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.contentItemGroups), itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: nil, searchState: stickers.searchState)
             },
             gifs: inputData.gifs,
             availableGifSearchEmojies: inputData.availableGifSearchEmojies
@@ -2503,7 +2521,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             return nil
                         }
                         
-                        return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: {
+                        return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(context: context, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: {
                             guard let strongSelf = self, let interaction = strongSelf.interaction else {
                                 return
                             }
@@ -2632,7 +2650,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             return nil
                         }
                         
-                        return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked && !isStarred, menu: menuItems, openPremiumIntro: {
+                        return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(context: context, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked && !isStarred, menu: menuItems, openPremiumIntro: {
                             guard let strongSelf = self, let interaction = strongSelf.interaction else {
                                 return
                             }

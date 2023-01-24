@@ -106,7 +106,7 @@ public final class LottieComponent: Component {
             
             if delay != 0.0 {
                 self.isHidden = true
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.08, execute: { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + delay, execute: { [weak self] in
                     guard let self else {
                         return
                     }

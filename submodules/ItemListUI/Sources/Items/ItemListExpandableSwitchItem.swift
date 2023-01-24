@@ -169,6 +169,7 @@ private final class SubItemNode: HighlightTrackingButtonNode {
             }
         } else {
             checkNode = CheckNode(theme: CheckNodeTheme(theme: presentationData.theme, style: .plain))
+            checkNode.isUserInteractionEnabled = false
             self.checkNode = checkNode
             self.addSubnode(checkNode)
         }

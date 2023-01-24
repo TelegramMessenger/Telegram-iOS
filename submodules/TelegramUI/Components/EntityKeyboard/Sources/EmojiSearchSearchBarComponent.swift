@@ -131,9 +131,16 @@ final class EmojiSearchSearchBarComponent: Component {
             
             self.textFrame = CGRect(origin: CGPoint(x: self.leftInset, y: floor((containerSize.height - textSize.height) * 0.5)), size: textSize)
             
-            self.itemStartX = self.textFrame.maxX + self.textSpacing
+            let itemsWidth: CGFloat = self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1))
             
-            self.contentSize = CGSize(width: self.itemStartX + self.itemSize.width * CGFloat(self.itemCount) + self.itemSpacing * CGFloat(max(0, self.itemCount - 1)) + self.rightInset, height: containerSize.height)
+            var itemStartX = self.textFrame.maxX + self.textSpacing
+            if itemStartX + itemsWidth + self.rightInset < containerSize.width {
+                itemStartX = containerSize.width - self.rightInset - itemsWidth
+            }
+            
+            self.itemStartX = itemStartX
+            
+            self.contentSize = CGSize(width: self.itemStartX + itemsWidth + self.rightInset, height: containerSize.height)
         }
         
         func visibleItems(for rect: CGRect) -> Range<Int>? {
@@ -310,7 +317,7 @@ final class EmojiSearchSearchBarComponent: Component {
                                 }
                             } else {
                                 let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
-                                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(), size: self.scrollView.bounds.size))
+                                transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
                                 self.updateScrolling(transition: transition, fromScrolling: false)
                                 //self.scrollView.setContentOffset(CGPoint(), animated: true)
                                 
@@ -329,7 +336,7 @@ final class EmojiSearchSearchBarComponent: Component {
                 self.selectedItem = nil
                 
                 let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(), size: self.scrollView.bounds.size))
+                transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
                 self.updateScrolling(transition: transition, fromScrolling: false)
                 
                 self.state?.updated(transition: transition)
@@ -544,7 +551,7 @@ final class EmojiSearchSearchBarComponent: Component {
                 transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
             }
             if case .active = component.textInputState {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+                transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
             }
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize

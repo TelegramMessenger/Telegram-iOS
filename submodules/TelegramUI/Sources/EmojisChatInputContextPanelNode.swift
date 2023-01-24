@@ -423,7 +423,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                 return nil
             }
             
-            let content = StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: { [weak self] in
+            let content = StickerPreviewPeekContent(context: context, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: { [weak self] in
                 guard let self else {
                     return
                 }

@@ -522,7 +522,7 @@ final class PieChartComponent: Component {
             
             let fractionValue: Double = floor(displayValue * 100.0 * 10.0) / 10.0
             let fractionString: String
-            if fractionValue == 0.0 {
+            if displayValue == 0.0 {
                 fractionString = ""
             } else if fractionValue < 0.1 {
                 fractionString = "<0.1%"

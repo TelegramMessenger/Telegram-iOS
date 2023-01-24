@@ -395,6 +395,12 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
         }
     }
     
+    public func updateManualAlpha(alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        for node in self.nodes {
+            transition.updateAlpha(node: node, alpha: alpha)
+        }
+    }
+    
     func updateManualText(_ text: String, isBack: Bool = true) {
         let node: NavigationButtonItemNode
         if self.nodes.count > 0 {
