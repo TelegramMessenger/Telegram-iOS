@@ -6632,6 +6632,8 @@ public final class EmojiPagerContentComponent: Component {
                 animateContentCrossfade = true
             }
             
+            let crossfadeMinScale: CGFloat = 0.4
+            
             if animateContentCrossfade {
                 for (_, itemLayer) in self.visibleItemLayers {
                     if let snapshotLayer = itemLayer.snapshotContentTree() {
@@ -6639,7 +6641,7 @@ public final class EmojiPagerContentComponent: Component {
                         snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
                             snapshotLayer?.removeFromSuperlayer()
                         })
-                        snapshotLayer.animateScale(from: 1.0, to: 0.0001, duration: 0.2, removeOnCompletion: false)
+                        snapshotLayer.animateScale(from: 1.0, to: crossfadeMinScale, duration: 0.2, removeOnCompletion: false)
                     }
                 }
                 for (_, placeholderView) in self.visibleItemPlaceholderViews {
@@ -6648,7 +6650,7 @@ public final class EmojiPagerContentComponent: Component {
                         snapshotLayer.animateAlpha(from: CGFloat(snapshotLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
                             snapshotLayer?.removeFromSuperlayer()
                         })
-                        snapshotLayer.animateScale(from: 1.0, to: 0.0001, duration: 0.2, removeOnCompletion: false)
+                        snapshotLayer.animateScale(from: 1.0, to: crossfadeMinScale, duration: 0.2, removeOnCompletion: false)
                     }
                 }
                 for (_, selectionLayer) in self.visibleItemSelectionLayers {
@@ -6698,11 +6700,11 @@ public final class EmojiPagerContentComponent: Component {
             if animateContentCrossfade {
                 for (_, itemLayer) in self.visibleItemLayers {
                     itemLayer.animateAlpha(from: 0.0, to: CGFloat(itemLayer.opacity), duration: 0.2)
-                    itemLayer.animateScale(from: 0.0001, to: 1.0, duration: 0.2)
+                    itemLayer.animateScale(from: crossfadeMinScale, to: 1.0, duration: 0.2)
                 }
                 for (_, placeholderView) in self.visibleItemPlaceholderViews {
                     placeholderView.layer.animateAlpha(from: 0.0, to: CGFloat(placeholderView.layer.opacity), duration: 0.2)
-                    placeholderView.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.2)
+                    placeholderView.layer.animateScale(from: crossfadeMinScale, to: 1.0, duration: 0.2)
                 }
                 for (_, selectionLayer) in self.visibleItemSelectionLayers {
                     selectionLayer.animateAlpha(from: 0.0, to: CGFloat(selectionLayer.opacity), duration: 0.2)
