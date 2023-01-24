@@ -7092,10 +7092,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let isSettings = self.isSettings
         self.updateAvatarDisposable.set((signal
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-            let markup: UploadPeerPhotoMarkup? = nil
+            var markup: UploadPeerPhotoMarkup? = nil
             if isSettings {
-//                let fileId = adjustments?.documentId
-//                let backgroundColors = adjustments?.colors as? [Int32]
+                if let fileId = adjustments?.documentId, let backgroundColors = adjustments?.colors as? [Int32], fileId != 0 {
+                    if let packId = adjustments?.stickerPackId, let accessHash = adjustments?.stickerPackAccessHash, packId != 0 {
+                        markup = .sticker(packReference: .id(id: packId, accessHash: accessHash), fileId: fileId, backgroundColors: backgroundColors)
+                    } else {
+                        markup = .emoji(fileId: fileId, backgroundColors: backgroundColors)
+                    }
+                }
                 if case .fallback = mode {
                     return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)

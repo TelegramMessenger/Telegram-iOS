@@ -114,7 +114,17 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
     return context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var messageIdsToTranslate: [EngineMessage.Id] = []
         for messageId in messageIds {
-            if let message = transaction.getMessage(messageId), !message.text.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+            if let message = transaction.getMessage(messageId) {
+                if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[replyAttribute.messageId] {
+                    if !replyMessage.text.isEmpty, let translation = replyMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+                    } else {
+                        messageIdsToTranslate.append(replyMessage.id)
+                    }
+                }
+                if !message.text.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+                } else {
+                    messageIdsToTranslate.append(messageId)
+                }
             } else {
                 messageIdsToTranslate.append(messageId)
             }
@@ -151,7 +161,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 } else {
                     return .single(nil)
                     |> then(
-                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 16, fixedCombinedReadStates: nil)
+                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 32, fixedCombinedReadStates: nil)
                         |> filter { messageHistoryView -> Bool in
                             return messageHistoryView.0.entries.count > 1
                         }
@@ -168,7 +178,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                 if message.text.count > 10 {
                                     let text = String(message.text.prefix(100))
                                     languageRecognizer.processString(text)
-                                    let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
+                                    let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 4)
                                     languageRecognizer.reset()
                                     
                                     let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })

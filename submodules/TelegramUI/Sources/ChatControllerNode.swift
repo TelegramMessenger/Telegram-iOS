@@ -1944,9 +1944,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let dismissedTranslationPanelNode = dismissedTranslationPanelNode {
             var dismissedPanelFrame = dismissedTranslationPanelNode.frame
             dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
-            transition.updateFrame(node: dismissedTranslationPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTranslationPanelNode] _ in
+            transition.updateAlpha(node: dismissedTranslationPanelNode, alpha: 0.0, completion: { [weak dismissedTranslationPanelNode] _ in
                 dismissedTranslationPanelNode?.removeFromSupernode()
             })
+            dismissedTranslationPanelNode.animateOut()
         }
         
         if let dismissedImportStatusPanelNode = dismissedImportStatusPanelNode {

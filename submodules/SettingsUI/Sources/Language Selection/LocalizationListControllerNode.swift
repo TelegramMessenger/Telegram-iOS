@@ -496,7 +496,9 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                         }
                     }
                     
-                    entries.append(.doNotTranslate(text: presentationData.strings.Localization_DoNotTranslate, value: value))
+                    if showTranslate || translateChats {
+                        entries.append(.doNotTranslate(text: presentationData.strings.Localization_DoNotTranslate, value: value))
+                    }
                     
                     if showTranslate {
                         entries.append(.translateInfo(text: ignoredLanguages.count > 1 ? presentationData.strings.Localization_DoNotTranslateManyInfo : presentationData.strings.Localization_DoNotTranslateInfo))

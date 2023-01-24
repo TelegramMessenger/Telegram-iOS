@@ -1802,7 +1802,7 @@ public final class ChatListNode: ListView {
                                         }
                                     }
                                     if let hasUsername = groupType.hasUsername {
-                                        if hasUsername != (channel.addressName != nil) {
+                                        if hasUsername != (!(channel.addressName ?? "").isEmpty) {
                                             return false
                                         }
                                     }
@@ -1831,8 +1831,8 @@ public final class ChatListNode: ListView {
                                             return false
                                         }
                                     }
-                                    if let hasUsername = channelType.hasUsername, hasUsername {
-                                        if hasUsername != (channel.addressName != nil) {
+                                    if let hasUsername = channelType.hasUsername {
+                                        if hasUsername != (!(channel.addressName ?? "").isEmpty) {
                                             return false
                                         }
                                     }

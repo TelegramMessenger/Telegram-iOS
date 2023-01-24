@@ -32,13 +32,15 @@ public final class AvatarVideoNode: ASDisplayNode {
     private let playbackStartDisposable = MetaDisposable()
     private var videoLoopCount = 0
     
-    private var size = CGSize(width: 60.0, height: 60.0)
+    private var validLayout: (CGSize, CGFloat)?
+    private var internalSize = CGSize(width: 60.0, height: 60.0)
     
     public init(context: AccountContext) {
         self.context = context
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.isHidden = true
         
         super.init()
         
@@ -60,16 +62,15 @@ public final class AvatarVideoNode: ASDisplayNode {
         }
     }
     
+    private var didAppear = false
+    
     private func setupAnimation() {
         guard let animationFile = self.animationFile else {
             return
         }
         
-        let itemNativeFitSize = CGSize(width: 128.0, height: 128.0)
-        
-        let size = CGSize(width: self.size.width * 0.67, height: self.size.height * 0.67)
-        let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.size.width - size.width) / 2.0), y: floorToScreenPixels((self.size.height - size.height) / 2.0)), size: size)
-        
+        let itemNativeFitSize = self.internalSize.width > 100.0 ? CGSize(width: 256.0, height: 256.0) : CGSize(width: 128.0, height: 128.0)
+
         let animationData = EntityKeyboardAnimationData(file: animationFile)
         let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
             item: EmojiPagerContentComponent.Item(
@@ -89,109 +90,77 @@ public final class AvatarVideoNode: ASDisplayNode {
             blurredBadgeColor: .clear,
             accentIconColor: .white,
             pointSize: itemNativeFitSize,
-            onUpdateDisplayPlaceholder: { displayPlaceholder, _ in
-                if !displayPlaceholder {
-                    print()
-                }
-//                guard let strongSelf = self else {
-//                    return
-//                }
-//                if displayPlaceholder {
-//                    if let itemLayer = strongSelf.visibleItemLayers[itemId] {
-//                        let placeholderView: EmojiPagerContentComponent.View.ItemPlaceholderView
-//                        if let current = strongSelf.visibleItemPlaceholderViews[itemId] {
-//                            placeholderView = current
-//                        } else {
-//                            placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
-//                                context: context,
-//                                dimensions: item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0),
-//                                immediateThumbnailData: item.file.immediateThumbnailData,
-//                                shimmerView: nil,//strongSelf.shimmerHostView,
-//                                color: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
-//                                size: itemNativeFitSize
-//                            )
-//                            strongSelf.visibleItemPlaceholderViews[itemId] = placeholderView
-//                            strongSelf.view.insertSubview(placeholderView, at: 0)
-//                        }
-//                        placeholderView.frame = itemLayer.frame
-//                        placeholderView.update(size: placeholderView.bounds.size)
-//
-//                        strongSelf.updateShimmerIfNeeded()
-//                    }
-//                } else {
-//                    if let placeholderView = strongSelf.visibleItemPlaceholderViews[itemId] {
-//                        strongSelf.visibleItemPlaceholderViews.removeValue(forKey: itemId)
-//
-//                        if duration > 0.0 {
-//                            placeholderView.layer.opacity = 0.0
-//                            placeholderView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak self, weak placeholderView] _ in
-//                                guard let strongSelf = self else {
-//                                    return
-//                                }
-//                                placeholderView?.removeFromSuperview()
-//                                strongSelf.updateShimmerIfNeeded()
-//                            })
-//                        } else {
-//                            placeholderView.removeFromSuperview()
-//                            strongSelf.updateShimmerIfNeeded()
-//                        }
-//                    }
-//                }
+            onUpdateDisplayPlaceholder: { _, _ in
             }
         )
         itemLayer.onContentsUpdate = { [weak self] in
-            self?.backgroundNode.isHidden = false
+            if let self {
+                if !self.didAppear {
+                    self.didAppear = true
+                    Queue.mainQueue().after(0.15) {
+                        self.backgroundNode.isHidden = false
+                    }
+                }
+            }
         }
         itemLayer.layerTintColor = UIColor.white.cgColor
-        itemLayer.frame = itemFrame
-        itemLayer.isVisibleForAnimations = true
+        itemLayer.isVisibleForAnimations = self.visibility
         self.itemLayer = itemLayer
         self.backgroundNode.layer.addSublayer(itemLayer)
+        
+        if let (size, cornerRadius) = self.validLayout {
+            self.updateLayout(size: size, cornerRadius: cornerRadius, transition: .immediate)
+        }
+    }
+    
+    public func update(markup: TelegramMediaImage.EmojiMarkup, size: CGSize) {
+        guard markup != self.emojiMarkup else {
+            return
+        }
+        self.emojiMarkup = markup
+        self.internalSize = size
+        
+        let colors = markup.backgroundColors.map { UInt32(bitPattern: $0) }
+        if colors.count == 1 {
+            backgroundNode.backgroundColor = UIColor(rgb: colors.first!)
+            self.backgroundNode.image = nil
+        } else if colors.count == 2 {
+            self.backgroundNode.image = generateGradientImage(size: size, colors: colors.map { UIColor(rgb: $0) }, locations: [0.0, 1.0])!
+        } else {
+            self.backgroundNode.image = GradientBackgroundNode.generatePreview(size: size, colors: colors.map { UIColor(rgb: $0) })
+        }
+        self.backgroundNode.isHidden = true
+        
+        switch markup.content {
+        case let .emoji(fileId):
+            self.fileDisposable = (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+            |> deliverOnMainQueue).start(next: { [weak self] files in
+                if let strongSelf = self, let file = files.values.first {
+                    strongSelf.animationFile = file
+                    strongSelf.setupAnimation()
+                }
+            })
+        case let .sticker(packReference, fileId):
+            self.fileDisposable = (self.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
+            |> map { pack -> TelegramMediaFile? in
+                if case let .result(_, items, _) = pack, let item = items.first(where: { $0.file.fileId.id == fileId }) {
+                    return item.file
+                }
+                return nil
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] file in
+                if let strongSelf = self, let file {
+                    strongSelf.animationFile = file
+                    strongSelf.setupAnimation()
+                }
+            })
+        }
     }
     
     public func update(peer: EnginePeer, photo: TelegramMediaImage, size: CGSize) {
-        self.size = size
+        self.internalSize = size
         if let markup = photo.emojiMarkup {
-            if markup != self.emojiMarkup {
-                self.emojiMarkup = markup
-                
-                let colors = markup.backgroundColors.map { UInt32(bitPattern: $0) }
-                let backgroundImage: UIImage
-                if colors.count == 1 {
-                    backgroundImage = generateSingleColorImage(size: size, color: UIColor(rgb: colors.first!))!
-                } else if colors.count == 2 {
-                    backgroundImage = generateGradientImage(size: size, colors: colors.map { UIColor(rgb: $0) }, locations: [0.0, 1.0])!
-                } else {
-                    backgroundImage = GradientBackgroundNode.generatePreview(size: size, colors: colors.map { UIColor(rgb: $0) })
-                }
-                self.backgroundNode.image = backgroundImage
-                self.backgroundNode.isHidden = true
-                
-                switch markup.content {
-                case let .emoji(fileId):
-                    self.fileDisposable = (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
-                    |> deliverOnMainQueue).start(next: { [weak self] files in
-                        if let strongSelf = self, let file = files.values.first {
-                            strongSelf.animationFile = file
-                            strongSelf.setupAnimation()
-                        }
-                    })
-                case let .sticker(packReference, fileId):
-                    self.fileDisposable = (self.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
-                    |> map { pack -> TelegramMediaFile? in
-                        if case let .result(_, items, _) = pack, let item = items.first(where: { $0.file.fileId.id == fileId }) {
-                            return item.file
-                        }
-                        return nil
-                    }
-                    |> deliverOnMainQueue).start(next: { [weak self] file in
-                        if let strongSelf = self, let file {
-                            strongSelf.animationFile = file
-                            strongSelf.setupAnimation()
-                        }
-                    })
-                }
-            }
+            self.update(markup: markup, size: size)
         } else if let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
             self.backgroundNode.image = nil
             
@@ -205,7 +174,9 @@ public final class AvatarVideoNode: ASDisplayNode {
         }
     }
     
+    private var visibility = false
     public func updateVisibility(_ isVisible: Bool) {
+        self.visibility = isVisible
         if isVisible, let videoContent = self.videoContent, self.videoLoopCount != maxVideoLoopCount {
             if self.videoNode == nil {
                 let context = self.context
@@ -262,9 +233,11 @@ public final class AvatarVideoNode: ASDisplayNode {
             self.videoNode = nil
             videoNode.removeFromSupernode()
         }
+        self.itemLayer?.isVisibleForAnimations = isVisible
     }
     
     public func updateLayout(size: CGSize, cornerRadius: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, cornerRadius)
         self.layer.cornerRadius = cornerRadius
         
         self.backgroundNode.frame = CGRect(origin: .zero, size: size)
@@ -272,6 +245,12 @@ public final class AvatarVideoNode: ASDisplayNode {
         if let videoNode = self.videoNode {
             videoNode.frame = CGRect(origin: .zero, size: size)
             videoNode.updateLayout(size: size, transition: transition)
+        }
+        
+        if let itemLayer = self.itemLayer {
+            let itemSize = CGSize(width: size.width * 0.67, height: size.height * 0.67)
+            let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - itemSize.width) / 2.0), y: floorToScreenPixels((size.height - itemSize.height) / 2.0)), size: itemSize)
+            itemLayer.frame = itemFrame
         }
     }
     

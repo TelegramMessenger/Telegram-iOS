@@ -1184,6 +1184,26 @@ public class PremiumLimitsListScreen: ViewController {
                     )
                 )
                 
+                availableItems[.translation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.translation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["translations"],
+                                    decoration: .hello
+                                )),
+                                title: strings.Premium_Translation,
+                                text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }
                     let index: Int
