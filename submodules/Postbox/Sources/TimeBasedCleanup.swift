@@ -325,11 +325,6 @@ private final class TimeBasedCleanupImpl {
     }
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
-        if "".isEmpty {
-            //TODO:remove debugging
-            return
-        }
-        
         let generalPaths = self.generalPaths
         let totalSizeBasedPath = self.totalSizeBasedPath
         let shortLivedPaths = self.shortLivedPaths
@@ -362,27 +357,30 @@ private final class TimeBasedCleanupImpl {
                 //#endif
                 
                 var totalApproximateSize: Int64 = 0
-                for path in shortLivedPaths {
-                    totalApproximateSize += statForDirectory(path: path)
-                }
-                for path in generalPaths {
-                    totalApproximateSize += statForDirectory(path: path)
-                }
-                
-                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: totalSizeBasedPath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
-                    var fileIds = Set<Data>()
-                    loop: for url in enumerator {
-                        guard let url = url as? URL else {
-                            continue
-                        }
-                        if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
-                            if fileIds.contains(fileId) {
-                                continue loop
+                if gigabytesLimit < Int32.max {
+                    for path in shortLivedPaths {
+                        totalApproximateSize += statForDirectory(path: path)
+                    }
+                    for path in generalPaths {
+                        totalApproximateSize += statForDirectory(path: path)
+                    }
+                    
+                    
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: totalSizeBasedPath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                        var fileIds = Set<Data>()
+                        loop: for url in enumerator {
+                            guard let url = url as? URL else {
+                                continue
                             }
-                        
-                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
-                                fileIds.insert(fileId)
-                                totalApproximateSize += Int64(value)
+                            if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
+                                if fileIds.contains(fileId) {
+                                    continue loop
+                                }
+                                
+                                if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                    fileIds.insert(fileId)
+                                    totalApproximateSize += Int64(value)
+                                }
                             }
                         }
                     }
@@ -405,15 +403,18 @@ private final class TimeBasedCleanupImpl {
                 
                 var totalLimitSize: UInt64 = 0
                 
-                for path in generalPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
-                    if !paths.contains(path) {
-                        paths.append(path)
+                if general < Int32.max {
+                    for path in generalPaths {
+                        let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+                        if !paths.contains(path) {
+                            paths.append(path)
+                        }
+                        removedGeneralCount += scanResult.unlinkedCount
+                        totalLimitSize += scanResult.totalSize
                     }
-                    removedGeneralCount += scanResult.unlinkedCount
-                    totalLimitSize += scanResult.totalSize
                 }
-                do {
+                
+                if gigabytesLimit < Int32.max {
                     let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
                     if !paths.contains(totalSizeBasedPath) {
                         paths.append(totalSizeBasedPath)
