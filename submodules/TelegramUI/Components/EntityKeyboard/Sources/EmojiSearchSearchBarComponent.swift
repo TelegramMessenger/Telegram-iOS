@@ -53,6 +53,44 @@ private final class RoundMaskView: UIImageView {
     }
 }
 
+private final class HoldGestureRecognizer: UITapGestureRecognizer {
+    private var currentHighlightPoint: CGPoint?
+    var updateHighlight: ((CGPoint?) -> Void)?
+    
+    override var state: UIGestureRecognizer.State {
+        didSet {
+            print("set state \(self.state)")
+        }
+    }
+    
+    override func reset() {
+        super.reset()
+        
+        if let _ = self.currentHighlightPoint {
+            self.currentHighlightPoint = nil
+            self.updateHighlight?(nil)
+        }
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        let point = touches.first?.location(in: self.view)
+        if self.currentHighlightPoint == nil {
+            self.currentHighlightPoint = point
+            self.updateHighlight?(point)
+        }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+    }
+}
+
 final class EmojiSearchSearchBarComponent: Component {
     enum TextInputState: Equatable {
         case inactive
@@ -212,7 +250,7 @@ final class EmojiSearchSearchBarComponent: Component {
         private let selectedItemTintBackground: SimpleLayer
         
         private var component: EmojiSearchSearchBarComponent?
-        private weak var state: EmptyComponentState?
+        private weak var componentState: EmptyComponentState?
         
         private var itemLayout: ItemLayout?
         private var ignoreScrolling: Bool = false
@@ -220,6 +258,7 @@ final class EmojiSearchSearchBarComponent: Component {
         private let roundMaskView: RoundMaskView
         private let tintRoundMaskView: RoundMaskView
         
+        private var highlightedItem: AnyHashable?
         private var selectedItem: AnyHashable?
         
         private lazy var hapticFeedback: HapticFeedback = {
@@ -271,7 +310,29 @@ final class EmojiSearchSearchBarComponent: Component {
             self.scrollView.layer.addSublayer(self.selectedItemBackground)
             self.tintScrollView.layer.addSublayer(self.selectedItemTintBackground)
             
-            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            let tapRecognizer = HoldGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            tapRecognizer.updateHighlight = { [weak self] point in
+                guard let self else {
+                    return
+                }
+                var highlightedItem: AnyHashable?
+                
+                if let point = point {
+                    let location = self.convert(point, to: self.scrollView)
+                    for (id, itemView) in self.visibleItemViews {
+                        if let itemComponentView = itemView.view.view, itemComponentView.frame.contains(location) {
+                            highlightedItem = id
+                            break
+                        }
+                    }
+                }
+                
+                if self.highlightedItem != highlightedItem {
+                    self.highlightedItem = highlightedItem
+                    self.componentState?.updated(transition: .easeInOut(duration: 0.2))
+                }
+            }
+            self.addGestureRecognizer(tapRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -296,7 +357,7 @@ final class EmojiSearchSearchBarComponent: Component {
                                 AudioServicesPlaySystemSound(0x450)
                                 self.hapticFeedback.tap()
                             }
-                            self.state?.updated(transition: .immediate)
+                            self.componentState?.updated(transition: .easeInOut(duration: 0.2))
                             
                             if let _ = self.selectedItem, let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
                                 component.searchTermUpdated(group.identifiers.joined(separator: ""))
@@ -339,7 +400,7 @@ final class EmojiSearchSearchBarComponent: Component {
                 transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
                 self.updateScrolling(transition: transition, fromScrolling: false)
                 
-                self.state?.updated(transition: transition)
+                self.componentState?.updated(transition: transition)
                 
                 if dispatchEvent {
                     self.component?.searchTermUpdated(nil)
@@ -426,12 +487,17 @@ final class EmojiSearchSearchBarComponent: Component {
                         
                         itemTransition.setPosition(view: view, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
                         itemTransition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: CGSize(width: itemLayout.itemSize.width, height: itemLayout.itemSize.height)))
-                        let scaleFactor = itemFrame.width / itemLayout.itemSize.width
-                        itemTransition.setSublayerTransform(view: view, transform: CATransform3DMakeScale(scaleFactor, scaleFactor, 1.0))
+                        
+                        var scaleFactor = itemFrame.width / itemLayout.itemSize.width
+                        if self.highlightedItem == AnyHashable(item.id) {
+                            scaleFactor *= 0.8
+                        }
+                        
+                        itemTransition.setScale(view: view, scale: scaleFactor)
                         
                         itemTransition.setPosition(view: itemView.tintView, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
                         itemTransition.setBounds(view: itemView.tintView, bounds: CGRect(origin: CGPoint(), size: CGSize(width: itemLayout.itemSize.width, height: itemLayout.itemSize.height)))
-                        itemTransition.setSublayerTransform(view: itemView.tintView, transform: CATransform3DMakeScale(scaleFactor, scaleFactor, 1.0))
+                        itemTransition.setScale(view: itemView.tintView, scale: scaleFactor)
                         
                         itemTransition.setAlpha(view: view, alpha: itemAlpha)
                         itemTransition.setAlpha(view: itemView.tintView, alpha: itemAlpha)
@@ -476,23 +542,57 @@ final class EmojiSearchSearchBarComponent: Component {
             }
             
             if let selectedItem = self.selectedItem, let index = items.firstIndex(where: { AnyHashable($0.id) == selectedItem }) {
-                self.selectedItemBackground.isHidden = false
-                self.selectedItemTintBackground.isHidden = false
-                
                 let selectedItemCenter = itemLayout.frame(at: index).center
                 let selectionSize = CGSize(width: 28.0, height: 28.0)
-                
                 self.selectedItemBackground.backgroundColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayHighlightColor.cgColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayHighlightColor.cgColor
                 self.selectedItemTintBackground.backgroundColor = UIColor(white: 1.0, alpha: 0.15).cgColor
                 self.selectedItemBackground.cornerRadius = selectionSize.height * 0.5
                 self.selectedItemTintBackground.cornerRadius = selectionSize.height * 0.5
                 
                 let selectionFrame = CGRect(origin: CGPoint(x: floor(selectedItemCenter.x - selectionSize.width * 0.5), y: floor(selectedItemCenter.y - selectionSize.height * 0.5)), size: selectionSize)
-                self.selectedItemBackground.frame = selectionFrame
-                self.selectedItemTintBackground.frame = selectionFrame
+                
+                self.selectedItemBackground.bounds = CGRect(origin: CGPoint(), size: selectionFrame.size)
+                self.selectedItemTintBackground.bounds = CGRect(origin: CGPoint(), size: selectionFrame.size)
+                
+                if self.selectedItemBackground.opacity == 0.0 {
+                    self.selectedItemBackground.position = selectionFrame.center
+                    self.selectedItemTintBackground.position = selectionFrame.center
+                    
+                    self.selectedItemBackground.opacity = 1.0
+                    self.selectedItemTintBackground.opacity = 1.0
+                    
+                    Transition.immediate.setScale(layer: self.selectedItemBackground, scale: 1.0)
+                    Transition.immediate.setScale(layer: self.selectedItemTintBackground, scale: 1.0)
+                    
+                    if !transition.animation.isImmediate {
+                        self.selectedItemBackground.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        self.selectedItemTintBackground.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        
+                        self.selectedItemBackground.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, damping: 92.0)
+                        self.selectedItemTintBackground.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, damping: 92.0)
+                    }
+                } else {
+                    if self.selectedItemBackground.position != selectionFrame.center {
+                        transition.setPosition(layer: self.selectedItemBackground, position: selectionFrame.center)
+                        transition.setPosition(layer: self.selectedItemTintBackground, position: selectionFrame.center)
+                        
+                        if case let .curve(duration, _) = transition.animation {
+                            Transition.immediate.setScale(layer: self.selectedItemBackground, scale: 1.0)
+                            Transition.immediate.setScale(layer: self.selectedItemTintBackground, scale: 1.0)
+                            
+                            self.selectedItemBackground.animateKeyframes(values: [1.0 as NSNumber, 0.75 as NSNumber, 1.0 as NSNumber], duration: duration, keyPath: "transform.scale")
+                            self.selectedItemTintBackground.animateKeyframes(values: [1.0 as NSNumber, 0.75 as NSNumber, 1.0 as NSNumber], duration: duration, keyPath: "transform.scale")
+                        } else {
+                            transition.setScale(layer: self.selectedItemBackground, scale: 1.0)
+                            transition.setScale(layer: self.selectedItemTintBackground, scale: 1.0)
+                        }
+                    }
+                }
             } else {
-                self.selectedItemBackground.isHidden = true
-                self.selectedItemTintBackground.isHidden = true
+                transition.setAlpha(layer: self.selectedItemBackground, alpha: 0.0)
+                transition.setScale(layer: self.selectedItemBackground, scale: 0.8)
+                transition.setAlpha(layer: self.selectedItemTintBackground, alpha: 0.0)
+                transition.setScale(layer: self.selectedItemTintBackground, scale: 0.8)
             }
             
             let scrollBounds = self.scrollView.bounds
@@ -507,7 +607,7 @@ final class EmojiSearchSearchBarComponent: Component {
         
         func update(component: EmojiSearchSearchBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
-            self.state = state
+            self.componentState = state
             
             let textSize = self.textView.update(
                 transition: .immediate,

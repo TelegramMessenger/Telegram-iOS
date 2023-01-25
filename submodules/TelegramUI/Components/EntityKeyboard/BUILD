@@ -43,6 +43,8 @@ swift_library(
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
         "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/GZip",
+        "//submodules/rlottie:RLottieBinding",
     ],
     visibility = [
         "//visibility:public",

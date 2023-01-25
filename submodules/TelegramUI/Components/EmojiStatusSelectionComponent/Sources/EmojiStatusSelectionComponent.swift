@@ -371,7 +371,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     } else {
                         strongSelf.stableEmptyResultEmoji = nil
                     }
-                    emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults, searchState: .active)
+                    emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: 0), emptySearchResults: emptySearchResults, searchState: .active)
                 } else {
                     strongSelf.stableEmptyResultEmoji = nil
                 }
