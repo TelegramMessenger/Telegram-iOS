@@ -1003,6 +1003,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
             }
         }
         
+        if let chatController = self.baseNavigationController?.topViewController as? ChatController {
+            chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+        }
+        
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             let message = self.entries[centralItemNode.index].message
             if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {

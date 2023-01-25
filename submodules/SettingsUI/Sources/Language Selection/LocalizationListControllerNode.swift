@@ -488,7 +488,16 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     
                     var value = ""
                     if ignoredLanguages.count > 1 {
-                        value = ignoredLanguages.joined(separator: ", ")
+                        var ignoredLanguagesSet = Set<String>()
+                        var filteredIgnoredLanguages: [String] = []
+                        for language in ignoredLanguages {
+                            if ignoredLanguagesSet.contains(language) {
+                                continue
+                            }
+                            ignoredLanguagesSet.insert(language)
+                            filteredIgnoredLanguages.append(language)
+                        }
+                        value = filteredIgnoredLanguages.joined(separator: ", ")
                     } else if let code = ignoredLanguages.first {
                         let enLocale = Locale(identifier: "en")
                         if let title = enLocale.localizedString(forLanguageCode: code) {

@@ -143,12 +143,11 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 return .single(nil)
             }
             
-            var dontTranslateLanguages: [String] = []
+            var dontTranslateLanguages = Set<String>()
             if let ignoredLanguages = settings.ignoredLanguages {
-                dontTranslateLanguages = ignoredLanguages
-            } else {
-                dontTranslateLanguages = [baseLang]
+                dontTranslateLanguages = Set(ignoredLanguages)
             }
+            dontTranslateLanguages.insert(baseLang)
             
             return cachedChatTranslationState(engine: context.engine, peerId: peerId)
             |> mapToSignal { cached in
@@ -184,7 +183,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                     let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
                                     if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
                                         let fromLang = language.key.rawValue
-                                        fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + 1
+                                        fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
                                     }
                                     count += 1
                                 }

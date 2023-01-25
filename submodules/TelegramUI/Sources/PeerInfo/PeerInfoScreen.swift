@@ -7052,7 +7052,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     subscriber.putCompletion()
                 } else if let strongSelf = self, let progress = next as? NSNumber {
                     Queue.mainQueue().async {
-                        strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.25))
+                        strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.45))
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                         }
@@ -7132,7 +7132,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 case .complete:
                     strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
                 case let .progress(value):
-                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(0.25 + value * 0.75))
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(0.45 + value * 0.55))
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)

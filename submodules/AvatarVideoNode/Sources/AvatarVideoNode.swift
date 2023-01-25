@@ -31,6 +31,7 @@ public final class AvatarVideoNode: ASDisplayNode {
     private var itemLayer: EmojiPagerContentComponent.View.ItemLayer?
     private var useAnimationNode = false
     private var animationNode: AnimatedStickerNode?
+    private let stickerFetchedDisposable = MetaDisposable()
     
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
@@ -56,6 +57,7 @@ public final class AvatarVideoNode: ASDisplayNode {
     
     deinit {
         self.fileDisposable?.dispose()
+        self.stickerFetchedDisposable.dispose()
         self.playbackStartDisposable.dispose()
     }
     
@@ -75,6 +77,8 @@ public final class AvatarVideoNode: ASDisplayNode {
         }
         
         if self.useAnimationNode {
+            self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(animationFile), resource: chatMessageStickerResource(file: animationFile, small: false)).start())
+            
             let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.autoplay = false
             self.animationNode = animationNode
@@ -125,10 +129,10 @@ public final class AvatarVideoNode: ASDisplayNode {
                 }
             }
             itemLayer.layerTintColor = UIColor.white.cgColor
-            itemLayer.isVisibleForAnimations = self.visibility
             self.itemLayer = itemLayer
             self.backgroundNode.layer.addSublayer(itemLayer)
         }
+        self.updateVisibility(self.visibility)
         
         if let (size, cornerRadius) = self.validLayout {
             self.updateLayout(size: size, cornerRadius: cornerRadius, transition: .immediate)
@@ -141,7 +145,8 @@ public final class AvatarVideoNode: ASDisplayNode {
         }
         self.emojiMarkup = markup
         self.internalSize = size
-        //self.useAnimationNode = useAnimationNode
+        self.useAnimationNode = useAnimationNode
+        self.didSetupAnimation = false
         
         let colors = markup.backgroundColors.map { UInt32(bitPattern: $0) }
         if colors.count == 1 {
@@ -197,15 +202,19 @@ public final class AvatarVideoNode: ASDisplayNode {
         }
     }
     
+    private var didSetupAnimation = false
     private var visibility = false
     public func updateVisibility(_ isVisible: Bool) {
         self.visibility = isVisible
         if isVisible, let animationNode = self.animationNode, let file = self.animationFile {
-            let pathPrefix = self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-            let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-            let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
-            animationNode.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+            if !self.didSetupAnimation {
+                self.didSetupAnimation = true
+                let pathPrefix = self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
+                animationNode.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+            }
         }
         self.animationNode?.visibility = isVisible
         if isVisible, let videoContent = self.videoContent, self.videoLoopCount != maxVideoLoopCount {
