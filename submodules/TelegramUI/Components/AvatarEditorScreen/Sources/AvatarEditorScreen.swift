@@ -850,9 +850,9 @@ final class AvatarEditorScreenComponent: Component {
                             }
                             
                             if state?.keyboardContentId == AnyHashable("emoji") {
-                                data.emoji = data.emoji.withUpdatedItemGroups(panelItemGroups: data.emoji.panelItemGroups, contentItemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults, searchState: .active)
+                                data.emoji = data.emoji.withUpdatedItemGroups(panelItemGroups: data.emoji.panelItemGroups, contentItemGroups: searchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: searchResult.id, version: 0), emptySearchResults: emptySearchResults, searchState: .active)
                             } else {
-                                data.stickers = data.stickers?.withUpdatedItemGroups(panelItemGroups: data.stickers?.panelItemGroups ?? searchResult.groups, contentItemGroups: searchResult.groups, itemContentUniqueId: searchResult.id, emptySearchResults: emptySearchResults, searchState: .active)
+                                data.stickers = data.stickers?.withUpdatedItemGroups(panelItemGroups: data.stickers?.panelItemGroups ?? searchResult.groups, contentItemGroups: searchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: searchResult.id, version: 0), emptySearchResults: emptySearchResults, searchState: .active)
                             }
                         }
                         

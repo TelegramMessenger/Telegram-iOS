@@ -2559,6 +2559,16 @@ public final class EmojiPagerContentComponent: Component {
         }
     }
     
+    public struct ContentId: Equatable {
+        public var id: AnyHashable
+        public var version: Int
+        
+        public init(id: AnyHashable, version: Int) {
+            self.id = id
+            self.version = version
+        }
+    }
+    
     public let id: AnyHashable
     public let context: AccountContext
     public let avatarPeer: EnginePeer?
@@ -2568,7 +2578,7 @@ public final class EmojiPagerContentComponent: Component {
     public let panelItemGroups: [ItemGroup]
     public let contentItemGroups: [ItemGroup]
     public let itemLayoutType: ItemLayoutType
-    public let itemContentUniqueId: AnyHashable?
+    public let itemContentUniqueId: ContentId?
     public let searchState: SearchState
     public let warpContentsOnEdges: Bool
     public let displaySearchWithPlaceholder: String?
@@ -2590,7 +2600,7 @@ public final class EmojiPagerContentComponent: Component {
         panelItemGroups: [ItemGroup],
         contentItemGroups: [ItemGroup],
         itemLayoutType: ItemLayoutType,
-        itemContentUniqueId: AnyHashable?,
+        itemContentUniqueId: ContentId?,
         searchState: SearchState,
         warpContentsOnEdges: Bool,
         displaySearchWithPlaceholder: String?,
@@ -2624,7 +2634,7 @@ public final class EmojiPagerContentComponent: Component {
         self.selectedItems = selectedItems
     }
     
-    public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: AnyHashable?, emptySearchResults: EmptySearchResults?, searchState: SearchState) -> EmojiPagerContentComponent {
+    public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: ContentId?, emptySearchResults: EmptySearchResults?, searchState: SearchState) -> EmojiPagerContentComponent {
         return EmojiPagerContentComponent(
             id: self.id,
             context: self.context,
@@ -6629,7 +6639,9 @@ public final class EmojiPagerContentComponent: Component {
             
             var animateContentCrossfade = false
             if let previousComponent, previousComponent.itemContentUniqueId != component.itemContentUniqueId, itemTransition.animation.isImmediate {
-                animateContentCrossfade = true
+                if previousComponent.itemContentUniqueId?.id != component.itemContentUniqueId?.id {
+                    animateContentCrossfade = true
+                }
             }
             
             let crossfadeMinScale: CGFloat = 0.4

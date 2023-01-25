@@ -390,7 +390,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             panelItemGroups: [],
             contentItemGroups: self.itemGroups,
             itemLayoutType: .compact,
-            itemContentUniqueId: "main",
+            itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: "main", version: 0),
             searchState: .empty,
             warpContentsOnEdges: false,
             displaySearchWithPlaceholder: "Search Emoji",
@@ -411,7 +411,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                     iconFile: nil
                 )
             }
-            emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults, searchState: .active)
+            emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: 0), emptySearchResults: emptySearchResults, searchState: .active)
         }
         
         let _ = self.keyboardView.update(

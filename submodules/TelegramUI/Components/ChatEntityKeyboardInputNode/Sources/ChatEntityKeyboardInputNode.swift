@@ -245,10 +245,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     private var hasRecentGifsDisposable: Disposable?
     
     private let emojiSearchDisposable = MetaDisposable()
-    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable, version: Int)?>(nil)
     
     private let stickerSearchDisposable = MetaDisposable()
-    private let stickerSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+    private let stickerSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable, version: Int)?>(nil)
     
     private let controllerInteraction: ChatControllerInteraction?
     
@@ -1079,13 +1079,15 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             }
                         }
                         
+                        var version = 0
                         strongSelf.emojiSearchDisposable.set((resultSignal
                         |> delay(0.15, queue: .mainQueue())
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query))))
+                            strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query), version)))
+                            version += 1
                         }))
                     }
                 case let .category(value):
@@ -1127,12 +1129,14 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         )])
                     }
                         
+                    var version = 0
                     strongSelf.emojiSearchDisposable.set((resultSignal
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value))))
+                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value), version)))
+                        version += 1
                     }))
                 }
             },
@@ -1392,6 +1396,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         )], files.isFinalResult))
                     }
                         
+                    var version = 0
                     strongSelf.stickerSearchDisposable.set((resultSignal
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let strongSelf = self else {
@@ -1403,7 +1408,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         if group.items.isEmpty && !result.isFinalResult {
                             return
                         }
-                        strongSelf.stickerSearchResult.set(.single((result.items, AnyHashable(value))))
+                        strongSelf.stickerSearchResult.set(.single((result.items, AnyHashable(value), version)))
+                        version += 1
                     }))
                 }
             },
@@ -1443,7 +1449,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let emoji = inputData.emoji {
-                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults, searchState: .active)
+                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: .active)
                 }
             }
             
@@ -1457,7 +1463,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let stickers = inputData.stickers {
-                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: stickerSearchResult.id, emptySearchResults: stickerSearchResults, searchState: .active)
+                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: .active)
                 }
             }
             
