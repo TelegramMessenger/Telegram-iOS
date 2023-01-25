@@ -6737,15 +6737,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return peer?.isPremium ?? false
                 } |> distinctUntilChanged
                 
-                let isHidden = self.chatDisplayNode.historyNode.cachedPeerDataAndMessages
-                |> map { cachedDataAndMessages -> Bool in
-                    let (cachedData, _) = cachedDataAndMessages
-                    var isHidden = false
-                    if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.translationHidden) {
-                        isHidden = true
-                    }
-                    return isHidden
-                } |> distinctUntilChanged
+                let isHidden = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.TranslationHidden(id: self.context.account.peerId))
+                |> distinctUntilChanged
                 self.translationStateDisposable = (combineLatest(
                     queue: .concurrentDefaultQueue(),
                     isPremium,

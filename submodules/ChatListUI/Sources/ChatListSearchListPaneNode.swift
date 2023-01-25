@@ -1710,7 +1710,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     }
                                 }
                                 if let hasUsername = groupType.hasUsername {
-                                    if hasUsername != (channel.addressName != nil) {
+                                    if hasUsername != (!(channel.addressName ?? "").isEmpty) {
                                         return false
                                     }
                                 }
@@ -1738,8 +1738,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                         return false
                                     }
                                 }
-                                if let hasUsername = channelType.hasUsername, hasUsername {
-                                    if hasUsername != (channel.addressName != nil) {
+                                if let hasUsername = channelType.hasUsername {
+                                    if hasUsername != (!(channel.addressName ?? "").isEmpty) {
                                         return false
                                     }
                                 }

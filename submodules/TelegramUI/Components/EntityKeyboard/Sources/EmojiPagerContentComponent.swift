@@ -3927,7 +3927,7 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        private func scrollToTop() {
+        public func scrollToTop() {
             guard let _ = self.component, let _ = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
@@ -5116,7 +5116,7 @@ public final class EmojiPagerContentComponent: Component {
                 self.visibleSearchHeader?.endEditing(true)
             }
         }
-        
+    
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if self.ignoreScrolling {
                 return

@@ -250,7 +250,7 @@ public enum PremiumSource: Equatable {
                     return "deeplink"
                 }
             case .translation:
-                return "translation"
+                return "translations"
         }
     }
 }
@@ -329,7 +329,7 @@ enum PremiumPerk: CaseIterable {
             case .emojiStatus:
                 return "emoji_status"
             case .translation:
-                return "translation"
+                return "translations"
         }
     }
     
@@ -428,7 +428,7 @@ enum PremiumPerk: CaseIterable {
             case .emojiStatus:
                 return "Premium/Perk/Status"
             case .translation:
-                return "Premium/Perk/Status"
+                return "Premium/Perk/Translation"
         }
     }
 }
@@ -1492,7 +1492,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x5A6EEE),
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
-                UIColor(rgb: 0x54bdff)
+                UIColor(rgb: 0x54bdff),
+                UIColor(rgb: 0x71c8ff)
             ]
                         
             let accountContext = context.component.context

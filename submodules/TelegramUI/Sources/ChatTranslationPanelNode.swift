@@ -48,6 +48,8 @@ final class ChatTranslationPanelNode: ASDisplayNode {
     
         super.init()
 
+        self.clipsToBounds = true
+        
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.button)
         self.addSubnode(self.moreButton)
@@ -61,6 +63,10 @@ final class ChatTranslationPanelNode: ASDisplayNode {
                 strongSelf.morePressed(node: strongSelf.moreButton.contextSourceNode, gesture: gesture)
             }
         }
+    }
+    
+    func animateOut() {
+        self.layer.animateBounds(from: self.bounds, to: self.bounds.offsetBy(dx: 0.0, dy: self.bounds.size.height), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
     }
     
     func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
@@ -123,13 +129,14 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         let moreButtonSize = self.moreButton.measure(CGSize(width: 100.0, height: panelHeight))
         self.moreButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - moreButtonSize.width, y: floorToScreenPixels((panelHeight - moreButtonSize.height) / 2.0)), size: moreButtonSize)
      
+        let buttonPadding: CGFloat = 10.0
         let buttonSpacing: CGFloat = 10.0
         let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: width - contentRightInset - moreButtonSize.width, height: panelHeight))
         if let icon = self.buttonIconNode.image {
-            let buttonSize = CGSize(width: buttonTextSize.width + icon.size.width + buttonSpacing, height: panelHeight)
+            let buttonSize = CGSize(width: buttonTextSize.width + icon.size.width + buttonSpacing + buttonPadding * 2.0, height: panelHeight)
             self.button.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - buttonSize.width) / 2.0), y: 0.0), size: buttonSize)
-            self.buttonIconNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((buttonSize.height - icon.size.height) / 2.0)), size: icon.size)
-            self.buttonTextNode.frame = CGRect(origin: CGPoint(x: icon.size.width + buttonSpacing, y: floorToScreenPixels((buttonSize.height - buttonTextSize.height) / 2.0)), size: buttonTextSize)
+            self.buttonIconNode.frame = CGRect(origin: CGPoint(x: buttonPadding, y: floorToScreenPixels((buttonSize.height - icon.size.height) / 2.0)), size: icon.size)
+            self.buttonTextNode.frame = CGRect(origin: CGPoint(x: buttonPadding + icon.size.width + buttonSpacing, y: floorToScreenPixels((buttonSize.height - buttonTextSize.height) / 2.0)), size: buttonTextSize)
         }
 
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))

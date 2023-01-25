@@ -3013,22 +3013,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         
         return TGPaintingData(drawing: drawingData, entitiesData: entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities, stickers: stickers)
     }
-    
-    public func resultImage() -> UIImage! {
-        let image = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
-            let bounds = CGRect(origin: .zero, size: size)
-            context.clear(bounds)
-            if let cgImage = self.drawingView.drawingImage?.cgImage {
-                context.draw(cgImage, in: bounds)
-            }
-            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-            context.scaleBy(x: 1.0, y: -1.0)
-            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-            self.entitiesView.layer.render(in: context)
-        }, opaque: false, scale: 1.0)
-        return image
-    }
-    
+        
     public func animateOut(_ completion: @escaping (() -> Void)) {
         self.selectionContainerView.alpha = 0.0
         

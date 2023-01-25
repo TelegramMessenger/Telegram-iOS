@@ -549,8 +549,11 @@ public class Window1 {
                 
                 var keyboardHeight: CGFloat
                 if keyboardFrame.isEmpty || keyboardFrame.maxY < screenHeight {
-                    if isTablet && screenHeight - keyboardFrame.maxY < 5.0 {
+                    if inPopover || (isTablet && screenHeight - keyboardFrame.maxY < 5.0) {
                         keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
+                        if inPopover && !keyboardHeight.isZero {
+                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
+                        }
                     } else {
                         keyboardHeight = 0.0
                     }

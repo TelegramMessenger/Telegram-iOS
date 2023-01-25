@@ -350,7 +350,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 parentMessage: item.message,
                                 constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                                 animationCache: item.controllerInteraction.presentationContext.animationCache,
-                                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
+                                associatedData: item.associatedData
                             ))
                         }
                     }

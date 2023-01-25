@@ -1291,9 +1291,23 @@ final class AvatarEditorScreenComponent: Component {
                     entity.position = CGPoint(x: drawingSize.width / 2.0, y: drawingSize.height / 2.0)
                     entity.scale = 3.3
                     
-                    var documentId: Int64 = 0
-                    if case let .file(file) = entity.content, file.isCustomEmoji {
-                        documentId = file.fileId.id
+                    var fileId: Int64 = 0
+                    var stickerPackId: Int64 = 0
+                    var stickerPackAccessHash: Int64 = 0
+                    if case let .file(file) = entity.content {
+                        if file.isCustomEmoji {
+                            fileId = file.fileId.id
+                        } else if file.isAnimatedSticker {
+                            for attribute in file.attributes {
+                                if case let .Sticker(_, packReference, _) = attribute, let packReference, case let .id(id, accessHash) = packReference {
+                                    fileId = file.fileId.id
+                                    stickerPackId = id
+                                    stickerPackAccessHash = accessHash
+                                    break
+                                }
+                            }
+                            
+                        }
                     }
                     
                     let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
@@ -1337,9 +1351,15 @@ final class AvatarEditorScreenComponent: Component {
                     }, opaque: false)!
                     
                     if entity.isAnimated {
-                        controller.videoCompletion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, documentId: documentId, colors: colors), { [weak controller] in
-                            controller?.dismiss()
-                        })
+                        if stickerPackId != 0 {
+                            controller.videoCompletion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, stickerPackId: stickerPackId, stickerPackAccessHash: stickerPackAccessHash, documentId: fileId, colors: colors), { [weak controller] in
+                                controller?.dismiss()
+                            })
+                        } else {
+                            controller.videoCompletion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, documentId: fileId, colors: colors), { [weak controller] in
+                                controller?.dismiss()
+                            })
+                        }
                     } else {
                         controller.imageCompletion(combinedImage, { [weak controller] in
                             controller?.dismiss()
@@ -1436,6 +1456,16 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
+        self.scrollToTop = { [weak self] in
+            if let self {
+                if let view = self.node.hostView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
+                    view.scrollToTop()
+                } else if let view = self.node.hostView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
+                    view.scrollToTop()
+                }
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

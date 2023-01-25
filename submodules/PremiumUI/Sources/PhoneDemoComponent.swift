@@ -138,6 +138,21 @@ private final class PhoneView: UIView {
         }
     }
     
+    var model: PhoneDemoComponent.Model = .notch {
+        didSet {
+            if self.model != oldValue {
+                switch self.model {
+                case .notch:
+                    self.borderView.image = phoneBorderImage
+                    self.shimmerBorderView.image = phoneBorderMaskImage
+                case .island:
+                    self.borderView.image = phoneBorderImage14
+                    self.shimmerBorderView.image = phoneBorderMaskImage14
+                }
+            }
+        }
+    }
+    
     override init(frame: CGRect) {
         self.contentContainerView = UIView()
         self.contentContainerView.clipsToBounds = true
@@ -355,21 +370,30 @@ final class PhoneDemoComponent: Component {
         case fasterStars
         case badgeStars
         case emoji
+        case hello
+    }
+    
+    enum Model {
+        case notch
+        case island
     }
     
     let context: AccountContext
     let position: Position
+    let model: Model
     let videoFile: TelegramMediaFile?
     let decoration: BackgroundDecoration
     
     public init(
         context: AccountContext,
         position: PhoneDemoComponent.Position,
+        model: Model = .notch,
         videoFile: TelegramMediaFile?,
         decoration: BackgroundDecoration = .none
     ) {
         self.context = context
         self.position = position
+        self.model = model
         self.videoFile = videoFile
         self.decoration = decoration
     }
@@ -379,6 +403,9 @@ final class PhoneDemoComponent: Component {
             return false
         }
         if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.model != rhs.model {
             return false
         }
         if lhs.videoFile != rhs.videoFile {
@@ -452,6 +479,7 @@ final class PhoneDemoComponent: Component {
             self.containerView.frame = CGRect(origin: .zero, size: availableSize)
             self.decorationContainerView.frame = CGRect(origin: CGPoint(x: -availableSize.width * 0.5, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             self.phoneView.bounds = CGRect(origin: .zero, size: phoneSize)
+            self.phoneView.model = component.model
             
             switch component.decoration {
                 case .none:
@@ -501,6 +529,13 @@ final class PhoneDemoComponent: Component {
                     if let _ = self.decorationView as? EmojiStarsView {
                     } else {
                         let starsView = EmojiStarsView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
+                    }
+                case .hello:
+                    if let _ = self.decorationView as? HelloView {
+                    } else {
+                        let starsView = HelloView(frame: self.decorationContainerView.bounds)
                         self.decorationView = starsView
                         self.decorationContainerView.addSubview(starsView)
                     }

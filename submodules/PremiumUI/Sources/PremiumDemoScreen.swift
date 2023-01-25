@@ -909,9 +909,12 @@ private final class DemoSheetContent: CombinedComponent {
                         id: PremiumDemoScreen.Subject.translation,
                         component: AnyComponent(
                             PageComponent(
-                                content: AnyComponent(AppIconsDemoComponent(
+                                content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
-                                    appIcons: appIcons
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["translations"],
+                                    decoration: .hello
                                 )),
                                 title: strings.Premium_Translation,
                                 text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
