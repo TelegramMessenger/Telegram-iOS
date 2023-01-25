@@ -1119,7 +1119,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         )
         
         let translationState: Signal<ChatTranslationState?, NoError>
-        if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
+        if let peerId = chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && subject != .scheduledMessages {
             translationState = chatTranslationState(context: context, peerId: peerId)
         } else {
             translationState = .single(nil)

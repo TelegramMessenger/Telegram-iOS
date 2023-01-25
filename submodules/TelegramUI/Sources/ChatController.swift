@@ -6730,7 +6730,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 threadData = .single(nil)
             }
             
-            if peerId.namespace != Namespaces.Peer.SecretChat && self.subject != .scheduledMessages {
+            if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
                 var baseLanguageCode = self.presentationData.strings.baseLanguageCode
                 if baseLanguageCode.contains("-") {
                     baseLanguageCode = baseLanguageCode.components(separatedBy: "-").first ?? baseLanguageCode
