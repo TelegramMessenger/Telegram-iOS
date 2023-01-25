@@ -24,7 +24,7 @@ private let phrases = [
     "Halo"
 ]
 
-private var activeCount = 13
+private var simultaneousDisplayCount = 13
 
 private let referenceWidth: CGFloat = 1180
 private let positions: [CGPoint] = [
@@ -69,7 +69,7 @@ final class HelloView: UIView, PhoneDemoDecorationView {
         let phraseIds = Array(self.availablePhraseIds()).shuffled()
         let positionIds = Array(self.availablePositionIds()).shuffled()
         
-        for i in 0 ..< activeCount {
+        for i in 0 ..< simultaneousDisplayCount {
             let delay: Double = Double.random(in: 0.0 ..< 0.8)
             Queue.mainQueue().after(delay) {
                 self.spawnPhrase(phraseIds[i], positionIndex: positionIds[i])

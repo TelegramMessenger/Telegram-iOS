@@ -13,6 +13,9 @@ import GradientBackground
 import AnimationCache
 import MultiAnimationRenderer
 import EntityKeyboard
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import StickerResources
 
 private let maxVideoLoopCount = 3
 
@@ -26,6 +29,8 @@ public final class AvatarVideoNode: ASDisplayNode {
     private var fileDisposable: Disposable?
     private var animationFile: TelegramMediaFile?
     private var itemLayer: EmojiPagerContentComponent.View.ItemLayer?
+    private var useAnimationNode = false
+    private var animationNode: AnimatedStickerNode?
     
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
@@ -69,56 +74,74 @@ public final class AvatarVideoNode: ASDisplayNode {
             return
         }
         
-        let itemNativeFitSize = self.internalSize.width > 100.0 ? CGSize(width: 256.0, height: 256.0) : CGSize(width: 128.0, height: 128.0)
-
-        let animationData = EntityKeyboardAnimationData(file: animationFile)
-        let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
-            item: EmojiPagerContentComponent.Item(
-                animationData: animationData,
-                content: .animation(animationData),
-                itemFile: animationFile,
-                subgroupId: nil,
-                icon: .none,
-                tintMode: animationData.isTemplate ? .primary : .none
-            ),
-            context: context,
-            attemptSynchronousLoad: false,
-            content: .animation(animationData),
-            cache: context.animationCache,
-            renderer: context.animationRenderer,
-            placeholderColor: .clear,
-            blurredBadgeColor: .clear,
-            accentIconColor: .white,
-            pointSize: itemNativeFitSize,
-            onUpdateDisplayPlaceholder: { _, _ in
-            }
-        )
-        itemLayer.onContentsUpdate = { [weak self] in
-            if let self {
-                if !self.didAppear {
-                    self.didAppear = true
-                    Queue.mainQueue().after(0.15) {
-                        self.backgroundNode.isHidden = false
+        if self.useAnimationNode {
+            let animationNode = DefaultAnimatedStickerNodeImpl()
+            animationNode.autoplay = false
+            self.animationNode = animationNode
+            animationNode.started = { [weak self] in
+                if let self {
+                    if !self.didAppear {
+                        self.didAppear = true
+                        Queue.mainQueue().after(0.15) {
+                            self.backgroundNode.isHidden = false
+                        }
                     }
                 }
             }
+            self.backgroundNode.addSubnode(animationNode)
+        } else {
+            let itemNativeFitSize = self.internalSize.width > 100.0 ? CGSize(width: 192.0, height: 192.0) : CGSize(width: 64.0, height: 64.0)
+            
+            let animationData = EntityKeyboardAnimationData(file: animationFile)
+            let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
+                item: EmojiPagerContentComponent.Item(
+                    animationData: animationData,
+                    content: .animation(animationData),
+                    itemFile: animationFile,
+                    subgroupId: nil,
+                    icon: .none,
+                    tintMode: animationData.isTemplate ? .primary : .none
+                ),
+                context: context,
+                attemptSynchronousLoad: false,
+                content: .animation(animationData),
+                cache: context.animationCache,
+                renderer: context.animationRenderer,
+                placeholderColor: .clear,
+                blurredBadgeColor: .clear,
+                accentIconColor: .white,
+                pointSize: itemNativeFitSize,
+                onUpdateDisplayPlaceholder: { _, _ in
+                }
+            )
+            itemLayer.onContentsUpdate = { [weak self] in
+                if let self {
+                    if !self.didAppear {
+                        self.didAppear = true
+                        Queue.mainQueue().after(0.15) {
+                            self.backgroundNode.isHidden = false
+                        }
+                    }
+                }
+            }
+            itemLayer.layerTintColor = UIColor.white.cgColor
+            itemLayer.isVisibleForAnimations = self.visibility
+            self.itemLayer = itemLayer
+            self.backgroundNode.layer.addSublayer(itemLayer)
         }
-        itemLayer.layerTintColor = UIColor.white.cgColor
-        itemLayer.isVisibleForAnimations = self.visibility
-        self.itemLayer = itemLayer
-        self.backgroundNode.layer.addSublayer(itemLayer)
         
         if let (size, cornerRadius) = self.validLayout {
             self.updateLayout(size: size, cornerRadius: cornerRadius, transition: .immediate)
         }
     }
     
-    public func update(markup: TelegramMediaImage.EmojiMarkup, size: CGSize) {
+    public func update(markup: TelegramMediaImage.EmojiMarkup, size: CGSize, useAnimationNode: Bool = true) {
         guard markup != self.emojiMarkup else {
             return
         }
         self.emojiMarkup = markup
         self.internalSize = size
+        //self.useAnimationNode = useAnimationNode
         
         let colors = markup.backgroundColors.map { UInt32(bitPattern: $0) }
         if colors.count == 1 {
@@ -160,7 +183,7 @@ public final class AvatarVideoNode: ASDisplayNode {
     public func update(peer: EnginePeer, photo: TelegramMediaImage, size: CGSize) {
         self.internalSize = size
         if let markup = photo.emojiMarkup {
-            self.update(markup: markup, size: size)
+            self.update(markup: markup, size: size, useAnimationNode: false)
         } else if let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
             self.backgroundNode.image = nil
             
@@ -177,6 +200,14 @@ public final class AvatarVideoNode: ASDisplayNode {
     private var visibility = false
     public func updateVisibility(_ isVisible: Bool) {
         self.visibility = isVisible
+        if isVisible, let animationNode = self.animationNode, let file = self.animationFile {
+            let pathPrefix = self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+            let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
+            let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
+            animationNode.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+        }
+        self.animationNode?.visibility = isVisible
         if isVisible, let videoContent = self.videoContent, self.videoLoopCount != maxVideoLoopCount {
             if self.videoNode == nil {
                 let context = self.context
@@ -247,9 +278,13 @@ public final class AvatarVideoNode: ASDisplayNode {
             videoNode.updateLayout(size: size, transition: transition)
         }
         
+        let itemSize = CGSize(width: size.width * 0.67, height: size.height * 0.67)
+        let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - itemSize.width) / 2.0), y: floorToScreenPixels((size.height - itemSize.height) / 2.0)), size: itemSize)
+        if let animationNode = self.animationNode {
+            animationNode.frame = itemFrame
+            animationNode.updateLayout(size: itemSize)
+        }
         if let itemLayer = self.itemLayer {
-            let itemSize = CGSize(width: size.width * 0.67, height: size.height * 0.67)
-            let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - itemSize.width) / 2.0), y: floorToScreenPixels((size.height - itemSize.height) / 2.0)), size: itemSize)
             itemLayer.frame = itemFrame
         }
     }
