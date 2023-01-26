@@ -1532,6 +1532,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         var isActive: Bool
         var hasPresetSearch: Bool
         var textInputState: EmojiSearchSearchBarComponent.TextInputState
+        var searchState: EmojiPagerContentComponent.SearchState
         var size: CGSize
         var canFocus: Bool
         var searchCategories: EmojiSearchCategories?
@@ -1561,6 +1562,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             if lhs.textInputState != rhs.textInputState {
                 return false
             }
+            if lhs.searchState != rhs.searchState {
+                return false
+            }
             if lhs.size != rhs.size {
                 return false
             }
@@ -1587,11 +1591,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     private let backgroundLayer: SimpleLayer
     private let tintBackgroundLayer: SimpleLayer
     
-    private let searchIconView: UIImageView
-    private let searchIconTintView: UIImageView
-    
-    private let backIconView: UIImageView
-    private let backIconTintView: UIImageView
+    private let statusIcon = ComponentView<Empty>()
     
     private let clearIconView: UIImageView
     private let clearIconTintView: UIImageView
@@ -1625,12 +1625,6 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.backgroundLayer = SimpleLayer()
         self.tintBackgroundLayer = SimpleLayer()
         
-        self.searchIconView = UIImageView()
-        self.searchIconTintView = UIImageView()
-        
-        self.backIconView = UIImageView()
-        self.backIconTintView = UIImageView()
-        
         self.clearIconView = UIImageView()
         self.clearIconTintView = UIImageView()
         self.clearIconButton = HighlightableButton()
@@ -1646,12 +1640,6 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         self.layer.addSublayer(self.backgroundLayer)
         self.tintContainerView.layer.addSublayer(self.tintBackgroundLayer)
-        
-        self.addSubview(self.searchIconView)
-        self.tintContainerView.addSubview(self.searchIconTintView)
-        
-        self.addSubview(self.backIconView)
-        self.tintContainerView.addSubview(self.backIconTintView)
         
         self.addSubview(self.clearIconView)
         self.tintContainerView.addSubview(self.clearIconTintView)
@@ -1716,7 +1704,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             let location = recognizer.location(in: self)
-            if self.backIconView.frame.contains(location) {
+            if let view = self.statusIcon.view, view.frame.contains(location), self.currentPresetSearchTerm != nil {
                 self.clearCategorySearch()
             } else {
                 self.activateTextInput()
@@ -1839,10 +1827,10 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             return
         }
         self.params = nil
-        self.update(context: params.context, theme: params.theme, strings: params.strings, text: params.text, useOpaqueTheme: params.useOpaqueTheme, isActive: params.isActive, size: params.size, canFocus: params.canFocus, searchCategories: params.searchCategories, transition: transition)
+        self.update(context: params.context, theme: params.theme, strings: params.strings, text: params.text, useOpaqueTheme: params.useOpaqueTheme, isActive: params.isActive, size: params.size, canFocus: params.canFocus, searchCategories: params.searchCategories, searchState: params.searchState, transition: transition)
     }
     
-    public func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, text: String, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, canFocus: Bool, searchCategories: EmojiSearchCategories?, transition: Transition) {
+    public func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, text: String, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, canFocus: Bool, searchCategories: EmojiSearchCategories?, searchState: EmojiPagerContentComponent.SearchState, transition: Transition) {
         let textInputState: EmojiSearchSearchBarComponent.TextInputState
         if let textField = self.textField {
             textInputState = .active(hasText: !(textField.text ?? "").isEmpty)
@@ -1859,6 +1847,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             isActive: isActive,
             hasPresetSearch: self.currentPresetSearchTerm == nil,
             textInputState: textInputState,
+            searchState: searchState,
             size: size,
             canFocus: canFocus,
             searchCategories: searchCategories
@@ -1871,7 +1860,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         let isActiveWithText = isActive && self.currentPresetSearchTerm == nil
         
         if self.params?.theme !== theme {
-            self.searchIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)?.withRenderingMode(.alwaysTemplate)
+            /*self.searchIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)?.withRenderingMode(.alwaysTemplate)
             self.searchIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
             
             self.searchIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)
@@ -1879,7 +1868,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             self.backIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: .white)?.withRenderingMode(.alwaysTemplate)
             self.backIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
             
-            self.backIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: .white)
+            self.backIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: .white)*/
             
             self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)?.withRenderingMode(.alwaysTemplate)
             self.clearIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
@@ -1889,11 +1878,11 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         self.params = params
         
-        let sideInset: CGFloat = 8.0
+        let sideInset: CGFloat = 12.0
         let topInset: CGFloat = 8.0
         let inputHeight: CGFloat = 36.0
         
-        let sideTextInset: CGFloat = 8.0 + 4.0 + 24.0
+        let sideTextInset: CGFloat = sideInset + 4.0 + 24.0
         
         if useOpaqueTheme {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
@@ -1942,7 +1931,40 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         let textFrame = CGRect(origin: CGPoint(x: textX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textX, height: backgroundFrame.height))
         self.textFrame = textFrame
         
-        if let image = self.searchIconView.image {
+        let statusContent: EmojiSearchStatusComponent.Content
+        switch searchState {
+        case .empty:
+            statusContent = .search
+        case .searching:
+            statusContent = .progress
+        case .active:
+            statusContent = .results
+        }
+        
+        let statusSize = CGSize(width: 24.0, height: 24.0)
+        let _ = self.statusIcon.update(
+            transition: transition,
+            component: AnyComponent(EmojiSearchStatusComponent(
+                theme: theme,
+                strings: strings,
+                useOpaqueTheme: useOpaqueTheme,
+                content: statusContent
+            )),
+            environment: {},
+            containerSize: statusSize
+        )
+        let iconFrame = CGRect(origin: CGPoint(x: textFrame.minX - statusSize.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - statusSize.height) / 2.0)), size: statusSize)
+        if let statusIconView = self.statusIcon.view as? EmojiSearchStatusComponent.View {
+            if statusIconView.superview == nil {
+                self.addSubview(statusIconView)
+                self.tintContainerView.addSubview(statusIconView.tintContainerView)
+            }
+            
+            transition.setFrame(view: statusIconView, frame: iconFrame)
+            transition.setFrame(view: statusIconView.tintContainerView, frame: iconFrame)
+        }
+        
+        /*if let image = self.searchIconView.image {
             let iconFrame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
             transition.setBounds(view: self.searchIconView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
             transition.setPosition(view: self.searchIconView, position: iconFrame.center)
@@ -1964,9 +1986,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             transition.setAlpha(view: self.backIconView, alpha: self.currentPresetSearchTerm != nil ? 1.0 : 0.0)
             transition.setScale(view: self.backIconTintView, scale: self.currentPresetSearchTerm != nil ? 1.0 : 0.001)
             transition.setAlpha(view: self.backIconTintView, alpha: self.currentPresetSearchTerm != nil ? 1.0 : 0.0)
-        }
+        }*/
         
-        let placeholderContentFrame = CGRect(origin: CGPoint(x: textFrame.minX - 6.0, y: backgroundFrame.minX), size: CGSize(width: backgroundFrame.maxX - (textFrame.minX - 6.0), height: backgroundFrame.height))
+        let placeholderContentFrame = CGRect(origin: CGPoint(x: textFrame.minX - 6.0, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - (textFrame.minX - 6.0), height: backgroundFrame.height))
         let _ = self.placeholderContent.update(
             transition: transition,
             component: AnyComponent(EmojiSearchSearchBarComponent(
@@ -6546,7 +6568,7 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
-                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, transition: transition)
+                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, searchState: component.searchState, transition: transition)
                 if !useOpaqueTheme {
                     transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
                     transition.attachAnimation(view: visibleSearchHeader, id: "search_transition", completion: { [weak self] completed in

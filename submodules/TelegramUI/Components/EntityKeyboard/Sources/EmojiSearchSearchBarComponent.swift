@@ -162,7 +162,7 @@ final class EmojiSearchSearchBarComponent: Component {
             self.containerSize = containerSize
             self.itemCount = itemCount
             self.itemSpacing = 11.0
-            self.leftInset = 6.0
+            self.leftInset = 8.0
             self.rightInset = 8.0
             self.itemSize = CGSize(width: 24.0, height: 24.0)
             self.textSpacing = 11.0

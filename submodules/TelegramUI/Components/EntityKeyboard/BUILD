@@ -45,6 +45,7 @@ swift_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/GZip",
         "//submodules/rlottie:RLottieBinding",
+        "//submodules/lottie-ios:Lottie",
     ],
     visibility = [
         "//visibility:public",
