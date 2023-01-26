@@ -23,7 +23,6 @@ struct ParsedDialogs {
     let topMessageIds: [PeerId: MessageId]
     let storeMessages: [StoreMessage]
     let ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout]
-    let hiddenTranslations: [PeerId: Bool]
     
     let lowerNonPinnedIndex: MessageIndex?
     let referencedFolders: [PeerGroupId: PeerGroupUnreadCountersSummary]
@@ -56,7 +55,6 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var channelStates: [PeerId: Int32] = [:]
     var topMessageIds: [PeerId: MessageId] = [:]
     var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
-    var hiddenTranslations: [PeerId: Bool] = [:]
     
     var storeMessages: [StoreMessage] = []
     var nonPinnedDialogsTopMessageIds = Set<MessageId>()
@@ -113,11 +111,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 apiChannelPts = pts
             
                 ttlPeriods[peer.peerId] = .known(ttlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
-            
-                if  (flags & (1 << 6)) != 0 {
-                    hiddenTranslations[peer.peerId] = true
-                }
-            
+                        
                 let isPinned = (flags & (1 << 2)) != 0
                 if !isPinned {
                     nonPinnedDialogsTopMessageIds.insert(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: topMessage))
@@ -196,7 +190,6 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         topMessageIds: topMessageIds,
         storeMessages: storeMessages,
         ttlPeriods: ttlPeriods,
-        hiddenTranslations: hiddenTranslations,
     
         lowerNonPinnedIndex: lowerNonPinnedIndex,
         referencedFolders: referencedFolders
@@ -215,7 +208,6 @@ struct FetchedChatList {
     var channelStates: [PeerId: Int32]
     var storeMessages: [StoreMessage]
     var topMessageIds: [PeerId: MessageId]
-    var hiddenTranslations: [PeerId: Bool]
     
     var lowerNonPinnedIndex: MessageIndex?
     
@@ -324,7 +316,6 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     var channelStates: [PeerId: Int32] = [:]
                     var storeMessages: [StoreMessage] = []
                     var topMessageIds: [PeerId: MessageId] = [:]
-                    var hiddenTranslations: [PeerId: Bool] = [:]
                     
                     peers.append(contentsOf: parsedRemoteChats.peers)
                     peerPresences.merge(parsedRemoteChats.peerPresences, uniquingKeysWith: { _, updated in updated })
@@ -336,7 +327,6 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     channelStates.merge(parsedRemoteChats.channelStates, uniquingKeysWith: { _, updated in updated })
                     storeMessages.append(contentsOf: parsedRemoteChats.storeMessages)
                     topMessageIds.merge(parsedRemoteChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
-                    hiddenTranslations.merge(parsedRemoteChats.hiddenTranslations, uniquingKeysWith: { _, updated in updated })
                     
                     if let parsedPinnedChats = parsedPinnedChats {
                         peers.append(contentsOf: parsedPinnedChats.peers)
@@ -349,7 +339,6 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         channelStates.merge(parsedPinnedChats.channelStates, uniquingKeysWith: { _, updated in updated })
                         storeMessages.append(contentsOf: parsedPinnedChats.storeMessages)
                         topMessageIds.merge(parsedPinnedChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
-                        hiddenTranslations.merge(parsedPinnedChats.hiddenTranslations, uniquingKeysWith: { _, updated in updated })
                     }
                     
                     var peerGroupIds: [PeerId: PeerGroupId] = [:]
@@ -373,7 +362,6 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         reactionTagSummaries.merge(folderChats.reactionTagSummaries, uniquingKeysWith: { _, updated in updated })
                         channelStates.merge(folderChats.channelStates, uniquingKeysWith: { _, updated in updated })
                         storeMessages.append(contentsOf: folderChats.storeMessages)
-                        hiddenTranslations.merge(folderChats.hiddenTranslations, uniquingKeysWith: { _, updated in updated })
                     }
                     
                     var pinnedItemIds: [PeerId]?
@@ -410,7 +398,6 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         channelStates: channelStates,
                         storeMessages: storeMessages,
                         topMessageIds: topMessageIds,
-                        hiddenTranslations: hiddenTranslations,
                     
                         lowerNonPinnedIndex: parsedRemoteChats.lowerNonPinnedIndex,
                     

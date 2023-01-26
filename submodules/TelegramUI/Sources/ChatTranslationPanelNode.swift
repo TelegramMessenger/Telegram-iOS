@@ -122,7 +122,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             self.buttonTextNode.attributedText = NSAttributedString(string: buttonText, font: Font.regular(17.0), textColor: interfaceState.theme.rootController.navigationBar.accentTextColor)
         }
 
-        let panelHeight: CGFloat = 44.0
+        let panelHeight: CGFloat = 40.0
         
         let contentRightInset: CGFloat = 14.0 + rightInset
                   

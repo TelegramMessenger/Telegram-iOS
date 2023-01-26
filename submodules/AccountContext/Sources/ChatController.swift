@@ -618,7 +618,7 @@ public protocol ChatController: ViewController {
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)
     
-    func updateIsPushed(_ isPushed: Bool)
+    func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition)
     
     func hintPlayNextOutgoingGift()
     

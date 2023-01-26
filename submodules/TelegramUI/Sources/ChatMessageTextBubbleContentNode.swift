@@ -261,7 +261,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         messageEntities = updatingMedia.entities?.entities ?? []
                     }
                     
-                    if let translateToLanguage = item.associatedData.translateToLanguage, !item.message.text.isEmpty {
+                    if let translateToLanguage = item.associatedData.translateToLanguage, !item.message.text.isEmpty && incoming {
                         isTranslating = true
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {

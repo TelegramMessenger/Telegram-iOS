@@ -8705,7 +8705,9 @@ Sorry for the inconvenience.";
 "Conversation.Translation.DoNotTranslate" = "Do Not Translate %@";
 "Conversation.Translation.Hide" = "Hide";
 "Conversation.Translation.AddedToDoNotTranslateText" = "**%@** is added to the Do Not Translate list.";
-"Conversation.Translation.TranslationBarHiddenText" = "Translation bar is now hidden for this channel.";
+"Conversation.Translation.TranslationBarHiddenChatText" = "Translation bar is now hidden for this chat.";
+"Conversation.Translation.TranslationBarHiddenGroupText" = "Translation bar is now hidden for this group.";
+"Conversation.Translation.TranslationBarHiddenChannelText" = "Translation bar is now hidden for this channel.";
 
 "ProfilePhoto.SetEmoji" = "Set Emoji";
 
@@ -8740,3 +8742,5 @@ Sorry for the inconvenience.";
 "Premium.TranslationInfo" = "Real-time translation of channels and chats into other languages.";
 "Premium.TranslationStandaloneInfo" = "Subscribe to **Telegram Premium** to be able to translate all messages in a chat at once.";
 "Premium.Translation.Proceed" = "About Telegram Premium";
+
+"Settings.PauseMusicOnRecording" = "Pause Music While Recoding";

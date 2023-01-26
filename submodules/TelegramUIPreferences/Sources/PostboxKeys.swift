@@ -73,7 +73,7 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case visualMediaStoredState = 5
     case cachedImageRecognizedContent = 6
     case pendingInAppPurchaseState = 7
-    case translationState = 9
+    case translationState = 10
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {

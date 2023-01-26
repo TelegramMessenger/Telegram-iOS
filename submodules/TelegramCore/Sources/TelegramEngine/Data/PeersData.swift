@@ -858,7 +858,11 @@ public extension TelegramEngine.EngineData.Item {
                 guard let view = view as? CachedPeerDataView else {
                     preconditionFailure()
                 }
-                if let cachedData = view.cachedPeerData as? CachedChannelData {
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.flags.contains(.translationHidden)
+                } else if let cachedData = view.cachedPeerData as? CachedGroupData {
+                    return cachedData.flags.contains(.translationHidden)
+                } else if let cachedData = view.cachedPeerData as? CachedChannelData {
                     return cachedData.flags.contains(.translationHidden)
                 } else {
                     return false

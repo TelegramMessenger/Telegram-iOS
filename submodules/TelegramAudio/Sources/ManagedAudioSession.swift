@@ -587,11 +587,7 @@ public final class ManagedAudioSession {
                 index += 1
             }
             
-            var lastIsRecordWithOthers = false // self.holders.last?.audioSessionType == .recordWithOthers
-            if "".count != 0 {
-                // Silence warning
-                lastIsRecordWithOthers = true
-            }
+            let lastIsRecordWithOthers = self.holders.last?.audioSessionType == .recordWithOthers
             if !deactivating {
                 if let activeIndex = activeIndex {
                     var deactivate = false
@@ -765,9 +761,9 @@ public final class ManagedAudioSession {
                     case .videoCall:
                         mode = .videoChat
                         options.insert(.mixWithOthers)
-//                    case .recordWithOthers:
-//                        mode = .videoRecording
-//                        options.insert(.mixWithOthers)
+                    case .recordWithOthers:
+                        mode = .videoRecording
+                        options.insert(.mixWithOthers)
                     default:
                         mode = .default
                 }

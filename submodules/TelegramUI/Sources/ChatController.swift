@@ -6730,14 +6730,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 threadData = .single(nil)
             }
             
-            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                let baseLanguageCode = self.presentationData.strings.baseLanguageCode
+            if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
+                var baseLanguageCode = self.presentationData.strings.baseLanguageCode
+                if baseLanguageCode.contains("-") {
+                    baseLanguageCode = baseLanguageCode.components(separatedBy: "-").first ?? baseLanguageCode
+                }
                 let isPremium = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                 |> map { peer -> Bool in
                     return peer?.isPremium ?? false
                 } |> distinctUntilChanged
                 
-                let isHidden = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.TranslationHidden(id: self.context.account.peerId))
+                let isHidden = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.TranslationHidden(id: peerId))
                 |> distinctUntilChanged
                 self.translationStateDisposable = (combineLatest(
                     queue: .concurrentDefaultQueue(),
@@ -10125,10 +10128,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let context = strongSelf.context
+            let presentationData = strongSelf.presentationData
             let _ = context.engine.messages.togglePeerMessagesTranslationHidden(peerId: peerId, hidden: true).start()
 
-            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_TranslationBarHiddenText, round: false, undoText: presentationData.strings.Undo_Undo), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+            var text: String = ""
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if peer is TelegramGroup {
+                    text = presentationData.strings.Conversation_Translation_TranslationBarHiddenGroupText
+                } else if let peer = peer as? TelegramChannel {
+                    switch peer.info {
+                    case .group:
+                        text = presentationData.strings.Conversation_Translation_TranslationBarHiddenGroupText
+                    case .broadcast:
+                        text = presentationData.strings.Conversation_Translation_TranslationBarHiddenChannelText
+                    }
+                } else {
+                    text = presentationData.strings.Conversation_Translation_TranslationBarHiddenChatText
+                }
+            }
+            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: text, round: false, undoText: presentationData.strings.Undo_Undo), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     if case .undo = action {
                         let _ = context.engine.messages.togglePeerMessagesTranslationHidden(peerId: peerId, hidden: false).start()
                     }
@@ -18185,9 +18203,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.historyNodeContainer.layer.addShakeAnimation(amplitude: -6.0, decay: true)
     }
     
-    public func updateIsPushed(_ isPushed: Bool) {
-        let scale: CGFloat = isPushed ? 0.94 : 1.0
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0))
+    public func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        let scale: CGFloat = 1.0 - 0.06 * fraction
         transition.updateTransformScale(node: self.chatDisplayNode.historyNodeContainer, scale: scale)
     }
     
