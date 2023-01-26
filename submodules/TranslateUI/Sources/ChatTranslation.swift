@@ -115,27 +115,32 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
         var messageIdsToTranslate: [EngineMessage.Id] = []
         var messageIdsSet = Set<EngineMessage.Id>()
         for messageId in messageIds {
-            guard !messageIdsSet.contains(messageId) else {
-                continue
-            }
-            messageIdsSet.insert(messageId)
             if let message = transaction.getMessage(messageId) {
                 if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[replyAttribute.messageId] {
                     if !replyMessage.text.isEmpty {
                         if let translation = replyMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
                         } else {
-                            messageIdsToTranslate.append(replyMessage.id)
+                            if !messageIdsSet.contains(replyMessage.id) {
+                                messageIdsToTranslate.append(replyMessage.id)
+                                messageIdsSet.insert(replyMessage.id)
+                            }
                         }
                     }
                 }
                 if !message.text.isEmpty && message.author?.id != context.account.peerId {
                     if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
                     } else {
-                        messageIdsToTranslate.append(messageId)
+                        if !messageIdsSet.contains(messageId) {
+                            messageIdsToTranslate.append(messageId)
+                            messageIdsSet.insert(messageId)
+                        }
                     }
                 }
             } else {
-                messageIdsToTranslate.append(messageId)
+                if !messageIdsSet.contains(messageId) {
+                    messageIdsToTranslate.append(messageId)
+                    messageIdsSet.insert(messageId)
+                }
             }
         }
         return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, toLang: toLang)
