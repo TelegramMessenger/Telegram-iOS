@@ -77,7 +77,7 @@ private func translationSettingsControllerEntries(theme: PresentationTheme, stri
     if let ignoredLanguages = settings.ignoredLanguages {
         selectedLanguages = Set(ignoredLanguages)
     } else {
-        selectedLanguages = Set([strings.baseLanguageCode])
+        selectedLanguages = Set([strings.baseLanguageCode, systemLanguageCode()])
     }
     for (code, title, subtitle) in languages {
         entries.append(.language(index, theme, title, subtitle, selectedLanguages.contains(code), code))
@@ -100,6 +100,7 @@ public func translationSettingsController(context: AccountContext) -> ViewContro
             if value {
                 if current.ignoredLanguages == nil {
                     updatedIgnoredLanguages.append(interfaceLanguageCode)
+                    updatedIgnoredLanguages.append(systemLanguageCode())
                 }
                 if !updatedIgnoredLanguages.contains(code) {
                     updatedIgnoredLanguages.append(code)

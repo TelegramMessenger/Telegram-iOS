@@ -1001,9 +1001,14 @@ public class TranslateScreen: ViewController {
         }
         
         var toLanguage = toLanguage ?? baseLanguageCode
-        
         if toLanguage == fromLanguage {
             toLanguage = "en"
+        }
+        
+        if toLanguage == "nb" {
+            toLanguage = "nl"
+        } else if toLanguage == "pt-br" {
+            toLanguage = "pt"
         }
         
         var copyTranslationImpl: ((String) -> Void)?

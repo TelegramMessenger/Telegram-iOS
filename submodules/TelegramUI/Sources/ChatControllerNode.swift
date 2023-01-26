@@ -1096,7 +1096,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var dismissedTranslationPanelNode: ChatTranslationPanelNode?
         var immediatelyLayoutTranslationPanelNodeAndAnimateAppearance = false
         var translationPanelHeight: CGFloat?
+        
+        var hasTranslationPanel = false
         if let _ = self.chatPresentationInterfaceState.translationState {
+            if case .overlay = self.chatPresentationInterfaceState.mode {
+            } else if self.chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) != nil {
+            } else if self.chatPresentationInterfaceState.search != nil {
+            } else {
+                hasTranslationPanel = true
+            }
+        }
+        if hasTranslationPanel {
             let translationPanelNode: ChatTranslationPanelNode
             if let current = self.chatTranslationPanel {
                 translationPanelNode = current
