@@ -96,7 +96,9 @@ public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, 
             var currentRects: [CGRect] = []
             for rect in rects {
                 if rect.width.isZero {
-                    combinedRects.append(currentRects)
+                    if !currentRects.isEmpty {
+                        combinedRects.append(currentRects)
+                    }
                     currentRects.removeAll()
                 } else {
                     currentRects.append(rect)

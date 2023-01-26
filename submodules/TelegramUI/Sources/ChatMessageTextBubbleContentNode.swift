@@ -635,8 +635,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return
         }
-        let rects = self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []
-        
+        let rects = self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? [] 
         if isTranslating, !rects.isEmpty {
             let shimmeringNode: ShimmeringLinkNode
             if let current = self.shimmeringNode {

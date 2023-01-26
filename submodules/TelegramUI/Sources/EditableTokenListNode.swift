@@ -311,7 +311,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.clipsToBounds = true
         
         self.textFieldNode.textField.delegate = self
-        self.textFieldNode.textField.addTarget(self, action: #selector(textFieldChanged(_:)), for: .editingChanged)
+        self.textFieldNode.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
         self.textFieldNode.textField.didDeleteBackwardWhileEmpty = { [weak self] in
             if let strongSelf = self {
                 if let selectedTokenId = strongSelf.selectedTokenId {
@@ -518,7 +518,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             for tokenNode in self.tokenNodes {
                 let convertedPoint = self.view.convert(point, to: tokenNode.view)
                 if tokenNode.bounds.contains(convertedPoint) {
-                    if tokenNode.isSelected && convertedPoint.x < 24.0 {
+                    if tokenNode.isSelected {
                         self.deleteToken?(tokenNode.token.id)
                     } else {
                         self.updateSelectedTokenId(tokenNode.token.id, animated: true)

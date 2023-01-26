@@ -965,19 +965,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 guard let imageCompletion, let videoCompletion else {
                     return
                 }
-                let peerType: AvatarEditorScreen.PeerType
-                if case .legacyGroup = peer {
-                    peerType = .group
-                } else if case let .channel(channel) = peer {
-                    if case .group = channel.info {
-                        peerType = channel.flags.contains(.isForum) ? .forum : .group
-                    } else {
-                        peerType = .channel
-                    }
-                } else {
-                    peerType = .user
-                }
-                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: peerType, markup: nil)
+                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: .group, markup: nil)
                 controller.imageCompletion = imageCompletion
                 controller.videoCompletion = videoCompletion
                 pushImpl?(controller)
