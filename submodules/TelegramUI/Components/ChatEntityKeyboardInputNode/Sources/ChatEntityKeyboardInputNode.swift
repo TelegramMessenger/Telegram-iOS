@@ -177,7 +177,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 loadMoreToken: nil,
                 displaySearchWithPlaceholder: nil,
                 searchCategories: nil,
-                searchInitiallyHidden: true
+                searchInitiallyHidden: true,
+                searchState: .empty
             )
         ))
         
@@ -244,11 +245,38 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     private var inputDataDisposable: Disposable?
     private var hasRecentGifsDisposable: Disposable?
     
+    private struct EmojiSearchResult {
+        var groups: [EmojiPagerContentComponent.ItemGroup]
+        var id: AnyHashable
+        var version: Int
+        var isPreset: Bool
+    }
+    
+    private struct EmojiSearchState {
+        var result: EmojiSearchResult?
+        var isSearching: Bool
+        
+        init(result: EmojiSearchResult?, isSearching: Bool) {
+            self.result = result
+            self.isSearching = isSearching
+        }
+    }
+    
     private let emojiSearchDisposable = MetaDisposable()
-    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable, version: Int)?>(nil)
+    private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
+    private var emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
+        didSet {
+            self.emojiSearchState.set(.single(self.emojiSearchStateValue))
+        }
+    }
     
     private let stickerSearchDisposable = MetaDisposable()
-    private let stickerSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable, version: Int)?>(nil)
+    private let stickerSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
+    private var stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
+        didSet {
+            self.stickerSearchState.set(.single(self.stickerSearchStateValue))
+        }
+    }
     
     private let controllerInteraction: ChatControllerInteraction?
     
@@ -356,7 +384,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             loadMoreToken: nil,
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
-                            searchInitiallyHidden: true
+                            searchInitiallyHidden: true,
+                            searchState: .empty
                         )
                     )
                 }
@@ -388,7 +417,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             loadMoreToken: nil,
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
-                            searchInitiallyHidden: true
+                            searchInitiallyHidden: true,
+                            searchState: .empty
                         )
                     )
                 }
@@ -426,7 +456,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             loadMoreToken: loadMoreToken,
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
-                            searchInitiallyHidden: true
+                            searchInitiallyHidden: true,
+                            searchState: .active
                         )
                     )
                 }
@@ -511,7 +542,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             loadMoreToken: loadMoreToken,
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
-                            searchInitiallyHidden: true
+                            searchInitiallyHidden: true,
+                            searchState: .active
                         )
                     )
                 }
@@ -950,13 +982,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 switch query {
                 case .none:
                     strongSelf.emojiSearchDisposable.set(nil)
-                    strongSelf.emojiSearchResult.set(.single(nil))
+                    strongSelf.emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
                 case let .text(rawQuery, languageCode):
                     let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
                     
                     if query.isEmpty {
                         strongSelf.emojiSearchDisposable.set(nil)
-                        strongSelf.emojiSearchResult.set(.single(nil))
+                        strongSelf.emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
                     } else {
                         let context = strongSelf.context
                         
@@ -1080,13 +1112,15 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         
                         var version = 0
+                        strongSelf.emojiSearchStateValue.isSearching = true
                         strongSelf.emojiSearchDisposable.set((resultSignal
                         |> delay(0.15, queue: .mainQueue())
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query), version)))
+                            
+                            strongSelf.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(query), version: version, isPreset: false), isSearching: false)
                             version += 1
                         }))
                     }
@@ -1128,14 +1162,23 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items
                         )])
                     }
+                    
+                    let delayValue: Double
+                    /*#if DEBUG
+                    delayValue = 2.3
+                    #else*/
+                    delayValue = 0.0
+                    //#endif
                         
                     var version = 0
+                    strongSelf.emojiSearchStateValue.isSearching = true
                     strongSelf.emojiSearchDisposable.set((resultSignal
+                    |> delay(delayValue, queue: .mainQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value), version)))
+                        strongSelf.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                         version += 1
                     }))
                 }
@@ -1352,10 +1395,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 switch query {
                 case .none:
                     strongSelf.stickerSearchDisposable.set(nil)
-                    strongSelf.stickerSearchResult.set(.single(nil))
+                    strongSelf.stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
                 case .text:
                     strongSelf.stickerSearchDisposable.set(nil)
-                    strongSelf.stickerSearchResult.set(.single(nil))
+                    strongSelf.stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
                 case let .category(value):
                     let resultSignal = strongSelf.context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
                     |> mapToSignal { files -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
@@ -1406,9 +1449,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
+                            strongSelf.stickerSearchStateValue.isSearching = true
                             return
                         }
-                        strongSelf.stickerSearchResult.set(.single((result.items, AnyHashable(value), version)))
+                        strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                         version += 1
                     }))
                 }
@@ -1428,10 +1472,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
             updatedInputData,
             self.gifComponent.get(),
-            self.emojiSearchResult.get(),
-            self.stickerSearchResult.get()
+            self.emojiSearchState.get(),
+            self.stickerSearchState.get()
         )
-        |> deliverOnMainQueue).start(next: { [weak self] inputData, gifs, emojiSearchResult, stickerSearchResult in
+        |> deliverOnMainQueue).start(next: { [weak self] inputData, gifs, emojiSearchState, stickerSearchState in
             guard let strongSelf = self else {
                 return
             }
@@ -1440,7 +1484,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
-            if let emojiSearchResult = emojiSearchResult {
+            if let emojiSearchResult = emojiSearchState.result {
                 var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
                 if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
                     emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
@@ -1449,11 +1493,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let emoji = inputData.emoji {
-                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: .active)
+                    let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty
+                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : defaultSearchState)
+                }
+            } else if emojiSearchState.isSearching {
+                if let emoji = inputData.emoji {
+                    inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emoji.contentItemGroups, itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults, searchState: .searching)
                 }
             }
             
-            if let stickerSearchResult = stickerSearchResult {
+            if let stickerSearchResult = stickerSearchState.result {
                 var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
                 if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
                     //TODO:localize
@@ -1463,7 +1512,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let stickers = inputData.stickers {
-                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: .active)
+                    let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty
+                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: stickerSearchState.isSearching ? .searching : defaultSearchState)
+                }
+            } else if stickerSearchState.isSearching {
+                if let stickers = inputData.stickers {
+                    inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickers.contentItemGroups, itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: stickers.emptySearchResults, searchState: .searching)
                 }
             }
             

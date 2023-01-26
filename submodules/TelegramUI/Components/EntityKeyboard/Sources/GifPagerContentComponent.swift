@@ -197,6 +197,7 @@ public final class GifPagerContentComponent: Component {
     public let displaySearchWithPlaceholder: String?
     public let searchCategories: EmojiSearchCategories?
     public let searchInitiallyHidden: Bool
+    public let searchState: EmojiPagerContentComponent.SearchState
     
     public init(
         context: AccountContext,
@@ -207,7 +208,8 @@ public final class GifPagerContentComponent: Component {
         loadMoreToken: String?,
         displaySearchWithPlaceholder: String?,
         searchCategories: EmojiSearchCategories?,
-        searchInitiallyHidden: Bool
+        searchInitiallyHidden: Bool,
+        searchState: EmojiPagerContentComponent.SearchState
     ) {
         self.context = context
         self.inputInteraction = inputInteraction
@@ -218,6 +220,7 @@ public final class GifPagerContentComponent: Component {
         self.displaySearchWithPlaceholder = displaySearchWithPlaceholder
         self.searchCategories = searchCategories
         self.searchInitiallyHidden = searchInitiallyHidden
+        self.searchState = searchState
     }
     
     public static func ==(lhs: GifPagerContentComponent, rhs: GifPagerContentComponent) -> Bool {
@@ -246,6 +249,9 @@ public final class GifPagerContentComponent: Component {
             return false
         }
         if lhs.searchInitiallyHidden != rhs.searchInitiallyHidden {
+            return false
+        }
+        if lhs.searchState != rhs.searchState {
             return false
         }
         return true
@@ -1066,7 +1072,7 @@ public final class GifPagerContentComponent: Component {
                 }
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
-                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: false, isActive: false, size: searchHeaderFrame.size, canFocus: false, searchCategories: component.searchCategories, transition: transition)
+                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: false, isActive: false, size: searchHeaderFrame.size, canFocus: false, searchCategories: component.searchCategories, searchState: component.searchState, transition: transition)
                 transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame, completion: { [weak self] completed in
                     let _ = self
                     let _ = completed
