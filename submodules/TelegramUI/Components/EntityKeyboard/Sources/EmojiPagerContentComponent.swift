@@ -1740,6 +1740,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             
             let textField = EmojiSearchTextField(frame: textFieldFrame)
             textField.autocorrectionType = .no
+            textField.returnKeyType = .search
             self.textField = textField
             self.insertSubview(textField, belowSubview: self.clearIconView)
             textField.delegate = self

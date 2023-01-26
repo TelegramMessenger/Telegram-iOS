@@ -835,19 +835,6 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
                 })
             }
             
-            for (peerId, _) in fetchedChats.hiddenTranslations {
-                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                    if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        let current = (current as? CachedChannelData) ?? CachedChannelData()
-                        var updatedFlags = current.flags
-                        updatedFlags.insert(.translationHidden)
-                        return current.withUpdatedFlags(updatedFlags)
-                    } else {
-                        return current
-                    }
-                })
-            }
-
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
             for peerId in fetchedChats.chatPeerIds {

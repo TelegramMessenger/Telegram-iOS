@@ -2029,15 +2029,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     for i in (wideIndexRange.0 ... wideIndexRange.1) {
                         switch historyView.filteredEntries[i] {
                         case let .MessageEntry(message, _, _, _, _, _):
-                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                            } else if !message.text.isEmpty {
-                                messageIdsToTranslate.append(message.id)
+                            if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
+                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                } else {
+                                    messageIdsToTranslate.append(message.id)
+                                }
                             }
                         case let .MessageGroupEntry(_, messages, _):
                             for (message, _, _, _, _) in messages {
-                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                                } else if !message.text.isEmpty {
-                                    messageIdsToTranslate.append(message.id)
+                                if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
+                                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                    } else {
+                                        messageIdsToTranslate.append(message.id)
+                                    }
                                 }
                             }
                         default:

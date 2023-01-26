@@ -182,7 +182,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
             let convertedType: ManagedAudioSessionType
             switch type {
                 case TGAudioSessionTypePlayAndRecord, TGAudioSessionTypePlayAndRecordHeadphones:
-                    convertedType = .record(speaker: false)
+                    convertedType = .recordWithOthers
                 default:
                     convertedType = .play
             }

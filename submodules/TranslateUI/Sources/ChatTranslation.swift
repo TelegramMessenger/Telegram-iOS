@@ -113,17 +113,26 @@ private let languageRecognizer = NLLanguageRecognizer()
 public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
     return context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var messageIdsToTranslate: [EngineMessage.Id] = []
+        var messageIdsSet = Set<EngineMessage.Id>()
         for messageId in messageIds {
+            guard !messageIdsSet.contains(messageId) else {
+                continue
+            }
+            messageIdsSet.insert(messageId)
             if let message = transaction.getMessage(messageId) {
                 if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[replyAttribute.messageId] {
-                    if !replyMessage.text.isEmpty, let translation = replyMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
-                    } else {
-                        messageIdsToTranslate.append(replyMessage.id)
+                    if !replyMessage.text.isEmpty {
+                        if let translation = replyMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+                        } else {
+                            messageIdsToTranslate.append(replyMessage.id)
+                        }
                     }
                 }
-                if !message.text.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
-                } else {
-                    messageIdsToTranslate.append(messageId)
+                if !message.text.isEmpty && message.author?.id != context.account.peerId {
+                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+                    } else {
+                        messageIdsToTranslate.append(messageId)
+                    }
                 }
             } else {
                 messageIdsToTranslate.append(messageId)
@@ -194,6 +203,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             
                             if let _ = fromLangs["ru"] {
                                 fromLangs["bg"] = nil
+                                fromLangs["kk"] = nil
                             }
                             
                             var mostFrequent: (String, Int)?

@@ -8742,3 +8742,5 @@ Sorry for the inconvenience.";
 "Premium.TranslationInfo" = "Real-time translation of channels and chats into other languages.";
 "Premium.TranslationStandaloneInfo" = "Subscribe to **Telegram Premium** to be able to translate all messages in a chat at once.";
 "Premium.Translation.Proceed" = "About Telegram Premium";
+
+"Settings.PauseMusicOnRecording" = "Pause Music While Recoding";

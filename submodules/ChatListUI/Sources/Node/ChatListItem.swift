@@ -1843,7 +1843,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if !message.text.isEmpty && entities.count > 0 {
                             var messageText = message.text
                             var entities = entities
-                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                            if !"".isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                 messageText = translation.text
                                 entities = translation.entities
                             }

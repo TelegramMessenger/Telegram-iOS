@@ -49,13 +49,13 @@ enum AvatarBackground: Equatable {
 }
 
 private let defaultBackgrounds: [AvatarBackground] = [
-    .gradient([0x72d5fd, 0x2a9ef1]),
-    .gradient([0xff885e, 0xff516a]),
-    .gradient([0xffcd6a, 0xffa85c]),
-    .gradient([0xa0de7e, 0x54cb68]),
-    .gradient([0x00fcfd, 0x4acccd]),
-    .gradient([0xe0a2f3, 0xd669ed]),
-    .gradient([0x82b1ff, 0x665fff]),
+    .gradient([0xff72d5fd, 0xff2a9ef1]),
+    .gradient([0xffff885e, 0xffff516a]),
+    .gradient([0xffffcd6a, 0xffffa85c]),
+    .gradient([0xffa0de7e, 0xff54cb68]),
+    .gradient([0xff00fcfd, 0xff4acccd]),
+    .gradient([0xffe0a2f3, 0xffd669ed]),
+    .gradient([0xff82b1ff, 0xff665fff]),
 ]
 
 public struct AvatarKeyboardInputData: Equatable {
@@ -261,7 +261,7 @@ final class AvatarEditorScreenComponent: Component {
             if wasEmpty && self.state?.selectedFile == nil {
                 self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
             }
-            
+                        
             let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void = { [weak self] query in
                 guard let strongSelf = self, let context = strongSelf.state?.context else {
                     return
@@ -297,9 +297,9 @@ final class AvatarEditorScreenComponent: Component {
                             return combineLatest(
                                 context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
                                 combineLatest(keywords.map { context.engine.stickers.searchStickers(query: $0.emoticons.first!)
-                                    |> map { items -> [FoundStickerItem] in
-                                        return items.items
-                                    }
+                                |> map { items -> [FoundStickerItem] in
+                                    return items.items
+                                }
                                 })
                             )
                             |> map { view, stickers -> [EmojiPagerContentComponent.ItemGroup] in
@@ -434,52 +434,107 @@ final class AvatarEditorScreenComponent: Component {
                         }))
                     }
                 case let .category(value):
-                    let resultSignal = context.engine.stickers.searchEmoji(emojiString: value)
-                    |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
-                        var items: [EmojiPagerContentComponent.Item] = []
-                        
-                        var existingIds = Set<MediaId>()
-                        for itemFile in files {
-                            if existingIds.contains(itemFile.fileId) {
-                                continue
+                    if strongSelf.state?.keyboardContentId == AnyHashable("emoji") {
+                        let resultSignal = context.engine.stickers.searchEmoji(emojiString: value)
+                        |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                            var items: [EmojiPagerContentComponent.Item] = []
+                            
+                            var existingIds = Set<MediaId>()
+                            for itemFile in files {
+                                if existingIds.contains(itemFile.fileId) {
+                                    continue
+                                }
+                                existingIds.insert(itemFile.fileId)
+                                let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                let item = EmojiPagerContentComponent.Item(
+                                    animationData: animationData,
+                                    content: .animation(animationData),
+                                    itemFile: itemFile, subgroupId: nil,
+                                    icon: .none,
+                                    tintMode: animationData.isTemplate ? .primary : .none
+                                )
+                                items.append(item)
                             }
-                            existingIds.insert(itemFile.fileId)
-                            let animationData = EntityKeyboardAnimationData(file: itemFile)
-                            let item = EmojiPagerContentComponent.Item(
-                                animationData: animationData,
-                                content: .animation(animationData),
-                                itemFile: itemFile, subgroupId: nil,
-                                icon: .none,
-                                tintMode: animationData.isTemplate ? .primary : .none
-                            )
-                            items.append(item)
+                            
+                            return .single([EmojiPagerContentComponent.ItemGroup(
+                                supergroupId: "search",
+                                groupId: "search",
+                                title: nil,
+                                subtitle: nil,
+                                actionButtonTitle: nil,
+                                isFeatured: false,
+                                isPremiumLocked: false,
+                                isEmbedded: false,
+                                hasClear: false,
+                                collapsedLineCount: nil,
+                                displayPremiumBadges: false,
+                                headerItem: nil,
+                                items: items
+                            )])
                         }
                         
-                        return .single([EmojiPagerContentComponent.ItemGroup(
-                            supergroupId: "search",
-                            groupId: "search",
-                            title: nil,
-                            subtitle: nil,
-                            actionButtonTitle: nil,
-                            isFeatured: false,
-                            isPremiumLocked: false,
-                            isEmbedded: false,
-                            hasClear: false,
-                            collapsedLineCount: nil,
-                            displayPremiumBadges: false,
-                            headerItem: nil,
-                            items: items
-                        )])
+                        strongSelf.emojiSearchDisposable.set((resultSignal
+                        |> delay(0.15, queue: .mainQueue())
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value))))
+                        }))
+                    } else {
+                        let resultSignal = context.engine.stickers.searchStickers(query: value)
+                        |> filter { result -> Bool in
+                            return !result.items.isEmpty
+                        }
+                        |> map { result -> [TelegramMediaFile] in
+                            return result.items.map { $0.file }
+                        }
+                        |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                            var items: [EmojiPagerContentComponent.Item] = []
+                            
+                            var existingIds = Set<MediaId>()
+                            for itemFile in files {
+                                if existingIds.contains(itemFile.fileId) {
+                                    continue
+                                }
+                                existingIds.insert(itemFile.fileId)
+                                let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                let item = EmojiPagerContentComponent.Item(
+                                    animationData: animationData,
+                                    content: .animation(animationData),
+                                    itemFile: itemFile, subgroupId: nil,
+                                    icon: .none,
+                                    tintMode: animationData.isTemplate ? .primary : .none
+                                )
+                                items.append(item)
+                            }
+                            
+                            return .single([EmojiPagerContentComponent.ItemGroup(
+                                supergroupId: "search",
+                                groupId: "search",
+                                title: nil,
+                                subtitle: nil,
+                                actionButtonTitle: nil,
+                                isFeatured: false,
+                                isPremiumLocked: false,
+                                isEmbedded: false,
+                                hasClear: false,
+                                collapsedLineCount: nil,
+                                displayPremiumBadges: false,
+                                headerItem: nil,
+                                items: items
+                            )])
+                        }
+                        
+                        strongSelf.emojiSearchDisposable.set((resultSignal
+                        |> delay(0.15, queue: .mainQueue())
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value))))
+                        }))
                     }
-                        
-                    strongSelf.emojiSearchDisposable.set((resultSignal
-                    |> delay(0.15, queue: .mainQueue())
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value))))
-                    }))
                 }
             }
             
@@ -756,6 +811,10 @@ final class AvatarEditorScreenComponent: Component {
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
+            if state.expanded && environment.inputHeight > 0.0 {
+                state.expanded = false
+            }
+            
             let effectiveIsExpanded = state.expanded || state.editingColor
             
             if self.isExpanded != effectiveIsExpanded {
@@ -803,7 +862,7 @@ final class AvatarEditorScreenComponent: Component {
             let navigationDoneButtonSize = self.navigationDoneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.isSearchActive || (state.expanded && backgroundIsBright) ? environment.theme.rootController.navigationBar.accentTextColor : .white)),
+                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.expanded && !backgroundIsBright ? .white : environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
                         guard let self else {
                             return
@@ -818,8 +877,9 @@ final class AvatarEditorScreenComponent: Component {
                 if navigationDoneButtonView.superview == nil {
                     self.addSubview(navigationDoneButtonView)
                 }
+                
                 transition.setFrame(view: navigationDoneButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - navigationDoneButtonSize.width, y: environment.statusBarHeight), size: navigationDoneButtonSize))
-                transition.setAlpha(view: navigationDoneButtonView, alpha: (state.expanded || state.isSearchActive) && !state.editingColor ? 1.0 : 0.0)
+                transition.setAlpha(view: navigationDoneButtonView, alpha: (state.expanded || environment.inputHeight > 0.0) && !state.editingColor ? 1.0 : 0.0)
             }
                         
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
