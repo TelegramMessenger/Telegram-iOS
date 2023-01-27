@@ -620,8 +620,12 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: false) {
+            var isSelected = !effectiveRightsFlags.contains(rights)
+            
             var subItems: [SubPermission] = []
             if rights == .banSendMedia {
+                isSelected = banSendMediaSubList().allSatisfy({ !effectiveRightsFlags.contains($0.0) })
+                
                 for (subRight, _) in banSendMediaSubList() {
                     let subRightEnabled = true
                     
@@ -629,7 +633,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
                 }
             }
             
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), !effectiveRightsFlags.contains(rights), rights, true, subItems, state.expandedPermissions.contains(rights)))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), isSelected, rights, true, subItems, state.expandedPermissions.contains(rights)))
             rightIndex += 1
         }
         
@@ -793,14 +797,40 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     } else {
                         effectiveRightsFlags = TelegramChatBannedRightsFlags()
                     }
-                    if value {
-                        effectiveRightsFlags.remove(rights)
-                        effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
+                    
+                    if rights == .banSendMedia {
+                        if value {
+                            effectiveRightsFlags.remove(rights)
+                            for item in banSendMediaSubList() {
+                                effectiveRightsFlags.remove(item.0)
+                            }
+                        } else {
+                            effectiveRightsFlags.insert(rights)
+                            for (right, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: false) {
+                                if groupPermissionDependencies(right).contains(rights) {
+                                    effectiveRightsFlags.insert(right)
+                                }
+                            }
+                            
+                            for item in banSendMediaSubList() {
+                                effectiveRightsFlags.insert(item.0)
+                                for (right, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: false) {
+                                    if groupPermissionDependencies(right).contains(item.0) {
+                                        effectiveRightsFlags.insert(right)
+                                    }
+                                }
+                            }
+                        }
                     } else {
-                        effectiveRightsFlags.insert(rights)
-                        for (right, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: false) {
-                            if groupPermissionDependencies(right).contains(rights) {
-                                effectiveRightsFlags.insert(right)
+                        if value {
+                            effectiveRightsFlags.remove(rights)
+                            effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
+                        } else {
+                            effectiveRightsFlags.insert(rights)
+                            for (right, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: false) {
+                                if groupPermissionDependencies(right).contains(rights) {
+                                    effectiveRightsFlags.insert(right)
+                                }
                             }
                         }
                     }

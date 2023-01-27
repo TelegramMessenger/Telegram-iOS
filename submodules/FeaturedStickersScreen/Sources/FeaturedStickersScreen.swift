@@ -1204,7 +1204,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([context.engine.stickers.searchStickers(query: text.basicEmoji.0)
+                    signals = .single([context.engine.stickers.searchStickers(query: [text.basicEmoji.0])
                     |> map { (nil, $0.items) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
                     var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
@@ -1226,7 +1226,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                         var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
-                            signals.append(context.engine.stickers.searchStickers(query: emoji.basicEmoji.0)
+                            signals.append(context.engine.stickers.searchStickers(query: [emoji.basicEmoji.0])
                             |> take(1)
                             |> map { (emoji, $0.items) })
                         }

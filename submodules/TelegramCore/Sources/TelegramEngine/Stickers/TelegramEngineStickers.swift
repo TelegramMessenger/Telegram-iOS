@@ -30,7 +30,7 @@ public extension TelegramEngine {
             return _internal_randomGreetingSticker(account: self.account)
         }
 
-        public func searchStickers(query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> {
+        public func searchStickers(query: [String], scope: SearchStickersScope = [.installed, .remote]) -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> {
             return _internal_searchStickers(account: self.account, query: query, scope: scope)
         }
 
@@ -184,8 +184,13 @@ public extension TelegramEngine {
             return _internal_resolveInlineStickers(postbox: self.account.postbox, network: self.account.network, fileIds: fileIds)
         }
         
-        public func searchEmoji(emojiString: String) -> Signal<[TelegramMediaFile], NoError> {
-            return self.account.network.request(Api.functions.messages.searchCustomEmoji(emoticon: emojiString, hash: 0))
+        public func searchEmoji(emojiString: [String]) -> Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError> {
+            return _internal_searchEmoji(account: self.account, query: emojiString)
+            |> map { items, isFinalResult -> (items: [TelegramMediaFile], isFinalResult: Bool) in
+                return (items.map(\.file), isFinalResult)
+            }
+            
+            /*return self.account.network.request(Api.functions.messages.searchCustomEmoji(emoticon: emojiString.joined(separator: ""), hash: 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.EmojiList?, NoError> in
                 return .single(nil)
@@ -209,7 +214,7 @@ public extension TelegramEngine {
                 default:
                     return .single([])
                 }
-            }
+            }*/
         }
     }
 }

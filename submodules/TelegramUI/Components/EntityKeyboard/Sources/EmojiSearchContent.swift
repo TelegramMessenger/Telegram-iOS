@@ -23,6 +23,23 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
         var deviceMetrics: DeviceMetrics
     }
     
+    private struct EmojiSearchResult {
+        var groups: [EmojiPagerContentComponent.ItemGroup]
+        var id: AnyHashable
+        var version: Int
+        var isPreset: Bool
+    }
+    
+    private struct EmojiSearchState {
+        var result: EmojiSearchResult?
+        var isSearching: Bool
+        
+        init(result: EmojiSearchResult?, isSearching: Bool) {
+            self.result = result
+            self.isSearching = isSearching
+        }
+    }
+    
     private let context: AccountContext
     private var initialFocusId: ItemCollectionId?
     private let hasPremiumForUse: Bool
@@ -41,8 +58,9 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
     public var onCancel: (() -> Void)?
     
     private let emojiSearchDisposable = MetaDisposable()
-    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
-    private var emojiSearchResultValue: (groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?
+    private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
+    private var emojiSearchStateValue: EmojiSearchState = EmojiSearchState(result: nil, isSearching: false)
+    private var immediateEmojiSearchState: EmojiSearchState = EmojiSearchState(result: nil, isSearching: false)
     
     private var dataDisposable: Disposable?
 
@@ -160,13 +178,13 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 switch query {
                 case .none:
                     self.emojiSearchDisposable.set(nil)
-                    self.emojiSearchResult.set(.single(nil))
+                    self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                 case let .text(rawQuery, languageCode):
                     let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
                     
                     if query.isEmpty {
                         self.emojiSearchDisposable.set(nil)
-                        self.emojiSearchResult.set(.single(nil))
+                        self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                     } else {
                         let context = self.context
                         
@@ -270,18 +288,22 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                             }
                         }
                         
+                        var version = 0
+                        self.emojiSearchStateValue.isSearching = true
                         self.emojiSearchDisposable.set((resultSignal
                         |> delay(0.15, queue: .mainQueue())
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             guard let self else {
                                 return
                             }
-                            self.emojiSearchResult.set(.single((result, AnyHashable(query))))
+                            
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(query), version: version, isPreset: false), isSearching: false)
+                            version += 1
                         }))
                     }
                 case let .category(value):
                     let resultSignal = self.context.engine.stickers.searchEmoji(emojiString: value)
-                    |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                    |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
                         var existingIds = Set<MediaId>()
@@ -301,7 +323,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                             items.append(item)
                         }
                         
-                        return .single([EmojiPagerContentComponent.ItemGroup(
+                        return .single(([EmojiPagerContentComponent.ItemGroup(
                             supergroupId: "search",
                             groupId: "search",
                             title: nil,
@@ -315,16 +337,28 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                             displayPremiumBadges: false,
                             headerItem: nil,
                             items: items
-                        )])
+                        )], isFinalResult))
                     }
+                    
+                    let _ = resultSignal
                         
+                    var version = 0
                     self.emojiSearchDisposable.set((resultSignal
-                    |> delay(0.15, queue: .mainQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let self else {
                             return
                         }
-                        self.emojiSearchResult.set(.single((result, AnyHashable(value))))
+                        
+                        guard let group = result.items.first else {
+                            return
+                        }
+                        if group.items.isEmpty && !result.isFinalResult {
+                            self.emojiSearchStateValue.isSearching = true
+                            return
+                        }
+                        
+                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: false), isSearching: false)
+                        version += 1
                     }))
                 }
             },
@@ -347,13 +381,13 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
         )
         
         self.dataDisposable = (
-            self.emojiSearchResult.get()
+            self.emojiSearchState.get()
             |> deliverOnMainQueue
-        ).start(next: { [weak self] emojiSearchResult in
+        ).start(next: { [weak self] emojiSearchState in
             guard let self else {
                 return
             }
-            self.emojiSearchResultValue = emojiSearchResult
+            self.immediateEmojiSearchState = emojiSearchState
             self.update(transition: .immediate)
         })
     }
@@ -403,7 +437,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             selectedItems: Set()
         )
         
-        if let emojiSearchResult = self.emojiSearchResultValue {
+        if let emojiSearchResult = self.immediateEmojiSearchState.result {
             var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
             if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
                 emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
@@ -411,7 +445,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                     iconFile: nil
                 )
             }
-            emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: 0), emptySearchResults: emptySearchResults, searchState: .empty(hasResults: true))
+            emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: self.immediateEmojiSearchState.isSearching ? .searching : .empty(hasResults: true))
         }
         
         let _ = self.keyboardView.update(

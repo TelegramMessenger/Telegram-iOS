@@ -103,6 +103,7 @@ public struct Namespaces {
         public static let attachMenuBots: Int8 = 23
         public static let featuredStickersConfiguration: Int8 = 24
         public static let emojiSearchCategories: Int8 = 25
+        public static let cachedEmojiQueryResults: Int8 = 26
     }
     
     public struct UnorderedItemList {
