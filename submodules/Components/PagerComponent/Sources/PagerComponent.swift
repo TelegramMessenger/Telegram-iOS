@@ -46,15 +46,18 @@ public final class PagerComponentChildEnvironment: Equatable {
     public let containerInsets: UIEdgeInsets
     public let onChildScrollingUpdate: (ContentScrollingUpdate) -> Void
     public let onWantsExclusiveModeUpdated: (Bool) -> Void
+    public let scrollToTop: ActionSlot<Void>
     
     init(
         containerInsets: UIEdgeInsets,
         onChildScrollingUpdate: @escaping (ContentScrollingUpdate) -> Void,
-        onWantsExclusiveModeUpdated: @escaping (Bool) -> Void
+        onWantsExclusiveModeUpdated: @escaping (Bool) -> Void,
+        scrollToTop: ActionSlot<Void>
     ) {
         self.containerInsets = containerInsets
         self.onChildScrollingUpdate = onChildScrollingUpdate
         self.onWantsExclusiveModeUpdated = onWantsExclusiveModeUpdated
+        self.scrollToTop = scrollToTop
     }
     
     public static func ==(lhs: PagerComponentChildEnvironment, rhs: PagerComponentChildEnvironment) -> Bool {
@@ -296,6 +299,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var scrollingPanelOffsetToBottomEdge: CGFloat = .greatestFiniteMagnitude
             var scrollingPanelOffsetFraction: CGFloat = 0.0
             var wantsExclusiveMode: Bool = false
+            let scrollToTop = ActionSlot<Void>()
                                             
             init(view: ComponentHostView<(ChildEnvironmentType, PagerComponentChildEnvironment)>) {
                 self.view = view
@@ -368,7 +372,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             case .began:
                 self.paneTransitionGestureState = PaneTransitionGestureState()
             case .changed:
-                if let centralId = self.centralId, let component = self.component, let centralIndex = component.contents.firstIndex(where: {  $0.id == centralId }), var paneTransitionGestureState = self.paneTransitionGestureState, self.bounds.width > 0.0 {
+                if let centralId = self.centralId, let component = self.component, let centralIndex = component.contents.firstIndex(where: { $0.id == centralId }), let centralView = self.contentViews[centralId], !centralView.wantsExclusiveMode, var paneTransitionGestureState = self.paneTransitionGestureState, self.bounds.width > 0.0 {
                     var fraction = recognizer.translation(in: self).x / self.bounds.width
                     if centralIndex <= 0 {
                         fraction = min(0.0, fraction)
@@ -463,6 +467,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 if self.isTopPanelExpanded {
                     updateTopPanelExpanded = true
                 }
+            } else {
+                self.contentViews[id]?.scrollToTop.invoke(Void())
             }
             
             if updateTopPanelExpanded {
@@ -843,7 +849,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                                     return
                                 }
                                 strongSelf.onChildWantsExclusiveModeUpdated(id: id, wantsExclusiveMode: wantsExclusiveMode)
-                            }
+                            },
+                            scrollToTop: contentView.scrollToTop
                         )
                         
                         let _ = contentView.view.update(

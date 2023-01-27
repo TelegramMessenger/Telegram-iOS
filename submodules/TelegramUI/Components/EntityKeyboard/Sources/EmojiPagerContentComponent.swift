@@ -1278,7 +1278,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
         }
 
         for (_, itemLayer) in self.visibleItemLayers {
-            if itemLayer.frame.inset(by: UIEdgeInsets(top: 6.0, left: itemLayout.itemSpacing, bottom: 6.0, right: itemLayout.itemSpacing)).contains(point) {
+            if itemLayer.frame.inset(by: UIEdgeInsets(top: -6.0, left: -itemLayout.itemSpacing, bottom: -6.0, right: -itemLayout.itemSpacing)).contains(point) {
                 self.performItemAction(itemLayer.item, self, itemLayer.frame, itemLayer)
                 return true
             }
@@ -2104,7 +2104,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         var hasText = false
         if let textField = self.textField {
             textField.textColor = theme.contextMenu.primaryColor
-            transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideTextInset, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width - sideTextInset, height: backgroundFrame.height)))
+            transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideTextInset, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width - sideTextInset - 32.0, height: backgroundFrame.height)))
             
             if let text = textField.text, !text.isEmpty {
                 hasText = true
@@ -2556,8 +2556,8 @@ public final class EmojiPagerContentComponent: Component {
         case detailed
     }
     
-    public enum SearchState {
-        case empty
+    public enum SearchState: Equatable {
+        case empty(hasResults: Bool)
         case searching
         case active
     }
@@ -4382,11 +4382,11 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?, animated: Bool) {
-            guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let itemGroup = component.contentItemGroups.first(where: { $0.supergroupId == supergroupId }), let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
             
-            if self.isSearchActivated {
+            if !component.contentItemGroups.contains(where: { $0.groupId == supergroupId }), self.isSearchActivated {
                 self.visibleSearchHeader?.clearCategorySearch()
                 return
             }
@@ -4444,6 +4444,10 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         if highlightFrame.minX + highlightFrame.size.width > self.scrollView.bounds.width - 4.0 {
                             highlightFrame.size.width = self.scrollView.bounds.width - 4.0 - highlightFrame.minX
+                        }
+                        
+                        if (itemGroup.isPremiumLocked || itemGroup.isFeatured), !itemGroup.isEmbedded, case .compact = itemLayout.layoutType {
+                            highlightFrame.size.height += 6.0
                         }
                         
                         highlightLayer.frame = highlightFrame
@@ -5122,7 +5126,7 @@ public final class EmojiPagerContentComponent: Component {
                 scrollView.layer.removeAllAnimations()
             }
             
-            if self.isSearchActivated, let component = self.component, component.searchState == .empty, !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+            if self.isSearchActivated, let component = self.component, component.searchState == .empty(hasResults: false), !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
                 scrollView.isScrollEnabled = false
                 DispatchQueue.main.async {
                     scrollView.isScrollEnabled = true
@@ -6121,6 +6125,14 @@ public final class EmojiPagerContentComponent: Component {
             self.activeItemUpdated = keyboardChildEnvironment.getContentActiveItemUpdated(component.id)
             
             self.pagerEnvironment = pagerEnvironment
+            
+            pagerEnvironment.scrollToTop.connect { [weak self] in
+                guard let self else {
+                    return
+                }
+                
+                self.scrollView.setContentOffset(CGPoint(), animated: true)
+            }
             
             self.updateIsWarpEnabled(isEnabled: component.warpContentsOnEdges)
             
@@ -7714,7 +7726,7 @@ public final class EmojiPagerContentComponent: Component {
                 contentItemGroups: allItemGroups,
                 itemLayoutType: .compact,
                 itemContentUniqueId: nil,
-                searchState: .empty,
+                searchState: .empty(hasResults: false),
                 warpContentsOnEdges: isReactionSelection || isStatusSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
                 displaySearchWithPlaceholder: displaySearchWithPlaceholder,
                 searchCategories: searchCategories,
@@ -8236,7 +8248,7 @@ public final class EmojiPagerContentComponent: Component {
                 contentItemGroups: allItemGroups,
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
-                searchState: .empty,
+                searchState: .empty(hasResults: false),
                 warpContentsOnEdges: isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchCategories: searchCategories,

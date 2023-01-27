@@ -38,12 +38,12 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     
     let theme: PresentationTheme
     let overflowHeight: CGFloat
-    let displayBackground: Bool
+    let displayBackground: EntityKeyboardComponent.DisplayTopPanelBackground
     
     init(
         theme: PresentationTheme,
         overflowHeight: CGFloat,
-        displayBackground: Bool
+        displayBackground: EntityKeyboardComponent.DisplayTopPanelBackground
     ) {
         self.theme = theme
         self.overflowHeight = overflowHeight
@@ -193,7 +193,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                 strongSelf.updateVisibilityFraction(value: fraction, transition: transition)
             }
             
-            if component.displayBackground {
+            if case .blur = component.displayBackground {
+                self.backgroundColor = nil
+                
                 let backgroundView: BlurredBackgroundView
                 if let current = self.backgroundView {
                     backgroundView = current
@@ -216,7 +218,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                 
                 backgroundSeparatorView.backgroundColor = component.theme.chat.inputPanel.panelSeparatorColor
                 transition.setFrame(view: backgroundSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: height), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
-            } else {
+            } else if case .none = component.displayBackground {
+                self.backgroundColor = nil
+                
                 if let backgroundView = self.backgroundView {
                     self.backgroundView = nil
                     backgroundView.removeFromSuperview()
@@ -225,6 +229,17 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                     self.backgroundSeparatorView = nil
                     backgroundSeparatorView.removeFromSuperview()
                 }
+            } else if case .opaque = component.displayBackground {
+                if let backgroundView = self.backgroundView {
+                    self.backgroundView = nil
+                    backgroundView.removeFromSuperview()
+                }
+                if let backgroundSeparatorView = self.backgroundSeparatorView {
+                    self.backgroundSeparatorView = nil
+                    backgroundSeparatorView.removeFromSuperview()
+                }
+                
+                self.backgroundColor = component.theme.chat.inputMediaPanel.backgroundColor
             }
             
             return CGSize(width: availableSize.width, height: height)

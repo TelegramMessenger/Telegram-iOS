@@ -156,7 +156,7 @@ public final class EmojiStatusSelectionComponent: Component {
             let topPanelHeight: CGFloat = component.hideTopPanel ? 0.0 : 42.0
             
             let keyboardSize = self.keyboardView.update(
-                transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
+                transition: transition,//.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
@@ -172,7 +172,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     defaultToEmojiTab: true,
                     externalTopPanelContainer: self.panelHostView,
                     externalBottomPanelContainer: nil,
-                    displayTopPanelBackground: true,
+                    displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
                     hideTopPanelUpdated: { [weak self] hideTopPanel, transition in

@@ -830,6 +830,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
+            
                 self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
                 self.animatedStickerNode = nil
                 if let title = title {

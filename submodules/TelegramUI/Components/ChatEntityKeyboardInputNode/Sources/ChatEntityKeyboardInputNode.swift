@@ -178,7 +178,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 displaySearchWithPlaceholder: nil,
                 searchCategories: nil,
                 searchInitiallyHidden: true,
-                searchState: .empty
+                searchState: .empty(hasResults: false)
             )
         ))
         
@@ -244,6 +244,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     private var currentInputData: InputData
     private var inputDataDisposable: Disposable?
     private var hasRecentGifsDisposable: Disposable?
+    private let opaqueTopPanelBackground: Bool
     
     private struct EmojiSearchResult {
         var groups: [EmojiPagerContentComponent.ItemGroup]
@@ -385,7 +386,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .empty
+                            searchState: .empty(hasResults: false)
                         )
                     )
                 }
@@ -418,7 +419,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .empty
+                            searchState: .empty(hasResults: false)
                         )
                     )
                 }
@@ -569,10 +570,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private weak var currentUndoOverlayController: UndoOverlayController?
     
-    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
+    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
+        self.opaqueTopPanelBackground = opaqueTopPanelBackground
         
         self.controllerInteraction = controllerInteraction
         
@@ -1493,7 +1495,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let emoji = inputData.emoji {
-                    let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty
+                    let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty(hasResults: true)
                     inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : defaultSearchState)
                 }
             } else if emojiSearchState.isSearching {
@@ -1512,7 +1514,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let stickers = inputData.stickers {
-                    let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty
+                    let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty(hasResults: true)
                     inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: stickerSearchState.isSearching ? .searching : defaultSearchState)
                 }
             } else if stickerSearchState.isSearching {
@@ -1771,7 +1773,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 defaultToEmojiTab: self.defaultToEmojiTab,
                 externalTopPanelContainer: self.externalTopPanelContainerImpl,
                 externalBottomPanelContainer: nil,
-                displayTopPanelBackground: false,
+                displayTopPanelBackground: self.opaqueTopPanelBackground ? .opaque : .none,
                 topPanelExtensionUpdated: { [weak self] topPanelExtension, transition in
                     guard let strongSelf = self else {
                         return
@@ -2332,17 +2334,19 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                     )
                 },
                 defaultToEmojiTab: true,
+                opaqueTopPanelBackground: true,
                 controllerInteraction: nil,
                 interfaceInteraction: nil,
                 chatPeerId: nil
             )
             self.inputNode = inputNode
-            inputNode.clipContentToTopPanel = hideBackground
+            inputNode.clipContentToTopPanel = true
             inputNode.emojiInputInteraction = inputInteraction
             inputNode.externalTopPanelContainerImpl = nil
             inputNode.switchToTextInput = { [weak self] in
                 self?.switchToKeyboard?()
             }
+            inputNode.backgroundColor = self.presentationData.theme.chat.inputMediaPanel.backgroundColor
             self.addSubnode(inputNode)
         }
     }

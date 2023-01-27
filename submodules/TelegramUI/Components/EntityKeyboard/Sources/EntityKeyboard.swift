@@ -61,6 +61,12 @@ public final class EntityKeyboardComponent: Component {
         case masks
     }
     
+    public enum DisplayTopPanelBackground {
+        case none
+        case blur
+        case opaque
+    }
+    
     public struct GifSearchEmoji: Equatable {
         public var emoji: String
         public var file: TelegramMediaFile
@@ -100,7 +106,7 @@ public final class EntityKeyboardComponent: Component {
     public let defaultToEmojiTab: Bool
     public let externalTopPanelContainer: PagerExternalTopPanelContainer?
     public let externalBottomPanelContainer: PagerExternalTopPanelContainer?
-    public let displayTopPanelBackground: Bool
+    public let displayTopPanelBackground: DisplayTopPanelBackground
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
     public let hideInputUpdated: (Bool, Bool, Transition) -> Void
     public let hideTopPanelUpdated: (Bool, Transition) -> Void
@@ -132,7 +138,7 @@ public final class EntityKeyboardComponent: Component {
         defaultToEmojiTab: Bool,
         externalTopPanelContainer: PagerExternalTopPanelContainer?,
         externalBottomPanelContainer: PagerExternalTopPanelContainer?,
-        displayTopPanelBackground: Bool,
+        displayTopPanelBackground: DisplayTopPanelBackground,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void,
         hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
         hideTopPanelUpdated: @escaping (Bool, Transition) -> Void,
@@ -727,7 +733,7 @@ public final class EntityKeyboardComponent: Component {
                     topPanel: AnyComponent(EntityKeyboardTopContainerPanelComponent(
                         theme: component.theme,
                         overflowHeight: component.hiddenInputHeight,
-                        displayBackground: component.externalTopPanelContainer == nil && component.displayTopPanelBackground
+                        displayBackground: component.externalTopPanelContainer != nil ? .none : component.displayTopPanelBackground
                     )),
                     externalTopPanelContainer: component.externalTopPanelContainer,
                     bottomPanel: component.displayBottomPanel ? AnyComponent(EntityKeyboardBottomPanelComponent(
