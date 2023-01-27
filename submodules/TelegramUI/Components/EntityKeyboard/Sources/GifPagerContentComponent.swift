@@ -139,7 +139,7 @@ public final class GifPagerContentComponent: Component {
     public enum Subject: Equatable {
         case recent
         case trending
-        case emojiSearch(String)
+        case emojiSearch([String])
     }
     
     public final class InputInteraction {
@@ -147,14 +147,14 @@ public final class GifPagerContentComponent: Component {
         public let openGifContextMenu: (Item, UIView, CGRect, ContextGesture, Bool) -> Void
         public let loadMore: (String) -> Void
         public let openSearch: () -> Void
-        public let updateSearchQuery: (String?) -> Void
+        public let updateSearchQuery: ([String]?) -> Void
         
         public init(
             performItemAction: @escaping (Item, UIView, CGRect) -> Void,
             openGifContextMenu: @escaping (Item, UIView, CGRect, ContextGesture, Bool) -> Void,
             loadMore: @escaping (String) -> Void,
             openSearch: @escaping () -> Void,
-            updateSearchQuery: @escaping (String?) -> Void
+            updateSearchQuery: @escaping ([String]?) -> Void
         ) {
             self.performItemAction = performItemAction
             self.openGifContextMenu = openGifContextMenu

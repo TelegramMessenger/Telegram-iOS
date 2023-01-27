@@ -426,7 +426,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             case let .emojiSearch(query):
                 gifItems = combineLatest(
                     hasRecentGifs,
-                    paneGifSearchForQuery(context: context, query: query, offset: nil, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil),
+                    paneGifSearchForQuery(context: context, query: query.joined(separator: ""), offset: nil, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil),
                     searchCategories
                 )
                 |> map { hasRecentGifs, result, searchCategories -> EntityKeyboardGifContent in
@@ -503,7 +503,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 let gifItems: Signal<EntityKeyboardGifContent, NoError>
-                gifItems = combineLatest(hasRecentGifs, paneGifSearchForQuery(context: context, query: query, offset: token, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil), searchCategories)
+                gifItems = combineLatest(hasRecentGifs, paneGifSearchForQuery(context: context, query: query.joined(separator: ""), offset: token, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil), searchCategories)
                 |> map { hasRecentGifs, result, searchCategories -> EntityKeyboardGifContent in
                     var items: [GifPagerContentComponent.Item] = []
                     var existingIds = Set<MediaId>()
@@ -977,22 +977,22 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             },
             updateSearchQuery: { [weak self] query in
-                guard let strongSelf = self else {
+                guard let self = self else {
                     return
                 }
                 
                 switch query {
                 case .none:
-                    strongSelf.emojiSearchDisposable.set(nil)
-                    strongSelf.emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
+                    self.emojiSearchDisposable.set(nil)
+                    self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                 case let .text(rawQuery, languageCode):
                     let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
                     
                     if query.isEmpty {
-                        strongSelf.emojiSearchDisposable.set(nil)
-                        strongSelf.emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
+                        self.emojiSearchDisposable.set(nil)
+                        self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                     } else {
-                        let context = strongSelf.context
+                        let context = self.context
                         
                         var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
                         if !languageCode.lowercased().hasPrefix("en") {
@@ -1028,17 +1028,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
                                 var result: [(String, TelegramMediaFile?, String)] = []
                                 
-                                var existingEmoticons = Set<String>()
-                                var allEmoticonsList: [String] = []
                                 var allEmoticons: [String: String] = [:]
                                 for keyword in keywords {
                                     for emoticon in keyword.emoticons {
                                         allEmoticons[emoticon] = keyword.keyword
-                                        
-                                        if !existingEmoticons.contains(emoticon) {
-                                            allEmoticonsList.append(emoticon)
-                                            existingEmoticons.insert(emoticon)
-                                        }
                                     }
                                 }
                                 
@@ -1075,24 +1068,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                         let item = EmojiPagerContentComponent.Item(
                                             animationData: animationData,
                                             content: .animation(animationData),
-                                            itemFile: itemFile,
-                                            subgroupId: nil,
+                                            itemFile: itemFile, subgroupId: nil,
                                             icon: .none,
                                             tintMode: animationData.isTemplate ? .primary : .none
                                         )
                                         items.append(item)
                                     }
-                                }
-                                
-                                for emoji in allEmoticonsList {
-                                    items.append(EmojiPagerContentComponent.Item(
-                                        animationData: nil,
-                                        content: .staticEmoji(emoji),
-                                        itemFile: nil,
-                                        subgroupId: nil,
-                                        icon: .none,
-                                        tintMode: .none
-                                    ))
                                 }
                                 
                                 return [EmojiPagerContentComponent.ItemGroup(
@@ -1114,21 +1095,21 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         
                         var version = 0
-                        strongSelf.emojiSearchStateValue.isSearching = true
-                        strongSelf.emojiSearchDisposable.set((resultSignal
+                        self.emojiSearchStateValue.isSearching = true
+                        self.emojiSearchDisposable.set((resultSignal
                         |> delay(0.15, queue: .mainQueue())
                         |> deliverOnMainQueue).start(next: { [weak self] result in
-                            guard let strongSelf = self else {
+                            guard let self else {
                                 return
                             }
                             
-                            strongSelf.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(query), version: version, isPreset: false), isSearching: false)
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(query), version: version, isPreset: false), isSearching: false)
                             version += 1
                         }))
                     }
                 case let .category(value):
-                    let resultSignal = strongSelf.context.engine.stickers.searchEmoji(emojiString: value)
-                    |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                    let resultSignal = self.context.engine.stickers.searchEmoji(emojiString: value)
+                    |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
                         var existingIds = Set<MediaId>()
@@ -1148,7 +1129,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items.append(item)
                         }
                         
-                        return .single([EmojiPagerContentComponent.ItemGroup(
+                        return .single(([EmojiPagerContentComponent.ItemGroup(
                             supergroupId: "search",
                             groupId: "search",
                             title: nil,
@@ -1162,25 +1143,25 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             displayPremiumBadges: false,
                             headerItem: nil,
                             items: items
-                        )])
+                        )], isFinalResult))
                     }
-                    
-                    let delayValue: Double
-                    /*#if DEBUG
-                    delayValue = 2.3
-                    #else*/
-                    delayValue = 0.0
-                    //#endif
                         
                     var version = 0
-                    strongSelf.emojiSearchStateValue.isSearching = true
-                    strongSelf.emojiSearchDisposable.set((resultSignal
-                    |> delay(delayValue, queue: .mainQueue())
+                    self.emojiSearchDisposable.set((resultSignal
                     |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let strongSelf = self else {
+                        guard let self else {
                             return
                         }
-                        strongSelf.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                        
+                        guard let group = result.items.first else {
+                            return
+                        }
+                        if group.items.isEmpty && !result.isFinalResult {
+                            self.emojiSearchStateValue.isSearching = true
+                            return
+                        }
+                        
+                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                         version += 1
                     }))
                 }

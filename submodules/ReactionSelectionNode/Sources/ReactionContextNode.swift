@@ -164,6 +164,23 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    private struct EmojiSearchResult {
+        var groups: [EmojiPagerContentComponent.ItemGroup]
+        var id: AnyHashable
+        var version: Int
+        var isPreset: Bool
+    }
+    
+    private struct EmojiSearchState {
+        var result: EmojiSearchResult?
+        var isSearching: Bool
+        
+        init(result: EmojiSearchResult?, isSearching: Bool) {
+            self.result = result
+            self.isSearching = isSearching
+        }
+    }
+    
     private let context: AccountContext
     private let presentationData: PresentationData
     private let animationCache: AnimationCache
@@ -235,7 +252,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var emojiContentDisposable: Disposable?
     
     private let emojiSearchDisposable = MetaDisposable()
-    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+    private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
+    private var emojiSearchStateValue: EmojiSearchState = EmojiSearchState(result: nil, isSearching: false)
+    
     private var emptyResultEmojis: [TelegramMediaFile] = []
     private var stableEmptyResultEmoji: TelegramMediaFile?
     private let stableEmptyResultEmojiDisposable = MetaDisposable()
@@ -440,14 +459,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.emojiContentDisposable = combineLatest(queue: .mainQueue(),
                 getEmojiContent(self.animationCache, self.animationRenderer),
-                self.emojiSearchResult.get()
-            ).start(next: { [weak self] emojiContent, emojiSearchResult in
+                self.emojiSearchState.get()
+            ).start(next: { [weak self] emojiContent, emojiSearchState in
                 guard let strongSelf = self else {
                     return
                 }
                 
                 var emojiContent = emojiContent
-                if let emojiSearchResult = emojiSearchResult {
+                if let emojiSearchResult = emojiSearchState.result {
                     var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
                     if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
                         if strongSelf.stableEmptyResultEmoji == nil {
@@ -460,7 +479,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     } else {
                         strongSelf.stableEmptyResultEmoji = nil
                     }
-                    emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: 0), emptySearchResults: emptySearchResults, searchState: .active)
+                    emojiContent = emojiContent.withUpdatedItemGroups(panelItemGroups: emojiContent.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : .active)
                 } else {
                     strongSelf.stableEmptyResultEmoji = nil
                 }
@@ -1340,22 +1359,22 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.requestUpdateOverlayWantsToBeBelowKeyboard(transition.containedViewLayoutTransition)
             },
             updateSearchQuery: { [weak self] query in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
                 
                 switch query {
                 case .none:
-                    strongSelf.emojiSearchDisposable.set(nil)
-                    strongSelf.emojiSearchResult.set(.single(nil))
+                    self.emojiSearchDisposable.set(nil)
+                    self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                 case let .text(rawQuery, languageCode):
                     let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
                     
                     if query.isEmpty {
-                        strongSelf.emojiSearchDisposable.set(nil)
-                        strongSelf.emojiSearchResult.set(.single(nil))
+                        self.emojiSearchDisposable.set(nil)
+                        self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                     } else {
-                        let context = strongSelf.context
+                        let context = self.context
                         
                         var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
                         if !languageCode.lowercased().hasPrefix("en") {
@@ -1457,18 +1476,22 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         }
                         
-                        strongSelf.emojiSearchDisposable.set((resultSignal
+                        var version = 0
+                        self.emojiSearchStateValue.isSearching = true
+                        self.emojiSearchDisposable.set((resultSignal
                         |> delay(0.15, queue: .mainQueue())
-                        |> deliverOnMainQueue).start(next: { result in
-                            guard let strongSelf = self else {
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let self else {
                                 return
                             }
-                            strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query))))
+                            
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(query), version: version, isPreset: false), isSearching: false)
+                            version += 1
                         }))
                     }
                 case let .category(value):
-                    let resultSignal = strongSelf.context.engine.stickers.searchEmoji(emojiString: value)
-                    |> mapToSignal { files -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                    let resultSignal = self.context.engine.stickers.searchEmoji(emojiString: value)
+                    |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
                         var existingIds = Set<MediaId>()
@@ -1488,7 +1511,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             items.append(item)
                         }
                         
-                        return .single([EmojiPagerContentComponent.ItemGroup(
+                        return .single(([EmojiPagerContentComponent.ItemGroup(
                             supergroupId: "search",
                             groupId: "search",
                             title: nil,
@@ -1502,16 +1525,26 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             displayPremiumBadges: false,
                             headerItem: nil,
                             items: items
-                        )])
+                        )], isFinalResult))
                     }
-                    
-                    strongSelf.emojiSearchDisposable.set((resultSignal
-                    |> delay(0.15, queue: .mainQueue())
-                    |> deliverOnMainQueue).start(next: { result in
-                        guard let strongSelf = self else {
+                        
+                    var version = 0
+                    self.emojiSearchDisposable.set((resultSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let self else {
                             return
                         }
-                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(value))))
+                        
+                        guard let group = result.items.first else {
+                            return
+                        }
+                        if group.items.isEmpty && !result.isFinalResult {
+                            self.emojiSearchStateValue.isSearching = true
+                            return
+                        }
+                        
+                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                        version += 1
                     }))
                 }
             },
