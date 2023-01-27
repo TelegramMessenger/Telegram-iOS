@@ -21,6 +21,7 @@ final class ColorPickerComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let isVisible: Bool
+    let bottomInset: CGFloat
     let colors: [UInt32]
     let colorsChanged: ([UInt32]) -> Void
     let cancel: () -> Void
@@ -30,6 +31,7 @@ final class ColorPickerComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         isVisible: Bool,
+        bottomInset: CGFloat,
         colors: [UInt32],
         colorsChanged: @escaping ([UInt32]) -> Void,
         cancel: @escaping () -> Void,
@@ -38,6 +40,7 @@ final class ColorPickerComponent: Component {
         self.theme = theme
         self.strings = strings
         self.isVisible = isVisible
+        self.bottomInset = bottomInset
         self.colors = colors
         self.colorsChanged = colorsChanged
         self.cancel = cancel
@@ -52,6 +55,9 @@ final class ColorPickerComponent: Component {
             return false
         }
         if lhs.isVisible != rhs.isVisible {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
             return false
         }
         if lhs.colors != rhs.colors {
@@ -395,7 +401,7 @@ final class ColorPickerComponent: Component {
             self.component = component
             
             let buttonHeight: CGFloat = 44.0
-            let size = CGSize(width: availableSize.width, height: 264.0)
+            let size = CGSize(width: availableSize.width, height: availableSize.height - availableSize.width - 32.0 - buttonHeight - 56.0 - component.bottomInset)
             let panelSize = CGSize(width: availableSize.width, height: size.height + buttonHeight)
             
             if themeChanged {
