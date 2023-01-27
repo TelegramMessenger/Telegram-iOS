@@ -34,6 +34,25 @@ enum AvatarBackground: Equatable {
         }
     }
     
+    var isLight: Bool {
+        switch self {
+            case let .gradient(colors):
+                if colors.count == 1 {
+                    return UIColor(rgb: colors.first!).lightness > 0.99
+                } else if colors.count == 2 {
+                    return UIColor(rgb: colors.first!).lightness > 0.99 || UIColor(rgb: colors.last!).lightness > 0.99
+                } else {
+                    var lightCount = 0
+                    for color in colors {
+                        if UIColor(rgb: color).lightness > 0.99 {
+                            lightCount += 1
+                        }
+                    }
+                    return lightCount >= 2
+                }
+        }
+    }
+    
     func generateImage(size: CGSize) -> UIImage {
         switch self {
             case let .gradient(colors):
@@ -313,31 +332,28 @@ final class AvatarEditorScreenComponent: Component {
                                 )
                             }
                         }
-                    
-                        let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                        |> map { peer -> Bool in
-                            guard case let .user(user) = peer else {
-                                return false
-                            }
-                            return user.isPremium
-                        }
-                        |> distinctUntilChanged
-                        
+                                            
                         let resultSignal = signal
                         |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                             return combineLatest(
-                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-                                context.engine.stickers.availableReactions(),
-                                hasPremium
+                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
+                                combineLatest(keywords.map { context.engine.stickers.searchStickers(query: $0.emoticons)
+                                |> map { items -> [FoundStickerItem] in
+                                    return items.items
+                                }
+                                })
                             )
-                            |> take(1)
-                            |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
-                                var result: [(String, TelegramMediaFile?, String)] = []
+                            |> map { view, stickers -> [EmojiPagerContentComponent.ItemGroup] in
+                                let hasPremium = true
                                 
+                                var emoji: [(String, TelegramMediaFile?, String)] = []
+                                
+                                var existingEmoticons = Set<String>()
                                 var allEmoticons: [String: String] = [:]
                                 for keyword in keywords {
                                     for emoticon in keyword.emoticons {
                                         allEmoticons[emoticon] = keyword.keyword
+                                        existingEmoticons.insert(emoticon)
                                     }
                                 }
                                 
@@ -350,9 +366,9 @@ final class AvatarEditorScreenComponent: Component {
                                         case let .CustomEmoji(_, _, alt, _):
                                             if !item.file.isPremiumEmoji || hasPremium {
                                                 if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                                    result.append((alt, item.file, keyword))
+                                                    emoji.append((alt, item.file, keyword))
                                                 } else if alt == query {
-                                                    result.append((alt, item.file, alt))
+                                                    emoji.append((alt, item.file, alt))
                                                 }
                                             }
                                         default:
@@ -361,10 +377,10 @@ final class AvatarEditorScreenComponent: Component {
                                     }
                                 }
                                 
-                                var items: [EmojiPagerContentComponent.Item] = []
+                                var emojiItems: [EmojiPagerContentComponent.Item] = []
                                 
                                 var existingIds = Set<MediaId>()
-                                for item in result {
+                                for item in emoji {
                                     if let itemFile = item.1 {
                                         if existingIds.contains(itemFile.fileId) {
                                             continue
@@ -378,25 +394,71 @@ final class AvatarEditorScreenComponent: Component {
                                             icon: .none,
                                             tintMode: animationData.isTemplate ? .primary : .none
                                         )
-                                        items.append(item)
+                                        emojiItems.append(item)
                                     }
                                 }
                                 
-                                return [EmojiPagerContentComponent.ItemGroup(
-                                    supergroupId: "search",
-                                    groupId: "search",
-                                    title: nil,
-                                    subtitle: nil,
-                                    actionButtonTitle: nil,
-                                    isFeatured: false,
-                                    isPremiumLocked: false,
-                                    isEmbedded: false,
-                                    hasClear: false,
-                                    collapsedLineCount: nil,
-                                    displayPremiumBadges: false,
-                                    headerItem: nil,
-                                    items: items
-                                )]
+                                var stickerItems: [EmojiPagerContentComponent.Item] = []
+                                for stickerResult in stickers {
+                                    for sticker in stickerResult {
+                                        if existingIds.contains(sticker.file.fileId) {
+                                            continue
+                                        }
+                                        
+                                        existingIds.insert(sticker.file.fileId)
+                                        let animationData = EntityKeyboardAnimationData(file: sticker.file)
+                                        let item = EmojiPagerContentComponent.Item(
+                                            animationData: animationData,
+                                            content: .animation(animationData),
+                                            itemFile: sticker.file,
+                                            subgroupId: nil,
+                                            icon: .none,
+                                            tintMode: .none
+                                        )
+                                        stickerItems.append(item)
+                                    }
+                                }
+                                
+                                var result: [EmojiPagerContentComponent.ItemGroup] = []
+                                if !emojiItems.isEmpty {
+                                    result.append(
+                                        EmojiPagerContentComponent.ItemGroup(
+                                            supergroupId: "search",
+                                            groupId: "emoji",
+                                            title: "Emoji",
+                                            subtitle: nil,
+                                            actionButtonTitle: nil,
+                                            isFeatured: false,
+                                            isPremiumLocked: false,
+                                            isEmbedded: false,
+                                            hasClear: false,
+                                            collapsedLineCount: nil,
+                                            displayPremiumBadges: false,
+                                            headerItem: nil,
+                                            items: emojiItems
+                                        )
+                                    )
+                                }
+                                if !stickerItems.isEmpty {
+                                    result.append(
+                                        EmojiPagerContentComponent.ItemGroup(
+                                            supergroupId: "search",
+                                            groupId: "stickers",
+                                            title: "Stickers",
+                                            subtitle: nil,
+                                            actionButtonTitle: nil,
+                                            isFeatured: false,
+                                            isPremiumLocked: false,
+                                            isEmbedded: false,
+                                            hasClear: false,
+                                            collapsedLineCount: nil,
+                                            displayPremiumBadges: false,
+                                            headerItem: nil,
+                                            items: stickerItems
+                                        )
+                                    )
+                                }
+                                return result
                             }
                         }
                         

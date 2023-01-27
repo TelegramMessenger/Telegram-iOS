@@ -4,19 +4,36 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-func _internal_translate(network: Network, text: String, toLang: String) -> Signal<String?, NoError> {
+public enum TranslationError {
+    case generic
+    case invalidMessageId
+    case textIsEmpty
+    case textTooLong
+    case invalidLanguage
+    case limitExceeded
+}
+
+func _internal_translate(network: Network, text: String, toLang: String) -> Signal<String?, TranslationError> {
     var flags: Int32 = 0
     flags |= (1 << 1)
 
     return network.request(Api.functions.messages.translateText(flags: flags, peer: nil, id: nil, text: [.textWithEntities(text: text, entities: [])], toLang: toLang))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.messages.TranslatedText?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { result -> Signal<String?, NoError> in
-        guard let result = result else {
-            return .complete()
+    |> mapError { error -> TranslationError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .limitExceeded
+        } else if error.errorDescription == "MSG_ID_INVALID" {
+            return .invalidMessageId
+        } else if error.errorDescription == "INPUT_TEXT_EMPTY" {
+            return .textIsEmpty
+        } else if error.errorDescription == "INPUT_TEXT_TOO_LONG" {
+            return .textTooLong
+        } else if error.errorDescription == "TO_LANG_INVALID" {
+            return .invalidLanguage
+        } else {
+            return .generic
         }
+    }
+    |> mapToSignal { result -> Signal<String?, TranslationError> in
         switch result {
         case let .translateResult(results):
             if case let .textWithEntities(text, _) = results.first {
@@ -28,14 +45,15 @@ func _internal_translate(network: Network, text: String, toLang: String) -> Sign
     }
 }
 
-func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
+func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
     guard let peerId = messageIds.first?.peerId else {
         return .never()
     }
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { inputPeer -> Signal<Void, NoError> in
+    |> castError(TranslationError.self)
+    |> mapToSignal { inputPeer -> Signal<Void, TranslationError> in
         guard let inputPeer = inputPeer else {
             return .never()
         }
@@ -45,12 +63,23 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
         
         let id: [Int32] = messageIds.map { $0.id }
         return account.network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.messages.TranslatedText?, NoError> in
-            return .single(nil)
+        |> mapError { error -> TranslationError in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .limitExceeded
+            } else if error.errorDescription == "MSG_ID_INVALID" {
+                return .invalidMessageId
+            } else if error.errorDescription == "INPUT_TEXT_EMPTY" {
+                return .textIsEmpty
+            } else if error.errorDescription == "INPUT_TEXT_TOO_LONG" {
+                return .textTooLong
+            } else if error.errorDescription == "TO_LANG_INVALID" {
+                return .invalidLanguage
+            } else {
+                return .generic
+            }
         }
-        |> mapToSignal { result -> Signal<Void, NoError> in
-            guard let result = result, case let .translateResult(results) = result else {
+        |> mapToSignal { result -> Signal<Void, TranslationError> in
+            guard case let .translateResult(results) = result else {
                 return .complete()
             }
             return account.postbox.transaction { transaction in
@@ -71,6 +100,7 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
                     index += 1
                 }
             }
+            |> castError(TranslationError.self)
         }
     }
 }

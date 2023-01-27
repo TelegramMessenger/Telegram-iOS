@@ -8844,3 +8844,5 @@ Sorry for the inconvenience.";
 "EmojiInput.TrendingEmoji" = "TRENDING EMOJI";
 
 "Chat.PlaceholderTextNotAllowed" = "Text not allowed";
+
+"CallList.DeleteAll" = "Delete All";

@@ -18,7 +18,7 @@ public enum ManagedAudioSessionType: Equatable {
     case ambient
     case play
     case playWithPossiblePortOverride
-    case record(speaker: Bool)
+    case record(speaker: Bool, withOthers: Bool)
     case voiceCall
     case videoCall
     case recordWithOthers
@@ -587,7 +587,14 @@ public final class ManagedAudioSession {
                 index += 1
             }
             
-            let lastIsRecordWithOthers = self.holders.last?.audioSessionType == .recordWithOthers
+            var lastIsRecordWithOthers = false
+            if let lastHolder = self.holders.last {
+                if case let .record(_, withOthers) = lastHolder.audioSessionType {
+                    lastIsRecordWithOthers = withOthers
+                } else if case .recordWithOthers = lastHolder.audioSessionType {
+                    lastIsRecordWithOthers = true
+                }
+            }
             if !deactivating {
                 if let activeIndex = activeIndex {
                     var deactivate = false
@@ -896,13 +903,13 @@ public final class ManagedAudioSession {
         
         if resetToBuiltin {
             var updatedType = type
-            if case .record(false) = updatedType, self.isHeadsetPluggedInValue {
-                updatedType = .record(speaker: true)
+            if case .record(false, let withOthers) = updatedType, self.isHeadsetPluggedInValue {
+                updatedType = .record(speaker: true, withOthers: withOthers)
             }
             switch updatedType {
-                case .record(false):
+                case .record(false, _):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
-                case .voiceCall, .playWithPossiblePortOverride, .record(true):
+                case .voiceCall, .playWithPossiblePortOverride, .record(true, _):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         var alreadySet = false

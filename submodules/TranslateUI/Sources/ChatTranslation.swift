@@ -144,6 +144,9 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
             }
         }
         return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, toLang: toLang)
+        |> `catch` { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
     } |> switchToLatest
 }
 

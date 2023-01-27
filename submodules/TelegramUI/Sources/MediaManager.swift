@@ -44,8 +44,6 @@ private struct GlobalControlOptions: OptionSet {
     static let seek = GlobalControlOptions(rawValue: 1 << 5)
 }
 
-public var test: Double?
-
 public final class MediaManagerImpl: NSObject, MediaManager {
     public static var globalAudioSession: ManagedAudioSession {
         return sharedAudioSession

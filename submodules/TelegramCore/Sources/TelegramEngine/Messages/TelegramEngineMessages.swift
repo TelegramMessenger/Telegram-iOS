@@ -356,11 +356,11 @@ public extension TelegramEngine {
             return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
         }
         
-        public func translate(text: String, toLang: String) -> Signal<String?, NoError> {
+        public func translate(text: String, toLang: String) -> Signal<String?, TranslationError> {
             return _internal_translate(network: self.account.network, text: text, toLang: toLang)
         }
         
-        public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
+        public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
             return _internal_translateMessages(account: self.account, messageIds: messageIds, toLang: toLang)
         }
         
