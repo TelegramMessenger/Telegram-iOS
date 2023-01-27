@@ -21,7 +21,7 @@ protocol LegacyPaintEntity {
     func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void)
 }
 
-private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType) -> CIImage? {
+private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, tintColor: UIColor?) -> CIImage? {
     let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     assert(bytesPerRow == calculatedBytesPerRow)
     
@@ -46,7 +46,10 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
         }
     })
 
-    if let image = image {
+    if var image = image {
+        if let tintColor, let tintedImage = generateTintedImage(image: image, color: tintColor) {
+            image = tintedImage
+        }
         return CIImage(image: image)
     } else {
         return nil
@@ -160,6 +163,11 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
         if self.animated {
             let currentTime = CMTimeGetSeconds(time)
             
+            var tintColor: UIColor?
+            if let _ = self.file?.isCustomTemplateEmoji {
+                tintColor = .white
+            }
+            
             self.disposables.add((self.frameQueue.get()
             |> take(1)
             |> deliverOn(self.queue)).start(next: { [weak self] frameQueue in
@@ -204,7 +212,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         return frame
                     }
                     if let frame = maybeFrame {
-                        let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
+                        let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, tintColor: tintColor)
                         completion(image)
                         strongSelf.cachedCIImage = image
                     } else {
@@ -258,6 +266,18 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
     var mirrored: Bool {
         return false
     }
+    
+    var animated: Bool {
+        return self.entity.renderAnimationFrames != nil
+    }
+    
+    var duration: Double {
+        if let lastFrame = self.entity.renderAnimationFrames?.last {
+            return lastFrame.timestamp + lastFrame.duration
+        } else {
+            return 0.0
+        }
+    }
 
     let entity: DrawingTextEntity
 
@@ -266,13 +286,42 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
     }
 
     var cachedCIImage: CIImage?
+    var cachedFrameCIImage: (Double, CIImage)?
+    
     func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
         var image: CIImage?
-        if let cachedImage = self.cachedCIImage {
-            image = cachedImage
-        } else if let renderImage = entity.renderImage {
-            image = CIImage(image: renderImage)
-            self.cachedCIImage = image
+        if let frames = self.entity.renderAnimationFrames {
+            var currentTime = CMTimeGetSeconds(time)
+            let duration = self.duration
+            while currentTime > duration {
+                currentTime -= duration
+            }
+            
+            for frame in frames {
+                if currentTime >= frame.timestamp && currentTime < frame.timestamp + frame.duration {
+                    if let (timestamp, cachedImage) = self.cachedFrameCIImage, timestamp == frame.timestamp {
+                        image = cachedImage
+                    } else if let renderImage = CIImage(image: frame.image) {
+                        self.cachedFrameCIImage = (frame.timestamp, renderImage)
+                        image = renderImage
+                    }
+                    break
+                }
+            }
+            if image == nil {
+                if let (_, cachedImage) = self.cachedFrameCIImage {
+                    image = cachedImage
+                } else if let firstFrame = frames.first {
+                    image = CIImage(image: firstFrame.image)
+                }
+            }
+        } else {
+            if let cachedImage = self.cachedCIImage {
+                image = cachedImage
+            } else if let renderImage = entity.renderImage {
+                image = CIImage(image: renderImage)
+                self.cachedCIImage = image
+            }
         }
         completion(image)
     }
@@ -450,6 +499,8 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         for entity in self.entities {
             if let sticker = entity as? LegacyPaintStickerEntity, sticker.animated {
                 durations.append(sticker.duration)
+            } else if let text = entity as? LegacyPaintTextEntity, text.animated {
+                durations.append(.single(text.duration))
             }
         }
         
