@@ -59,6 +59,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     var dismiss: ((Bool) -> Void)?
     var cancel: (() -> Void)?
+    var tryShare: ((String, [EnginePeer]) -> Bool)?
     var share: ((String, [PeerId], [PeerId: Int64], Bool, Bool) -> Signal<ShareState, ShareControllerError>)?
     var shareExternal: ((Bool) -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
@@ -770,6 +771,41 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func send(peerId: PeerId? = nil, showNames: Bool = true, silently: Bool = false) {
+        let peerIds: [PeerId]
+        if let peerId = peerId {
+            peerIds = [peerId]
+        } else {
+            peerIds = self.controllerInteraction!.selectedPeers.map { $0.peerId }
+        }
+        
+        if let context = self.context, let tryShare = self.tryShare {
+            let _ = (context.engine.data.get(EngineDataMap(
+                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
+            ))
+            |> deliverOnMainQueue).start(next: { [weak self] peers in
+                guard let self else {
+                    return
+                }
+                
+                var mappedPeers: [EnginePeer] = []
+                for peerId in peerIds {
+                    if let maybePeer = peers[peerId], let peer = maybePeer {
+                        mappedPeers.append(peer)
+                    }
+                }
+                
+                if !tryShare(self.inputFieldNode.text, mappedPeers) {
+                    return
+                }
+                
+                self.commitSend(peerId: peerId, showNames: showNames, silently: silently)
+            })
+        } else {
+            self.commitSend(peerId: peerId, showNames: showNames, silently: silently)
+        }
+    }
+    
+    private func commitSend(peerId: PeerId?, showNames: Bool, silently: Bool) {
         if !self.inputFieldNode.text.isEmpty {
             for peer in self.controllerInteraction!.selectedPeers {
                 if case let .channel(channel) = peer.peer, channel.isRestrictedBySlowmode {
@@ -889,6 +925,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             strongSelf.dismiss?(true)
                         }
                 }
+            }, error: { _ in
+                
             }, completed: {
                 if !wasDone && fromForeignApp {
                     doneImpl(false)
