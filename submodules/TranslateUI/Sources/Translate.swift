@@ -185,5 +185,8 @@ public func systemLanguageCodes() -> [String] {
         let language = language.components(separatedBy: "-").first ?? language
         languages.append(language)
     }
+    if languages.count == 2 && languages != ["en", "ru"] {
+        languages = Array(languages.prefix(1))
+    }
     return languages
 }
