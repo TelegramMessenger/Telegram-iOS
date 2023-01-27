@@ -4261,7 +4261,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     
                     subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                    }, action: { c, _ in
+                    }, iconPosition: .left, action: { c, _ in
                         c.popItems()
                     })))
                     subItems.append(.separator)
@@ -4766,7 +4766,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                            }, action: { c, _ in
+                            }, iconPosition: .left, action: { c, _ in
                                 c.popItems()
                             })))
                             subItems.append(.separator)
@@ -4941,7 +4941,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                            }, action: { c, _ in
+                            }, iconPosition: .left, action: { c, _ in
                                 c.popItems()
                             })))
                             subItems.append(.separator)
@@ -5075,7 +5075,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                            }, action: { c, _ in
+                            }, iconPosition: .left, action: { c, _ in
                                 c.popItems()
                             })))
                             subItems.append(.separator)
@@ -5432,7 +5432,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         subItems.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-        }, action: { c, _ in
+        }, iconPosition: .left, action: { c, _ in
             c.popItems()
         })))
         subItems.append(.separator)
@@ -6239,7 +6239,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     items.append(.separator)
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { (c, _) in
+                    }, iconPosition: .left, action: { (c, _) in
                         if let backAction = backAction {
                             backAction(c)
                         }

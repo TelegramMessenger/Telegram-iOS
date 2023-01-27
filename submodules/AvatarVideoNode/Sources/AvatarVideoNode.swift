@@ -92,6 +92,11 @@ public final class AvatarVideoNode: ASDisplayNode {
                     }
                 }
             }
+            if animationFile.isCustomTemplateEmoji {
+                animationNode.dynamicColor = .white
+            } else {
+                animationNode.dynamicColor = nil
+            }
             self.backgroundNode.addSubnode(animationNode)
         } else {
             let itemNativeFitSize = self.internalSize.width > 100.0 ? CGSize(width: 192.0, height: 192.0) : CGSize(width: 64.0, height: 64.0)
@@ -129,6 +134,7 @@ public final class AvatarVideoNode: ASDisplayNode {
                 }
             }
             itemLayer.layerTintColor = UIColor.white.cgColor
+            
             self.itemLayer = itemLayer
             self.backgroundNode.layer.addSublayer(itemLayer)
         }

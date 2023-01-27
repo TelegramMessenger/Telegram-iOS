@@ -174,9 +174,9 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         }, action: { c, _ in
             var subItems: [ContextMenuItem] = []
             
-            subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
+            subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_Back, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-            }, action: { c, _ in
+            }, iconPosition: .left, action: { c, _ in
                 c.popItems()
             })))
             subItems.append(.separator)
@@ -184,8 +184,19 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             let enLocale = Locale(identifier: "en")
             var languages: [(String, String, String)] = []
             var addedLanguages = Set<String>()
-            for code in popularTranslationLanguages {
-                if let title = enLocale.localizedString(forLanguageCode: code) {
+            
+            var topLanguages: [String] = []
+            var langCode = languageCode
+            if langCode == "nb" {
+                langCode = "nl"
+            } else if langCode == "pt-br" {
+                langCode = "pt"
+            }
+            topLanguages.append(langCode)
+            topLanguages.append(contentsOf: popularTranslationLanguages)
+            
+            for code in topLanguages {
+                if !addedLanguages.contains(code), let title = enLocale.localizedString(forLanguageCode: code) {
                     let languageLocale = Locale(identifier: code)
                     let subtitle = languageLocale.localizedString(forLanguageCode: code) ?? title
                     let value = (code, title.capitalized, subtitle.capitalized)

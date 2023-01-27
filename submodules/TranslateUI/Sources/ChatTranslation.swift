@@ -165,7 +165,9 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 dontTranslateLanguages = Set(ignoredLanguages)
             } else {
                 dontTranslateLanguages.insert(baseLang)
-                dontTranslateLanguages.insert(systemLanguageCode())
+                for language in systemLanguageCodes() {
+                    dontTranslateLanguages.insert(language)
+                }
             }
             
             return cachedChatTranslationState(engine: context.engine, peerId: peerId)

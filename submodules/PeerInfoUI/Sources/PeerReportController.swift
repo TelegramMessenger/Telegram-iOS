@@ -166,7 +166,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             items.append(.separator)
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-            }, action: { (c, _) in
+            }, iconPosition: .left, action: { (c, _) in
                 backAction(c)
             })))
         }

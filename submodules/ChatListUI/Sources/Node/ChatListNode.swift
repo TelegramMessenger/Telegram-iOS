@@ -1491,10 +1491,12 @@ public final class ChatListNode: ListView {
                                     if product.id.hasSuffix(".annual") {
                                         let fraction = Float(product.priceCurrencyAndAmount.amount) / Float(12) / Float(shortestOptionPrice.0)
                                         let discount = Int32(round((1.0 - fraction) * 20.0) * 5.0)
-                                        if suggestions.contains(.annualPremium) {
-                                            return .premiumAnnualDiscount(discount: discount)
-                                        } else if suggestions.contains(.upgradePremium) {
-                                            return .premiumUpgrade(discount: discount)
+                                        if discount > 0 {
+                                            if suggestions.contains(.annualPremium) {
+                                                return .premiumAnnualDiscount(discount: discount)
+                                            } else if suggestions.contains(.upgradePremium) {
+                                                return .premiumUpgrade(discount: discount)
+                                            }
                                         }
                                         break
                                     }

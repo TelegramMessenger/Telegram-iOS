@@ -99,7 +99,6 @@ final class AvatarPreviewComponent: Component {
             let hadFile = self.component?.file != nil
             var fileUpdated = false
             if self.component?.file?.fileId != component.file?.fileId {
-                self.imageNode.isHidden = false
                 fileUpdated = true
             }
             
@@ -130,9 +129,8 @@ final class AvatarPreviewComponent: Component {
                     })
                 }
                 
+                self.imageNode.isHidden = false
                 if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
-                    self.imageNode.isHidden = false
-                    
                     if self.animationNode == nil {
                         let animationNode = DefaultAnimatedStickerNodeImpl()
                         animationNode.autoplay = false
@@ -150,7 +148,6 @@ final class AvatarPreviewComponent: Component {
                         animationNode.visibility = false
                         self.animationNode = nil
                         animationNode.removeFromSupernode()
-                        self.imageNode.isHidden = false
                     }
                     self.imageNode.setSignal(chatMessageSticker(account: component.context.account, userLocation: .other, file: file, small: false, synchronousLoad: false))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: component.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: false)).start())
@@ -204,6 +201,14 @@ final class AvatarPreviewComponent: Component {
             let source = AnimatedStickerResourceSource(account: component.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
             self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .count(1), mode: .direct(cachePathPrefix: nil))
             self.animationNode?.visibility = true
+                        
+            if let animationNode = self.animationNode as? DefaultAnimatedStickerNodeImpl {
+                if file.isCustomTemplateEmoji {
+                    animationNode.dynamicColor = .white
+                } else {
+                    animationNode.dynamicColor = nil
+                }
+            }
             
             self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
             |> deliverOn(Queue.concurrentDefaultQueue())).start())
