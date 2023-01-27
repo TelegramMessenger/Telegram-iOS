@@ -422,7 +422,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }, tag: DataAndStorageEntryTag.saveEditedPhotos)
             case let .pauseMusicOnRecording(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleSaveEditedPhotos(value)
+                    arguments.togglePauseMusicOnRecording(value)
                 }, tag: DataAndStorageEntryTag.saveEditedPhotos)
             case let .openLinksIn(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {

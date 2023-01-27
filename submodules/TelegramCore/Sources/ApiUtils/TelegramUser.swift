@@ -203,13 +203,20 @@ extension TelegramUser {
             let restrictionInfo: PeerAccessRestrictionInfo? = rhs.restrictionInfo
             
             let accessHash: TelegramPeerAccessHash?
-            if let rhsAccessHashValue = lhs.accessHash, case .personal = rhsAccessHashValue {
+            if let rhsAccessHashValue = rhs.accessHash, case .personal = rhsAccessHashValue {
                 accessHash = rhsAccessHashValue
             } else {
                 accessHash = lhs.accessHash ?? rhs.accessHash
             }
             
-            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: rhs.username, phone: lhs.phone, photo: rhs.photo.isEmpty ? lhs.photo : rhs.photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: rhs.usernames)
+            let photo: [TelegramMediaImageRepresentation]
+            if case .genericPublic = rhs.accessHash {
+                photo = lhs.photo
+            } else {
+                photo = rhs.photo
+            }
+            
+            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: rhs.username, phone: lhs.phone, photo: photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: rhs.usernames)
         }
     }
 }

@@ -10074,7 +10074,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 if let strongSelf = self, type == .translated {
-                    Queue.mainQueue().after(0.3) {
+                    Queue.mainQueue().after(0.15) {
                         strongSelf.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
                     }
                 }
@@ -10106,7 +10106,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     var ignoredLanguages = Set<String>()
                     ignoredLanguages.insert(strongSelf.presentationData.strings.baseLanguageCode)
-                    ignoredLanguages.insert(systemLanguageCode())
+                    for language in systemLanguageCodes() {
+                        ignoredLanguages.insert(language)
+                    }
                     ignoredLanguages.insert(langCode)
                     updated.ignoredLanguages = Array(ignoredLanguages)
                 }

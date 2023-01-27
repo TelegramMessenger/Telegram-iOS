@@ -468,9 +468,11 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     if let activeLanguage = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguage) {
                         ignoredLanguages = [activeLanguage]
                     }
-                    let systemLanguage = systemLanguageCode()
-                    if !ignoredLanguages.contains(systemLanguage) {
-                        ignoredLanguages.append(systemLanguage)
+                    let systemLanguages = systemLanguageCodes()
+                    for systemLanguage in systemLanguages {
+                        if !ignoredLanguages.contains(systemLanguage) {
+                            ignoredLanguages.append(systemLanguage)
+                        }
                     }
                 }
             } else {
@@ -478,9 +480,10 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 if let activeLanguage = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguage) {
                     ignoredLanguages = [activeLanguage]
                 }
-                let systemLanguageCode = systemLanguageCode()
-                if !ignoredLanguages.contains(systemLanguageCode) {
-                    ignoredLanguages.append(systemLanguageCode)
+                for systemLanguageCode in systemLanguageCodes() {
+                    if !ignoredLanguages.contains(systemLanguageCode) {
+                        ignoredLanguages.append(systemLanguageCode)
+                    }
                 }
             }
             
@@ -561,14 +564,18 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             let transition = preparedLanguageListNodeTransition(presentationData: presentationData, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openSearch: openSearch, toggleShowTranslate: { value in
                 let _ = updateTranslationSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     var updated = current.withUpdatedShowTranslate(value)
-                    if !value {
+                    if !updated.showTranslate && !updated.translateChats {
                         updated = updated.withUpdatedIgnoredLanguages(nil)
                     }
                     return updated
                 }).start()
             }, toggleTranslateChats: { value in
                 let _ = updateTranslationSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                    return current.withUpdatedTranslateChats(value)
+                    var updated = current.withUpdatedTranslateChats(value)
+                    if !updated.showTranslate && !updated.translateChats {
+                        updated = updated.withUpdatedIgnoredLanguages(nil)
+                    }
+                    return updated
                 }).start()
             }, openDoNotTranslate: { [weak self] in
                 if let strongSelf = self {
