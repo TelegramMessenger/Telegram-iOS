@@ -1017,8 +1017,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                  }), in: .current)*/
                             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                         } else {
-                            //TODO:localize
-                            strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: "Invoice not found", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                            strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                         }
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(strongSelf.peer.id), peerType: .channel), anchor: anchor))

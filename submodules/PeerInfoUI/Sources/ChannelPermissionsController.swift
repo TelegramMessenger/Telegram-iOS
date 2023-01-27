@@ -379,7 +379,6 @@ private struct ChannelPermissionsControllerState: Equatable {
 }
 
 func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool) -> String {
-    //TODO:localize
     if right.contains(.banSendText) {
         return strings.Channel_BanUser_PermissionSendMessages
     } else if right.contains(.banSendMedia) {
@@ -399,19 +398,19 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
     } else if right.contains(.banManageTopics) {
         return strings.Channel_EditAdmin_PermissionCreateTopics
     } else if right.contains(.banSendPhotos) {
-        return "Send Photos"
+        return strings.Channel_BanUser_PermissionSendPhoto
     } else if right.contains(.banSendVideos) {
-        return "Send Videos"
+        return strings.Channel_BanUser_PermissionSendVideo
     } else if right.contains(.banSendStickers) {
         return strings.Channel_BanUser_PermissionSendStickersAndGifs
     } else if right.contains(.banSendMusic) {
-        return "Send Music"
+        return strings.Channel_BanUser_PermissionSendMusic
     } else if right.contains(.banSendFiles) {
-        return "Send Files"
+        return strings.Channel_BanUser_PermissionSendFile
     } else if right.contains(.banSendVoice) {
-        return "Send Voice Messages"
+        return strings.Channel_BanUser_PermissionSendVoiceMessage
     } else if right.contains(.banSendInstantVideos) {
-        return "Send Video Messages"
+        return strings.Channel_BanUser_PermissionSendVideoMessage
     } else {
         return ""
     }
@@ -423,17 +422,17 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
     } else if right.contains(.banSendMedia) {
         return strings.GroupPermission_NoSendMedia
     } else if right.contains(.banSendPhotos) {
-        return "no photos"
+        return strings.GroupPermission_NoSendPhoto
     } else if right.contains(.banSendVideos) {
-        return "no videos"
+        return strings.GroupPermission_NoSendVideo
     } else if right.contains(.banSendMusic) {
-        return "no music"
+        return strings.GroupPermission_NoSendMusic
     } else if right.contains(.banSendFiles) {
-        return "no files"
+        return strings.GroupPermission_NoSendFile
     } else if right.contains(.banSendVoice) {
-        return "no voice messages"
+        return strings.GroupPermission_NoSendVoiceMessage
     } else if right.contains(.banSendInstantVideos) {
-        return "no video messages"
+        return strings.GroupPermission_NoSendVideoMessage
     } else if right.contains(.banSendGifs) {
         return strings.GroupPermission_NoSendGifs
     } else if right.contains(.banEmbedLinks) {

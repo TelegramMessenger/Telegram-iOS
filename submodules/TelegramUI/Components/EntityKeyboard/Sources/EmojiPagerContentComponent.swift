@@ -6979,8 +6979,7 @@ public final class EmojiPagerContentComponent: Component {
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
                         
-                        //TODO:localize
-                        let title = "TRENDING EMOJI"
+                        let title = context.sharedContext.currentPresentationData.with({ $0 }).strings.EmojiInput_TrendingEmoji
                         itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 0, isClearable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
@@ -7670,8 +7669,7 @@ public final class EmojiPagerContentComponent: Component {
                 } else if isEmojiSelection {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
                 } else if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
-                    //TODO:localize
-                    displaySearchWithPlaceholder = "Search"
+                    displaySearchWithPlaceholder = strings.Common_Search
                 }
             }
             

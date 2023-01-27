@@ -59,7 +59,11 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
     
     private let emojiSearchDisposable = MetaDisposable()
     private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
-    private var emojiSearchStateValue: EmojiSearchState = EmojiSearchState(result: nil, isSearching: false)
+    private var emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
+        didSet {
+            self.emojiSearchState.set(.single(self.emojiSearchStateValue))
+        }
+    }
     private var immediateEmojiSearchState: EmojiSearchState = EmojiSearchState(result: nil, isSearching: false)
     
     private var dataDisposable: Disposable?
@@ -106,13 +110,12 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 groupItems.append(resultItem)
             }
             
-            //TODO:localize
             self.itemGroups.append(EmojiPagerContentComponent.ItemGroup(
                 supergroupId: AnyHashable(groupItem.info.id),
                 groupId: AnyHashable(groupItem.info.id),
                 title: groupItem.info.title,
                 subtitle: nil,
-                actionButtonTitle: "Add \(groupItem.info.title)",
+                actionButtonTitle: self.presentationData.strings.EmojiInput_AddPack(groupItem.info.title).string,
                 isFeatured: true,
                 isPremiumLocked: !self.hasPremiumForInstallation,
                 isEmbedded: false,
@@ -413,7 +416,6 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
         let params = Params(size: size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics)
         self.params = params
         
-        //TODO:localize
         var emojiContent = EmojiPagerContentComponent(
             id: "emoji",
             context: self.context,
@@ -427,7 +429,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: "main", version: 0),
             searchState: .empty(hasResults: false),
             warpContentsOnEdges: false,
-            displaySearchWithPlaceholder: "Search Emoji",
+            displaySearchWithPlaceholder: self.presentationData.strings.EmojiSearch_SearchEmojiPlaceholder,
             searchCategories: nil,
             searchInitiallyHidden: false,
             searchAlwaysActive: true,

@@ -138,9 +138,8 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
                 
                 textString = NSAttributedString(string: item.strings.ChatList_StorageHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case .setupPassword:
-                //TODO:localize
-                titleString = NSAttributedString(string: "Protect Your Account", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
-                textString = NSAttributedString(string: "Set a password that will be required each time you log in with this phone number.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                titleString = NSAttributedString(string: item.strings.Settings_SuggestSetupPasswordTitle, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                textString = NSAttributedString(string: item.strings.Settings_SuggestSetupPasswordText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case let .premiumUpgrade(discount):
                 let discountString = "\(discount)%"
                 let rawTitleString = item.strings.ChatList_PremiumAnnualUpgradeTitle(discountString)

@@ -18221,9 +18221,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func restrictedSendingContentsText() -> String {
-        //TODO:localize
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
-            return "Sending messages is disabled in this chat"
+            return self.presentationData.strings.Chat_SendNotAllowedText
         }
         
         var itemList: [String] = []
@@ -18253,21 +18252,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var title: String?
             switch right {
             case .banSendText:
-                title = "text messages"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeText
             case .banSendPhotos:
-                title = "photos"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypePhoto
             case .banSendVideos:
-                title = "videos"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeVideo
             case .banSendVoice:
-                title = "voice messages"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeVoiceMessage
             case .banSendInstantVideos:
-                title = "video messages"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeVideoMessage
             case .banSendFiles:
-                title = "files"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeFile
             case .banSendMusic:
-                title = "music"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeMusic
             case .banSendStickers:
-                title = "Stickers & GIFs"
+                title = self.presentationData.strings.Chat_SendAllowedContentTypeSticker
             default:
                 break
             }
@@ -18277,21 +18276,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if itemList.isEmpty {
-            return "Sending messages is disabled in this chat"
+            return self.presentationData.strings.Chat_SendNotAllowedText
         }
         
         var itemListString = ""
-        for i in 0 ..< itemList.count {
-            if i != 0 {
-                itemListString.append(", ")
+        if #available(iOS 13.0, *) {
+            let listFormatter = ListFormatter()
+            listFormatter.locale = localeWithStrings(presentationData.strings)
+            if let value = listFormatter.string(from: itemList) {
+                itemListString = value
             }
-            if i == itemList.count - 1 && i != 0 {
-                itemListString.append("and ")
-            }
-            itemListString.append(itemList[i])
         }
         
-        return "The admins of this group only allow to send \(itemListString)."
+        if itemListString.isEmpty {
+            for i in 0 ..< itemList.count {
+                if i != 0 {
+                    itemListString.append(", ")
+                }
+                itemListString.append(itemList[i])
+            }
+        }
+        
+        return self.presentationData.strings.Chat_SendAllowedContentText(itemListString).string
     }
 }
 
