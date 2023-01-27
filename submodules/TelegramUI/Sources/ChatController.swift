@@ -10083,6 +10083,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                 return
             }
+            var langCode = langCode
+            if langCode == "nb" {
+                langCode = "nl"
+            } else if langCode == "pt-br" {
+                langCode = "pt"
+            }
             let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
                 return current?.withToLang(langCode).withIsEnabled(true)
             }).start()
@@ -10098,7 +10104,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     updated.ignoredLanguages = ignoredLanguages
                 } else {
-                    updated.ignoredLanguages = [strongSelf.presentationData.strings.baseLanguageCode, langCode]
+                    var ignoredLanguages = Set<String>()
+                    ignoredLanguages.insert(strongSelf.presentationData.strings.baseLanguageCode)
+                    ignoredLanguages.insert(systemLanguageCode())
+                    ignoredLanguages.insert(langCode)
+                    updated.ignoredLanguages = Array(ignoredLanguages)
                 }
                 return updated
             }).start()

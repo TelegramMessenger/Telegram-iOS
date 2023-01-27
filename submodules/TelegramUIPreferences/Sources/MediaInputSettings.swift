@@ -8,7 +8,7 @@ public struct MediaInputSettings: Codable, Equatable {
     public let pauseMusicOnRecording: Bool
     
     public static var defaultSettings: MediaInputSettings {
-        return MediaInputSettings(enableRaiseToSpeak: true, pauseMusicOnRecording: true)
+        return MediaInputSettings(enableRaiseToSpeak: true, pauseMusicOnRecording: false)
     }
     
     public init(enableRaiseToSpeak: Bool, pauseMusicOnRecording: Bool) {
@@ -20,7 +20,7 @@ public struct MediaInputSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.enableRaiseToSpeak = (try container.decode(Int32.self, forKey: "enableRaiseToSpeak")) != 0
-        self.pauseMusicOnRecording = (try container.decode(Int32.self, forKey: "pauseMusicOnRecording")) != 0
+        self.pauseMusicOnRecording = (try container.decodeIfPresent(Int32.self, forKey: "pauseMusicOnRecording") ?? 0) != 0
     }
     
     public func encode(to encoder: Encoder) throws {

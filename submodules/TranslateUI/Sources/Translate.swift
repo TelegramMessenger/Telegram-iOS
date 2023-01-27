@@ -178,3 +178,11 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         return (false, nil)
     }
 }
+
+public func systemLanguageCode() -> String {
+    if let systemLanguage = Locale.preferredLanguages.first {
+        let language = systemLanguage.components(separatedBy: "-").first ?? systemLanguage
+        return language
+    }
+    return ""
+}

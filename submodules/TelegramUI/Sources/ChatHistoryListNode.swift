@@ -1295,6 +1295,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 var translateToLanguage: String?
                 if let translationState, isPremium && translationState.isEnabled {
                     translateToLanguage = translationState.toLang ?? presentationData.strings.baseLanguageCode
+                    if translateToLanguage == "nb" {
+                        translateToLanguage = "nl"
+                    } else if translateToLanguage == "pt-br" {
+                        translateToLanguage = "pt"
+                    }
                 }
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage)

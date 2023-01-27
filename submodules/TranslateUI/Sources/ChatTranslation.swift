@@ -148,6 +148,9 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
 }
 
 public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
+    if peerId.id == PeerId.Id._internalFromInt64Value(777000) {
+        return .single(nil)
+    }
     if #available(iOS 12.0, *) {
         let baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
         return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
@@ -160,8 +163,10 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
             var dontTranslateLanguages = Set<String>()
             if let ignoredLanguages = settings.ignoredLanguages {
                 dontTranslateLanguages = Set(ignoredLanguages)
+            } else {
+                dontTranslateLanguages.insert(baseLang)
+                dontTranslateLanguages.insert(systemLanguageCode())
             }
-            dontTranslateLanguages.insert(baseLang)
             
             return cachedChatTranslationState(engine: context.engine, peerId: peerId)
             |> mapToSignal { cached in
