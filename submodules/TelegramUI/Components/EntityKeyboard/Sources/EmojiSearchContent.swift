@@ -431,7 +431,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 defaultToEmojiTab: true,
                 externalTopPanelContainer: self.panelHostView,
                 externalBottomPanelContainer: nil,
-                displayTopPanelBackground: true,
+                displayTopPanelBackground: .blur,
                 topPanelExtensionUpdated: { _, _ in },
                 hideInputUpdated: { _, _, _ in },
                 hideTopPanelUpdated: { _, _ in

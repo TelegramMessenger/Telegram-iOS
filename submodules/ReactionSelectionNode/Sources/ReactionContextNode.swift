@@ -712,6 +712,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        #if DEBUG
+        loopIdle = true
+        #endif
+        
         var validIndices = Set<Int>()
         var nextX: CGFloat = sideInset
         for i in 0 ..< self.items.count {
