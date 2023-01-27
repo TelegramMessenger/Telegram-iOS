@@ -6876,10 +6876,12 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         let searchCategories: Signal<EmojiSearchCategories?, NoError>
-        if isEmojiSelection || isReactionSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+        if isEmojiSelection || isReactionSelection {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .emoji)
         } else if isStatusSelection {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .status)
+        } else if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .avatar)
         } else {
             searchCategories = .single(nil)
         }

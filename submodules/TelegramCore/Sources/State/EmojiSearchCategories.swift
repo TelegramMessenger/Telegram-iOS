@@ -7,6 +7,7 @@ public final class EmojiSearchCategories: Equatable, Codable {
     public enum Kind: Int64 {
         case emoji = 0
         case status = 1
+        case avatar = 2
     }
 
     public struct Group: Codable, Equatable {
@@ -119,6 +120,11 @@ func managedSynchronizeEmojiSearchCategories(postbox: Postbox, network: Network,
                 }
             case .status:
                 signal = network.request(Api.functions.messages.getEmojiStatusGroups(hash: current?.hash ?? 0))
+                |> `catch` { _ -> Signal<Api.messages.EmojiGroups, NoError> in
+                    return .single(.emojiGroupsNotModified)
+                }
+            case .avatar:
+                signal = network.request(Api.functions.messages.getEmojiProfilePhotoGroups(hash: current?.hash ?? 0))
                 |> `catch` { _ -> Signal<Api.messages.EmojiGroups, NoError> in
                     return .single(.emojiGroupsNotModified)
                 }
