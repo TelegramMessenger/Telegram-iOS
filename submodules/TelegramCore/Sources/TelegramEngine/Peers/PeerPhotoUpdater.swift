@@ -156,7 +156,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                     }
                                     
                                     var videoEmojiMarkup: Api.VideoSize?
-                                    if let markup {
+                                    if let markup = markup{
                                         switch markup {
                                         case let .emoji(fileId, backgroundColors):
                                             videoEmojiMarkup = .videoSizeEmojiMarkup(emojiId: fileId, backgroundColors: backgroundColors)
@@ -288,7 +288,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                     }
                                     
                                     var videoEmojiMarkup: Api.VideoSize?
-                                    if let markup {
+                                    if let markup = markup {
                                         switch markup {
                                         case let .emoji(fileId, backgroundColors):
                                             videoEmojiMarkup = .videoSizeEmojiMarkup(emojiId: fileId, backgroundColors: backgroundColors)
