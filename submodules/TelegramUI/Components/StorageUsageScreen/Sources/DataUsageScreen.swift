@@ -266,18 +266,17 @@ final class DataUsageScreenComponent: Component {
             case .music:
                 return strings.StorageManagement_SectionMusic
             case .messages:
-                //TODO:localize
-                return "Messages"
+                return strings.StorageManagement_SectionMessages
             case .stickers:
                 return strings.StorageManagement_SectionStickers
             case .voiceMessages:
-                return "Voice Messages"
+                return strings.StorageManagement_SectionVoiceMessages
             case .calls:
-                return "Calls"
+                return strings.StorageManagement_SectionCalls
             case .totalIn:
-                return "Data Received"
+                return strings.DataUsage_SectionTotalIncoming
             case .totalOut:
-                return "Data Sent"
+                return strings.DataUsage_SectionTotalOutgoing
             }
         }
     }
@@ -809,17 +808,16 @@ final class DataUsageScreenComponent: Component {
             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
             let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
             
-            //TODO:localize
             let timestampString: String
             if let allStats = self.allStats, allStats.resetTimestamp != 0 {
                 let dateStringPlain = stringForFullDate(timestamp: allStats.resetTimestamp, strings: environment.strings, dateTimeFormat: PresentationDateTimeFormat())
                 switch self.selectedStats {
                 case .all:
-                    timestampString = "Your data usage since \(dateStringPlain)"
+                    timestampString = environment.strings.DataUsage_InfoTotalUsageSinceTime(dateStringPlain).string
                 case .mobile:
-                    timestampString = "Your mobile data usage since \(dateStringPlain)"
+                    timestampString = environment.strings.DataUsage_InfoMobileUsageSinceTime(dateStringPlain).string
                 case .wifi:
-                    timestampString = "Your Wi-Fi data usage since \(dateStringPlain)"
+                    timestampString = environment.strings.DataUsage_InfoWifiUsageSinceTime(dateStringPlain).string
                 }
             } else {
                 timestampString = ""
@@ -972,10 +970,9 @@ final class DataUsageScreenComponent: Component {
             contentHeight += categoriesSize.height
             contentHeight += 8.0
             
-            //TODO:localize
             let categoriesDescriptionSize = self.categoriesDescriptionView.update(
                 transition: transition,
-                component: AnyComponent(MultilineTextComponent(text: .markdown(text: "Tap on each section for detailed view.", attributes: MarkdownAttributes(
+                component: AnyComponent(MultilineTextComponent(text: .markdown(text: environment.strings.DataUsage_SectionsInfo, attributes: MarkdownAttributes(
                     body: body,
                     bold: bold,
                     link: body,
@@ -996,15 +993,14 @@ final class DataUsageScreenComponent: Component {
             contentHeight += categoriesDescriptionSize.height
             contentHeight += 40.0
             
-            //TODO:localize
             let totalTitle: String
             switch self.selectedStats {
             case .all:
-                totalTitle = "TOTAL NETWORK USAGE"
+                totalTitle = environment.strings.DataUsage_SectionUsageTotal
             case .mobile:
-                totalTitle = "MOBILE NETWORK USAGE"
+                totalTitle = environment.strings.DataUsage_SectionUsageMobile
             case .wifi:
-                totalTitle = "WI-FI NETWORK USAGE"
+                totalTitle = environment.strings.DataUsage_SectionUsageWifi
             }
             let totalCategoriesTitleSize = self.totalCategoriesTitleView.update(
                 transition: transition,
@@ -1053,7 +1049,6 @@ final class DataUsageScreenComponent: Component {
             contentHeight += 40.0
             
             var autoDownloadSettingsContentHeight: CGFloat = 0.0
-            //TODO:localize
             let autoDownloadSettingsSize: CGSize
             if case .all = self.selectedStats, let autoDownloadSettingsComponentView = self.autoDownloadSettingsView.view {
                 autoDownloadSettingsSize = autoDownloadSettingsComponentView.bounds.size
@@ -1063,7 +1058,7 @@ final class DataUsageScreenComponent: Component {
                     component: AnyComponent(StoragePeerTypeItemComponent(
                         theme: environment.theme,
                         iconName: self.selectedStats == .mobile ? "Settings/Menu/Cellular" : "Settings/Menu/WiFi",
-                        title: "Auto-Download Settings",
+                        title: environment.strings.DataUsage_AutoDownloadSettings,
                         subtitle: stringForAutoDownloadSetting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator, settings: self.mediaAutoDownloadSettings, isCellular: self.selectedStats == .mobile),
                         value: "",
                         hasNext: false,
@@ -1215,9 +1210,8 @@ final class DataUsageScreenComponent: Component {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationData: presentationData)
             
-            //TODO:localize
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Reset Statistics", color: .destructive, action: { [weak self, weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.NetworkUsageSettings_ResetStats, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
                     self?.commitClear()

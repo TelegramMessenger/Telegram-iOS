@@ -619,8 +619,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                             
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                //TODO:localize
-                let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Your emoji status has been updated.", undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                 controller.present(undoController, in: .window(.root))
             }
             let copyEmoji: (TelegramMediaFile) -> Void = { file in
@@ -643,9 +642,8 @@ private final class StickerPackContainer: ASDisplayNode {
                 }
             }
             
-            //TODO:localize
             if strongSelf.sendEmoji != nil {
-                menuItems.append(.action(ContextMenuActionItem(text: "Send Emoji", icon: { theme in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SendEmoji, icon: { theme in
                     if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) {
                         return generateImage(image.size, rotatedContext: { size, context in
                             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -663,8 +661,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 })))
             }
             
-            //TODO:localize
-            menuItems.append(.action(ContextMenuActionItem(text: "Set as Status", icon: { theme in
+            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SetAsStatus, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Smile"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 f(.default)
@@ -688,8 +685,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 }
             })))
             
-            //TODO:localize
-            menuItems.append(.action(ContextMenuActionItem(text: "Copy Emoji", icon: { theme in
+            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_CopyEmoji, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 copyEmoji(file)

@@ -727,10 +727,9 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 interaction.openSettings(.rememberPassword)
             }))
         } else if settings.suggestPasswordSetup {
-            //TODO:localize
-            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: "Protect Your Account", text: .markdown("Set a password that will be required each time log in with this phone number."), linkAction: { _ in
+            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_SuggestSetupPasswordTitle, text: .markdown(presentationData.strings.Settings_SuggestSetupPasswordText), linkAction: { _ in
             }))
-            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: "Set Additional Password", action: {
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_SuggestSetupPasswordAction, action: {
                 interaction.openSettings(.passwordSetup)
             }))
         }

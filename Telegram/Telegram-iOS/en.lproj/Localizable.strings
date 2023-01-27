@@ -8746,3 +8746,101 @@ Sorry for the inconvenience.";
 "Premium.Translation.Proceed" = "About Telegram Premium";
 
 "Settings.PauseMusicOnRecording" = "Pause Music While Recoding";
+
+"Settings.SuggestSetupPasswordTitle" = "Protect Your Account";
+"Settings.SuggestSetupPasswordText" = "Set a password that will be required each time you log in with this phone number.";
+"Settings.SuggestSetupPasswordAction" = "Set Additional Password";
+
+"Chat.SendNotAllowedText" = "Sending messages is not allowed in this group";
+"Chat.SendNotAllowedPeerText" = "Sending messages is not allowed in %@";
+"Chat.SendNotAllowedPhoto" = "Sending photos is not allowed in this group";
+"Chat.SendNotAllowedVideo" = "Sending videos is not allowed in this group";
+"Chat.SendNotAllowedFile" = "Sending files is not allowed in this group";
+"Chat.SendNotAllowedAudioMessage" = "Sending audio messages is not allowed in this group";
+"Chat.SendNotAllowedVideoMessage" = "Sending video messages is not allowed in this group";
+"Chat.SendNotAllowedMusic" = "Sending music is not allowed in this group";
+
+"Chat.SendAllowedContentText" = "The admins of this group only allow to send %1$@.";
+"Chat.SendAllowedContentPeerText" = "The admins of %1$@ only allow to send %2$@.";
+
+"Chat.SendAllowedContentTypeText" = "text messages";
+"Chat.SendAllowedContentTypePhoto" = "photos";
+"Chat.SendAllowedContentTypeVideo" = "videos";
+"Chat.SendAllowedContentTypeVoiceMessage" = "voice messages";
+"Chat.SendAllowedContentTypeVideoMessage" = "video messages";
+"Chat.SendAllowedContentTypeFile" = "files";
+"Chat.SendAllowedContentTypeMusic" = "music";
+"Chat.SendAllowedContentTypeSticker" = "stickers & GIFs";
+
+"Channel.BanUser.PermissionSendPhoto" = "Send Photos";
+"Channel.BanUser.PermissionSendVideo" = "Send Videos";
+"Channel.BanUser.PermissionSendMusic" = "Send Music";
+"Channel.BanUser.PermissionSendVoiceMessage" = "Send Audio Messages";
+"Channel.BanUser.PermissionSendVideoMessage" = "Send Video Messages";
+"Channel.BanUser.PermissionSendFile" = "Send Files";
+
+"GroupPermission.NoSendPhoto" = "no photos";
+"GroupPermission.NoSendVideo" = "no videos";
+"GroupPermission.NoSendMusic" = "no music";
+"GroupPermission.NoSendVoiceMessage" = "no audio messages";
+"GroupPermission.NoSendVideoMessage" = "no video messages";
+"GroupPermission.NoSendFile" = "no files";
+
+"Settings.AutosaveMediaOn" = "On";
+"Settings.AutosaveMediaOff" = "Off";
+"Settings.AutosaveMediaOn" = "On";
+"Settings.AutosaveMediaAllMedia" = "All Media (%@)";
+"Settings.AutosaveMediaPhoto" = "Photos";
+"Settings.AutosaveMediaNoPhoto" = "No Photos";
+"Settings.AutosaveMediaVideo" = "Videos up to %@";
+"Settings.AutosaveMediaNoVideo" = "No Videos";
+
+"Settings.SaveToCameraRollSection" = "SAVE TO CAMERA ROLL";
+"Settings.SaveToCameraRollInfo" = "Automatically save all new photos and videos from these chats to your Cameral Roll.";
+
+"Autosave.TypesSection" = "SAVE TO CAMERA ROLL";
+"Autosave.TypePhoto" = "Photos";
+"Autosave.TypeVideo" = "Videos";
+"Autosave.TypesInfo" = "Automatically save all new media from private chats to your Cameral Roll.";
+"Autosave.VideoSizeSection" = "MAXIMUM VIDEO SIZE";
+"Autosave.VideoInfo" = "All downloaded videos in private chats less than %@ will be saved to Cameral Roll.";
+"Autosave.ExceptionsSection" = "EXCEPTIONS";
+"Autosave.AddException" = "Add Exception";
+"Autosave.Exception" = "Exception";
+"Autosave.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Chat.ErrorInvoiceNotFound" = "Invoice not found.";
+
+"EmojiStatus.AppliedText" = "Your emoji status has been updated.";
+"EmojiPreview.SendEmoji" = "Send Emoji";
+"EmojiPreview.SetAsStatus" = "Set as Status";
+"EmojiPreview.CopyEmoji" = "Copy Emoji";
+
+"EmojiSearch.SearchStickersEmptyResult" = "No emoji found";
+
+"DataUsage.MediaDirectionIncoming" = "Incoming";
+"DataUsage.MediaDirectionOutgoing" = "Outgoing";
+"DataUsage.InfoTotalUsageSinceTime" = "Your data usage since %@";
+"DataUsage.InfoMobileUsageSinceTime" = "Your mobile data usage since %@";
+"DataUsage.InfoWifiUsageSinceTime" = "Your Wi-Fi data usage since %@";
+"DataUsage.SectionsInfo" = "Tap on each section for detailed view.";
+"DataUsage.SectionUsageTotal" = "TOTAL NETWORK USAGE";
+"DataUsage.SectionUsageMobile" = "MOBILE NETWORK USAGE";
+"DataUsage.SectionUsageWifi" = "WI-FI NETWORK USAGE";
+"DataUsage.AutoDownloadSettings" = "Auto-Download Settings";
+
+"StorageManagement.SectionMessages" = "Messages";
+"StorageManagement.SectionVoiceMessages" = "Voice Messages";
+"StorageManagement.SectionCalls" = "Calls";
+
+"DataUsage.SectionTotalIncoming" = "Data Received";
+"DataUsage.SectionTotalOutgoing" = "Data Sent";
+
+"EmojiInput.TabMasks" = "Masks";
+"EmojiInput.TabGifs" = "GIFs";
+"EmojiInput.TabStickers" = "Stickers";
+"EmojiInput.TabEmoji" = "Emoji";
+
+"EmojiInput.TrendingEmoji" = "TRENDING EMOJI";
+
+"Chat.PlaceholderTextNotAllowed" = "Text not allowed";

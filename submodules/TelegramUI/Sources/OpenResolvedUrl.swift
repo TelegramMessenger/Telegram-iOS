@@ -713,8 +713,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     navigationController.pushViewController(checkoutController)
                 }
             } else {
-                //TODO:localize
-                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: "Invoice not found", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
     }
 }

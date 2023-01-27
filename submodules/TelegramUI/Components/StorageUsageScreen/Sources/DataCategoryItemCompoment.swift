@@ -169,10 +169,9 @@ private final class SubItemComponent: Component {
             )
             availableWidth = max(1.0, availableWidth - titleValueSize.width - 4.0)
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: transition,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.isIncoming ? "Incoming" : "Outgoing", font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.isIncoming ? component.strings.DataUsage_MediaDirectionIncoming : component.strings.DataUsage_MediaDirectionOutgoing, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)))),
                 environment: {},
                 containerSize: CGSize(width: availableWidth, height: 100.0)
             )

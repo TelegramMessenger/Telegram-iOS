@@ -932,7 +932,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     guard let controller = strongSelf.interfaceInteraction?.chatController() as? ChatControllerImpl else {
                         return
                     }
-                    //TODO:localize
                     controller.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: controller.restrictedSendingContentsText(), customUndoText: nil))
                 } else {
                     strongSelf.ensureFocused()
@@ -1384,8 +1383,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 } else {
                     if sendingTextDisabled {
-                        //TODO:localize
-                        placeholder = "Text not allowed"
+                        placeholder = interfaceState.strings.Chat_PlaceholderTextNotAllowed
                     } else {
                         if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
                             placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
@@ -2865,8 +2863,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                                 
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
-                    //TODO:localize
-                    let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Your emoji status has been updated.", undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                    let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                     //strongSelf.currentUndoOverlayController = controller
                     controller.controllerInteraction?.presentController(undoController, nil)
                 }
@@ -2890,8 +2887,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
                 
-                //TODO:localize
-                menuItems.append(.action(ContextMenuActionItem(text: "Send Emoji", icon: { theme in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SendEmoji, icon: { theme in
                     if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) {
                         return generateImage(image.size, rotatedContext: { size, context in
                             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -2908,8 +2904,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     f(.default)
                 })))
                 
-                //TODO:localize
-                menuItems.append(.action(ContextMenuActionItem(text: "Set as Status", icon: { theme in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SetAsStatus, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Smile"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     f(.default)
@@ -2933,8 +2928,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 })))
                 
-                //TODO:localize
-                menuItems.append(.action(ContextMenuActionItem(text: "Copy Emoji", icon: { theme in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_CopyEmoji, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     copyEmoji(file)

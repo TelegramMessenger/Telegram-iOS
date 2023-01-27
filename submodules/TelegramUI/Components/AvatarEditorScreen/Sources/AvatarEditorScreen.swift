@@ -230,7 +230,11 @@ final class AvatarEditorScreenComponent: Component {
 
         private let emojiSearchDisposable = MetaDisposable()
         private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
-        private var emojiSearchStateValue: EmojiSearchState = EmojiSearchState(result: nil, isSearching: false)
+        private var emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
+            didSet {
+                self.emojiSearchState.set(.single(self.emojiSearchStateValue))
+            }
+        }
         
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         

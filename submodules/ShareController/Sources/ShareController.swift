@@ -1743,7 +1743,6 @@ public func presentExternalShare(context: AccountContext, text: String, parentCo
 }
 
 private func restrictedSendingContentsText(peer: EnginePeer, presentationData: PresentationData) -> String {
-    //TODO:localize
     var itemList: [String] = []
     
     let order: [TelegramChatBannedRightsFlags] = [
@@ -1771,21 +1770,21 @@ private func restrictedSendingContentsText(peer: EnginePeer, presentationData: P
         var title: String?
         switch right {
         case .banSendText:
-            title = "text messages"
+            title = presentationData.strings.Chat_SendAllowedContentTypeText
         case .banSendPhotos:
-            title = "photos"
+            title = presentationData.strings.Chat_SendAllowedContentTypePhoto
         case .banSendVideos:
-            title = "videos"
+            title = presentationData.strings.Chat_SendAllowedContentTypeVideo
         case .banSendVoice:
-            title = "voice messages"
+            title = presentationData.strings.Chat_SendAllowedContentTypeVoiceMessage
         case .banSendInstantVideos:
-            title = "video messages"
+            title = presentationData.strings.Chat_SendAllowedContentTypeVideoMessage
         case .banSendFiles:
-            title = "files"
+            title = presentationData.strings.Chat_SendAllowedContentTypeFile
         case .banSendMusic:
-            title = "music"
+            title = presentationData.strings.Chat_SendAllowedContentTypeMusic
         case .banSendStickers:
-            title = "Stickers & GIFs"
+            title = presentationData.strings.Chat_SendAllowedContentTypeSticker
         default:
             break
         }
@@ -1795,19 +1794,27 @@ private func restrictedSendingContentsText(peer: EnginePeer, presentationData: P
     }
     
     if itemList.isEmpty {
-        return "Sending messages is disabled in \(peer.compactDisplayTitle)"
+        return presentationData.strings.Chat_SendNotAllowedPeerText(peer.compactDisplayTitle).string
     }
     
     var itemListString = ""
-    for i in 0 ..< itemList.count {
-        if i != 0 {
-            itemListString.append(", ")
+    
+    if #available(iOS 13.0, *) {
+        let listFormatter = ListFormatter()
+        listFormatter.locale = localeWithStrings(presentationData.strings)
+        if let value = listFormatter.string(from: itemList) {
+            itemListString = value
         }
-        if i == itemList.count - 1 && i != 0 {
-            itemListString.append("and ")
-        }
-        itemListString.append(itemList[i])
     }
     
-    return "The admins of \(peer.compactDisplayTitle) group only allow to send \(itemListString)."
+    if itemListString.isEmpty {
+        for i in 0 ..< itemList.count {
+            if i != 0 {
+                itemListString.append(", ")
+            }
+            itemListString.append(itemList[i])
+        }
+    }
+    
+    return presentationData.strings.Chat_SendAllowedContentPeerText(peer.compactDisplayTitle, itemListString).string
 }

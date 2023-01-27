@@ -574,28 +574,27 @@ private func autosaveLabelAndValue(presentationData: PresentationData, settings:
         }
     }
     
-    //TODO:localize
     let value: String
     if configuration.photo || configuration.video {
-        value = "On"
+        value = presentationData.strings.Settings_AutosaveMediaOn
     } else {
-        value = "Off"
+        value = presentationData.strings.Settings_AutosaveMediaOff
     }
     
     var label = ""
     if configuration.photo && configuration.video {
-        label.append("All Media (\(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData))))")
+        label.append(presentationData.strings.Settings_AutosaveMediaAllMedia(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string)
     } else {
         if configuration.photo {
             if !label.isEmpty {
                 label.append(", ")
             }
-            label.append("Photos")
+            label.append(presentationData.strings.Settings_AutosaveMediaPhoto)
         } else if configuration.video {
             if !label.isEmpty {
                 label.append(", ")
             }
-            label.append("Videos up to \(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))")
+            label.append(presentationData.strings.Settings_AutosaveMediaVideo(dataSizeString(Int(configuration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string)
         }
     }
     
@@ -622,17 +621,16 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     let defaultSettings = MediaAutoDownloadSettings.defaultSettings
     entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.cellular != defaultSettings.cellular || data.automaticMediaDownloadSettings.wifi != defaultSettings.wifi))
     
-    //TODO:localize
-    entries.append(.autoSaveHeader("SAVE TO CAMERA ROLL"))
+    entries.append(.autoSaveHeader(presentationData.strings.Settings_SaveToCameraRollSection))
     
     let privateLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .privateChats, exceptionPeers: autosaveExceptionPeers)
     let groupsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .groups, exceptionPeers: autosaveExceptionPeers)
     let channelsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .channels, exceptionPeers: autosaveExceptionPeers)
     
-    entries.append(.autoSaveItem(index: 0, type: .privateChats, title: "Private Chats", label: privateLabelAndValue.label, value: privateLabelAndValue.value))
-    entries.append(.autoSaveItem(index: 1, type: .groups, title: "Groups", label: groupsLabelAndValue.label, value: groupsLabelAndValue.value))
-    entries.append(.autoSaveItem(index: 2, type: .channels, title: "Channels", label: channelsLabelAndValue.label, value: channelsLabelAndValue.value))
-    entries.append(.autoSaveInfo("Automatically save all new photos and videos from these chats to your Cameral Roll."))
+    entries.append(.autoSaveItem(index: 0, type: .privateChats, title: presentationData.strings.Notifications_PrivateChats, label: privateLabelAndValue.label, value: privateLabelAndValue.value))
+    entries.append(.autoSaveItem(index: 1, type: .groups, title: presentationData.strings.Notifications_GroupChats, label: groupsLabelAndValue.label, value: groupsLabelAndValue.value))
+    entries.append(.autoSaveItem(index: 2, type: .channels, title: presentationData.strings.Notifications_Channels, label: channelsLabelAndValue.label, value: channelsLabelAndValue.value))
+    entries.append(.autoSaveInfo(presentationData.strings.Settings_SaveToCameraRollInfo))
     
     
     let dataSaving = effectiveDataSaving(for: data.voiceCallSettings, autodownloadSettings: data.autodownloadSettings)

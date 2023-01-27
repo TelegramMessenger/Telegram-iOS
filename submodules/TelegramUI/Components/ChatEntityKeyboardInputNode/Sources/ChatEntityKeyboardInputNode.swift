@@ -637,8 +637,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                                     
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
-                        //TODO:localize
-                        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Your emoji status has been updated.", undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                         strongSelf.currentUndoOverlayController = controller
                         controllerInteraction.presentController(controller, nil)
                     },
@@ -673,8 +672,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                                         
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             
-                            //TODO:localize
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Emoji copied to clipboard.", undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiPreview_CopyEmoji, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                             strongSelf.currentUndoOverlayController = controller
                             controllerInteraction.presentController(controller, nil)
                         }
@@ -1488,9 +1486,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             if let stickerSearchResult = stickerSearchState.result {
                 var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
                 if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
-                    //TODO:localize
                     stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                        text: "No stickers found",
+                        text: presentationData.strings.EmojiSearch_SearchStickersEmptyResult,
                         iconFile: nil
                     )
                 }
@@ -2506,8 +2503,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             }
                             
                             if let _ = strongSelf.chatPeerId {
-                                //TODO:localize
-                                menuItems.append(.action(ContextMenuActionItem(text: "Send Emoji", icon: { theme in
+                                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SendEmoji, icon: { theme in
                                     if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) {
                                         return generateImage(image.size, rotatedContext: { size, context in
                                             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -2524,8 +2520,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     f(.default)
                                 })))
                                 
-                                //TODO:localize
-                                menuItems.append(.action(ContextMenuActionItem(text: "Set as Status", icon: { theme in
+                                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SetAsStatus, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Smile"), color: theme.actionSheet.primaryTextColor)
                                 }, action: { _, f in
                                     f(.default)
@@ -2549,8 +2544,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     }
                                 })))
                                 
-                                //TODO:localize
-                                menuItems.append(.action(ContextMenuActionItem(text: "Copy Emoji", icon: { theme in
+                                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_CopyEmoji, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
                                 }, action: { _, f in
                                     copyEmoji(file)

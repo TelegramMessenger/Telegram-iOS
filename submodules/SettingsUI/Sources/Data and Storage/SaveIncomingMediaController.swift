@@ -258,12 +258,11 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
         entries.append(.peer(peer: peer, presence: peerPresence))
     }
     
-    entries.append(.typesHeader("SAVE TO CAMERA ROLL"))
+    entries.append(.typesHeader(presentationData.strings.Autosave_TypesSection))
     
-    //TODO:localize
-    entries.append(.typePhotos("Photos", configuration.photo))
-    entries.append(.typeVideos("Videos", configuration.video))
-    entries.append(.typesInfo("Automatically save all new media from private chats to your Cameral Roll."))
+    entries.append(.typePhotos(presentationData.strings.Autosave_TypePhoto, configuration.photo))
+    entries.append(.typeVideos(presentationData.strings.Autosave_TypeVideo, configuration.video))
+    entries.append(.typesInfo(presentationData.strings.Autosave_TypesInfo))
     
     if configuration.video {
         let sizeText: String
@@ -275,9 +274,9 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
         
         let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).string
         
-        entries.append(.videoSizeHeader("MAXIMUM VIDEO SIZE"))
+        entries.append(.videoSizeHeader(presentationData.strings.Autosave_VideoSizeSection))
         entries.append(.videoSize(decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, text: text, value: configuration.maximumVideoSize))
-        entries.append(.videoInfo("All downloaded videos in private chats less than \(sizeText) will be saved to Cameral Roll."))
+        entries.append(.videoInfo(presentationData.strings.Autosave_VideoInfo(sizeText).string))
     }
     
     if case let .peerType(peerType) = scope {
@@ -306,13 +305,12 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
         }
         
         if filteredExceptions.isEmpty {
-            //TODO:localize
-            entries.append(.exceptionsHeader("EXCEPTIONS"))
+            entries.append(.exceptionsHeader(presentationData.strings.Autosave_ExceptionsSection))
         } else {
             entries.append(.exceptionsHeader(presentationData.strings.Notifications_CategoryExceptions(Int32(filteredExceptions.count)).uppercased()))
         }
         
-        entries.append(.addException("Add Exception"))
+        entries.append(.addException(presentationData.strings.Autosave_AddException))
         
         var index = 0
         for (exceptionPeer, exceptionConfiguration) in filteredExceptions {
@@ -321,23 +319,23 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
                 if !label.isEmpty {
                     label.append(", ")
                 }
-                label.append("Photos")
+                label.append(presentationData.strings.Settings_AutosaveMediaPhoto)
             } else {
                 if !label.isEmpty {
                     label.append(", ")
                 }
-                label.append("No Photos")
+                label.append(presentationData.strings.Settings_AutosaveMediaNoPhoto)
             }
             if exceptionConfiguration.video {
                 if !label.isEmpty {
                     label.append(", ")
                 }
-                label.append("Videos up to \(dataSizeString(Int(exceptionConfiguration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))")
+                label.append(presentationData.strings.Settings_AutosaveMediaVideo(dataSizeString(Int(exceptionConfiguration.maximumVideoSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string)
             } else {
                 if !label.isEmpty {
                     label.append(", ")
                 }
-                label.append("No Videos")
+                label.append(presentationData.strings.Settings_AutosaveMediaNoVideo)
             }
             
             entries.append(.exceptionItem(index: index, peer: exceptionPeer, label: label))
@@ -345,7 +343,7 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
         }
         
         if !filteredExceptions.isEmpty {
-            entries.append(.deleteAllExceptions("Delete All Exceptions"))
+            entries.append(.deleteAllExceptions(presentationData.strings.Autosave_DeleteAllExceptions))
         }
     }
     
@@ -588,8 +586,7 @@ func saveIncomingMediaController(context: AccountContext, scope: SaveIncomingMed
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationData: presentationData)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                //ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
-                ActionSheetButtonItem(title: "Delete All Exceptions", color: .destructive, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.Autosave_DeleteAllExceptions, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
                     let _ = updateMediaAutoSaveSettingsInteractively(account: context.account, { settings in
@@ -674,28 +671,27 @@ func saveIncomingMediaController(context: AccountContext, scope: SaveIncomingMed
         let title: String
         switch scope {
         case let .peer(id):
-            //TODO:localize
             if let data = mediaAutoSaveSettings.exceptions.first(where: { $0.id == id }) {
                 configuration = data.configuration
             } else {
                 configuration = .default
             }
-            title = "Exception"
+            title = presentationData.strings.Autosave_Exception
         case .addPeer:
             configuration = state.pendingConfiguration
-            title = "Add Exception"
+            title = presentationData.strings.Autosave_AddException
         case let .peerType(peerType):
             exceptions = mediaAutoSaveSettings.exceptions
             switch peerType {
             case .privateChats:
                 configuration = mediaAutoSaveSettings.configurations[.users] ?? .default
-                title = "Private Chats"
+                title = presentationData.strings.Notifications_PrivateChats
             case .groups:
                 configuration = mediaAutoSaveSettings.configurations[.groups] ?? .default
-                title = "Groups"
+                title = presentationData.strings.Notifications_GroupChats
             case .channels:
                 configuration = mediaAutoSaveSettings.configurations[.channels] ?? .default
-                title = "Channels"
+                title = presentationData.strings.Notifications_Channels
             }
         }
         
