@@ -1814,8 +1814,8 @@ public final class EntityKeyboardTopPanelComponent: Component {
                     let itemFrame = CGRect(origin: CGPoint(x: itemOuterFrame.minX + floor((itemOuterFrame.width - itemSize.width) / 2.0), y: itemOuterFrame.minY + floor((itemOuterFrame.height - itemSize.height) / 2.0)), size: itemSize)
                     itemTransition.setFrame(view: itemView, frame: itemFrame)
                     
-                    transition.setSublayerTransform(view: itemView, transform: CATransform3DMakeScale(scale, scale, 1.0))
-                    transition.setAlpha(view: itemView, alpha: self.visibilityFraction)
+                    itemTransition.setSublayerTransform(view: itemView, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                    itemTransition.setAlpha(view: itemView, alpha: self.visibilityFraction)
                 }
             }
             var removedIds: [AnyHashable] = []

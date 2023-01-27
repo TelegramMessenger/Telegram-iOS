@@ -933,7 +933,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         return
                     }
                     //TODO:localize
-                    controller.controllerInteraction?.displayUndo(.info(title: nil, text: controller.restrictedSendingContentsText()))
+                    controller.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: controller.restrictedSendingContentsText(), customUndoText: nil))
                 } else {
                     strongSelf.ensureFocused()
                 }

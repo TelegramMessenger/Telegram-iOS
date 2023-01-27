@@ -178,7 +178,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 displaySearchWithPlaceholder: nil,
                 searchCategories: nil,
                 searchInitiallyHidden: true,
-                searchState: .empty
+                searchState: .empty(hasResults: false)
             )
         ))
         
@@ -386,7 +386,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .empty
+                            searchState: .empty(hasResults: false)
                         )
                     )
                 }
@@ -419,7 +419,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             displaySearchWithPlaceholder: presentationData.strings.Common_Search,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .empty
+                            searchState: .empty(hasResults: false)
                         )
                     )
                 }
@@ -1495,7 +1495,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let emoji = inputData.emoji {
-                    let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty
+                    let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty(hasResults: true)
                     inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : defaultSearchState)
                 }
             } else if emojiSearchState.isSearching {
@@ -1514,7 +1514,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 }
                 if let stickers = inputData.stickers {
-                    let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty
+                    let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty(hasResults: true)
                     inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: stickerSearchState.isSearching ? .searching : defaultSearchState)
                 }
             } else if stickerSearchState.isSearching {

@@ -8612,7 +8612,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if bannedMediaInput {
-                strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
+                strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil))
                 return
             }
                         
@@ -8754,7 +8754,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 switch displayType {
                     case .tooltip:
                         if displayToast {
-                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: banDescription))
+                            strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: banDescription, customUndoText: nil))
                         } else {
                             var rect: CGRect?
                             let isStickers: Bool = subject == .stickers
@@ -8924,7 +8924,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if bannedMediaInput {
-                strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText()))
+                strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil))
                 return
             }
             
