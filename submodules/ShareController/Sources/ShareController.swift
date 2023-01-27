@@ -40,6 +40,7 @@ public enum ShareControllerExternalStatus {
 }
 
 public enum ShareControllerError {
+    case generic
     case fileTooBig(Int64)
 }
 
@@ -551,6 +552,249 @@ public final class ShareController: ViewController {
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
             })
         }
+        
+        self.controllerNode.tryShare = { [weak self] text, peers in
+            guard let strongSelf = self else {
+                return false
+            }
+            
+            var subject = strongSelf.subject
+            if let segmentedValues = strongSelf.segmentedValues {
+                let selectedValue = segmentedValues[strongSelf.controllerNode.selectedSegmentedIndex]
+                subject = selectedValue.subject
+            }
+            
+            switch subject {
+            case .url:
+                for peer in peers {
+                    var banSendText = false
+                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                        banSendText = true
+                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                        banSendText = true
+                    }
+                    
+                    if banSendText {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            case .text:
+                for peer in peers {
+                    var banSendText = false
+                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                        banSendText = true
+                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                        banSendText = true
+                    }
+                    
+                    if banSendText {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            case .quote:
+                for peer in peers {
+                    var banSendText = false
+                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                        banSendText = true
+                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                        banSendText = true
+                    }
+                    
+                    if banSendText {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            case .image:
+                for peer in peers {
+                    var banSendPhotos = false
+                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendPhotos) != nil {
+                        banSendPhotos = true
+                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendPhotos) {
+                        banSendPhotos = true
+                    }
+                    
+                    if banSendPhotos {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            case let .media(mediaReference):
+                var sendTextAsCaption = false
+                if mediaReference.media is TelegramMediaImage || mediaReference.media is TelegramMediaFile {
+                    sendTextAsCaption = true
+                }
+                
+                for peer in peers {
+                    var banSendType = false
+                    if mediaReference.media is TelegramMediaImage {
+                        if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendPhotos) != nil {
+                            banSendType = true
+                        } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendPhotos) {
+                            banSendType = true
+                        }
+                    } else if let file = mediaReference.media as? TelegramMediaFile {
+                        if file.isSticker || file.isAnimated {
+                            if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendStickers) != nil {
+                                banSendType = true
+                            } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendStickers) {
+                                banSendType = true
+                            }
+                        } else if file.isInstantVideo {
+                            if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                banSendType = true
+                            } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendInstantVideos) {
+                                banSendType = true
+                            }
+                        } else if file.isVoice {
+                            if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendVoice) != nil {
+                                banSendType = true
+                            } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendVoice) {
+                                banSendType = true
+                            }
+                        } else if file.isMusic {
+                            if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendMusic) != nil {
+                                banSendType = true
+                            } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendMusic) {
+                                banSendType = true
+                            }
+                        } else if file.isVideo {
+                            if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendVideos) != nil {
+                                banSendType = true
+                            } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendVideos) {
+                                banSendType = true
+                            }
+                        } else {
+                            if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendFiles) != nil {
+                                banSendType = true
+                            } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendFiles) {
+                                banSendType = true
+                            }
+                        }
+                    }
+                    
+                    if banSendType {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        return false
+                    }
+                    
+                    if !text.isEmpty && !sendTextAsCaption {
+                        var banSendText = false
+                        if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                            banSendText = true
+                        } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                            banSendText = true
+                        }
+                        
+                        if banSendText {
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            
+                            return false
+                        }
+                    }
+                }
+            case .mapMedia:
+                for peer in peers {
+                    var banSendText = false
+                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                        banSendText = true
+                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                        banSendText = true
+                    }
+                    
+                    if banSendText {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            case let .messages(messages):
+                for peer in peers {
+                    if !text.isEmpty {
+                        var banSendText = false
+                        if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                            banSendText = true
+                        } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                            banSendText = true
+                        }
+                        
+                        if banSendText {
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            
+                            return false
+                        }
+                    }
+                    for message in messages {
+                        for media in message.media {
+                            var banSendType = false
+                            if media is TelegramMediaImage {
+                                if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendPhotos) != nil {
+                                    banSendType = true
+                                } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendPhotos) {
+                                    banSendType = true
+                                }
+                            } else if let file = media as? TelegramMediaFile {
+                                if file.isSticker || file.isAnimated {
+                                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendStickers) != nil {
+                                        banSendType = true
+                                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendStickers) {
+                                        banSendType = true
+                                    }
+                                } else if file.isInstantVideo {
+                                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                        banSendType = true
+                                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendInstantVideos) {
+                                        banSendType = true
+                                    }
+                                } else if file.isVoice {
+                                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendVoice) != nil {
+                                        banSendType = true
+                                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendVoice) {
+                                        banSendType = true
+                                    }
+                                } else if file.isMusic {
+                                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendMusic) != nil {
+                                        banSendType = true
+                                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendMusic) {
+                                        banSendType = true
+                                    }
+                                } else if file.isVideo {
+                                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendVideos) != nil {
+                                        banSendType = true
+                                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendVideos) {
+                                        banSendType = true
+                                    }
+                                } else {
+                                    if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendFiles) != nil {
+                                        banSendType = true
+                                    } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendFiles) {
+                                        banSendType = true
+                                    }
+                                }
+                            }
+                            
+                            if banSendType {
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                
+                                return false
+                            }
+                        }
+                    }
+                }
+            case .fromExternal:
+                break
+            }
+            
+            return true
+        }
+        
         self.controllerNode.share = { [weak self] text, peerIds, topicIds, showNames, silently in
             guard let self else {
                 return .complete()
@@ -559,6 +803,7 @@ public final class ShareController: ViewController {
             return self.currentContext.engine.data.get(EngineDataMap(
                 peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
             ))
+            |> deliverOnMainQueue
             |> castError(ShareControllerError.self)
             |> mapToSignal { [weak self] peers -> Signal<ShareState, ShareControllerError> in
                 guard let strongSelf = self else {
@@ -604,7 +849,7 @@ public final class ShareController: ViewController {
                         if banSendText {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            return .complete()
+                            return .fail(.generic)
                         }
                         
                         var replyToMessageId: MessageId?
@@ -637,7 +882,7 @@ public final class ShareController: ViewController {
                         if banSendText {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            return .complete()
+                            return .fail(.generic)
                         }
                         
                         var replyToMessageId: MessageId?
@@ -669,7 +914,7 @@ public final class ShareController: ViewController {
                         if banSendText {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            return .complete()
+                            return .fail(.generic)
                         }
                         
                         var replyToMessageId: MessageId?
@@ -704,7 +949,7 @@ public final class ShareController: ViewController {
                         if banSendPhotos {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            return .complete()
+                            return .fail(.generic)
                         }
                         
                         var replyToMessageId: MessageId?
@@ -778,7 +1023,7 @@ public final class ShareController: ViewController {
                         if banSendType {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            return .complete()
+                            return .fail(.generic)
                         }
                         
                         var replyToMessageId: MessageId?
@@ -810,7 +1055,7 @@ public final class ShareController: ViewController {
                         if banSendText {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             
-                            return .complete()
+                            return .fail(.generic)
                         }
                         
                         var replyToMessageId: MessageId?
@@ -851,7 +1096,7 @@ public final class ShareController: ViewController {
                             if banSendText {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
-                                return .complete()
+                                return .fail(.generic)
                             }
                             
                             messagesToEnqueue.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
@@ -908,7 +1153,7 @@ public final class ShareController: ViewController {
                                 if banSendType {
                                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: restrictedSendingContentsText(peer: peer, presentationData: strongSelf.presentationData), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                     
-                                    return .complete()
+                                    return .fail(.generic)
                                 }
                             }
                             
