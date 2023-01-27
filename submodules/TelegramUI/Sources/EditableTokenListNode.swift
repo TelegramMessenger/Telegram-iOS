@@ -418,12 +418,11 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             }
         }
         
-        if width - currentOffset.x < 90.0 {
+        let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
+        if width - currentOffset.x < placeholderSize.width {
             currentOffset.y += 28.0
             currentOffset.x = sideInset
         }
-        
-        let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
         transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + floor((28.0 - placeholderSize.height) / 2.0)), size: placeholderSize))
         
         let textNodeFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + UIScreenPixel), size: CGSize(width: width - currentOffset.x - sideInset - 8.0, height: 28.0))

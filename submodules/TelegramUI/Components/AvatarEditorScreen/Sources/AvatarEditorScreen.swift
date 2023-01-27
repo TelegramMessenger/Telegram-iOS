@@ -652,9 +652,12 @@ final class AvatarEditorScreenComponent: Component {
                 updateScrollingToItemGroup: {
                 },
                 onScroll: { [weak self] in
-                    if let self, let state = self.state, state.expanded {
-                        state.expanded = false
-                        state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                    if let self {
+                        self.endEditing(true)
+                        if let state = self.state, state.expanded {
+                            state.expanded = false
+                            state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                        }
                     }
                 },
                 chatPeerId: nil,
@@ -776,9 +779,12 @@ final class AvatarEditorScreenComponent: Component {
                 updateScrollingToItemGroup: {
                 },
                 onScroll: { [weak self] in
-                    if let self, let state = self.state, state.expanded {
-                        state.expanded = false
-                        state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                    if let self {
+                        self.endEditing(true)
+                        if let state = self.state, state.expanded {
+                            state.expanded = false
+                            state.updated(transition: Transition(animation: .curve(duration: 0.45, curve: .spring)))
+                        }
                     }
                 },
                 chatPeerId: nil,
@@ -1033,6 +1039,11 @@ final class AvatarEditorScreenComponent: Component {
                 transition.setAlpha(view: backgroundView, alpha: state.editingColor ? 0.0 : 1.0)
             }
             
+            var colorPickerBottomInset: CGFloat = 0.0
+            if environment.deviceMetrics.type != .tablet {
+                colorPickerBottomInset = environment.safeInsets.bottom
+            }
+            
             let colorPickerSize = self.colorPickerView.update(
                 transition: transition,
                 component: AnyComponent(
@@ -1040,6 +1051,7 @@ final class AvatarEditorScreenComponent: Component {
                         theme: environment.theme,
                         strings: environment.strings,
                         isVisible: state.editingColor,
+                        bottomInset: colorPickerBottomInset,
                         colors: state.selectedBackground.colors,
                         colorsChanged: { [weak state] colors in
                             if let state {
@@ -1066,7 +1078,7 @@ final class AvatarEditorScreenComponent: Component {
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
             let colorPickerFrame = CGRect(origin: .zero, size: colorPickerSize)
             if let colorPickerView = self.colorPickerView.view {
@@ -1534,5 +1546,9 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
     
     override public func viewDidLoad() {
         super.viewDidLoad()
+    }
+    
+    public override func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        return CGSize(width: 390.0, height: 730.0)
     }
 }
