@@ -1278,6 +1278,9 @@ final class AvatarEditorScreenComponent: Component {
                         }
                         
                         image = context.generateImage()
+                        if file.isCustomTemplateEmoji {
+                            image = generateTintedImage(image: image, color: .white)
+                        }
                     default:
                         return
                     }
