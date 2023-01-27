@@ -1903,7 +1903,7 @@ final class StorageUsageScreenComponent: Component {
                     component: AnyComponent(StorageKeepSizeComponent(
                         theme: environment.theme,
                         strings: environment.strings,
-                        value: cacheSettings?.defaultCacheStorageLimitGigabytes ?? 32,
+                        value: cacheSettings?.defaultCacheStorageLimitGigabytes ?? 16,
                         updateValue: { [weak self] value in
                             guard let self, let component = self.component else {
                                 return
@@ -3143,7 +3143,7 @@ final class StorageUsageScreenComponent: Component {
                 for value in presetValues {
                     let optionText: String
                     if value == Int32.max {
-                        optionText = presentationData.strings.ClearCache_Forever
+                        optionText = presentationData.strings.ClearCache_Never
                     } else {
                         optionText = timeIntervalString(strings: presentationData.strings, value: value)
                     }
