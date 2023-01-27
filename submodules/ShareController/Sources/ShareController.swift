@@ -778,6 +778,12 @@ public final class ShareController: ViewController {
                                         banSendType = true
                                     }
                                 }
+                            } else if media is TelegramMediaContact || media is TelegramMediaMap {
+                                if case let .channel(channel) = peer, channel.hasBannedPermission(.banSendText) != nil {
+                                    banSendType = true
+                                } else if case let .legacyGroup(group) = peer, group.hasBannedPermission(.banSendText) {
+                                    banSendType = true
+                                }
                             }
                             
                             if banSendType {
