@@ -113,16 +113,18 @@ class ChatImageGalleryItem: GalleryItem {
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
+    let translateToLanguage: String?
     let displayInfoOnTop: Bool
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction, Message) -> Void
     let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, translateToLanguage: String? = nil, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
         self.location = location
+        self.translateToLanguage = translateToLanguage
         self.displayInfoOnTop = displayInfoOnTop
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -132,7 +134,7 @@ class ChatImageGalleryItem: GalleryItem {
     func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
-        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
+        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop, translateToLanguage: self.translateToLanguage)
         for media in self.message.media {
             if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia, let image = fullMedia as? TelegramMediaImage {
                 node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
@@ -171,7 +173,7 @@ class ChatImageGalleryItem: GalleryItem {
             if self.displayInfoOnTop {
                 node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
             }
-            node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
+            node.setMessage(self.message, displayInfo: !self.displayInfoOnTop, translateToLanguage: self.translateToLanguage)
         }
     }
     
@@ -198,6 +200,7 @@ class ChatImageGalleryItem: GalleryItem {
 final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private var message: Message?
+    private var translateToLanguage: String?
     private let presentationData: PresentationData
     
     private let imageNode: TransformImageNode
@@ -322,10 +325,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
-    fileprivate func setMessage(_ message: Message, displayInfo: Bool) {
+    fileprivate func setMessage(_ message: Message, displayInfo: Bool, translateToLanguage: String?) {
         self.message = message
+        self.translateToLanguage = translateToLanguage
         self.imageNode.captureProtected = message.isCopyProtected()
-        self.footerContentNode.setMessage(message, displayInfo: displayInfo)
+        self.footerContentNode.setMessage(message, displayInfo: displayInfo, translateToLanguage: translateToLanguage)
     }
     
     fileprivate func setImage(userLocation: MediaResourceUserLocation, imageReference: ImageMediaReference) {

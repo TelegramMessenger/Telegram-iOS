@@ -612,7 +612,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    func setMessage(_ message: Message, displayInfo: Bool = true) {
+    func setMessage(_ message: Message, displayInfo: Bool = true, translateToLanguage: String? = nil) {
         self.currentMessage = message
         
         let canDelete: Bool
@@ -734,7 +734,17 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     break
                 }
             }
-            messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities, message: message)
+            var text = message.text
+            if let translateToLanguage, !text.isEmpty {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
+                        text = attribute.text
+                        entities = attribute.entities
+                        break
+                    }
+                }
+            }
+            messageText = galleryCaptionStringWithAppliedEntities(text, entities: entities, message: message)
         }
                         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
