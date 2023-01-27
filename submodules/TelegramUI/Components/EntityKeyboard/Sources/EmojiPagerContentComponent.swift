@@ -6865,7 +6865,9 @@ public final class EmojiPagerContentComponent: Component {
             }
             |> take(1)
         } else if isProfilePhotoEmojiSelection {
-            //orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji)
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji)
+        } else if isGroupPhotoEmojiSelection {
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedGroupPhotoEmoji)
         }
         
         let availableReactions: Signal<AvailableReactions?, NoError>

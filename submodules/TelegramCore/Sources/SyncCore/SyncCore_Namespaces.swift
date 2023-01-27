@@ -77,6 +77,8 @@ public struct Namespaces {
         public static let CloudTopReactions: Int32 = 20
         public static let CloudEmojiCategories: Int32 = 21
         public static let CloudEmojiStatusCategories: Int32 = 22
+        public static let CloudFeaturedProfilePhotoEmoji: Int32 = 23
+        public static let CloudFeaturedGroupPhotoEmoji: Int32 = 24
     }
     
     public struct CachedItemCollection {

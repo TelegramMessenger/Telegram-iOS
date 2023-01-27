@@ -1196,6 +1196,8 @@ public class Account {
             self.managedOperationsDisposable.add(managedAllPremiumStickers(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(managedRecentStatusEmoji(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(managedFeaturedStatusEmoji(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedProfilePhotoEmoji(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedGroupPhotoEmoji(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(managedRecentReactions(postbox: self.postbox, network: self.network).start())
             self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(self.managedTopReactionsDisposable)
