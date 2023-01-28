@@ -164,7 +164,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             let currentTime = CMTimeGetSeconds(time)
             
             var tintColor: UIColor?
-            if let _ = self.file?.isCustomTemplateEmoji {
+            if let file = self.file, file.isCustomTemplateEmoji {
                 tintColor = .white
             }
             
