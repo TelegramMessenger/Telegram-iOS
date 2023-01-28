@@ -2094,11 +2094,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     strongSelf.otherPeerName = otherPeerName
                     
                     if !hadProducts {
-                        if let _ = products.first(where: { $0.isCurrent }) {
-                            strongSelf.selectedProductId = strongSelf.products?.first?.id
-                        } else {
-                            strongSelf.selectedProductId = strongSelf.products?.last?.id
-                        }
+                        strongSelf.selectedProductId = strongSelf.products?.first?.id
                         
                         for (_, video) in promoConfiguration.videos {
                             strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())

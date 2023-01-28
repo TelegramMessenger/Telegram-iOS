@@ -1397,14 +1397,29 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         scrollAnimationCurve = .Spring(duration: 0.4)
                     } else {
                         let wasPlaying = strongSelf.appliedPlayingMessageId != nil
-                        
                         if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let (currentlyPlayingMessageId, currentlyPlayingVideo) = currentlyPlayingMessageIdAndType {
                             if isFirstTime {
                             } else if case let .peer(peerId) = chatLocation, currentlyPlayingMessageId.id.peerId != peerId {
                             } else {
-                                if wasPlaying || currentlyPlayingVideo {
-                                    updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
-                                    scrollAnimationCurve = .Spring(duration: 0.4)
+                                var isChat = false
+                                if case .peer = chatLocation {
+                                    isChat = true
+                                }
+                                
+                                if (isChat && (wasPlaying || currentlyPlayingVideo)) || (!isChat && !wasPlaying && currentlyPlayingVideo) {
+                                    var currentIsVisible = true
+                                    if let appliedPlayingMessageId = strongSelf.appliedPlayingMessageId {
+                                        currentIsVisible = false
+                                        strongSelf.forEachVisibleMessageItemNode({ view in
+                                            if view.item?.message.id ==  appliedPlayingMessageId.id {
+                                                currentIsVisible = true
+                                            }
+                                        })
+                                    }
+                                    if currentIsVisible {
+                                        updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
+                                        scrollAnimationCurve = .Spring(duration: 0.4)
+                                    }
                                 }
                             }
                         }
