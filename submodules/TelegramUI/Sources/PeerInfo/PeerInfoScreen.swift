@@ -6919,11 +6919,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 })
             }
         } else if case .custom = mode {
-            signal = self.context.engine.contacts.updateContactPhoto(peerId: self.peerId, resource: resource, videoResource: nil, videoStartTimestamp: nil, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
+            signal = self.context.engine.contacts.updateContactPhoto(peerId: self.peerId, resource: resource, videoResource: nil, videoStartTimestamp: nil, markup: nil, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
             })
         } else if case .suggest = mode {
-            signal = self.context.engine.contacts.updateContactPhoto(peerId: self.peerId, resource: resource, videoResource: nil, videoStartTimestamp: nil, mode: .suggest, mapResourceToAvatarSizes: { resource, representations in
+            signal = self.context.engine.contacts.updateContactPhoto(peerId: self.peerId, resource: resource, videoResource: nil, videoStartTimestamp: nil, markup: nil, mode: .suggest, mapResourceToAvatarSizes: { resource, representations in
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
             })
         } else {
@@ -7030,85 +7030,109 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
         }
         
+        var markup: UploadPeerPhotoMarkup? = nil
+        if let fileId = adjustments?.documentId, let backgroundColors = adjustments?.colors as? [Int32], fileId != 0 {
+            if let packId = adjustments?.stickerPackId, let accessHash = adjustments?.stickerPackAccessHash, packId != 0 {
+                markup = .sticker(packReference: .id(id: packId, accessHash: accessHash), fileId: fileId, backgroundColors: backgroundColors)
+            } else {
+                markup = .emoji(fileId: fileId, backgroundColors: backgroundColors)
+            }
+        }
+        
+        var uploadVideo = true
+        if let _ = markup {
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let uploadVideoValue = data["upload_markup_video"] as? Bool, uploadVideoValue {
+                uploadVideo = true
+            } else {
+                uploadVideo = false
+            }
+        }
+        
         let account = self.context.account
         let context = self.context
-        let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
-            let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
-                if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                    return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
-                } else {
-                    return nil
-                }
-            }
-            let uploadInterface = LegacyLiveUploadInterface(context: context)
-            let signal: SSignal
-            if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
-                let durationSignal: SSignal = SSignal(generator: { subscriber in
-                    let disposable = (entityRenderer.duration()).start(next: { duration in
-                        subscriber.putNext(duration)
-                        subscriber.putCompletion()
-                    })
-                    
-                    return SBlockDisposable(block: {
-                        disposable.dispose()
-                    })
-                })
-                signal = durationSignal.map(toSignal: { duration -> SSignal in
-                    if let duration = duration as? Double {
-                        return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+        
+        let videoResource: Signal<TelegramMediaResource?, UploadPeerPhotoError>
+        if uploadVideo {
+            videoResource = Signal<TelegramMediaResource?, UploadPeerPhotoError> { [weak self] subscriber in
+                let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                    if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                        return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
                     } else {
-                        return SSignal.single(nil)
-                    }
-                })
-               
-            } else if let asset = asset as? AVAsset {
-                signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
-            } else {
-                signal = SSignal.complete()
-            }
-            
-            let signalDisposable = signal.start(next: { next in
-                if let result = next as? TGMediaVideoConversionResult {
-                    if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
-                        account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-                    }
-                    
-                    if let timestamp = videoStartTimestamp {
-                        videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
-                    }
-                    
-                    var value = stat()
-                    if stat(result.fileURL.path, &value) == 0 {
-                        if let data = try? Data(contentsOf: result.fileURL) {
-                            let resource: TelegramMediaResource
-                            if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
-                                resource = LocalFileMediaResource(fileId: liveUploadData.id)
-                            } else {
-                                resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                            }
-                            account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                            subscriber.putNext(resource)
-                        }
-                    }
-                    subscriber.putCompletion()
-                } else if let strongSelf = self, let progress = next as? NSNumber {
-                    Queue.mainQueue().async {
-                        strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.45))
-                        if let (layout, navigationHeight) = strongSelf.validLayout {
-                            strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-                        }
+                        return nil
                     }
                 }
-            }, error: { _ in
-            }, completed: nil)
-            
-            let disposable = ActionDisposable {
-                signalDisposable?.dispose()
+                let uploadInterface = LegacyLiveUploadInterface(context: context)
+                let signal: SSignal
+                if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                    let durationSignal: SSignal = SSignal(generator: { subscriber in
+                        let disposable = (entityRenderer.duration()).start(next: { duration in
+                            subscriber.putNext(duration)
+                            subscriber.putCompletion()
+                        })
+                        
+                        return SBlockDisposable(block: {
+                            disposable.dispose()
+                        })
+                    })
+                    signal = durationSignal.map(toSignal: { duration -> SSignal in
+                        if let duration = duration as? Double {
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                        } else {
+                            return SSignal.single(nil)
+                        }
+                    })
+                    
+                } else if let asset = asset as? AVAsset {
+                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                } else {
+                    signal = SSignal.complete()
+                }
+                
+                let signalDisposable = signal.start(next: { next in
+                    if let result = next as? TGMediaVideoConversionResult {
+                        if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                            account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                        }
+                        
+                        if let timestamp = videoStartTimestamp {
+                            videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
+                        }
+                        
+                        var value = stat()
+                        if stat(result.fileURL.path, &value) == 0 {
+                            if let data = try? Data(contentsOf: result.fileURL) {
+                                let resource: TelegramMediaResource
+                                if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                    resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                } else {
+                                    resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                                }
+                                account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                subscriber.putNext(resource)
+                            }
+                        }
+                        subscriber.putCompletion()
+                    } else if let strongSelf = self, let progress = next as? NSNumber {
+                        Queue.mainQueue().async {
+                            strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.45))
+                            if let (layout, navigationHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                            }
+                        }
+                    }
+                }, error: { _ in
+                }, completed: nil)
+                
+                let disposable = ActionDisposable {
+                    signalDisposable?.dispose()
+                }
+                
+                return ActionDisposable {
+                    disposable.dispose()
+                }
             }
-            
-            return ActionDisposable {
-                disposable.dispose()
-            }
+        } else {
+            videoResource = .single(nil)
         }
         
         var dismissStatus: (() -> Void)?
@@ -7131,17 +7155,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         let peerId = self.peerId
         let isSettings = self.isSettings
-        self.updateAvatarDisposable.set((signal
+        self.updateAvatarDisposable.set((videoResource
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-            var markup: UploadPeerPhotoMarkup? = nil
             if isSettings {
-                if let fileId = adjustments?.documentId, let backgroundColors = adjustments?.colors as? [Int32], fileId != 0 {
-                    if let packId = adjustments?.stickerPackId, let accessHash = adjustments?.stickerPackAccessHash, packId != 0 {
-                        markup = .sticker(packReference: .id(id: packId, accessHash: accessHash), fileId: fileId, backgroundColors: backgroundColors)
-                    } else {
-                        markup = .emoji(fileId: fileId, backgroundColors: backgroundColors)
-                    }
-                }
                 if case .fallback = mode {
                     return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
@@ -7152,15 +7168,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })
                 }
             } else if case .custom = mode {
-                return context.engine.contacts.updateContactPhoto(peerId: peerId, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
+                return context.engine.contacts.updateContactPhoto(peerId: peerId, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             } else if case .suggest = mode {
-                return context.engine.contacts.updateContactPhoto(peerId: peerId, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mode: .suggest, mapResourceToAvatarSizes: { resource, representations in
+                return context.engine.contacts.updateContactPhoto(peerId: peerId, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mode: .suggest, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             } else {
-                return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: context.engine.peers.uploadedPeerVideo(resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
+                return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: videoResource.flatMap { context.engine.peers.uploadedPeerVideo(resource: $0) |> map(Optional.init) }, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             }
@@ -7418,7 +7434,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let postbox = strongSelf.context.account.postbox
             let signal: Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError>
             if case .custom = mode {
-                signal = strongSelf.context.engine.contacts.updateContactPhoto(peerId: strongSelf.peerId, resource: nil, videoResource: nil, videoStartTimestamp: nil, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
+                signal = strongSelf.context.engine.contacts.updateContactPhoto(peerId: strongSelf.peerId, resource: nil, videoResource: nil, videoStartTimestamp: nil, markup: nil, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
                 })
             } else if case .fallback = mode {
@@ -8507,7 +8523,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.updateAvatarDisposable.set((strongSelf.context.engine.contacts.updateContactPhoto(peerId: strongSelf.peerId, resource: nil, videoResource: nil, videoStartTimestamp: nil, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
+                strongSelf.updateAvatarDisposable.set((strongSelf.context.engine.contacts.updateContactPhoto(peerId: strongSelf.peerId, resource: nil, videoResource: nil, videoStartTimestamp: nil, markup: nil, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
                     mapResourceToAvatarSizes(postbox: strongSelf.context.account.postbox, resource: resource, representations: representations)
                 })
                 |> deliverOnMainQueue).start(next: { [weak self] _ in

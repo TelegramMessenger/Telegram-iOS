@@ -142,6 +142,15 @@ public enum AvatarGalleryEntry: Equatable {
         }
     }
     
+    public var emojiMarkup: TelegramMediaImage.EmojiMarkup? {
+        switch self {
+            case .topImage:
+                return nil
+            case let .image(_, _, _, _, _, _, _, _, _, _, _, markup):
+                return markup
+        }
+    }
+    
     public var indexData: GalleryItemIndexData? {
         switch self {
             case let .topImage(_, _, _, indexData, _, _):
@@ -343,11 +352,16 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                         let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                         if result.isEmpty, let first = initialEntries.first {
                             var videoRepresentations: [VideoRepresentationWithReference] = first.videoRepresentations
+                            var emojiMarkup: TelegramMediaImage.EmojiMarkup? = first.emojiMarkup
                             let isPersonal = first.representations.first?.representation.isPersonal == true
                             if videoRepresentations.isEmpty, !isPersonal {
                                 videoRepresentations = photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) })
                             }
-                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, videoRepresentations, peer, secondEntry != nil ? 0 : photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, false, photo.image.emojiMarkup))
+                            if emojiMarkup == nil, !isPersonal {
+                                emojiMarkup = photo.image.emojiMarkup
+                            }
+                            
+                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, videoRepresentations, peer, secondEntry != nil ? 0 : photo.date, indexData, photo.messageId, first.immediateThumbnailData ?? photo.image.immediateThumbnailData, nil, false, emojiMarkup))
                         } else {
                             result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil, photo.image.id == lastEntry?.id, photo.image.emojiMarkup))
                         }

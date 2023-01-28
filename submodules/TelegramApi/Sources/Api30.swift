@@ -4677,6 +4677,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getEmojiProfilePhotoGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(564480243)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getEmojiProfilePhotoGroups", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.EmojiGroups? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.EmojiGroups?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.EmojiGroups
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getEmojiStatusGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
                     let buffer = Buffer()
                     buffer.appendInt32(785209037)
@@ -7764,15 +7779,16 @@ public extension Api.functions.photos {
                 }
 }
 public extension Api.functions.photos {
-                static func uploadContactProfilePhoto(flags: Int32, userId: Api.InputUser, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                static func uploadContactProfilePhoto(flags: Int32, userId: Api.InputUser, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?, videoEmojiMarkup: Api.VideoSize?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1189444673)
+                    buffer.appendInt32(-515093903)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "photos.uploadContactProfilePhoto", parameters: [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("file", String(describing: file)), ("video", String(describing: video)), ("videoStartTs", String(describing: videoStartTs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
+                    if Int(flags) & Int(1 << 5) != 0 {videoEmojiMarkup!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "photos.uploadContactProfilePhoto", parameters: [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("file", String(describing: file)), ("video", String(describing: video)), ("videoStartTs", String(describing: videoStartTs)), ("videoEmojiMarkup", String(describing: videoEmojiMarkup))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
                         let reader = BufferReader(buffer)
                         var result: Api.photos.Photo?
                         if let signature = reader.readInt32() {
