@@ -534,7 +534,7 @@ func _internal_searchEmoji(account: Account, query: [String], scope: SearchStick
             return account.postbox.transaction { transaction -> (items: [FoundStickerItem], isFinalResult: Bool) in
                 if let (fileItems, hash) = result {
                     var result: [FoundStickerItem] = []
-                    let currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
+                    var currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
                     
                     var otherItems: [FoundStickerItem] = []
                     
@@ -542,13 +542,12 @@ func _internal_searchEmoji(account: Account, query: [String], scope: SearchStick
                         otherItems.append(item)
                     }
                 
-                    var foundItems: [FoundStickerItem] = []
-                
                     var files: [TelegramMediaFile] = []
                     for file in fileItems {
                         files.append(file)
                         if !currentItemIds.contains(file.fileId) {
-                            foundItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                            currentItemIds.insert(file.fileId)
+                            otherItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                         }
                     }
                 
