@@ -17,7 +17,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import StickerResources
 
-private let maxVideoLoopCount = 3
+private let maxVideoLoopCount = 2
 
 public final class AvatarVideoNode: ASDisplayNode {
     private let context: AccountContext
@@ -133,6 +133,14 @@ public final class AvatarVideoNode: ASDisplayNode {
                     }
                 }
             }
+            itemLayer.onLoop = { [weak self] in
+                if let self {
+                    self.videoLoopCount += 1
+                    if self.videoLoopCount >= maxVideoLoopCount {
+                        self.itemLayer?.isVisibleForAnimations = false
+                    }
+                }
+            }
             itemLayer.layerTintColor = UIColor.white.cgColor
             
             self.itemLayer = itemLayer
@@ -223,7 +231,7 @@ public final class AvatarVideoNode: ASDisplayNode {
             }
         }
         self.animationNode?.visibility = isVisible
-        if isVisible, let videoContent = self.videoContent, self.videoLoopCount != maxVideoLoopCount {
+        if isVisible, let videoContent = self.videoContent, self.videoLoopCount < maxVideoLoopCount {
             if self.videoNode == nil {
                 let context = self.context
                 let mediaManager = context.sharedContext.mediaManager
@@ -234,7 +242,7 @@ public final class AvatarVideoNode: ASDisplayNode {
                 videoNode.playbackCompleted = { [weak self] in
                     if let strongSelf = self {
                         strongSelf.videoLoopCount += 1
-                        if strongSelf.videoLoopCount == maxVideoLoopCount {
+                        if strongSelf.videoLoopCount >= maxVideoLoopCount {
                             if let videoNode = strongSelf.videoNode {
                                 strongSelf.videoNode = nil
                                 videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
@@ -279,7 +287,9 @@ public final class AvatarVideoNode: ASDisplayNode {
             self.videoNode = nil
             videoNode.removeFromSupernode()
         }
-        self.itemLayer?.isVisibleForAnimations = isVisible
+        if self.videoLoopCount < maxVideoLoopCount {
+            self.itemLayer?.isVisibleForAnimations = isVisible
+        }
     }
     
     public func updateLayout(size: CGSize, cornerRadius: CGFloat, transition: ContainedViewLayoutTransition) {

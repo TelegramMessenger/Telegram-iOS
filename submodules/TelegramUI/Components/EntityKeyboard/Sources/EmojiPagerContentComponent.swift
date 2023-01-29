@@ -3157,6 +3157,7 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             public var onContentsUpdate: () -> Void = {}
+            public var onLoop: () -> Void = {}
         
             public init(
                 item: Item,
@@ -3412,6 +3413,10 @@ public final class EmojiPagerContentComponent: Component {
                     self.displayPlaceholder = false
                     self.onUpdateDisplayPlaceholder(false, 0.2)
                     self.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                }
+                
+                if didLoop {
+                    self.onLoop()
                 }
             }
         }
