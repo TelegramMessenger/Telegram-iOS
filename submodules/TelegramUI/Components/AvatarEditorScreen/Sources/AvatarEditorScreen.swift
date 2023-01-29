@@ -867,7 +867,7 @@ final class AvatarEditorScreenComponent: Component {
             let navigationDoneButtonSize = self.navigationDoneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.expanded && !backgroundIsBright ? .white : environment.theme.rootController.navigationBar.accentTextColor)),
+                    content: AnyComponent(Text(text: component.peerType == .suggest ? strings.AvatarEditor_Suggest : strings.AvatarEditor_Set, font: Font.semibold(17.0), color: state.expanded && !backgroundIsBright ? .white : environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
                         guard let self else {
                             return

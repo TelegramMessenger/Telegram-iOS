@@ -6878,10 +6878,12 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         let searchCategories: Signal<EmojiSearchCategories?, NoError>
-        if isEmojiSelection || isReactionSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+        if isEmojiSelection || isReactionSelection {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .emoji)
         } else if isStatusSelection {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .status)
+        } else if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .avatar)
         } else {
             searchCategories = .single(nil)
         }
@@ -7802,8 +7804,12 @@ public final class EmojiPagerContentComponent: Component {
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let searchCategories: Signal<EmojiSearchCategories?, NoError> = context.engine.stickers.emojiSearchCategories(kind: .emoji)
-        
+        let searchCategories: Signal<EmojiSearchCategories?, NoError>
+        if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .avatar)
+        } else {
+            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .emoji)
+        }
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
             hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),

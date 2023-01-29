@@ -8724,6 +8724,7 @@ Sorry for the inconvenience.";
 "AvatarEditor.SetGroupPhoto" = "Set as Group Photo";
 "AvatarEditor.SetChannelPhoto" = "Set as Channel Photo";
 "AvatarEditor.Set" = "Set";
+"AvatarEditor.Suggest" = "Suggest";
 
 "Premium.UpgradeDescription" = "Your current **Telegram Premium** plan can be upgraded at a **discount**.";
 "Premium.CurrentPlan" = "your current plan";
