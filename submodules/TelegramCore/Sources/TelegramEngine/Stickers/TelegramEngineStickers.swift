@@ -241,7 +241,38 @@ func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds
             }
         }
         
-        return network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
+        var signals: [Signal<[Api.Document]?, NoError>] = []
+        var remainingIds = Array(unknownIds)
+        while !remainingIds.isEmpty {
+            let partIdCount = min(100, remainingIds.count)
+            let partIds = remainingIds.prefix(partIdCount)
+            remainingIds.removeFirst(partIdCount)
+            signals.append(network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(partIds)))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
+                return .single(nil)
+            })
+        }
+        
+        return combineLatest(signals)
+        |> mapToSignal { documentSets -> Signal<[Int64: TelegramMediaFile], NoError> in
+            return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+                var resultFiles: [Int64: TelegramMediaFile] = cachedFiles
+                for result in documentSets {
+                    if let result = result {
+                        for document in result {
+                            if let file = telegramMediaFileFromApiDocument(document) {
+                                resultFiles[file.fileId.id] = file
+                                transaction.storeMediaIfNotPresent(media: file)
+                            }
+                        }
+                    }
+                }
+                return resultFiles
+            }
+        }
+        
+        /*return network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
             return .single(nil)
@@ -260,6 +291,6 @@ func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds
                 }
                 return resultFiles
             }
-        }
+        }*/
     }
 }
