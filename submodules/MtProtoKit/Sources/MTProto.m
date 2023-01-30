@@ -769,6 +769,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (_transport != transport) {
             return;
         }
+        if (_useUnauthorizedMode) {
+            return;
+        }
         
         if (hasConnectionProblems) {
             [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
