@@ -226,7 +226,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                             if remainingSeconds <= 0 {
                                 text += "[" + presentationData.strings.TwoStepAuth_ResetAction + "](reset)"
                             } else {
-                                text.append(presentationData.strings.TwoStepAuth_ResetPendingText(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string)
+                                text.append(presentationData.strings.TwoStepAuth_ResetPendingText(timeIntervalString(strings: presentationData.strings, value: remainingSeconds, usage: .afterTime)).string)
                                 text.append("\n[\(presentationData.strings.TwoStepAuth_CancelResetTitle)](declineReset)")
                             }
                         } else {
