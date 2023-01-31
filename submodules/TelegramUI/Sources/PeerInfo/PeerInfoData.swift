@@ -18,12 +18,17 @@ enum PeerInfoUpdatingAvatar {
     case image(TelegramMediaImageRepresentation)
 }
 
+enum AvatarUploadProgress {
+    case value(CGFloat)
+    case indefinite
+}
+
 final class PeerInfoState {
     let isEditing: Bool
     let selectedMessageIds: Set<MessageId>?
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
-    let avatarUploadProgress: CGFloat?
+    let avatarUploadProgress: AvatarUploadProgress?
     let highlightedButton: PeerInfoHeaderButtonKey?
     
     init(
@@ -31,7 +36,7 @@ final class PeerInfoState {
         selectedMessageIds: Set<MessageId>?,
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
-        avatarUploadProgress: CGFloat?,
+        avatarUploadProgress: AvatarUploadProgress?,
         highlightedButton: PeerInfoHeaderButtonKey?
     ) {
         self.isEditing = isEditing
@@ -86,7 +91,7 @@ final class PeerInfoState {
         )
     }
     
-    func withAvatarUploadProgress(_ avatarUploadProgress: CGFloat?) -> PeerInfoState {
+    func withAvatarUploadProgress(_ avatarUploadProgress: AvatarUploadProgress?) -> PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,

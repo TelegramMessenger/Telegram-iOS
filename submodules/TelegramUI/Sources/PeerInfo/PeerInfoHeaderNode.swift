@@ -712,7 +712,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         transition.updateAlpha(node: self, alpha: 1.0 - fraction)
     }
     
-    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: CGFloat?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
+    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
             return
         }
@@ -741,7 +741,20 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             if let updatingAvatar = updatingAvatar {
                 overlayHidden = false
                 
-                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true, animateRotation: true))
+                var cancelEnabled = true
+                let progressValue: CGFloat?
+                if let uploadProgress {
+                    switch uploadProgress {
+                    case let .value(value):
+                        progressValue = max(0.027, value)
+                    case .indefinite:
+                        progressValue = nil
+                        cancelEnabled = false
+                    }
+                } else {
+                    progressValue = 0.027
+                }
+                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: progressValue, cancelEnabled: cancelEnabled, animateRotation: true))
                 
                 if case let .image(representation) = updatingAvatar {
                     if representation != self.currentRepresentation {
@@ -831,7 +844,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     }
     
     var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: CGFloat?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
+    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
             return
         }
