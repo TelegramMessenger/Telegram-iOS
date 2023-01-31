@@ -716,8 +716,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (void)transportConnectionFailed:(MTTransport *)transport scheme:(MTTransportScheme *)scheme {
     [[MTProto managerQueue] dispatchOnQueue:^{
-        if (transport != _transport)
+        if (transport != _transport) {
             return;
+        }
+        if (_useUnauthorizedMode) {
+            return;
+        }
         [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
     }];
 }
@@ -2049,7 +2053,9 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 }
                 MTShortLog(@"[MTProto#%p@%p incoming data parse error, header: %d:%@]", self, _context, (int)decryptedData.length, dumpHexString(decryptedData, 128));
                 
-                [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
+                if (!_useUnauthorizedMode) {
+                    [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
+                }
                 [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
                 
                 [self resetSessionInfo];
@@ -2075,7 +2081,9 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 decodeResult(transactionId, false);
             
             [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
-            [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
+            if (!_useUnauthorizedMode) {
+                [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
+            }
             
             [self requestSecureTransportReset];
         }
