@@ -6997,6 +6997,7 @@ public final class EmojiPagerContentComponent: Component {
             var recentStatusEmoji: OrderedItemListView?
             var topReactions: OrderedItemListView?
             var recentReactions: OrderedItemListView?
+            var featuredAvatarEmoji: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.LocalRecentEmoji {
                     recentEmoji = orderedView
@@ -7008,6 +7009,10 @@ public final class EmojiPagerContentComponent: Component {
                     recentReactions = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudTopReactions {
                     topReactions = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji {
+                    featuredAvatarEmoji = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji {
+                    featuredAvatarEmoji = orderedView
                 }
             }
             
@@ -7445,9 +7450,66 @@ public final class EmojiPagerContentComponent: Component {
                         }
                     }
                 }
+            } else if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+                var existingIds = Set<MediaId>()
+                
+                let groupId = "recent"
+                itemGroupIndexById[groupId] = itemGroups.count
+                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: topStatusTitle?.uppercased(), subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: []))
+                                
+                if let featuredAvatarEmoji = featuredAvatarEmoji {
+                    for item in featuredAvatarEmoji.items {
+                        guard let item = item.contents.get(RecentMediaItem.self) else {
+                            continue
+                        }
+                        
+                        let file = item.media
+                        if existingIds.contains(file.fileId) {
+                            continue
+                        }
+                        existingIds.insert(file.fileId)
+                        
+                        let resultItem: EmojiPagerContentComponent.Item
+                        
+                        var tintMode: Item.TintMode = .none
+                        if file.isCustomTemplateEmoji {
+                            tintMode = .accent
+                        }
+                        for attribute in file.attributes {
+                            if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                                switch packReference {
+                                case let .id(id, _):
+                                    if id == 773947703670341676 || id == 2964141614563343 {
+                                        tintMode = .accent
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                        }
+                        
+                        let animationData = EntityKeyboardAnimationData(file: file)
+                        resultItem = EmojiPagerContentComponent.Item(
+                            animationData: animationData,
+                            content: .animation(animationData),
+                            itemFile: file,
+                            subgroupId: nil,
+                            icon: .none,
+                            tintMode: tintMode
+                        )
+                        
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            if itemGroups[groupIndex].items.count >= (5 + 8) * 8 {
+                                break
+                            }
+                            
+                            itemGroups[groupIndex].items.append(resultItem)
+                        }
+                    }
+                }
             }
             
-            if let recentEmoji = recentEmoji, !isReactionSelection, !isStatusSelection {
+            if let recentEmoji = recentEmoji, !isReactionSelection, !isStatusSelection, !isProfilePhotoEmojiSelection, !isGroupPhotoEmojiSelection {
                 for item in recentEmoji.items {
                     guard let item = item.contents.get(RecentEmojiItem.self) else {
                         continue
