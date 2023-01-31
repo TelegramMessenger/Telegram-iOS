@@ -227,10 +227,11 @@ static int32_t fixedTimeDifferenceValue = 0;
         _apiEnvironment = apiEnvironment;
         _isTestingEnvironment = isTestingEnvironment;
         _useTempAuthKeys = useTempAuthKeys;
-#if DEBUG
-        _tempKeyExpiration = 30;
-#else
+        
         _tempKeyExpiration = 24 * 60 * 60;
+        
+#if DEBUG
+        //_tempKeyExpiration = 30;
 #endif
         
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];
