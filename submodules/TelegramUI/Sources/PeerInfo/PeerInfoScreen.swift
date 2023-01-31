@@ -7334,6 +7334,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     completion(nil)
                 }
             }
+            var isFromEditor = false
             mixin.requestAvatarEditor = { [weak self] imageCompletion, videoCompletion in
                 guard let strongSelf = self, let imageCompletion, let videoCompletion else {
                     return
@@ -7356,6 +7357,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 controller.imageCompletion = imageCompletion
                 controller.videoCompletion = videoCompletion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
+                isFromEditor = true
             }
 
             if let confirmationTextPhoto, let confirmationAction {
@@ -7371,7 +7373,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if let confirmationTextVideo, let confirmationAction {
                 mixin.willFinishWithVideo = { [weak self] image, commit in
                     if let strongSelf = self, let image {
-                        let controller = photoUpdateConfirmationController(context: strongSelf.context, peer: peer, image: image, text: confirmationTextVideo, doneTitle: confirmationAction, commit: {
+                        let controller = photoUpdateConfirmationController(context: strongSelf.context, peer: peer, image: image, text: confirmationTextVideo, doneTitle: confirmationAction, isDark: !isFromEditor, commit: {
                             commit?()
                         })
                         (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.presentInGlobalOverlay(controller)

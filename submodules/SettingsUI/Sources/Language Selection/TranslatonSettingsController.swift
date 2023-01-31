@@ -77,7 +77,13 @@ private func translationSettingsControllerEntries(theme: PresentationTheme, stri
     if let ignoredLanguages = settings.ignoredLanguages {
         selectedLanguages = Set(ignoredLanguages)
     } else {
-        selectedLanguages = Set([strings.baseLanguageCode])
+        var langCode = strings.baseLanguageCode
+        if langCode == "nb" {
+            langCode = "no"
+        } else if langCode == "pt-br" {
+            langCode = "pt"
+        }
+        selectedLanguages = Set([langCode])
         for language in systemLanguageCodes() {
             selectedLanguages.insert(language)
         }
