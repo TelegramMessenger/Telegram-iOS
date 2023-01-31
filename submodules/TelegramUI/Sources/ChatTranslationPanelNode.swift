@@ -173,9 +173,17 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         if languageCode.hasSuffix(rawSuffix) {
             languageCode = String(languageCode.dropLast(rawSuffix.count))
         }
-        let locale = Locale(identifier: languageCode)
-        let fromLanguage: String = locale.localizedString(forLanguageCode: translationState.fromLang) ?? ""
-        
+       
+        let fromLang = translationState.fromLang
+        let key = "Translation.Language.\(fromLang)"
+        let fromLanguage: String
+        if let string = presentationData.strings.primaryComponent.dict[key] {
+            fromLanguage = string
+        } else {
+            let languageLocale = Locale(identifier: languageCode)
+            fromLanguage = languageLocale.localizedString(forLanguageCode: fromLang) ?? ""
+        }
+                
         var items: [ContextMenuItem] = []
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_Translation_ChooseLanguage, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
@@ -204,24 +212,16 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             topLanguages.append(contentsOf: popularTranslationLanguages)
             
             for code in topLanguages {
-                if !addedLanguages.contains(code) {
-                    let key = "Translation.Language.\(code)"
-                    var title: String?
-                    if let string = presentationData.strings.primaryComponent.dict[key] {
-                        title = string
-                    } else if let engTitle = enLocale.localizedString(forLanguageCode: code) {
-                        let languageLocale = Locale(identifier: code)
-                        title = languageLocale.localizedString(forLanguageCode: code) ?? engTitle
+                if !addedLanguages.contains(code), let title = enLocale.localizedString(forLanguageCode: code) {
+                    let languageLocale = Locale(identifier: code)
+                    let subtitle = languageLocale.localizedString(forLanguageCode: code) ?? title
+                    let value = (code, subtitle.capitalized)
+                    if code == languageCode {
+                        languages.insert(value, at: 0)
+                    } else {
+                        languages.append(value)
                     }
-                    if let title {
-                        let value = (code, title.capitalized)
-                        if code == languageCode {
-                            languages.insert(value, at: 0)
-                        } else {
-                            languages.append(value)
-                        }
-                        addedLanguages.insert(code)
-                    }
+                    addedLanguages.insert(code)
                 }
             }
 
