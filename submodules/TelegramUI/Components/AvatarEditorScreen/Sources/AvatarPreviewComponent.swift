@@ -180,11 +180,12 @@ final class AvatarPreviewComponent: Component {
             
             self.imageView.frame = CGRect(origin: .zero, size: availableSize)
             if previousBackground != component.background {
-                if let _ = previousBackground, !transition.animation.isImmediate, let snapshotView = self.imageView.snapshotContentTree() {
-                    self.insertSubview(snapshotView, aboveSubview: self.imageView)
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
+                if let _ = previousBackground, !transition.animation.isImmediate {
+                    UIView.transition(with: self.imageView, duration: 0.2, options: .transitionCrossDissolve, animations: {
+                        self.imageView.image = component.background.generateImage(size: availableSize)
                     })
+                } else {
+                    self.imageView.image = component.background.generateImage(size: availableSize)
                 }
                 self.imageView.image = component.background.generateImage(size: availableSize)
             }

@@ -1298,7 +1298,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if let translationState, isPremium && translationState.isEnabled {
                     translateToLanguage = translationState.toLang ?? presentationData.strings.baseLanguageCode
                     if translateToLanguage == "nb" {
-                        translateToLanguage = "nl"
+                        translateToLanguage = "no"
                     } else if translateToLanguage == "pt-br" {
                         translateToLanguage = "pt"
                     }

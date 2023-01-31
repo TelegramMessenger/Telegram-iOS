@@ -6729,8 +6729,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 threadData = .single(nil)
             }
-            
-            if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
+
+            if case .standard(previewing: true) = self.presentationInterfaceState.mode {
+                
+            } else if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
                 var baseLanguageCode = self.presentationData.strings.baseLanguageCode
                 if baseLanguageCode.contains("-") {
                     baseLanguageCode = baseLanguageCode.components(separatedBy: "-").first ?? baseLanguageCode
@@ -10085,7 +10087,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             var langCode = langCode
             if langCode == "nb" {
-                langCode = "nl"
+                langCode = "no"
             } else if langCode == "pt-br" {
                 langCode = "pt"
             }

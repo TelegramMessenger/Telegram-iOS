@@ -6959,7 +6959,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 case .complete:
                     strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
                 case let .progress(value):
-                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(value))
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(.value(CGFloat(value)))
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
@@ -7015,21 +7015,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: mode == .custom ? true : false)
         
-        if [.suggest, .fallback].contains(mode) {
-        } else {
-            self.state = self.state.withUpdatingAvatar(.image(representation))
-        }
-       
-        if let (layout, navigationHeight) = self.validLayout {
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: mode == .custom ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
-        }
-        self.headerNode.ignoreCollapse = false
-        
-        var videoStartTimestamp: Double? = nil
-        if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
-            videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
-        }
-        
         var markup: UploadPeerPhotoMarkup? = nil
         if let fileId = adjustments?.documentId, let backgroundColors = adjustments?.colors as? [Int32], fileId != 0 {
             if let packId = adjustments?.stickerPackId, let accessHash = adjustments?.stickerPackAccessHash, packId != 0 {
@@ -7048,6 +7033,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         }
         
+        if [.suggest, .fallback].contains(mode) {
+        } else {
+            self.state = self.state.withUpdatingAvatar(.image(representation))
+            if !uploadVideo {
+                self.state = self.state.withAvatarUploadProgress(.indefinite)
+            }
+        }
+       
+        if let (layout, navigationHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: mode == .custom ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
+        }
+        self.headerNode.ignoreCollapse = false
+        
+        var videoStartTimestamp: Double? = nil
+        if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+            videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+        }
+    
         let account = self.context.account
         let context = self.context
         
@@ -7114,7 +7117,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         subscriber.putCompletion()
                     } else if let strongSelf = self, let progress = next as? NSNumber {
                         Queue.mainQueue().async {
-                            strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.45))
+                            strongSelf.state = strongSelf.state.withAvatarUploadProgress(.value(CGFloat(progress.floatValue * 0.45)))
                             if let (layout, navigationHeight) = strongSelf.validLayout {
                                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                             }
@@ -7189,7 +7192,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 case .complete:
                     strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
                 case let .progress(value):
-                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(0.45 + value * 0.55))
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(.value(CGFloat(0.45 + value * 0.55)))
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)

@@ -114,11 +114,19 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             if languageCode.hasSuffix(rawSuffix) {
                 languageCode = String(languageCode.dropLast(rawSuffix.count))
             }
-            let locale = Locale(identifier: languageCode)
-            let toLang = interfaceState.translationState?.toLang ?? languageCode
-            let toLanguage: String = locale.localizedString(forLanguageCode: toLang) ?? ""
             
-            let buttonText = interfaceState.translationState?.isEnabled == true ? interfaceState.strings.Conversation_Translation_ShowOriginal : interfaceState.strings.Conversation_Translation_TranslateTo(toLanguage).string
+            let toLang = interfaceState.translationState?.toLang ?? languageCode
+            
+            let key = "Translation.Language.\(toLang)"
+            var toLanguage: String?
+            if let string = interfaceState.strings.primaryComponent.dict[key] {
+                toLanguage = string
+            } else {
+                let languageLocale = Locale(identifier: languageCode)
+                toLanguage = languageLocale.localizedString(forLanguageCode: toLang) ?? ""
+            }
+                        
+            let buttonText = interfaceState.translationState?.isEnabled == true ? interfaceState.strings.Conversation_Translation_ShowOriginal : interfaceState.strings.Conversation_Translation_TranslateTo(toLanguage ?? "").string
             self.buttonTextNode.attributedText = NSAttributedString(string: buttonText, font: Font.regular(17.0), textColor: interfaceState.theme.rootController.navigationBar.accentTextColor)
         }
 
@@ -165,9 +173,17 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         if languageCode.hasSuffix(rawSuffix) {
             languageCode = String(languageCode.dropLast(rawSuffix.count))
         }
-        let locale = Locale(identifier: languageCode)
-        let fromLanguage: String = locale.localizedString(forLanguageCode: translationState.fromLang) ?? ""
-        
+       
+        let fromLang = translationState.fromLang
+        let key = "Translation.Language.\(fromLang)"
+        let fromLanguage: String
+        if let string = presentationData.strings.primaryComponent.dict[key] {
+            fromLanguage = string
+        } else {
+            let languageLocale = Locale(identifier: languageCode)
+            fromLanguage = languageLocale.localizedString(forLanguageCode: fromLang) ?? ""
+        }
+                
         var items: [ContextMenuItem] = []
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_Translation_ChooseLanguage, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
@@ -182,13 +198,13 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             subItems.append(.separator)
 
             let enLocale = Locale(identifier: "en")
-            var languages: [(String, String, String)] = []
+            var languages: [(String, String)] = []
             var addedLanguages = Set<String>()
             
             var topLanguages: [String] = []
             var langCode = languageCode
             if langCode == "nb" {
-                langCode = "nl"
+                langCode = "no"
             } else if langCode == "pt-br" {
                 langCode = "pt"
             }
@@ -199,7 +215,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
                 if !addedLanguages.contains(code), let title = enLocale.localizedString(forLanguageCode: code) {
                     let languageLocale = Locale(identifier: code)
                     let subtitle = languageLocale.localizedString(forLanguageCode: code) ?? title
-                    let value = (code, title.capitalized, subtitle.capitalized)
+                    let value = (code, subtitle.capitalized)
                     if code == languageCode {
                         languages.insert(value, at: 0)
                     } else {
@@ -222,7 +238,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
 //                }
 //            }
             
-            for (langCode, title, _) in languages {
+            for (langCode, title) in languages {
                 subItems.append(.action(ContextMenuActionItem(text: title , icon: { theme in
                     if translationState.toLang == langCode {
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
