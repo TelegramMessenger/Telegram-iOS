@@ -228,7 +228,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         _isTestingEnvironment = isTestingEnvironment;
         _useTempAuthKeys = useTempAuthKeys;
 #if DEBUG
-        _tempKeyExpiration = 10 * 60;
+        _tempKeyExpiration = 30;
 #else
         _tempKeyExpiration = 24 * 60 * 60;
 #endif

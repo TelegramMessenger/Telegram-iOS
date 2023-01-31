@@ -657,6 +657,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+- (void)simulateDisconnection {
+    [[MTProto managerQueue] dispatchOnQueue:^
+    {
+        if (_transport != nil) {
+            [_transport simulateDisconnection];
+        }
+    }];
+}
+
 - (bool)canAskForTransactions
 {
     return (_mtState & (MTProtoStateAwaitingDatacenterScheme | MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterAuthToken | MTProtoStateAwaitingTimeFixAndSalts | MTProtoStateStopped)) == 0;
@@ -770,7 +779,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             return;
         }
         if (_useUnauthorizedMode) {
+#if DEBUG
+#else
             return;
+#endif
         }
         
         if (hasConnectionProblems) {

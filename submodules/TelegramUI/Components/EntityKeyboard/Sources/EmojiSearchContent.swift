@@ -123,6 +123,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 collapsedLineCount: 3,
                 displayPremiumBadges: false,
                 headerItem: nil,
+                fillWithLoadingPlaceholders: false,
                 items: groupItems
             ))
         }
@@ -286,6 +287,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
+                                    fillWithLoadingPlaceholders: false,
                                     items: items
                                 )]
                             }
@@ -339,6 +341,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }

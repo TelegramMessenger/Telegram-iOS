@@ -1087,6 +1087,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
+                                    fillWithLoadingPlaceholders: false,
                                     items: items
                                 )]
                             }
@@ -1140,6 +1141,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }
@@ -1155,12 +1157,31 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            self.emojiSearchStateValue.isSearching = true
+                            //self.emojiSearchStateValue.isSearching = true
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
-                        
-                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
-                        version += 1
+                        //DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            version += 1
+                        //})
                     }))
                 }
             },
@@ -1416,6 +1437,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], files.isFinalResult))
                     }
@@ -1430,7 +1452,25 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            strongSelf.stickerSearchStateValue.isSearching = true
+                            //strongSelf.stickerSearchStateValue.isSearching = true
+                            strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
                         strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
@@ -1467,7 +1507,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             if let emojiSearchResult = emojiSearchState.result {
                 var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                     emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
                         text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
                         iconFile: nil
@@ -1485,7 +1525,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             if let stickerSearchResult = stickerSearchState.result {
                 var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                     stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
                         text: presentationData.strings.EmojiSearch_SearchStickersEmptyResult,
                         iconFile: nil

@@ -1475,6 +1475,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
+                                    fillWithLoadingPlaceholders: false,
                                     items: items
                                 )]
                             }
@@ -1528,6 +1529,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }

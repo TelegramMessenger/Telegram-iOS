@@ -76,4 +76,6 @@
 
 + (NSData *)_manuallyEncryptedMessage:(NSData *)preparedData messageId:(int64_t)messageId authKey:(MTDatacenterAuthKey *)authKey;
 
+- (void)simulateDisconnection;
+
 @end

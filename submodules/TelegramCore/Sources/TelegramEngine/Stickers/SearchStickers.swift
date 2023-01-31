@@ -476,6 +476,9 @@ func _internal_searchEmoji(account: Account, query: [String], scope: SearchStick
         if let currentCached = cached, currentTime > currentCached.timestamp + searchStickersConfiguration.cacheTimeout {
             cached = nil
         }
+        #if DEBUG
+        cached = nil
+        #endif
         
         return (result, cached, isPremium, searchStickersConfiguration)
     }

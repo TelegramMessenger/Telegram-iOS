@@ -568,6 +568,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: items
                                         )]
                                     }
@@ -621,6 +622,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
+                                    fillWithLoadingPlaceholders: false,
                                     items: items
                                 )], isFinalResult))
                             }

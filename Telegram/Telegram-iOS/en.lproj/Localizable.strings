@@ -8847,3 +8847,7 @@ Sorry for the inconvenience.";
 "Chat.PlaceholderTextNotAllowed" = "Text not allowed";
 
 "CallList.DeleteAll" = "Delete All";
+
+"DataUsage.TopSectionAll" = "All";
+"DataUsage.TopSectionMobile" = "Mobile";
+"DataUsage.TopSectionWifi" = "Wifi";

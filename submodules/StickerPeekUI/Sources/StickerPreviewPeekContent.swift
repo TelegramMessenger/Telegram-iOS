@@ -233,11 +233,11 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing - topOffset), size: imageSize)
+            var imageFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0), y: textSize.height + textSpacing - topOffset), size: imageSize)
             var centerOffset: CGFloat = 0.0
             if self.item.file.isPremiumSticker {
                 let originalImageFrame = imageFrame
-                imageFrame.origin.x = size.width - imageFrame.width - 18.0
+                imageFrame.origin.x = min(imageFrame.minX + imageFrame.width * 0.1, size.width - imageFrame.width - 18.0)
                 centerOffset = imageFrame.minX - originalImageFrame.minX
             }
             self.imageNode.frame = imageFrame
@@ -254,9 +254,9 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)
             
             if self.item.file.isCustomEmoji {
-                return CGSize(width: size.width, height: imageFrame.height)
+                return CGSize(width: boundingSize.width, height: imageFrame.height)
             } else {
-                return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
+                return CGSize(width: boundingSize.width, height: imageFrame.height + textSize.height + textSpacing)
             }
         } else {
             return CGSize(width: size.width, height: 10.0)

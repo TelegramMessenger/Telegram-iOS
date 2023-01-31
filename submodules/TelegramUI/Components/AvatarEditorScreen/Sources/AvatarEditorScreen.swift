@@ -435,6 +435,7 @@ final class AvatarEditorScreenComponent: Component {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: emojiItems
                                         )
                                     )
@@ -454,6 +455,7 @@ final class AvatarEditorScreenComponent: Component {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: stickerItems
                                         )
                                     )
@@ -510,6 +512,7 @@ final class AvatarEditorScreenComponent: Component {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }
