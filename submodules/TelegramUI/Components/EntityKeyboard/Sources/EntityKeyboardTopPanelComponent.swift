@@ -215,10 +215,14 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
         private func updateDisplayPlaceholder(displayPlaceholder: Bool, duration: Double) {
             if displayPlaceholder {
                 if self.placeholderView == nil, let component = self.component {
+                    var placeholderContent: EmojiPagerContentComponent.View.ItemPlaceholderView.Content?
+                    if let immediateThumbnailData = component.item.immediateThumbnailData {
+                        placeholderContent = .thumbnail(immediateThumbnailData)
+                    }
                     let placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
                         context: component.context,
                         dimensions: component.item.dimensions,
-                        immediateThumbnailData: component.item.immediateThumbnailData,
+                        content: placeholderContent,
                         shimmerView: nil,
                         color: component.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
                         size: CGSize(width: 28.0, height: 28.0)

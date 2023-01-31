@@ -397,10 +397,14 @@ final class StickerPackEmojisItemNode: GridItemNode {
                                 if let current = strongSelf.visibleItemPlaceholderViews[itemId] {
                                     placeholderView = current
                                 } else {
+                                    var placeholderContent: EmojiPagerContentComponent.View.ItemPlaceholderView.Content?
+                                    if let immediateThumbnailData = item.file.immediateThumbnailData {
+                                        placeholderContent = .thumbnail(immediateThumbnailData)
+                                    }
                                     placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
                                         context: context,
                                         dimensions: item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0),
-                                        immediateThumbnailData: item.file.immediateThumbnailData,
+                                        content: placeholderContent,
                                         shimmerView: nil,//strongSelf.shimmerHostView,
                                         color: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
                                         size: itemNativeFitSize

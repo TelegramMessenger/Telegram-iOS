@@ -8848,6 +8848,10 @@ Sorry for the inconvenience.";
 
 "CallList.DeleteAll" = "Delete All";
 
+"DataUsage.TopSectionAll" = "All";
+"DataUsage.TopSectionMobile" = "Mobile";
+"DataUsage.TopSectionWifi" = "Wifi";
+
 "Translation.Language.en" = "English";
 "Translation.Language.ar" = "Arabic";
 "Translation.Language.zh" = "Chinese";

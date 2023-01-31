@@ -435,6 +435,7 @@ final class AvatarEditorScreenComponent: Component {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: emojiItems
                                         )
                                     )
@@ -454,6 +455,7 @@ final class AvatarEditorScreenComponent: Component {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: stickerItems
                                         )
                                     )
@@ -510,6 +512,7 @@ final class AvatarEditorScreenComponent: Component {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }
@@ -527,7 +530,25 @@ final class AvatarEditorScreenComponent: Component {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            self.emojiSearchStateValue.isSearching = true
+                            //self.emojiSearchStateValue.isSearching = true
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
                         
@@ -907,7 +928,7 @@ final class AvatarEditorScreenComponent: Component {
                         if let searchResult = emojiSearchState.result {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                            if !searchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                            if !searchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                                 emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
                                     text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
                                     iconFile: nil

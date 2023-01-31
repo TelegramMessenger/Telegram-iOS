@@ -472,7 +472,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 var emojiContent = emojiContent
                 if let emojiSearchResult = emojiSearchState.result {
                     var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                    if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                    if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                         if strongSelf.stableEmptyResultEmoji == nil {
                             strongSelf.stableEmptyResultEmoji = strongSelf.emptyResultEmojis.randomElement()
                         }
@@ -1475,6 +1475,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
+                                    fillWithLoadingPlaceholders: false,
                                     items: items
                                 )]
                             }
@@ -1528,6 +1529,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }
@@ -1543,7 +1545,25 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            self.emojiSearchStateValue.isSearching = true
+                            //self.emojiSearchStateValue.isSearching = true
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
                         

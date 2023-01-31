@@ -8624,7 +8624,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 guard checkAvailableDiskSpace(context: strongSelf.context, push: { [weak self] c in
-                    self?.push(c)
+                    self?.present(c, in: .window(.root))
                 }) else {
                     return
                 }
