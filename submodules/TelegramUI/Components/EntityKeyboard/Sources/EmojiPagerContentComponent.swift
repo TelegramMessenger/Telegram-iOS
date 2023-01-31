@@ -4421,12 +4421,16 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?, animated: Bool) {
-            guard let component = self.component, let itemGroup = component.contentItemGroups.first(where: { $0.supergroupId == supergroupId }), let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
             
             if !component.contentItemGroups.contains(where: { $0.groupId == supergroupId }), self.isSearchActivated {
                 self.visibleSearchHeader?.clearCategorySearch()
+                return
+            }
+            
+            guard let itemGroup = component.contentItemGroups.first(where: { $0.supergroupId == supergroupId }) else {
                 return
             }
             
