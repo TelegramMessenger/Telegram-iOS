@@ -10087,7 +10087,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             var langCode = langCode
             if langCode == "nb" {
-                langCode = "nl"
+                langCode = "no"
             } else if langCode == "pt-br" {
                 langCode = "pt"
             }

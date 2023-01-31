@@ -463,7 +463,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     if let translationState, translationState.isEnabled {
                         var translateToLanguage = translationState.toLang ?? baseLanguageCode
                         if translateToLanguage == "nb" {
-                            translateToLanguage = "nl"
+                            translateToLanguage = "no"
                         } else if translateToLanguage == "pt-br" {
                             translateToLanguage = "pt"
                         }

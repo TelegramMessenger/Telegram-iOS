@@ -481,7 +481,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         if let translationState = interfaceState.translationState, translationState.isEnabled {
             translateToLanguage = translationState.toLang
             if translateToLanguage == "nb" {
-                translateToLanguage = "nl"
+                translateToLanguage = "no"
             } else if translateToLanguage == "pt-br" {
                 translateToLanguage = "pt"
             }
