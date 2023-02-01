@@ -1311,6 +1311,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             self.isActiveValue = true
             self.isActivePromise.set(true)
             
+            SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
+            
             self.runForegroundTasks()
         }
         
@@ -1523,6 +1525,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         self.runForegroundTasks()
+        
+        SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
     }
     
     func runForegroundTasks() {
@@ -1548,6 +1552,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.resetBadge()
         
         self.maybeCheckForUpdates()
+        
+        SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
     }
     
     func applicationWillTerminate(_ application: UIApplication) {

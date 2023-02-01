@@ -126,6 +126,13 @@ public final class SharedDisplayLinkDriver {
         self.update()
     }
     
+    public func updateForegroundState(_ isActive: Bool) {
+        if self.isInForeground != isActive {
+            self.isInForeground = isActive
+            self.update()
+        }
+    }
+    
     private func requestUpdate() {
         self.update()
     }
