@@ -2658,6 +2658,9 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                 if let strongSelf = self {
                                     strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
 
+                                    Queue.mainQueue().after(0.88) {
+                                        strongSelf.hapticFeedback.success()
+                                    }
                                     
                                     let text: String
                                     if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
@@ -2665,7 +2668,6 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                     } else {
                                         text = strongSelf.presentationData.strings.VideoChat_RecordingSaved
                                     }
-                                    
                                     strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: text), action: { [weak self] value in
                                         if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                             let context = strongSelf.context

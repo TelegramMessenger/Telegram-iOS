@@ -128,6 +128,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private weak var copyProtectionTooltipController: TooltipController?
     
+    private lazy var hapticFeedback = { HapticFeedback() }()
+    
     private var didSetReady: Bool = false
     private let _ready = Promise<Void>()
     public override func ready() -> Signal<Void, NoError> {
@@ -1392,6 +1394,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let peerId = peer.id
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
+                        Queue.mainQueue().after(0.88) {
+                            strongSelf.hapticFeedback.success()
+                        }
+
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         (strongSelf.navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                         

@@ -164,7 +164,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var scheduledAnimateInAsOverlayFromNode: ASDisplayNode?
     private var dismissAsOverlayLayout: ContainerViewLayout?
     
-    private var hapticFeedback: HapticFeedback?
+    lazy var hapticFeedback = { HapticFeedback() }()
     private var scrollViewDismissStatus = false
     
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
@@ -2904,10 +2904,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
-            if self.hapticFeedback == nil {
-                self.hapticFeedback = HapticFeedback()
-            }
-            self.hapticFeedback?.prepareImpact()
+            self.hapticFeedback.prepareImpact()
         }
     }
     
@@ -2917,7 +2914,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if dismissStatus != self.scrollViewDismissStatus {
                 self.scrollViewDismissStatus = dismissStatus
                 if !self.dismissedAsOverlay {
-                    self.hapticFeedback?.impact()
+                    self.hapticFeedback.impact()
                 }
             }
         }
