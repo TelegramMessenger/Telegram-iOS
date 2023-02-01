@@ -36,6 +36,7 @@ import UIKitRuntimeUtils
 import StoreKit
 import PhoneNumberFormat
 import AuthorizationUI
+import DeviceProximity
 
 #if canImport(AppCenter)
 import AppCenter
@@ -1314,6 +1315,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
             
             self.runForegroundTasks()
+        }
+        
+        
+        DeviceProximityManager.shared().proximityChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.mainWindow.setProximityDimHidden(!value)
+            }
         }
         
         if UIApplication.shared.isStatusBarHidden {
