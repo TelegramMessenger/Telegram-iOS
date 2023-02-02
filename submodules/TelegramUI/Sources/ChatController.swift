@@ -18216,6 +18216,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        if !transition.isAnimated {
+            self.chatDisplayNode.historyNodeContainer.layer.removeAllAnimations()
+        }
         let scale: CGFloat = 1.0 - 0.06 * fraction
         transition.updateTransformScale(node: self.chatDisplayNode.historyNodeContainer, scale: scale)
     }
