@@ -1190,6 +1190,7 @@ open class NavigationBar: ASDisplayNode {
             
             self.badgeNode.updateTheme(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
             
+            self.updateLeftButton(animated: false)
             self.requestLayout()
         }
     }

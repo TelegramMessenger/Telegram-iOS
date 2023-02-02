@@ -351,7 +351,7 @@ public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> U
                 let t = CGFloat(i) / CGFloat(colors.count - 1)
                 locations.append(t)
             }
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
             context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
@@ -381,7 +381,7 @@ public func generateGradientImage(size: CGSize, colors: [UIColor], locations: [C
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     if let context = UIGraphicsGetCurrentContext() {
         let gradientColors = colors.map { $0.cgColor } as CFArray
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace
         
         var locations = locations
         let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
@@ -403,7 +403,7 @@ public func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray
         context.clip()
         
         var locations: [CGFloat] = [0.0, 1.0]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
         
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())

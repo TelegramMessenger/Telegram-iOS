@@ -735,7 +735,7 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
         }
 
         func update(presentationData: PresentationData, constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat) {
-            let constrainedSize = CGSize(width: min(260.0, constrainedWidth), height: min(604.0, maxHeight))
+            let constrainedSize = CGSize(width: min(220.0, constrainedWidth), height: min(604.0, maxHeight))
 
             var topContentHeight: CGFloat = 0.0
             if let backButtonNode = self.backButtonNode {
