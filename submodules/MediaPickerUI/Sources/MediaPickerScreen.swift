@@ -154,7 +154,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var openCamera: ((TGAttachmentCameraView?) -> Void)?
     public var presentSchedulePicker: (Bool, @escaping (Int32) -> Void) -> Void = { _, _ in }
     public var presentTimerPicker: (@escaping (Int32) -> Void) -> Void = { _ in }
-    public var presentWebSearch: (MediaGroupsScreen) -> Void = { _ in }
+    public var presentWebSearch: (MediaGroupsScreen, Bool) -> Void = { _, _ in }
     public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
     
     private var completed = false
@@ -1350,6 +1350,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         self.updateSelectionState(count: Int32(selectionContext.count()))
+        
+        self.longTapWithTabBar = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.presentSearch(activateOnDisplay: false)
+            }
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -1572,27 +1578,34 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.controllerNode.updateNavigation(delayDisappear: true, transition: .immediate)
     }
     
+    private func presentSearch(activateOnDisplay: Bool) {
+        guard self.moreButtonNode.iconNode.iconState == .search else {
+            return
+        }
+        self.requestAttachmentMenuExpansion()
+        self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
+            if let strongSelf = self {
+                let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendPhotos: strongSelf.bannedSendPhotos, bannedSendVideos: strongSelf.bannedSendVideos, subject: .assets(collection), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
+                
+                mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
+                mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
+                mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
+                mediaPicker.legacyCompletion = strongSelf.legacyCompletion
+                mediaPicker.dismissAll = { [weak self] in
+                    self?.dismiss(animated: true, completion: nil)
+                }
+                
+                mediaPicker._presentedInModal = true
+                mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
+                strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
+            }
+        }), activateOnDisplay)
+    }
+    
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
         switch self.moreButtonNode.iconNode.iconState {
             case .search:
-                self.requestAttachmentMenuExpansion()
-                self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
-                    if let strongSelf = self {
-                        let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendPhotos: strongSelf.bannedSendPhotos, bannedSendVideos: strongSelf.bannedSendVideos, subject: .assets(collection), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
-                        
-                        mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
-                        mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
-                        mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
-                        mediaPicker.legacyCompletion = strongSelf.legacyCompletion
-                        mediaPicker.dismissAll = { [weak self] in
-                            self?.dismiss(animated: true, completion: nil)
-                        }
-                        
-                        mediaPicker._presentedInModal = true
-                        mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
-                        strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
-                    }
-                }))
+                self.presentSearch(activateOnDisplay: true)
             case .more:
                 let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount

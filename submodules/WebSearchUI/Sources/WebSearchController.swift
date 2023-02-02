@@ -85,6 +85,7 @@ public final class WebSearchController: ViewController {
     private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
     private let configuration: EngineConfiguration.SearchBots
+    private let activateOnDisplay: Bool
     
     private var controllerNode: WebSearchControllerNode {
         return self.displayNode as! WebSearchControllerNode
@@ -121,12 +122,13 @@ public final class WebSearchController: ViewController {
     
     public var attemptItemSelection: (ChatContextResult) -> Bool = { _ in return true }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: EngineConfiguration.SearchBots, mode: WebSearchControllerMode) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: EngineConfiguration.SearchBots, mode: WebSearchControllerMode, activateOnDisplay: Bool = true) {
         self.context = context
         self.mode = mode
         self.peer = peer
         self.chatLocation = chatLocation
         self.configuration = configuration
+        self.activateOnDisplay = activateOnDisplay
         
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
@@ -329,7 +331,7 @@ public final class WebSearchController: ViewController {
             self.didPlayPresentationAnimation = true
             self.controllerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
-        if !self.didActivateSearch {
+        if !self.didActivateSearch && self.activateOnDisplay {
             self.didActivateSearch = true
             self.navigationContentNode?.activate(select: select)
         }

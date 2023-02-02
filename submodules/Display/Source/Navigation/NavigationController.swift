@@ -433,8 +433,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 minHeight = 40.0
             }
             var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(minHeight, layout.safeInsets.top))))
-            if (layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland) && !isLandscape {
-                inCallStatusBarFrame.size.height += 12.0
+            if !isLandscape {
+                if layout.deviceMetrics.hasTopNotch {
+                    inCallStatusBarFrame.size.height += 12.0
+                } else if layout.deviceMetrics.hasDynamicIsland {
+                    inCallStatusBarFrame.size.height += 20.0
+                }
             }
             if inCallStatusBar.frame.isEmpty {
                 inCallStatusBar.frame = inCallStatusBarFrame
