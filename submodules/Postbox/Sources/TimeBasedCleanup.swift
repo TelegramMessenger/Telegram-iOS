@@ -272,17 +272,29 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
 }*/
 
 private func statForDirectory(path: String) -> Int64 {
-    var s = darwin_dirstat()
-    var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
-    if result != -1 {
-        return Int64(s.total_size)
-    } else {
-        result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+    if #available(macOS 10.13, *) {
+        var s = darwin_dirstat()
+        var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
         if result != -1 {
             return Int64(s.total_size)
         } else {
-            return 0
+            result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+            if result != -1 {
+                return Int64(s.total_size)
+            } else {
+                return 0
+            }
         }
+    } else {
+        let fileManager = FileManager.default
+        let folderURL = URL(fileURLWithPath: path)
+        var folderSize: Int64 = 0
+        if let files = try? fileManager.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil, options: []) {
+            for file in files {
+                folderSize += (fileSize(file.path) ?? 0)
+            }
+        }
+        return folderSize
     }
 }
 

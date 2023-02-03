@@ -306,7 +306,7 @@ final class PeerInfoHeaderNavigationTransition {
 final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let context: AccountContext
     
-    private let containerNode: ContextControllerSourceNode
+    let containerNode: ContextControllerSourceNode
     
     let avatarNode: AvatarNode
     fileprivate var videoNode: UniversalVideoNode?
@@ -2509,11 +2509,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     func updateAvatarIsHidden(entry: AvatarGalleryEntry?) {
         if let entry = entry {
-            self.avatarListNode.avatarContainerNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
-            self.editingContentNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
+            self.avatarListNode.avatarContainerNode.containerNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
+            self.editingContentNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
         } else {
-            self.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
-            self.editingContentNode.avatarNode.isHidden = false
+            self.avatarListNode.avatarContainerNode.containerNode.isHidden = false
+            self.editingContentNode.isHidden = false
         }
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }

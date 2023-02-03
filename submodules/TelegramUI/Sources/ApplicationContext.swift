@@ -165,9 +165,6 @@ final class AuthorizedApplicationContext {
         
         self.notificationController = NotificationContainerController(context: context)
         
-        self.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-        self.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
-        
         self.rootController = TelegramRootController(context: context)
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
@@ -735,8 +732,6 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
-                    strongSelf.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                    strongSelf.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
                     strongSelf.lockedCoveringView.updateTheme(presentationData.theme)
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }

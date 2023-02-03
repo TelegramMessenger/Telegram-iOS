@@ -7141,7 +7141,7 @@ public final class EmojiPagerContentComponent: Component {
                     topReactions = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji {
                     featuredAvatarEmoji = orderedView
-                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji {
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedGroupPhotoEmoji {
                     featuredAvatarEmoji = orderedView
                 }
             }

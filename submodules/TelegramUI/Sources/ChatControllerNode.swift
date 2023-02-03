@@ -164,7 +164,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var scheduledAnimateInAsOverlayFromNode: ASDisplayNode?
     private var dismissAsOverlayLayout: ContainerViewLayout?
     
-    private var hapticFeedback: HapticFeedback?
+    lazy var hapticFeedback = { HapticFeedback() }()
     private var scrollViewDismissStatus = false
     
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
@@ -1398,7 +1398,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let inputHeight = layout.standardInputHeight + self.inputPanelContainerNode.expansionFraction * (maximumInputNodeHeight - layout.standardInputHeight)
             
-            let heightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: inputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: self.isInFocus, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
+            let heightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: inputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, layoutMetrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isVisible: self.isInFocus, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
             
             let boundedHeight = inputNode.followsDefaultHeight ? min(heightAndOverflow.0, layout.standardInputHeight) : heightAndOverflow.0
             
@@ -1449,10 +1449,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.isSelectionGestureEnabled = isSelectionEnabled
                 
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
-            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: false, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
+            let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, layoutMetrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isVisible: false, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
         }
         
-        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 116.0)))
+        transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 200.0)))
         
         transition.updateFrame(node: self.inputContextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         transition.updateFrame(node: self.inputContextOverTextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
@@ -2684,7 +2684,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             self.inputMediaNode = inputNode
             if let (validLayout, _) = self.validLayout {
-                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: validLayout.deviceMetrics, isVisible: false, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
+                let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, layoutMetrics: validLayout.metrics, deviceMetrics: validLayout.deviceMetrics, isVisible: false, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
             }
         }
         
@@ -2904,10 +2904,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         if let scrollContainerNode = self.scrollContainerNode, scrollView === scrollContainerNode.view {
-            if self.hapticFeedback == nil {
-                self.hapticFeedback = HapticFeedback()
-            }
-            self.hapticFeedback?.prepareImpact()
+            self.hapticFeedback.prepareImpact()
         }
     }
     
@@ -2917,7 +2914,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if dismissStatus != self.scrollViewDismissStatus {
                 self.scrollViewDismissStatus = dismissStatus
                 if !self.dismissedAsOverlay {
-                    self.hapticFeedback?.impact()
+                    self.hapticFeedback.impact()
                 }
             }
         }

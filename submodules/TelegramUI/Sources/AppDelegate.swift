@@ -37,6 +37,7 @@ import StoreKit
 import PhoneNumberFormat
 import AuthorizationUI
 import ManagedFile
+import DeviceProximity
 
 #if canImport(AppCenter)
 import AppCenter
@@ -338,6 +339,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let launchIconSize = CGSize(width: 99.0, height: 99.0)
         let launchIconView = UIImageView(image: UIImage(bundleImageName: "Components/LaunchLogo"))
+        launchIconView.autoresizingMask = [.flexibleTopMargin, .flexibleLeftMargin, .flexibleRightMargin, .flexibleBottomMargin]
         launchIconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((hostView.containerView.frame.width - launchIconSize.width) / 2.0), y: floorToScreenPixels((hostView.containerView.frame.height - launchIconSize.height) / 2.0)), size: launchIconSize)
         hostView.containerView.addSubview(launchIconView)
         
@@ -1334,6 +1336,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
             
             self.runForegroundTasks()
+        }
+        
+        
+        DeviceProximityManager.shared().proximityChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.mainWindow.setProximityDimHidden(!value)
+            }
         }
         
         if UIApplication.shared.isStatusBarHidden {

@@ -1112,6 +1112,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 
                 let animatedOutNode = !simpleAnimation
                 
+                if let chatController = strongSelf.baseNavigationController?.topViewController as? ChatController {
+                    chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+                }
+                
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
                 })
             }

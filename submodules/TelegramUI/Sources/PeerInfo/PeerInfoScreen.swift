@@ -1950,7 +1950,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
     private let paneContainerNode: PeerInfoPaneContainerNode
     private var ignoreScrolling: Bool = false
-    private var hapticFeedback: HapticFeedback?
+    private lazy var hapticFeedback = { HapticFeedback() }()
 
     private var customStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?)
     private let customStatusPromise = Promise<(PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?)>((nil, nil, nil))
@@ -3096,7 +3096,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     for (_, section) in strongSelf.editingSections {
                                         section.animateErrorIfNeeded()
                                     }
-                                    strongSelf.hapticFeedback?.error()
+                                    strongSelf.hapticFeedback.error()
                                     return
                                 }
                             }
@@ -3146,10 +3146,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName {
                                 if firstName.isEmpty && lastName.isEmpty {
-                                    if strongSelf.hapticFeedback == nil {
-                                        strongSelf.hapticFeedback = HapticFeedback()
-                                    }
-                                    strongSelf.hapticFeedback?.error()
+                                    strongSelf.hapticFeedback.error()
                                     strongSelf.headerNode.editingContentNode.shakeTextForKey(.firstName)
                                 } else {
                                     var dismissStatus: (() -> Void)?
@@ -3212,10 +3209,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         let description = strongSelf.headerNode.editingContentNode.editingTextForKey(.description) ?? ""
                         
                         if title.isEmpty {
-                            if strongSelf.hapticFeedback == nil {
-                                strongSelf.hapticFeedback = HapticFeedback()
-                            }
-                            strongSelf.hapticFeedback?.error()
+                            strongSelf.hapticFeedback.error()
                             
                             strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
                         } else {
@@ -8024,6 +8018,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
+                        Queue.mainQueue().after(0.88) {
+                            strongSelf.hapticFeedback.success()
+                        }
+                        
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         
@@ -9055,10 +9053,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     shouldBeExpanded = true
                     
                     if self.canOpenAvatarByDragging && self.headerNode.isAvatarExpanded && offsetY <= -32.0 {
-                        if self.hapticFeedback == nil {
-                            self.hapticFeedback = HapticFeedback()
-                        }
-                        self.hapticFeedback?.impact()
+                        self.hapticFeedback.impact()
                         
                         self.canOpenAvatarByDragging = false
                         let contentOffset = scrollView.contentOffset.y
@@ -9078,13 +9073,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if let shouldBeExpanded = shouldBeExpanded, shouldBeExpanded != self.headerNode.isAvatarExpanded {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 
-                if self.hapticFeedback == nil {
-                    self.hapticFeedback = HapticFeedback()
-                }
                 if shouldBeExpanded {
-                    self.hapticFeedback?.impact()
+                    self.hapticFeedback.impact()
                 } else {
-                    self.hapticFeedback?.tap()
+                    self.hapticFeedback.tap()
                 }
                 
                 self.headerNode.updateIsAvatarExpanded(shouldBeExpanded, transition: transition)

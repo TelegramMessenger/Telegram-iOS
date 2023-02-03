@@ -1510,7 +1510,7 @@ open class TextNode: ASDisplayNode {
                             continue
                         }
                         
-                        var fixCoupleEmoji = false
+                        var fixDoubleEmoji = false
                         if glyphCount == 2, let font = attributes["NSFont"] as? UIFont, font.fontName.contains("ColorEmoji"), let string = layout.attributedString {
                             let range = CTRunGetStringRange(run)
                             let substring = string.attributedSubstring(from: NSMakeRange(range.location, range.length)).string
@@ -1518,17 +1518,21 @@ open class TextNode: ASDisplayNode {
                             let heart = Unicode.Scalar(0x2764)!
                             let man = Unicode.Scalar(0x1F468)!
                             let woman = Unicode.Scalar(0x1F469)!
+                            let leftHand = Unicode.Scalar(0x1FAF1)!
+                            let rightHand = Unicode.Scalar(0x1FAF2)!
                             
                             if substring.unicodeScalars.contains(heart) && (substring.unicodeScalars.contains(man) || substring.unicodeScalars.contains(woman)) {
-                                fixCoupleEmoji = true
+                                fixDoubleEmoji = true
+                            } else if substring.unicodeScalars.contains(leftHand) && substring.unicodeScalars.contains(rightHand) {
+                                fixDoubleEmoji = true
                             }
                         }
                         
-                        if fixCoupleEmoji {
+                        if fixDoubleEmoji {
                             context.setBlendMode(.normal)
                         }
                         CTRunDraw(run, context, CFRangeMake(0, glyphCount))
-                        if fixCoupleEmoji {
+                        if fixDoubleEmoji {
                             context.setBlendMode(blendMode)
                         }
                     }
