@@ -677,10 +677,13 @@ public final class AccountStateManager {
                     return (state, invalidatedChannels, disableParallelChannelReset)
                 }
                 |> deliverOn(self.queue)
-                |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
                     if let state = state, let authorizedState = state.state {
-                        let flags: Int32 = 0
-                        let ptsTotalLimit: Int32? = nil
+                        let flags: Int32
+                        let ptsTotalLimit: Int32?
+                        
+                        flags = 1 << 0
+                        ptsTotalLimit = 1000
                         
                         if let strongSelf = self {
                             if !invalidatedChannels.isEmpty {
@@ -700,19 +703,19 @@ public final class AccountStateManager {
                         |> retryRequest
                         
                         return request
-                        |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                        |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
                             guard let difference = difference else {
-                                return .single((nil, nil, true))
+                                return .single((nil, nil, true, false))
                             }
                             switch difference {
                             case .differenceTooLong:
-                                preconditionFailure()
+                                return .single((nil, nil, false, true))
                             default:
                                 return initialStateWithDifference(postbox: postbox, difference: difference)
-                                |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                                |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
                                     if state.initialState.state != authorizedState {
                                         Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
-                                        return .single((nil, nil, false))
+                                        return .single((nil, nil, false, false))
                                     } else {
                                         return finalStateWithDifference(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, difference: difference, asyncResetChannels: disableParallelChannelReset ? nil : { peers in
                                             queue.async {
@@ -720,14 +723,14 @@ public final class AccountStateManager {
                                             }
                                         })
                                         |> deliverOn(queue)
-                                        |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                                        |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
                                             if !finalState.state.preCachedResources.isEmpty {
                                                 for (resource, data) in finalState.state.preCachedResources {
                                                     mediaBox.storeResourceData(resource.id, data: data)
                                                 }
                                             }
                                             let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
-                                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
+                                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool) in
                                                 let startTime = CFAbsoluteTimeGetCurrent()
                                                 let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, skipVerification: false)
                                                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -736,9 +739,9 @@ public final class AccountStateManager {
                                                 }
                                                 
                                                 if let replayedState = replayedState {
-                                                    return (difference, replayedState, false)
+                                                    return (difference, replayedState, false, false)
                                                 } else {
-                                                    return (nil, nil, false)
+                                                    return (nil, nil, false, false)
                                                 }
                                             }
                                         }
@@ -750,14 +753,14 @@ public final class AccountStateManager {
                         let appliedState = network.request(Api.functions.updates.getState())
                         |> retryRequest
                         |> mapToSignal { state in
-                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
+                            return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool) in
                                 if let currentState = transaction.getState() as? AuthorizedAccountState {
                                     switch state {
                                     case let .state(pts, qts, date, seq, _):
                                         transaction.setState(currentState.changedState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq)))
                                     }
                                 }
-                                return (nil, nil, false)
+                                return (nil, nil, false, false)
                             }
                         }
                         return appliedState
@@ -765,8 +768,21 @@ public final class AccountStateManager {
                 }
                 |> deliverOn(self.queue)
                 
-                let _ = signal.start(next: { [weak self] difference, finalState, skipBecauseOfError in
-                    if let strongSelf = self {
+                let _ = signal.start(next: { [weak self] difference, finalState, skipBecauseOfError, resetState in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if resetState {
+                        let _ = (_internal_resetAccountState(postbox: postbox, network: network, accountPeerId: accountPeerId)
+                        |> deliverOn(strongSelf.queue)).start(completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if case .pollDifference = strongSelf.operations.removeFirst().content {
+                                strongSelf.startFirstOperation()
+                            }
+                        })
+                    } else {
                         if case .pollDifference = strongSelf.operations.removeFirst().content {
                             let events: AccountFinalStateEvents
                             if let finalState = finalState {
@@ -803,8 +819,6 @@ public final class AccountStateManager {
                                 strongSelf.replaceOperations(with: .pollDifference(strongSelf.getNextId(), AccountFinalStateEvents()))
                             }
                             strongSelf.startFirstOperation()
-                        } else {
-                            assertionFailure()
                         }
                     }
                 })
