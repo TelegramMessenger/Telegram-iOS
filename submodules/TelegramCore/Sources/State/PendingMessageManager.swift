@@ -1076,7 +1076,7 @@ public final class PendingMessageManager {
                 
                 let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
                 switch content.content {
-                    case let .text:
+                    case .text:
                         if bubbleUpEmojiOrStickersets {
                             flags |= Int32(1 << 15)
                         }
