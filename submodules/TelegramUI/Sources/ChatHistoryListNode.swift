@@ -954,63 +954,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
         
-        let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
-        |> map { animatedEmoji -> [String: [StickerPackItem]] in
-            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
-            switch animatedEmoji {
-                case let .result(_, items, _):
-                    for item in items {
-                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
-                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
-                            if animatedEmojiStickers[strippedEmoji] == nil {
-                                animatedEmojiStickers[strippedEmoji] = [item]
-                            }
-                        }
-                    }
-                default:
-                    break
-            }
-            return animatedEmojiStickers
-        }
+        let animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> = (context as! AccountContextImpl).animatedEmojiStickersSignal
         
-        let additionalAnimatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false)
-        |> map { animatedEmoji -> [String: [Int: StickerPackItem]] in
-            let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣".strippedEmoji
-            var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
-            switch animatedEmoji {
-                case let .result(_, items, _):
-                    for item in items {
-                        let indexKeys = item.getStringRepresentationsOfIndexKeys()
-                        if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
-                            let emoji: String?
-                            let indexEmoji: String?
-                            if sequence.contains(first.strippedEmoji) {
-                                emoji = last
-                                indexEmoji = first
-                            } else if sequence.contains(last.strippedEmoji) {
-                                emoji = first
-                                indexEmoji = last
-                            } else {
-                                emoji = nil
-                                indexEmoji = nil
-                            }
-                            
-                            if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.strippedEmoji.first, let strIndex = sequence.firstIndex(of: indexEmoji) {
-                                let index = sequence.distance(from: sequence.startIndex, to: strIndex)
-                                if animatedEmojiStickers[emoji] != nil {
-                                    animatedEmojiStickers[emoji]![index] = item
-                                } else {
-                                    animatedEmojiStickers[emoji] = [index: item]
-                                }
-                            }
-                        }
-                    }
-                default:
-                    break
-            }
-            return animatedEmojiStickers
-        }
+        let additionalAnimatedEmojiStickers = (context as! AccountContextImpl).additionalAnimatedEmojiStickers
         
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
                 
@@ -1077,7 +1023,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             customThreadOutgoingReadState = .single(nil)
         }
         
-        let availableReactions = context.engine.stickers.availableReactions()
+        let availableReactions: Signal<AvailableReactions?, NoError> = (context as! AccountContextImpl).availableReactions
         
         let defaultReaction = combineLatest(
             context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
