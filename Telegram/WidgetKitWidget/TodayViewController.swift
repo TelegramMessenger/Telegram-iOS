@@ -56,6 +56,8 @@ private let accountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResource: { a
     return .single(nil)
 }, prepareSecretThumbnailData: { _ in
     return nil
+}, backgroundUpload: { _, _, _ in
+    return .single(nil)
 })
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
