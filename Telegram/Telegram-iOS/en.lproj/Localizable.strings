@@ -8889,3 +8889,5 @@ Sorry for the inconvenience.";
 
 "Settings.RaiseToListen" = "Raise to Listen";
 "Settings.RaiseToListenInfo" = "Raise to Listen allows you to quickly listen and reply to incoming audio messages by raising the phone to your ear.";
+
+"Login.CodeSentCallText" = "Calling **%@** to dictate the code.";
