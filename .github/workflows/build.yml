@@ -36,7 +36,7 @@ jobs:
           SOURCE_DIR=/Users/Shared/telegram-ios
 
           # use canonical bazel root
-          BAZEL_USER_ROOT="/private/var/tmp/_bazel_telegram"
+          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
 
           cd $SOURCE_DIR
 
@@ -51,6 +51,7 @@ jobs:
 
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py build \
+            --bazelUserRoot="$BAZEL_USER_ROOT" \
             --configurationPath="build-system/appstore-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
             --configuration=release_arm64 \
