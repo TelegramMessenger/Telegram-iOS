@@ -30,6 +30,7 @@ private final class DataAndStorageControllerArguments {
     let openSaveIncoming: (AutomaticSaveIncomingPeerType) -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
     let togglePauseMusicOnRecording: (Bool) -> Void
+    let toggleRaiseToListen: (Bool) -> Void
     let toggleAutoplayGifs: (Bool) -> Void
     let toggleAutoplayVideos: (Bool) -> Void
     let toggleDownloadInBackground: (Bool) -> Void
@@ -37,7 +38,7 @@ private final class DataAndStorageControllerArguments {
     let openIntents: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -47,6 +48,7 @@ private final class DataAndStorageControllerArguments {
         self.openSaveIncoming = openSaveIncoming
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
         self.togglePauseMusicOnRecording = togglePauseMusicOnRecording
+        self.toggleRaiseToListen = toggleRaiseToListen
         self.toggleAutoplayGifs = toggleAutoplayGifs
         self.toggleAutoplayVideos = toggleAutoplayVideos
         self.toggleDownloadInBackground = toggleDownloadInBackground
@@ -74,6 +76,8 @@ public enum DataAndStorageEntryTag: ItemListItemTag, Equatable {
     case autoplayVideos
     case saveEditedPhotos
     case downloadInBackground
+    case pauseMusicOnRecording
+    case raiseToListen
     case autoSave(AutomaticSaveIncomingPeerType)
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
@@ -108,9 +112,11 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case otherHeader(PresentationTheme, String)
     case shareSheet(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
-    case pauseMusicOnRecording(PresentationTheme, String, Bool)
     case openLinksIn(PresentationTheme, String, String)
-
+    case pauseMusicOnRecording(PresentationTheme, String, Bool)
+    case raiseToListen(PresentationTheme, String, Bool)
+    case raiseToListenInfo(PresentationTheme, String)
+    
     case connectionHeader(PresentationTheme, String)
     case connectionProxy(PresentationTheme, String, String)
     case enableSensitiveContent(String, Bool)
@@ -129,7 +135,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.voiceCalls.rawValue
             case .autoplayHeader, .autoplayGifs, .autoplayVideos:
                 return DataAndStorageSection.autoPlay.rawValue
-            case .otherHeader, .shareSheet, .saveEditedPhotos, .pauseMusicOnRecording, .openLinksIn:
+            case .otherHeader, .shareSheet, .saveEditedPhotos, .openLinksIn, .pauseMusicOnRecording, .raiseToListen, .raiseToListenInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -152,14 +158,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 4
             case .automaticDownloadReset:
                 return 5
-            
             case .autoSaveHeader:
                 return 6
             case let .autoSaveItem(index, _, _, _, _):
                 return 7 + Int32(index)
             case .autoSaveInfo:
                 return 20
-            
             case .downloadInBackground:
                 return 21
             case .downloadInBackgroundInfo:
@@ -180,16 +184,20 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 29
             case .saveEditedPhotos:
                 return 31
-            case .pauseMusicOnRecording:
-                return 32
             case .openLinksIn:
+                return 32
+            case .pauseMusicOnRecording:
                 return 33
-            case .connectionHeader:
+            case .raiseToListen:
                 return 34
-            case .connectionProxy:
+            case .raiseToListenInfo:
                 return 35
-            case .enableSensitiveContent:
+            case .connectionHeader:
                 return 36
+            case .connectionProxy:
+                return 37
+            case .enableSensitiveContent:
+                return 38
         }
     }
     
@@ -297,14 +305,26 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .openLinksIn(lhsTheme, lhsText, lhsValue):
+                if case let .openLinksIn(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .pauseMusicOnRecording(lhsTheme, lhsText, lhsValue):
                 if case let .pauseMusicOnRecording(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .openLinksIn(lhsTheme, lhsText, lhsValue):
-                if case let .openLinksIn(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .raiseToListen(lhsTheme, lhsText, lhsValue):
+                if case let .raiseToListen(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .raiseToListenInfo(lhsTheme, lhsText):
+                if case let .raiseToListenInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -420,14 +440,20 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
                 }, tag: DataAndStorageEntryTag.saveEditedPhotos)
-            case let .pauseMusicOnRecording(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.togglePauseMusicOnRecording(value)
-                }, tag: DataAndStorageEntryTag.saveEditedPhotos)
             case let .openLinksIn(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openBrowserSelection()
                 })
+            case let .pauseMusicOnRecording(_, text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.togglePauseMusicOnRecording(value)
+                }, tag: DataAndStorageEntryTag.pauseMusicOnRecording)
+            case let .raiseToListen(_, text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleRaiseToListen(value)
+                }, tag: DataAndStorageEntryTag.raiseToListen)
+            case let .raiseToListenInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .downloadInBackground(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleDownloadInBackground(value)
@@ -646,8 +672,10 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
         entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
     }
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
-    entries.append(.pauseMusicOnRecording(presentationData.theme, presentationData.strings.Settings_PauseMusicOnRecording, data.mediaInputSettings.pauseMusicOnRecording))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
+    entries.append(.pauseMusicOnRecording(presentationData.theme, presentationData.strings.Settings_PauseMusicOnRecording, data.mediaInputSettings.pauseMusicOnRecording))
+    entries.append(.raiseToListen(presentationData.theme, presentationData.strings.Settings_RaiseToListen, data.mediaInputSettings.enableRaiseToSpeak))
+    entries.append(.raiseToListenInfo(presentationData.theme, presentationData.strings.Settings_RaiseToListenInfo))
 
     let proxyValue: String
     if let proxySettings = data.proxySettings, let activeServer = proxySettings.activeServer, proxySettings.enabled {
@@ -877,6 +905,10 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     }, togglePauseMusicOnRecording: { value in
         let _ = updateMediaInputSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedPauseMusicOnRecording(value)
+        }).start()
+    }, toggleRaiseToListen: { value in
+        let _ = updateMediaInputSettingsInteractively(accountManager: context.sharedContext.accountManager, {
+            $0.withUpdatedEnableRaiseToSpeak(value)
         }).start()
     }, toggleAutoplayGifs: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in

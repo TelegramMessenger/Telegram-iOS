@@ -83,7 +83,7 @@ public final class InAppPurchaseManager: NSObject {
         }
         
         public func pricePerMonth(_ monthsCount: Int) -> String {
-            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).prettyPrice().round(2)
+            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).round(2)
             return self.numberFormatter.string(from: price) ?? ""
         }
         

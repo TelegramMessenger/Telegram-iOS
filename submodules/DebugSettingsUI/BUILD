@@ -25,7 +25,6 @@ swift_library(
         "//submodules/GZip:GZip",
         "//third-party/ZipArchive:ZipArchive",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
-        "//submodules/Utils/DarwinDirStat",
     ],
     visibility = [
         "//visibility:public",

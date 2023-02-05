@@ -265,7 +265,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                             return nil
                         }
                     }
-                    let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                    let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                    let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
                         var value = stat()
                         if stat(path, &value) == 0 {
                             if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
@@ -298,6 +299,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                                 subscriber.putError(.generic)
                             }
                             subscriber.putCompletion()
+                            
+                            EngineTempBox.shared.dispose(tempFile)
                         }
                     }, error: { _ in
                         subscriber.putError(.generic)
@@ -342,6 +345,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                     adjustments = TGVideoEditAdjustments(dictionary: dict)
                 }
             }
+            let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
             let updatedSize = Atomic<Int64>(value: 0)
             let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                 if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
@@ -366,7 +370,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                     
                     signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
-                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
                                 var value = stat()
                                 if stat(path, &value) == 0 {
                                     if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
@@ -388,7 +392,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                     signal = SSignal.single(nil)
                 }
             } else {
-                signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: VideoConversionWatcher(update: { path, size in
+                signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
                     var value = stat()
                     if stat(path, &value) == 0 {
                         if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
@@ -430,6 +434,8 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                             subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
                             subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
                             subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
+                            
+                            EngineTempBox.shared.dispose(tempFile)
                         }
                     }
                     subscriber.putCompletion()

@@ -1136,7 +1136,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, associatedData: item.associatedData)
             
             var isReplyThread = false
             if case .replyThread = item.chatLocation {

@@ -226,8 +226,8 @@ final class ChatTranslationPanelNode: ASDisplayNode {
                     }
                 }
                 
-                topLanguages.append(contentsOf: popularTranslationLanguages)
-                
+                topLanguages.append("")
+                                
                 var languages: [(String, String)] = []
                 let languageLocale = Locale(identifier: langCode)
                 
@@ -321,6 +321,8 @@ private final class TranslationContextReferenceContentSource: ContextReferenceCo
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
+
+private let separatorHeight: CGFloat = 7.0
 
 private final class TranslationLanguagesContextMenuContent: ContextControllerItemsContent {
     private final class BackButtonNode: HighlightTrackingButtonNode {
@@ -445,7 +447,7 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
                 self.addSubnode(self.titleLabelNode)
 
                 self.highligthedChanged = { [weak self] highlighted in
-                    guard let strongSelf = self else {
+                    guard let strongSelf = self, let language = strongSelf.language, !language.isEmpty else {
                         return
                     }
                     if highlighted {
@@ -461,6 +463,9 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
             }
 
             @objc private func pressed() {
+                guard let language = self.language, !language.isEmpty else {
+                    return
+                }
                 self.action()
             }
             
@@ -476,7 +481,6 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
                 }
                 
                 self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
-                self.separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
 
                 self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
 
@@ -487,8 +491,15 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
                 let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
                 self.titleLabelNode.frame = titleFrame
 
-                self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height), size: CGSize(width: size.width, height: UIScreenPixel))
-                self.separatorNode.isHidden = isLast
+                if language == "" {
+                    self.separatorNode.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
+                    self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: separatorHeight))
+                    self.separatorNode.isHidden = false
+                } else {
+                    self.separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
+                    self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height), size: CGSize(width: size.width, height: UIScreenPixel))
+                    self.separatorNode.isHidden = isLast
+                }
             }
         }
 
@@ -537,26 +548,6 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
             self.scrollNode.view.delegate = self
 
             self.clipsToBounds = true
-
-//            self.stateDisposable = (self.listContext.state
-//            |> deliverOnMainQueue).start(next: { [weak self] state in
-//                guard let strongSelf = self else {
-//                    return
-//                }
-//                let updatedState = ItemsState(listState: state, readStats: strongSelf.state.readStats)
-//                var animateIn = false
-//                if strongSelf.state.item(at: 0) == nil && updatedState.item(at: 0) != nil {
-//                    animateIn = true
-//                }
-//                strongSelf.state = updatedState
-//                strongSelf.animateIn = true
-//                strongSelf.requestUpdate(strongSelf, animateIn ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
-//                if animateIn {
-//                    for (_, itemNode) in strongSelf.itemNodes {
-//                        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-//                    }
-//                }
-//            })
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -591,11 +582,23 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
 
             let minVisibleIndex = max(0, Int(floor(visibleBounds.minY / itemHeight)))
             let maxVisibleIndex = Int(ceil(visibleBounds.maxY / itemHeight))
-
+            
+            var separatorIndex = 0
+            for i in 0 ..< self.languages.count {
+                if self.languages[i].0.isEmpty {
+                    separatorIndex = i
+                    break
+                }
+            }
+            
             if minVisibleIndex <= maxVisibleIndex {
                 for index in minVisibleIndex ... maxVisibleIndex {
-                    let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: itemHeight))
-
+                    let height = self.languages[index].0.isEmpty ? separatorHeight : itemHeight
+                    var itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: height))
+                    if index > separatorIndex {
+                        itemFrame.origin.y += separatorHeight - itemHeight
+                    }
+                    
                     if index < self.languages.count {
                         let (languageCode, displayTitle) = self.languages[index]
                         validIds.insert(index)
@@ -612,7 +615,7 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
                             self.scrollNode.addSubnode(itemNode)
                         }
                         
-                        itemNode.update(size: itemFrame.size, presentationData: presentationData, language: languageCode, displayTitle: displayTitle, isLast: index == self.languages.count - 1, syncronousLoad: syncronousLoad)
+                        itemNode.update(size: itemFrame.size, presentationData: presentationData, language: languageCode, displayTitle: displayTitle, isLast: index == self.languages.count - 1 || index == separatorIndex - 1, syncronousLoad: syncronousLoad)
                         itemNode.frame = itemFrame
                     }
                 }
@@ -745,7 +748,7 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
                 topContentHeight += backButtonFrame.height
             }
             if let separatorNode = self.separatorNode {
-                let separatorFrame = CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: 7.0))
+                let separatorFrame = CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: separatorHeight))
                 separatorNode.backgroundColor = self.presentationData.theme.contextMenu.sectionSeparatorColor
                 transition.updateFrame(node: separatorNode, frame: separatorFrame)
                 topContentHeight += separatorFrame.height

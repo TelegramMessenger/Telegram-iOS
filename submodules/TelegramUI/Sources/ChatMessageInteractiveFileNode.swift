@@ -815,7 +815,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         edited = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings, associatedData: arguments.associatedData)
                     
                     let displayReactionsInline = shouldDisplayInlineDateReactions(message: arguments.message, isPremium: arguments.associatedData.isPremium, forceInline: arguments.associatedData.forceInlineReactions)
                     var reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings?

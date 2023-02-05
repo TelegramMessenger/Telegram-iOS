@@ -751,7 +751,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 case .assets:
                     signals = TGMediaAssetsController.resultSignals(for: controller.interaction?.selectionState, editingContext: controller.interaction?.editingState, intent: asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, storeAssets: true, convertToJpeg: convertToJpeg, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: controller.saveEditedPhotos)
                 case .media:
-                    signals = TGMediaAssetsController.pasteboardResultSignals(for: controller.interaction?.selectionState, editingContext: controller.interaction?.editingState, intent:  asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, descriptionGenerator: legacyAssetPickerItemGenerator())
+                    signals = TGMediaAssetsController.pasteboardResultSignals(for: controller.interaction?.selectionState, editingContext: controller.interaction?.editingState, intent: asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, descriptionGenerator: legacyAssetPickerItemGenerator())
                 }
                 guard let signals = signals else {
                     return

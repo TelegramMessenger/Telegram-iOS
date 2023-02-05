@@ -6296,6 +6296,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return nil
                     }
                 }
+                
+                let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                 let uploadInterface = LegacyLiveUploadInterface(context: context)
                 let signal: SSignal
                 if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
@@ -6311,14 +6313,14 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     })
                     signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
-                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, path: tempFile.path, watcher: nil, entityRenderer: entityRenderer)!
                         } else {
                             return SSignal.single(nil)
                         }
                     })
                    
                 } else if let asset = asset as? AVAsset {
-                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, path: tempFile.path, watcher: uploadInterface, entityRenderer: entityRenderer)!
                 } else {
                     signal = SSignal.complete()
                 }
@@ -6344,6 +6346,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                 }
                                 account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                 subscriber.putNext(resource)
+                                
+                                EngineTempBox.shared.dispose(tempFile)
                             }
                         }
                         subscriber.putCompletion()
