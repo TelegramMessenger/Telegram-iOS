@@ -65,6 +65,8 @@ private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNo
         
         super.init()
         
+        self.accessibilityTraits = [.button]
+        
         self.addSubnode(self.backgroundContainerNode)
         
         self.backgroundContainerNode.addSubnode(self.backgroundColorNode)
@@ -94,6 +96,7 @@ private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNo
     
     override func setAttributedTitle(_ title: NSAttributedString, for state: UIControl.State) {
         self.textNode.attributedText = title
+        self.accessibilityLabel = title.string
     }
     
     private var absoluteRect: (CGRect, CGSize)?

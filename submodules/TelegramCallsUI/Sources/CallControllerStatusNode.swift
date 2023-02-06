@@ -40,6 +40,9 @@ final class CallControllerStatusNode: ASDisplayNode {
     private let receptionNode: CallControllerReceptionNode
     private let logoNode: ASImageNode
     
+    private let titleActivateAreaNode: AccessibilityAreaNode
+    private let statusActivateAreaNode: AccessibilityAreaNode
+    
     var title: String = ""
     var subtitle: String = ""
     var status: CallControllerStatusValue = .text(string: "", displayLogo: false) {
@@ -118,6 +121,12 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.logoNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallTitleLogo"), color: .white)
         self.logoNode.isHidden = true
         
+        self.titleActivateAreaNode = AccessibilityAreaNode()
+        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        
+        self.statusActivateAreaNode = AccessibilityAreaNode()
+        self.statusActivateAreaNode.accessibilityTraits = [.staticText, .updatesFrequently]
+        
         super.init()
         
         self.isUserInteractionEnabled = false
@@ -127,6 +136,9 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.statusContainerNode.addSubnode(self.statusNode)
         self.statusContainerNode.addSubnode(self.receptionNode)
         self.statusContainerNode.addSubnode(self.logoNode)
+        
+        self.addSubnode(self.titleActivateAreaNode)
+        self.addSubnode(self.statusActivateAreaNode)
     }
     
     deinit {
@@ -191,6 +203,9 @@ final class CallControllerStatusNode: ASDisplayNode {
         let _ = statusApply()
         let _ = statusMeasureApply()
         
+        self.titleActivateAreaNode.accessibilityLabel = self.title
+        self.statusActivateAreaNode.accessibilityLabel = statusText
+        
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - titleLayout.size.width) / 2.0), y: 0.0), size: titleLayout.size)
         self.statusContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: titleLayout.size.height + spacing), size: CGSize(width: constrainedWidth, height: statusLayout.size.height))
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0) + statusOffset, y: 0.0), size: statusLayout.size)
@@ -200,6 +215,9 @@ final class CallControllerStatusNode: ASDisplayNode {
             let firstLineOffset = floor((statusMeasureLayout.size.width - firstLineRect.width) / 2.0)
             self.logoNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX + firstLineOffset - image.size.width - 7.0, y: 5.0), size: image.size)
         }
+        
+        self.titleActivateAreaNode.frame = self.titleNode.frame
+        self.statusActivateAreaNode.frame = self.statusContainerNode.frame
         
         return titleLayout.size.height + spacing + statusLayout.size.height
     }

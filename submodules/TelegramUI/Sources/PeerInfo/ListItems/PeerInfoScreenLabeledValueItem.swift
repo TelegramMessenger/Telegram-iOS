@@ -373,9 +373,11 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             self.iconNode.image = generateTintedImage(image: iconImage, color: presentationData.theme.list.itemAccentColor)
             self.iconNode.isHidden = false
             self.iconButtonNode.isHidden = false
+            self.iconButtonNode.accessibilityLabel = presentationData.strings.InviteLink_QRCode_Share
         } else {
             self.iconNode.isHidden = true
             self.iconButtonNode.isHidden = true
+            self.iconButtonNode.accessibilityLabel = nil
         }
         
         let additionalSideInset: CGFloat = !self.iconNode.isHidden ? 32.0 : 0.0

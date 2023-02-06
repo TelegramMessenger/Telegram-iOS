@@ -240,7 +240,31 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: EnginePeer(peer))
                 |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf, let peerSelected = strongSelf.peerSelected {
-                        peerSelected(peer, threadId)
+                        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
+                            let controller = PeerSelectionControllerImpl(
+                                PeerSelectionControllerParams(
+                                    context: strongSelf.context,
+                                    updatedPresentationData: nil,
+                                    filter: strongSelf.filter,
+                                    forumPeerId: peer.id,
+                                    hasChatListSelector: false,
+                                    hasContactSelector: false,
+                                    hasGlobalSearch: false,
+                                    title: EnginePeer(peer).compactDisplayTitle,
+                                    attemptSelection: strongSelf.attemptSelection,
+                                    createNewGroup: nil,
+                                    pretendPresentedInModal: false,
+                                    multipleSelection: false,
+                                    forwardedMessageIds: [],
+                                    hasTypeHeaders: false,
+                                    selectForumThreads: false
+                                )
+                            )
+                            controller.peerSelected = strongSelf.peerSelected
+                            strongSelf.push(controller)
+                        } else {
+                            peerSelected(peer, threadId)
+                        }
                     }
                 }))
             }

@@ -501,6 +501,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.buttonsNode = CallControllerButtonsNode(strings: self.presentationData.strings)
         self.toastNode = CallControllerToastContainerNode(strings: self.presentationData.strings)
         self.keyButtonNode = CallControllerKeyButton()
+        self.keyButtonNode.accessibilityElementsHidden = false
         
         super.init()
         
@@ -510,6 +511,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.containerTransformationNode.addSubnode(self.containerNode)
         
         self.backButtonNode.setTitle(presentationData.strings.Common_Back, with: Font.regular(17.0), with: .white, for: [])
+        self.backButtonNode.accessibilityLabel = presentationData.strings.Call_VoiceOver_Minimize
+        self.backButtonNode.accessibilityTraits = [.button]
         self.backButtonNode.hitTestSlop = UIEdgeInsets(top: -8.0, left: -20.0, bottom: -8.0, right: -8.0)
         self.backButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {

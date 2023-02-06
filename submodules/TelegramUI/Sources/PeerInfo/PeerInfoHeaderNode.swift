@@ -1713,6 +1713,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
+        self.clearButtonNode.isAccessibilityElement = false
         
         self.topSeparator = ASDisplayNode()
         
@@ -1873,6 +1874,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
+        self.clearButtonNode.isAccessibilityElement = false
         
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false

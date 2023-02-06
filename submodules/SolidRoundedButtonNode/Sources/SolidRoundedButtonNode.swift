@@ -251,6 +251,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         super.init()
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.buttonBackgroundNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.titleNode)
@@ -930,6 +932,8 @@ public final class SolidRoundedButtonView: UIView {
         self.iconNode.image = generateTintedImage(image: icon, color: self.theme.foregroundColor)
         
         super.init(frame: CGRect())
+        
+        self.isAccessibilityElement = true
         
         self.addSubview(self.buttonBackgroundNode)
         self.addSubview(self.buttonNode)
