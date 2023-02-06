@@ -20,7 +20,7 @@ public struct MediaInputSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.enableRaiseToSpeak = (try container.decode(Int32.self, forKey: "enableRaiseToSpeak")) != 0
-        self.pauseMusicOnRecording = (try container.decodeIfPresent(Int32.self, forKey: "pauseMusicOnRecording_v2") ?? 0) != 0
+        self.pauseMusicOnRecording = (try container.decodeIfPresent(Int32.self, forKey: "pauseMusicOnRecording_v2") ?? 1) != 0
     }
     
     public func encode(to encoder: Encoder) throws {

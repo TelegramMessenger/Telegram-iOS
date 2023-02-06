@@ -1362,7 +1362,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             }
                                         })
                                     }
-                                    if currentIsVisible {
+                                    if currentIsVisible && currentlyPlayingVideo {
                                         updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
                                         scrollAnimationCurve = .Spring(duration: 0.4)
                                     }
