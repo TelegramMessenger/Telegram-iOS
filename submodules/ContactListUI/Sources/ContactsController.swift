@@ -82,6 +82,8 @@ private final class SortHeaderButton: HighlightableButtonNode {
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 44.0))
         self.referenceNode.frame = self.containerNode.bounds
+        
+        self.accessibilityLabel = strings.Contacts_Sort
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

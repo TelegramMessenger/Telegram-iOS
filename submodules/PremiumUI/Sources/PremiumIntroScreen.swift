@@ -842,17 +842,22 @@ private final class CheckComponent: Component {
 final class SectionGroupComponent: Component {
     public final class Item: Equatable {
         public let content: AnyComponentWithIdentity<Empty>
+        public let accessibilityLabel: String
         public let isEnabled: Bool
         public let action: () -> Void
         
-        public init(_ content: AnyComponentWithIdentity<Empty>, isEnabled: Bool = true, action: @escaping () -> Void) {
+        public init(_ content: AnyComponentWithIdentity<Empty>, accessibilityLabel: String, isEnabled: Bool = true, action: @escaping () -> Void) {
             self.content = content
+            self.accessibilityLabel = accessibilityLabel
             self.isEnabled = isEnabled
             self.action = action
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.content != rhs.content {
+                return false
+            }
+            if lhs.accessibilityLabel != rhs.accessibilityLabel {
                 return false
             }
             if lhs.isEnabled != rhs.isEnabled {
@@ -947,6 +952,7 @@ final class SectionGroupComponent: Component {
                     self.buttonViews[item.content.id] = buttonView
                     self.addSubview(buttonView)
                 }
+                buttonView.accessibilityLabel = item.accessibilityLabel
                 
                 if let current = self.itemViews[item.content.id] {
                     itemView = current
@@ -1105,7 +1111,8 @@ final class PerkComponent: CombinedComponent {
                     colors: component.iconBackgroundColors,
                     cornerRadius: 7.0,
                     gradientDirection: .vertical),
-                availableSize: iconSize, transition: context.transition
+                availableSize: iconSize,
+                transition: context.transition
             )
             
             let icon = icon.update(
@@ -1179,7 +1186,7 @@ final class PerkComponent: CombinedComponent {
             context.add(arrow
                 .position(CGPoint(x: context.availableSize.width - 7.0 - arrow.size.width / 2.0, y: size.height / 2.0))
             )
-        
+            
             return size
         }
     }
@@ -1557,14 +1564,17 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
                         
                         var subtitle = ""
+                        var accessibilitySubtitle = ""
                         var pricePerMonth = product.price
                         if product.months > 1 {
                             pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
                             
                             if discountValue > 0 {
                                 subtitle = "**\(defaultPrice)** \(product.price)"
+                                accessibilitySubtitle = product.price
                                 if product.months == 12 {
                                     subtitle = environment.strings.Premium_PricePerYear(subtitle).string
+                                    accessibilitySubtitle = environment.strings.Premium_PricePerYear(accessibilitySubtitle).string
                                 }
                             } else {
                                 subtitle = product.price
@@ -1572,6 +1582,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         }
                         if product.isCurrent {
                             subtitle = environment.strings.Premium_CurrentPlan
+                            accessibilitySubtitle = subtitle
                         }
                         pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
                         
@@ -1594,6 +1605,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         )
                                     )
                                 ),
+                                accessibilityLabel: "\(giftTitle). \(accessibilitySubtitle). \(pricePerMonth)",
                                 isEnabled: product.months > currentProductMonths,
                                 action: {
                                     selectProduct(product.id)
@@ -1651,6 +1663,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 )
                             )
                         ),
+                        accessibilityLabel: "\(perk.title(strings: strings)). \(perk.subtitle(strings: strings))",
                         action: { [weak state] in
                             var demoSubject: PremiumDemoScreen.Subject
                             switch perk {

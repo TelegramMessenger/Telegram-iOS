@@ -859,6 +859,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
+        self.cancelButton.accessibilityLabel = self.presentationData.strings.Common_Close
         
         self.switchThemeButton = HighlightTrackingButtonNode()
         self.animationContainerNode = ASDisplayNode()

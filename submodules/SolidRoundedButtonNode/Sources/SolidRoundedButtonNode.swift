@@ -106,6 +106,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var title: String? {
         didSet {
+            self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
             }
@@ -114,6 +115,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var subtitle: String? {
         didSet {
+            self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, previousSubtitle: oldValue, transition: .immediate)
             }
@@ -124,6 +126,10 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         didSet {
             self.iconNode.image = generateTintedImage(image: self.icon, color: self.theme.foregroundColor)
         }
+    }
+    
+    private func updateAccessibilityLabels() {
+        self.accessibilityLabel = (self.title ?? "") + " " + (self.subtitle ?? "")
     }
     
     private var animationTimer: SwiftSignalKit.Timer?
@@ -759,6 +765,7 @@ public final class SolidRoundedButtonView: UIView {
     
     public var title: String? {
         didSet {
+            self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
             }
@@ -767,6 +774,7 @@ public final class SolidRoundedButtonView: UIView {
     
     public var label: String? {
         didSet {
+            self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
             }
@@ -775,10 +783,16 @@ public final class SolidRoundedButtonView: UIView {
     
     public var subtitle: String? {
         didSet {
+            self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, previousSubtitle: oldValue, transition: .immediate)
             }
         }
+    }
+    
+    private func updateAccessibilityLabels() {
+        self.accessibilityLabel = (self.title ?? "") + " " + (self.subtitle ?? "")
+        self.accessibilityValue = self.label
     }
     
     public var icon: UIImage? {
