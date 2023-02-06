@@ -302,7 +302,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     public var switchToTextInput: (() -> Void)?
     
-    private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool)?
+    private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, layoutMetrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool)?
     
     private var scheduledContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
     private var scheduledInnerTransition: Transition?
@@ -1087,6 +1087,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
+                                    fillWithLoadingPlaceholders: false,
                                     items: items
                                 )]
                             }
@@ -1140,6 +1141,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }
@@ -1155,12 +1157,31 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            self.emojiSearchStateValue.isSearching = true
+                            //self.emojiSearchStateValue.isSearching = true
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
-                        
-                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
-                        version += 1
+                        //DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            version += 1
+                        //})
                     }))
                 }
             },
@@ -1416,6 +1437,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], files.isFinalResult))
                     }
@@ -1430,7 +1452,25 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            strongSelf.stickerSearchStateValue.isSearching = true
+                            //strongSelf.stickerSearchStateValue.isSearching = true
+                            strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
                         strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
@@ -1467,7 +1507,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             if let emojiSearchResult = emojiSearchState.result {
                 var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                     emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
                         text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
                         iconFile: nil
@@ -1485,7 +1525,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             if let stickerSearchResult = stickerSearchState.result {
                 var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                     stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
                         text: presentationData.strings.EmojiSearch_SearchStickersEmptyResult,
                         iconFile: nil
@@ -1650,22 +1690,22 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     }
     
     private func performLayout(transition: Transition) {
-        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded) = self.currentState else {
+        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, layoutMetrics, deviceMetrics, isVisible, isExpanded) = self.currentState else {
             return
         }
         self.scheduledInnerTransition = transition
-        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, layoutMetrics: layoutMetrics, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
     
     public func simulateUpdateLayout(isVisible: Bool) {
-        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, _, isExpanded) = self.currentState else {
+        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, layoutMetrics, deviceMetrics, _, isExpanded) = self.currentState else {
             return
         }
-        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, layoutMetrics: layoutMetrics, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
     
-    public override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
-        self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded)
+    public override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, layoutMetrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
+        self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, layoutMetrics, deviceMetrics, isVisible, isExpanded)
         
         let innerTransition: Transition
         if let scheduledInnerTransition = self.scheduledInnerTransition {
@@ -1734,13 +1774,17 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
+        var keyboardBottomInset = bottomInset
+        if case .regular = layoutMetrics.widthClass, inputHeight > 0.0 && inputHeight < 100.0 {
+            keyboardBottomInset = inputHeight + 15.0
+        }
         let entityKeyboardSize = self.entityKeyboardView.update(
             transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
                 theme: interfaceState.theme,
                 strings: interfaceState.strings,
                 isContentInFocus: isVisible,
-                containerInsets: UIEdgeInsets(top: self.isEmojiSearchActive ? -34.0 : 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
+                containerInsets: UIEdgeInsets(top: self.isEmojiSearchActive ? -34.0 : 0.0, left: leftInset, bottom: keyboardBottomInset, right: rightInset),
                 topPanelInsets: UIEdgeInsets(),
                 emojiContent: emojiContent,
                 stickerContent: stickerContent,
@@ -2387,6 +2431,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             inputPanelHeight: 0.0,
             transition: .immediate,
             interfaceState: presentationInterfaceState,
+            layoutMetrics: LayoutMetrics(widthClass: .compact, heightClass: .compact),
             deviceMetrics: DeviceMetrics.iPhone12,
             isVisible: true,
             isExpanded: false

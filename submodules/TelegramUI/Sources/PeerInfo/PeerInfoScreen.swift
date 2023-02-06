@@ -1950,7 +1950,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
     private let paneContainerNode: PeerInfoPaneContainerNode
     private var ignoreScrolling: Bool = false
-    private var hapticFeedback: HapticFeedback?
+    private lazy var hapticFeedback = { HapticFeedback() }()
 
     private var customStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?)
     private let customStatusPromise = Promise<(PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?)>((nil, nil, nil))
@@ -3096,7 +3096,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     for (_, section) in strongSelf.editingSections {
                                         section.animateErrorIfNeeded()
                                     }
-                                    strongSelf.hapticFeedback?.error()
+                                    strongSelf.hapticFeedback.error()
                                     return
                                 }
                             }
@@ -3146,10 +3146,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName {
                                 if firstName.isEmpty && lastName.isEmpty {
-                                    if strongSelf.hapticFeedback == nil {
-                                        strongSelf.hapticFeedback = HapticFeedback()
-                                    }
-                                    strongSelf.hapticFeedback?.error()
+                                    strongSelf.hapticFeedback.error()
                                     strongSelf.headerNode.editingContentNode.shakeTextForKey(.firstName)
                                 } else {
                                     var dismissStatus: (() -> Void)?
@@ -3212,10 +3209,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         let description = strongSelf.headerNode.editingContentNode.editingTextForKey(.description) ?? ""
                         
                         if title.isEmpty {
-                            if strongSelf.hapticFeedback == nil {
-                                strongSelf.hapticFeedback = HapticFeedback()
-                            }
-                            strongSelf.hapticFeedback?.error()
+                            strongSelf.hapticFeedback.error()
                             
                             strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
                         } else {
@@ -6959,7 +6953,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 case .complete:
                     strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
                 case let .progress(value):
-                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(value))
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(.value(CGFloat(value)))
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
@@ -7015,21 +7009,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: mode == .custom ? true : false)
         
-        if [.suggest, .fallback].contains(mode) {
-        } else {
-            self.state = self.state.withUpdatingAvatar(.image(representation))
-        }
-       
-        if let (layout, navigationHeight) = self.validLayout {
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: mode == .custom ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
-        }
-        self.headerNode.ignoreCollapse = false
-        
-        var videoStartTimestamp: Double? = nil
-        if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
-            videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
-        }
-        
         var markup: UploadPeerPhotoMarkup? = nil
         if let fileId = adjustments?.documentId, let backgroundColors = adjustments?.colors as? [Int32], fileId != 0 {
             if let packId = adjustments?.stickerPackId, let accessHash = adjustments?.stickerPackAccessHash, packId != 0 {
@@ -7048,6 +7027,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         }
         
+        if [.suggest, .fallback].contains(mode) {
+        } else {
+            self.state = self.state.withUpdatingAvatar(.image(representation))
+            if !uploadVideo {
+                self.state = self.state.withAvatarUploadProgress(.indefinite)
+            }
+        }
+       
+        if let (layout, navigationHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: mode == .custom ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
+        }
+        self.headerNode.ignoreCollapse = false
+        
+        var videoStartTimestamp: Double? = nil
+        if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+            videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+        }
+    
         let account = self.context.account
         let context = self.context
         
@@ -7061,6 +7058,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         return nil
                     }
                 }
+                
+                let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                 let uploadInterface = LegacyLiveUploadInterface(context: context)
                 let signal: SSignal
                 if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
@@ -7076,14 +7075,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })
                     signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
-                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, path: tempFile.path, watcher: nil, entityRenderer: entityRenderer)!
                         } else {
                             return SSignal.single(nil)
                         }
                     })
-                    
                 } else if let asset = asset as? AVAsset {
-                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                    signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, path: tempFile.path, watcher: uploadInterface, entityRenderer: entityRenderer)!
                 } else {
                     signal = SSignal.complete()
                 }
@@ -7109,12 +7107,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                 subscriber.putNext(resource)
+                                
+                                EngineTempBox.shared.dispose(tempFile)
                             }
                         }
                         subscriber.putCompletion()
                     } else if let strongSelf = self, let progress = next as? NSNumber {
                         Queue.mainQueue().async {
-                            strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.45))
+                            strongSelf.state = strongSelf.state.withAvatarUploadProgress(.value(CGFloat(progress.floatValue * 0.45)))
                             if let (layout, navigationHeight) = strongSelf.validLayout {
                                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                             }
@@ -7189,7 +7189,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 case .complete:
                     strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
                 case let .progress(value):
-                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(0.45 + value * 0.55))
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(.value(CGFloat(0.45 + value * 0.55)))
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
@@ -7331,6 +7331,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     completion(nil)
                 }
             }
+            var isFromEditor = false
             mixin.requestAvatarEditor = { [weak self] imageCompletion, videoCompletion in
                 guard let strongSelf = self, let imageCompletion, let videoCompletion else {
                     return
@@ -7353,6 +7354,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 controller.imageCompletion = imageCompletion
                 controller.videoCompletion = videoCompletion
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
+                isFromEditor = true
             }
 
             if let confirmationTextPhoto, let confirmationAction {
@@ -7368,7 +7370,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if let confirmationTextVideo, let confirmationAction {
                 mixin.willFinishWithVideo = { [weak self] image, commit in
                     if let strongSelf = self, let image {
-                        let controller = photoUpdateConfirmationController(context: strongSelf.context, peer: peer, image: image, text: confirmationTextVideo, doneTitle: confirmationAction, commit: {
+                        let controller = photoUpdateConfirmationController(context: strongSelf.context, peer: peer, image: image, text: confirmationTextVideo, doneTitle: confirmationAction, isDark: !isFromEditor, commit: {
                             commit?()
                         })
                         (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.presentInGlobalOverlay(controller)
@@ -8019,6 +8021,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
+                        Queue.mainQueue().after(0.88) {
+                            strongSelf.hapticFeedback.success()
+                        }
+                        
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         
@@ -9050,10 +9056,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     shouldBeExpanded = true
                     
                     if self.canOpenAvatarByDragging && self.headerNode.isAvatarExpanded && offsetY <= -32.0 {
-                        if self.hapticFeedback == nil {
-                            self.hapticFeedback = HapticFeedback()
-                        }
-                        self.hapticFeedback?.impact()
+                        self.hapticFeedback.impact()
                         
                         self.canOpenAvatarByDragging = false
                         let contentOffset = scrollView.contentOffset.y
@@ -9073,13 +9076,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if let shouldBeExpanded = shouldBeExpanded, shouldBeExpanded != self.headerNode.isAvatarExpanded {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 
-                if self.hapticFeedback == nil {
-                    self.hapticFeedback = HapticFeedback()
-                }
                 if shouldBeExpanded {
-                    self.hapticFeedback?.impact()
+                    self.hapticFeedback.impact()
                 } else {
-                    self.hapticFeedback?.tap()
+                    self.hapticFeedback.tap()
                 }
                 
                 self.headerNode.updateIsAvatarExpanded(shouldBeExpanded, transition: transition)

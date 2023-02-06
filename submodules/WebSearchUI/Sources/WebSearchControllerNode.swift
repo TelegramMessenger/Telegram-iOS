@@ -245,9 +245,9 @@ class WebSearchControllerNode: ASDisplayNode {
         self.addSubnode(self.segmentedContainerNode)
         self.segmentedContainerNode.addSubnode(self.segmentedBackgroundNode)
         self.segmentedContainerNode.addSubnode(self.segmentedSeparatorNode)
-        if case .media = mode {
-            self.segmentedContainerNode.addSubnode(self.segmentedControlNode)
-        }
+//        if case .media = mode {
+//            self.segmentedContainerNode.addSubnode(self.segmentedControlNode)
+//        }
         if !attachment {
             self.addSubnode(self.toolbarBackgroundNode)
             self.addSubnode(self.toolbarSeparatorNode)

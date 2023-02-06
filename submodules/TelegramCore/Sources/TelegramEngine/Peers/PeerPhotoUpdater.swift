@@ -35,7 +35,13 @@ public enum SetCustomPeerPhotoMode {
 }
 
 func _internal_updateContactPhoto(account: Account, peerId: PeerId, resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, markup: UploadPeerPhotoMarkup?, mode: SetCustomPeerPhotoMode, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-    return _internal_updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: resource.flatMap({ _internal_uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: $0) }), video: videoResource.flatMap({ _internal_uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: $0) |> map(Optional.init) }), videoStartTimestamp: videoStartTimestamp, markup: markup, customPeerPhotoMode: mode, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+    let photo: Signal<UploadedPeerPhotoData, NoError>?
+    if videoResource == nil && markup != nil, let resource = resource {
+        photo = .single(UploadedPeerPhotoData.withResource(resource))
+    } else {
+        photo = resource.flatMap({ _internal_uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: $0) })
+    }
+    return _internal_updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: photo, video: videoResource.flatMap({ _internal_uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: $0) |> map(Optional.init) }), videoStartTimestamp: videoStartTimestamp, markup: markup, customPeerPhotoMode: mode, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
 }
 
 public struct UploadedPeerPhotoData {
@@ -208,7 +214,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                         if let _ = videoEmojiMarkup {
                                             flags |= (1 << 5)
                                         }
-                                        request = network.request(Api.functions.photos.uploadContactProfilePhoto(flags: flags, userId: inputUser, file: file, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: videoEmojiMarkup))
+                                        request = network.request(Api.functions.photos.uploadContactProfilePhoto(flags: flags, userId: inputUser, file: photoFile, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: videoEmojiMarkup))
                                     } else {
                                         request = .complete()
                                     }

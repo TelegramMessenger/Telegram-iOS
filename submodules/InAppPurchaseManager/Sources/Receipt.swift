@@ -7,6 +7,7 @@ private struct Asn1Tag {
     static let sequence: Int32 = 0x10
     static let set: Int32 = 0x11
     static let utf8String: Int32 = 0x0c
+    static let date: Int32 = 0x16
 }
 
 private struct Asn1Entry {
@@ -124,10 +125,12 @@ struct Receipt {
         fileprivate struct Tag {
             static let productIdentifier: Int32 = 1702
             static let transactionIdentifier: Int32 = 1703
+            static let expirationDate: Int32 = 1708
         }
         
         let productId: String
         let transactionId: String
+        let expirationDate: Date
     }
     
     let purchases: [Purchase]
@@ -192,6 +195,27 @@ func parseReceipt(_ data: Data) -> Receipt? {
     return Receipt(purchases: purchases)
 }
 
+private func parseRfc3339Date(_ str: String) -> Date? {
+    let posixLocale = Locale(identifier: "en_US_POSIX")
+    
+    let formatter1 = DateFormatter()
+    formatter1.locale = posixLocale
+    formatter1.dateFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ssX5"
+    formatter1.timeZone = TimeZone(secondsFromGMT: 0)
+    
+    let result = formatter1.date(from: str)
+    if result != nil {
+        return result
+    }
+    
+    let formatter2 = DateFormatter()
+    formatter2.locale = posixLocale
+    formatter2.dateFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss.SSSSSSX5"
+    formatter2.timeZone = TimeZone(secondsFromGMT: 0)
+    
+    return formatter2.date(from: str)
+}
+
 private func parsePurchaseAttributes(_ data: Data) -> Receipt.Purchase? {
     let root = parse(data)
     guard root.tag == Asn1Tag.set else {
@@ -200,6 +224,7 @@ private func parsePurchaseAttributes(_ data: Data) -> Receipt.Purchase? {
         
     var productId: String?
     var transactionId: String?
+    var expirationDate: Date?
     
     let receiptAttributes = parseSequence(root.data)
     for attribute in receiptAttributes {
@@ -219,12 +244,16 @@ private func parsePurchaseAttributes(_ data: Data) -> Receipt.Purchase? {
             let valEntry = parse(value)
             guard valEntry.tag == Asn1Tag.utf8String else { return nil }
             transactionId = String(bytes: valEntry.data, encoding: .utf8)
+        case Receipt.Purchase.Tag.expirationDate:
+            let valEntry = parse(value)
+            guard valEntry.tag == Asn1Tag.date else { return nil }
+            expirationDate = parseRfc3339Date(String(bytes: valEntry.data, encoding: .utf8) ?? "")
         default:
             break
         }
     }
-    guard let productId, let transactionId else {
+    guard let productId, let transactionId, let expirationDate else {
         return nil
     }
-    return Receipt.Purchase(productId: productId, transactionId: transactionId)
+    return Receipt.Purchase(productId: productId, transactionId: transactionId, expirationDate: expirationDate)
 }

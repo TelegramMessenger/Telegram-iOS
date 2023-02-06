@@ -126,7 +126,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var selectedFilterPromise = Promise<ChatListSearchFilterEntry?>()
     private var transitionFraction: CGFloat = 0.0
     
+    private var appearanceTimestamp: Double?
+    
     private weak var copyProtectionTooltipController: TooltipController?
+    
+    private lazy var hapticFeedback = { HapticFeedback() }()
     
     private var didSetReady: Bool = false
     private let _ready = Promise<Void>()
@@ -301,6 +305,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         self.filterContainerNode.filterPressed = { [weak self] filter in
             guard let strongSelf = self else {
+                return
+            }
+            
+            if let appearanceTimestamp = strongSelf.appearanceTimestamp, CACurrentMediaTime() - appearanceTimestamp < 0.5 {
                 return
             }
             
@@ -665,6 +673,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         if isFirstTime {
             self.filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.appearanceTimestamp = CACurrentMediaTime()
         }
         
         var bottomIntrinsicInset = layout.intrinsicInsets.bottom
@@ -1392,6 +1401,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let peerId = peer.id
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {
+                        Queue.mainQueue().after(0.88) {
+                            strongSelf.hapticFeedback.success()
+                        }
+
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         (strongSelf.navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                         

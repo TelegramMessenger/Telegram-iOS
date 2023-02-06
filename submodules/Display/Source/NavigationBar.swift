@@ -93,10 +93,12 @@ public final class NavigationBarTheme {
 public final class NavigationBarStrings {
     public let back: String
     public let close: String
+    public let tab: String
     
-    public init(back: String, close: String) {
+    public init(back: String, close: String, tab: String) {
         self.back = back
         self.close = close
+        self.tab = tab
     }
 }
 
@@ -1190,6 +1192,7 @@ open class NavigationBar: ASDisplayNode {
             
             self.badgeNode.updateTheme(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
             
+            self.updateLeftButton(animated: false)
             self.requestLayout()
         }
     }

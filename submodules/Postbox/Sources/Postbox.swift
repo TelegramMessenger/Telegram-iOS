@@ -132,6 +132,16 @@ public final class Transaction {
         self.postbox?.replaceChatListHole(groupId: groupId, index: index, hole: hole)
     }
     
+    public func allChatListHoles(groupId: PeerGroupId) -> [ChatListHole] {
+        assert(!self.disposed)
+        return self.postbox?.chatListTable.getHoles(groupId: groupId) ?? []
+    }
+    
+    public func addChatListHole(groupId: PeerGroupId, hole: ChatListHole) {
+        assert(!self.disposed)
+        self.postbox?.addChatListHole(groupId: groupId, hole: hole)
+    }
+    
     public func deleteMessages(_ messageIds: [MessageId], forEachMedia: ((Media) -> Void)?) {
         assert(!self.disposed)
         self.postbox?.deleteMessages(messageIds, forEachMedia: forEachMedia)
@@ -391,6 +401,16 @@ public final class Transaction {
     public func updatePeerChatListInclusion(_ id: PeerId, inclusion: PeerChatListInclusion) {
         assert(!self.disposed)
         self.postbox?.updatePeerChatListInclusion(id, inclusion: inclusion)
+    }
+    
+    public func removeAllChatListEntries(groupId: PeerGroupId, exceptPeerNamespace: PeerId.Namespace) {
+        assert(!self.disposed)
+        self.postbox?.removeAllChatListEntries(groupId: groupId, exceptPeerNamespace: exceptPeerNamespace)
+    }
+    
+    public func chatListGetAllPeerIds() -> [PeerId] {
+        assert(!self.disposed)
+        return self.postbox?.chatListTable.getAllPeerIds() ?? []
     }
     
     public func updateCurrentPeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {
@@ -1282,7 +1302,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath + "/db", name: "previous2")
-            //debugRestoreState(basePath: basePath + "/db", name: "previous2")
+            debugRestoreState(basePath: basePath + "/db", name: "previous2")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -1897,6 +1917,10 @@ final class PostboxImpl {
         self.chatListTable.replaceHole(groupId: groupId, index: index, hole: hole, operations: &self.currentChatListOperations)
     }
     
+    fileprivate func addChatListHole(groupId: PeerGroupId, hole: ChatListHole) {
+        self.chatListTable.addHole(groupId: groupId, hole: hole, operations: &self.currentChatListOperations)
+    }
+    
     fileprivate func deleteMessages(_ messageIds: [MessageId], forEachMedia: ((Media) -> Void)?) {
         self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
@@ -2224,6 +2248,10 @@ final class PostboxImpl {
         self.chatListTable.updateInclusion(peerId: id, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, { _ in
             return inclusion
         })
+    }
+    
+    fileprivate func removeAllChatListEntries(groupId: PeerGroupId, exceptPeerNamespace: PeerId.Namespace) {
+        self.chatListTable.removeAllEntries(groupId: groupId, exceptPeerNamespace: exceptPeerNamespace, operations: &self.currentChatListOperations)
     }
     
     fileprivate func getPinnedItemIds(groupId: PeerGroupId) -> [PinnedItemId] {

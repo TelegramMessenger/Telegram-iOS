@@ -68,13 +68,13 @@ enum AvatarBackground: Equatable {
 }
 
 private let defaultBackgrounds: [AvatarBackground] = [
-    .gradient([0xff72d5fd, 0xff2a9ef1]),
-    .gradient([0xffff885e, 0xffff516a]),
-    .gradient([0xffffcd6a, 0xffffa85c]),
-    .gradient([0xffa0de7e, 0xff54cb68]),
-    .gradient([0xff00fcfd, 0xff4acccd]),
-    .gradient([0xffe0a2f3, 0xffd669ed]),
-    .gradient([0xff82b1ff, 0xff665fff]),
+    .gradient([0xFF5A7FFF, 0xFF2CA0F2, 0xFF4DFF89, 0xFF6BFCEB]),
+    .gradient([0xFFFF011D, 0xFFFF530D, 0xFFFE64DC, 0xFFFFDC61]),
+    .gradient([0xFFFE64DC, 0xFFFF6847, 0xFFFFDD02, 0xFFFFAE10]),
+    .gradient([0xFF84EC00, 0xFF00B7C2, 0xFF00C217, 0xFFFFE600]),
+    .gradient([0xFF86B0FF, 0xFF35FFCF, 0xFF69FFFF, 0xFF76DEFF]),
+    .gradient([0xFFFAE100, 0xFFFF54EE, 0xFFFC2B78, 0xFFFF52D9]),
+    .gradient([0xFF73A4FF, 0xFF5F55FF, 0xFFFF49F8, 0xFFEC76FF]),
 ]
 
 public struct AvatarKeyboardInputData: Equatable {
@@ -435,6 +435,7 @@ final class AvatarEditorScreenComponent: Component {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: emojiItems
                                         )
                                     )
@@ -454,6 +455,7 @@ final class AvatarEditorScreenComponent: Component {
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
                                             items: stickerItems
                                         )
                                     )
@@ -510,6 +512,7 @@ final class AvatarEditorScreenComponent: Component {
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
+                            fillWithLoadingPlaceholders: false,
                             items: items
                         )], isFinalResult))
                     }
@@ -527,7 +530,25 @@ final class AvatarEditorScreenComponent: Component {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            self.emojiSearchStateValue.isSearching = true
+                            //self.emojiSearchStateValue.isSearching = true
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    fillWithLoadingPlaceholders: true,
+                                    items: []
+                                )
+                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
                         
@@ -907,7 +928,7 @@ final class AvatarEditorScreenComponent: Component {
                         if let searchResult = emojiSearchState.result {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                            if !searchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                            if !searchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                                 emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
                                     text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
                                     iconFile: nil

@@ -612,7 +612,18 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
+        let stringsUpdated = self.presentationData.strings !== presentationData.strings
         self.presentationData = presentationData
+    
+        if stringsUpdated {
+            if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
+                self.view.addSubview(snapshotView)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+        }
+        
         self.presentationDataValue.set(.single(presentationData))
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.list.blocksBackgroundColor, direction: true)

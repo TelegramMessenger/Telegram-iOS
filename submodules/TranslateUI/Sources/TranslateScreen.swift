@@ -1006,7 +1006,7 @@ public class TranslateScreen: ViewController {
         }
         
         if toLanguage == "nb" {
-            toLanguage = "nl"
+            toLanguage = "no"
         } else if toLanguage == "pt-br" {
             toLanguage = "pt"
         }

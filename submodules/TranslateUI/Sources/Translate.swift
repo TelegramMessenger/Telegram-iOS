@@ -25,9 +25,6 @@ public var supportedTranslationLanguages = [
     "ca",
     "ceb",
     "zh",
-//    "zh-Hant",
-//    "zh-CN", "zh"
-//    "zh-TW"
     "co",
     "hr",
     "cs",
@@ -168,9 +165,20 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
             supportedTranslationLanguages = ["uk", "ru"]
         }
         
-        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
-        if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
-            return (!dontTranslateLanguages.contains(language.key.rawValue), language.key.rawValue)
+        func normalize(_ code: String) -> String {
+            if code.contains("-") {
+                return code.components(separatedBy: "-").first ?? code
+            } else if code == "nb" {
+                return "no"
+            } else {
+                return code
+            }
+        }
+        
+        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalize($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
+        if let language = filteredLanguages.first {
+            let languageCode = normalize(language.key.rawValue)
+            return (!dontTranslateLanguages.contains(languageCode), languageCode)
         } else {
             return (false, nil)
         }

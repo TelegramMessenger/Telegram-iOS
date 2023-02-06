@@ -2215,12 +2215,18 @@ public final class ContextControllerReferenceViewInfo {
 }
 
 public protocol ContextReferenceContentSource: AnyObject {
+    var keepInPlace: Bool { get }
+    
     var shouldBeDismissed: Signal<Bool, NoError> { get }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo?
 }
 
 public extension ContextReferenceContentSource {
+    var keepInPlace: Bool {
+        return false
+    }
+    
     var shouldBeDismissed: Signal<Bool, NoError> {
         return .single(false)
     }

@@ -124,6 +124,7 @@ private final class AttachButtonComponent: CombinedComponent {
     let strings: PresentationStrings
     let theme: PresentationTheme
     let action: () -> Void
+    let longPressAction: () -> Void
     
     init(
         context: AccountContext,
@@ -131,7 +132,8 @@ private final class AttachButtonComponent: CombinedComponent {
         isSelected: Bool,
         strings: PresentationStrings,
         theme: PresentationTheme,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        longPressAction: @escaping () -> Void
     ) {
         self.context = context
         self.type = type
@@ -139,6 +141,7 @@ private final class AttachButtonComponent: CombinedComponent {
         self.strings = strings
         self.theme = theme
         self.action = action
+        self.longPressAction = longPressAction
     }
 
     static func ==(lhs: AttachButtonComponent, rhs: AttachButtonComponent) -> Bool {
@@ -293,6 +296,11 @@ private final class AttachButtonComponent: CombinedComponent {
                 .gesture(.tap {
                     component.action()
                 })
+                .gesture(.longPress({ state in
+                    if case .began = state {
+                        component.longPressAction()
+                    }
+                }))
             )
                         
             return context.availableSize
@@ -495,6 +503,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     var isStandalone: Bool = false
     
     var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
+    var longPressed: (AttachmentButtonType) -> Void = { _ in }
+
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
     var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
@@ -873,6 +883,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                                     strongSelf.scrollNode.view.scrollRectToVisible(button.frame.insetBy(dx: -35.0, dy: 0.0), animated: true)
                                 }
                             }
+                        }
+                    }, longPressAction: { [weak self] in
+                        if let strongSelf = self, i == strongSelf.selectedIndex {
+                            strongSelf.longPressed(type)
                         }
                     })
                 ),

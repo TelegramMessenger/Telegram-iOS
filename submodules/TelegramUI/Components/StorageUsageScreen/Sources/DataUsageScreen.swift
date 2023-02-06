@@ -913,9 +913,9 @@ final class DataUsageScreenComponent: Component {
                 component: AnyComponent(SegmentControlComponent(
                     theme: environment.theme,
                     items: [
-                        SegmentControlComponent.Item(id: AnyHashable(SelectedStats.all), title: "All"),
-                        SegmentControlComponent.Item(id: AnyHashable(SelectedStats.mobile), title: "Mobile"),
-                        SegmentControlComponent.Item(id: AnyHashable(SelectedStats.wifi), title: "WiFi")
+                        SegmentControlComponent.Item(id: AnyHashable(SelectedStats.all), title: environment.strings.DataUsage_TopSectionAll),
+                        SegmentControlComponent.Item(id: AnyHashable(SelectedStats.mobile), title: environment.strings.DataUsage_TopSectionMobile),
+                        SegmentControlComponent.Item(id: AnyHashable(SelectedStats.wifi), title: environment.strings.DataUsage_TopSectionWifi)
                     ],
                     selectedId: "total",
                     action: { [weak self] id in

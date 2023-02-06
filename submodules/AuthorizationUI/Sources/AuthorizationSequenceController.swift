@@ -954,7 +954,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 }
                             }
                             
-                            let signal = TGMediaVideoConverter.convert(avatarAsset, adjustments: avatarAdjustments, watcher: nil, entityRenderer: entityRenderer)!
+                            let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                            let signal = TGMediaVideoConverter.convert(avatarAsset, adjustments: avatarAdjustments, path: tempFile.path, watcher: nil, entityRenderer: entityRenderer)!
                             
                             let signalDisposable = signal.start(next: { next in
                                 if let result = next as? TGMediaVideoConversionResult {
@@ -964,6 +965,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
+                                            
+                                            EngineTempBox.shared.dispose(tempFile)
                                         }
                                     }
                                     subscriber.putCompletion()

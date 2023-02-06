@@ -199,6 +199,26 @@ final class ChatListTable: Table {
         }
     }
     
+    func getAllPeerIds() -> [PeerId] {
+        return self.indexTable.getAllPeerIds()
+    }
+    
+    func removeAllEntries(groupId: PeerGroupId, exceptPeerNamespace: PeerId.Namespace, operations: inout [PeerGroupId: [ChatListOperation]]) {
+        loop: for entry in self.allEntries(groupId: groupId) {
+            switch entry {
+            case let .hole(hole):
+                addOperation(.RemoveHoles([ChatListIndex(pinningIndex: nil, messageIndex: hole.index)]), groupId: groupId, to: &operations)
+                self.justRemoveHole(groupId: groupId, index: hole.index)
+            case let .message(index, _):
+                if index.messageIndex.id.peerId.namespace == exceptPeerNamespace {
+                    continue loop
+                }
+                addOperation(.RemoveEntry([index]), groupId: groupId, to: &operations)
+                self.justRemoveMessageIndex(groupId: groupId, index: index)
+            }
+        }
+    }
+    
     func getPinnedItemIds(groupId: PeerGroupId, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [(id: PinnedItemId, rank: Int)] {
         var itemIds: [(id: PinnedItemId, rank: Int)] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: UInt16.max - 1, messageIndex: MessageIndex.absoluteUpperBound()), type: .message).successor, values: { key, value in
@@ -364,6 +384,21 @@ final class ChatListTable: Table {
             self.justInsertHole(groupId: groupId, hole: hole)
             addOperation(.InsertHole(hole), groupId: groupId, to: &operations)
         }
+    }
+    
+    func getHoles(groupId: PeerGroupId) -> [ChatListHole] {
+        var result: [ChatListHole] = []
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), values: { key, value in
+            let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
+            assert(groupId == keyGroupId)
+            
+            let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
+            if type == ChatListEntryType.hole.rawValue {
+                result.append(ChatListHole(index: index.messageIndex))
+            }
+            return true
+        }, limit: 0)
+        return result
     }
     
     func replaceHole(groupId: PeerGroupId, index: MessageIndex, hole: ChatListHole?, operations: inout [PeerGroupId: [ChatListOperation]]) {

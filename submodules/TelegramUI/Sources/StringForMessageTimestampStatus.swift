@@ -5,6 +5,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
 import LocalizedPeerData
+import AccountContext
 
 enum MessageTimestampStatusFormat {
     case regular
@@ -28,7 +29,7 @@ private func dateStringForDay(strings: PresentationStrings, dateTimeFormat: Pres
     }
 }
 
-func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
+func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, associatedData: ChatMessageItemAssociatedData) -> String {
     if let adAttribute = message.adAttribute {
         switch adAttribute.messageType {
         case .sponsored:
@@ -84,6 +85,10 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
                 }
             }
         }
+    }
+    
+    if let subject = associatedData.subject, case .forwardedMessages = subject {
+        authorTitle = nil
     }
     
     if case .regular = format {

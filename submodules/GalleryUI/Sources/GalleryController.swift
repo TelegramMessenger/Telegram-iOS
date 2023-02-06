@@ -463,7 +463,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     if let translationState, translationState.isEnabled {
                         var translateToLanguage = translationState.toLang ?? baseLanguageCode
                         if translateToLanguage == "nb" {
-                            translateToLanguage = "nl"
+                            translateToLanguage = "no"
                         } else if translateToLanguage == "pt-br" {
                             translateToLanguage = "pt"
                         }
@@ -1111,6 +1111,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 strongSelf._hiddenMedia.set(.single(nil))
                 
                 let animatedOutNode = !simpleAnimation
+                
+                if let chatController = strongSelf.baseNavigationController?.topViewController as? ChatController {
+                    chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+                }
                 
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
                 })

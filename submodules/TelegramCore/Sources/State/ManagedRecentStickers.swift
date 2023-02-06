@@ -292,7 +292,7 @@ func managedProfilePhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void
 
 func managedGroupPhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedGroupPhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
-        return network.request(Api.functions.account.getDefaultProfilePhotoEmojis(hash: hash))
+        return network.request(Api.functions.account.getDefaultGroupPhotoEmojis(hash: hash))
         |> retryRequest
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
             switch result {

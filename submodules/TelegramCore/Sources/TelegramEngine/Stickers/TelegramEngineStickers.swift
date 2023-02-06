@@ -189,32 +189,6 @@ public extension TelegramEngine {
             |> map { items, isFinalResult -> (items: [TelegramMediaFile], isFinalResult: Bool) in
                 return (items.map(\.file), isFinalResult)
             }
-            
-            /*return self.account.network.request(Api.functions.messages.searchCustomEmoji(emoticon: emojiString.joined(separator: ""), hash: 0))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.EmojiList?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<[TelegramMediaFile], NoError> in
-                guard let result = result else {
-                    return .single([])
-                }
-                switch result {
-                case let .emojiList(_, documentIds):
-                    return self.resolveInlineStickers(fileIds: documentIds)
-                    |> map { result -> [TelegramMediaFile] in
-                        var files: [TelegramMediaFile] = []
-                        for id in documentIds {
-                            if let file = result[id] {
-                                files.append(file)
-                            }
-                        }
-                        return files
-                    }
-                default:
-                    return .single([])
-                }
-            }*/
         }
     }
 }

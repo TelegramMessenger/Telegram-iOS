@@ -671,7 +671,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let actionsPositionLock = self.actionsStackNode.topPositionLock {
                 actionsConstrainedHeight = layout.size.height - bottomInset - layout.intrinsicInsets.bottom - actionsPositionLock
             } else {
-                actionsConstrainedHeight = layout.size.height - contentTopInset - contentRect.height - contentActionsSpacing - bottomInset - layout.intrinsicInsets.bottom
+                if case let .reference(reference) = self.source, reference.keepInPlace {
+                    actionsConstrainedHeight = layout.size.height - contentRect.maxY - contentActionsSpacing - bottomInset - layout.intrinsicInsets.bottom
+                } else {
+                    actionsConstrainedHeight = layout.size.height - contentTopInset - contentRect.height - contentActionsSpacing - bottomInset - layout.intrinsicInsets.bottom
+                }
             }
             
             let actionsStackPresentation: ContextControllerActionsStackNode.Presentation
@@ -755,6 +759,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             var actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
 
             var contentVerticalOffset: CGFloat = 0.0
+            
             if keepInPlace, case .extracted = self.source {
                 actionsFrame.origin.y = contentRect.minY - contentActionsSpacing - actionsFrame.height
                 let statusBarHeight = (layout.statusBarHeight ?? 0.0)
