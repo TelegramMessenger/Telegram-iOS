@@ -686,9 +686,9 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             } else if case let .peerType(type) = mode, !result.isEmpty {
                 switch type {
                 case .group:
-                    result.append(.AdditionalCategory(index: 0, id: 0, title: "Create a New Group for This", image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
+                    result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewGroup, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
                 case .channel:
-                    result.append(.AdditionalCategory(index: 0, id: 0, title: "Create a New Channel for This", image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
+                    result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewChannel, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
                 default:
                     break
                 }

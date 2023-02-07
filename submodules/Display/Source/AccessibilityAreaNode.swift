@@ -8,6 +8,8 @@ public protocol AccessibilityFocusableNode {
 
 public final class AccessibilityAreaNode: ASDisplayNode {
     public var activate: (() -> Bool)?
+    public var increment: (() -> Void)?
+    public var decrement: (() -> Void)?
     public var focused: (() -> Void)?
     
     override public init() {
@@ -42,5 +44,13 @@ public final class AccessibilityAreaNode: ASDisplayNode {
                 }
             }
         }
+    }
+
+    override public func accessibilityIncrement() {
+        self.increment?()
+    }
+    
+    override public func accessibilityDecrement() {
+        self.decrement?()
     }
 }

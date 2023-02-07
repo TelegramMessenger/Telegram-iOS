@@ -528,4 +528,12 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 break
         }
     }
+    
+    open override func accessibilityPerformEscape() -> Bool {
+        if let controller = self.galleryController() {
+            controller.dismiss(animated: true)
+            return true
+        }
+        return false
+    }
 }

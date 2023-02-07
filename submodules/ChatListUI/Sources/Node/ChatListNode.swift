@@ -1861,6 +1861,9 @@ public final class ChatListNode: ListView {
                             return false
                         }
                     }
+                case .GroupReferenceEntry:
+                    isEmpty = false
+                    return true
                 default:
                     return true
                 }

@@ -119,6 +119,8 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var avatarsContent: AnimatedAvatarSetContext.Content?
     private let avatarsNode: AnimatedAvatarSetNode
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     private var theme: PresentationTheme?
     
     private var peerId: PeerId?
@@ -138,6 +140,9 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
         
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = .button
+        
         super.init()
 
         self.addSubnode(self.separatorNode)
@@ -146,6 +151,8 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.addSubnode(self.closeButton)
         
         self.addSubnode(self.avatarsNode)
+        
+        self.addSubnode(self.activateAreaNode)
     }
     
 
@@ -197,6 +204,9 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
             let avatarsSize = self.avatarsNode.update(context: self.context, content: avatarsContent, itemSize: CGSize(width: 32.0, height: 32.0), animated: true, synchronousLoad: true)
             transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: leftInset + 8.0, y: floor((panelHeight - avatarsSize.height) / 2.0)), size: avatarsSize))
         }
+        
+        self.activateAreaNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
+        self.activateAreaNode.accessibilityLabel = interfaceState.strings.Conversation_RequestsToJoin(self.count)
         
         return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight)
     }

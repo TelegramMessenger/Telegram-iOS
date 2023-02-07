@@ -8906,3 +8906,5 @@ Sorry for the inconvenience.";
 "Gallery.VoiceOver.Edit" = "Edit";
 "Gallery.VoiceOver.Stickers" = "Stickers";
 "Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
+
+"Appearance.VoiceOver.Theme" = "%@ Theme";

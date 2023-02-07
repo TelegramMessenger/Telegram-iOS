@@ -757,6 +757,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.delegate = self
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
+        
+        self.view.accessibilityTraits = .tabBar
     }
     
     @objc private func buttonPressed() {
