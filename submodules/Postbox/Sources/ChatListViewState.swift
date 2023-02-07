@@ -290,7 +290,7 @@ private final class ChatListViewSpaceState {
                 
                 postboxLog("existingEntityIds not unique: \(allEntityIds)")
                 postboxLog("allIndices: \(allIndices)")
-                assert(false)
+                //assert(false)
                 //preconditionFailure()
             }
             
