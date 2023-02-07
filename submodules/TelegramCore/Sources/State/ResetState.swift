@@ -26,6 +26,14 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                     if peerId.namespace != Namespaces.Peer.SecretChat {
                         transaction.addHole(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                     }
+                    
+                    if peerId.namespace == Namespaces.Peer.CloudChannel, let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                        for threadId in transaction.setMessageHistoryThreads(peerId: peerId) {
+                            transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: nil)
+                            transaction.addHole(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
+                        }
+                    }
                 }
                 
                 updatePeers(transaction: transaction, peers: fetchedChats.peers + additionalPeers, update: { _, updated -> Peer in

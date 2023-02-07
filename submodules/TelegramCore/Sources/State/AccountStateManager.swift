@@ -145,8 +145,8 @@ public final class AccountStateManager {
             return self.nextId
         }
         
-        private let isUpdatingValue = ValuePromise<Bool>(false)
-        private var currentIsUpdatingValue = false {
+        private let isUpdatingValue = ValuePromise<Bool>(true)
+        private var currentIsUpdatingValue = true {
             didSet {
                 if self.currentIsUpdatingValue != oldValue {
                     self.isUpdatingValue.set(self.currentIsUpdatingValue)
