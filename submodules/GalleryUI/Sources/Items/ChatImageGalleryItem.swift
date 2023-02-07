@@ -443,10 +443,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             var barButtonItems: [UIBarButtonItem] = []
             if imageReference.media.flags.contains(.hasStickers) {
                 let rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/Stickers"), color: .white), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Gallery_VoiceOver_Stickers
                 barButtonItems.append(rightBarButtonItem)
             }
             if self.message != nil {
                 let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
+                moreMenuItem.accessibilityLabel = self.presentationData.strings.Common_More
                 barButtonItems.append(moreMenuItem)
             }
             self._rightBarButtonItems.set(.single(barButtonItems))
@@ -646,6 +648,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 var barButtonItems: [UIBarButtonItem] = []
                 if self.message != nil {
                     let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
+                    moreMenuItem.accessibilityLabel = self.presentationData.strings.Common_More
                     barButtonItems.append(moreMenuItem)
                 }
                 self._rightBarButtonItems.set(.single(barButtonItems))

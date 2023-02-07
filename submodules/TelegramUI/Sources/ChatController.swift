@@ -4304,36 +4304,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
         self.navigationItem.titleView = self.chatTitleView
-        self.chatTitleView?.pressed = { [weak self] in
-            if let strongSelf = self {
-                if strongSelf.chatLocation == .peer(id: strongSelf.context.account.peerId) {
-                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
-                        strongSelf.effectiveNavigationController?.pushViewController(infoController)
-                    }
-                } else {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                        return $0.updatedTitlePanelContext {
-                            if let index = $0.firstIndex(where: {
-                                switch $0 {
-                                    case .chatInfo:
-                                        return true
-                                    default:
-                                        return false
-                                }
-                            }) {
-                                var updatedContexts = $0
-                                updatedContexts.remove(at: index)
-                                return updatedContexts
-                            } else {
-                                var updatedContexts = $0
-                                updatedContexts.append(.chatInfo)
-                                return updatedContexts.sorted()
-                            }
-                        }
-                    })
-                }
-            }
-        }
         self.chatTitleView?.longPressed = { [weak self] in
             if let strongSelf = self, let peerView = strongSelf.peerView, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
                 strongSelf.interfaceInteraction?.beginMessageSearch(.everything, "")
@@ -8317,22 +8287,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: interactive, { current in
-                    return current.updatedTitlePanelContext {
-                        if let index = $0.firstIndex(where: {
-                            switch $0 {
-                            case .chatInfo:
-                                return true
-                            default:
-                                return false
-                            }
-                        }) {
-                            var updatedContexts = $0
-                            updatedContexts.remove(at: index)
-                            return updatedContexts
-                        } else {
-                            return $0
-                        }
-                    }.updatedSearch(current.search == nil ? ChatSearchData(domain: domain).withUpdatedQuery(query) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(query))
+                    return current.updatedSearch(current.search == nil ? ChatSearchData(domain: domain).withUpdatedQuery(query) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(query))
                 })
                 strongSelf.updateItemNodesSearchTextHighlightStates()
             })
@@ -9613,17 +9568,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
                 return
             }
-            strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
-                return state.updatedTitlePanelContext({
-                    $0.filter({ item in
-                        if case .chatInfo = item {
-                            return false
-                        } else {
-                            return true
-                        }
-                    })
-                })
-            })
             let _ = (strongSelf.context.engine.peers.updatePeersGroupIdInteractively(peerIds: [peerId], groupId: .root)
             |> deliverOnMainQueue).start()
         }, openLinkEditing: { [weak self] in
@@ -11070,30 +11014,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return interfaceState
         }).start()
     }
-    
-    override public func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
         
-        self.updateChatPresentationInterfaceState(animated: false, interactive: false, {
-            $0.updatedTitlePanelContext {
-                if let index = $0.firstIndex(where: {
-                    switch $0 {
-                        case .chatInfo:
-                            return true
-                        default:
-                            return false
-                    }
-                }) {
-                    var updatedContexts = $0
-                    updatedContexts.remove(at: index)
-                    return updatedContexts
-                } else {
-                    return $0
-                }
-            }
-        })
-    }
-    
     override public func viewWillLeaveNavigation() {
         self.chatDisplayNode.willNavigateAway()
     }
@@ -11719,7 +11640,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
         switch action {
-        case .spacer:
+        case .spacer, .toggleInfoPanel:
             break
         case .cancelMessageSelection:
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
@@ -12204,27 +12125,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .feed:
                 break
             }
-        case .toggleInfoPanel:
-            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                return $0.updatedTitlePanelContext {
-                    if let index = $0.firstIndex(where: {
-                        switch $0 {
-                            case .chatInfo:
-                                return true
-                            default:
-                                return false
-                        }
-                    }) {
-                        var updatedContexts = $0
-                        updatedContexts.remove(at: index)
-                        return updatedContexts
-                    } else {
-                        var updatedContexts = $0
-                        updatedContexts.append(.chatInfo)
-                        return updatedContexts.sorted()
-                    }
-                }
-            })
         }
     }
     

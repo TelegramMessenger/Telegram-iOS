@@ -716,6 +716,9 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         
         super.init()
         
+        self.cancelButton.accessibilityTraits = [.button]
+        self.doneButton.accessibilityTraits = [.button]
+        
         self.addSubnode(self.switchItemNode)
         self.addSubnode(self.fontSizeItemNode)
         self.addSubnode(self.cancelButton)
@@ -769,6 +772,9 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         
         self.cancelButton.setTitle(presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
         self.doneButton.setTitle(presentationData.strings.Wallpaper_Set, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
+        
+        self.cancelButton.accessibilityLabel = presentationData.strings.Common_Cancel
+        self.doneButton.accessibilityLabel = presentationData.strings.Wallpaper_Set
     }
     
     func updatePresentationThemeSettings(presentationThemeSettings: PresentationThemeSettings) {

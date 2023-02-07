@@ -155,7 +155,12 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
         return .single(nil)
     }
     if #available(iOS 12.0, *) {
-        let baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
+        var baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
+        let rawSuffix = "-raw"
+        if baseLang.hasSuffix(rawSuffix) {
+            baseLang = String(baseLang.dropLast(rawSuffix.count))
+        }
+        
         return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
         |> mapToSignal { sharedData in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) ?? TranslationSettings.defaultSettings

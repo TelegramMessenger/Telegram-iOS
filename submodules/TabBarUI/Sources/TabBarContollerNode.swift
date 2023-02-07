@@ -31,7 +31,7 @@ final class TabBarControllerNode: ASDisplayNode {
     init(theme: TabBarControllerTheme, navigationBarPresentationData: NavigationBarPresentationData, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void) {
         self.theme = theme
         self.navigationBarPresentationData = navigationBarPresentationData
-        self.tabBarNode = TabBarNode(theme: theme, tabString: navigationBarPresentationData.strings.tab, itemSelected: itemSelected, contextAction: contextAction, swipeAction: swipeAction)
+        self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected, contextAction: contextAction, swipeAction: swipeAction)
         self.disabledOverlayNode = ASDisplayNode()
         self.disabledOverlayNode.backgroundColor = theme.backgroundColor.withAlphaComponent(0.5)
         self.disabledOverlayNode.alpha = 0.0
@@ -67,7 +67,7 @@ final class TabBarControllerNode: ASDisplayNode {
         self.navigationBarPresentationData = navigationBarPresentationData
         self.backgroundColor = theme.backgroundColor
         
-        self.tabBarNode.updateTheme(theme, tabString: navigationBarPresentationData.strings.tab)
+        self.tabBarNode.updateTheme(theme)
         self.disabledOverlayNode.backgroundColor = theme.backgroundColor.withAlphaComponent(0.5)
         self.toolbarNode?.updateTheme(ToolbarTheme(tabBarTheme: theme))
     }

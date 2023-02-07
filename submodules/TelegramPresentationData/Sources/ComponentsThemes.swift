@@ -54,7 +54,7 @@ public extension NavigationBarTheme {
 
 public extension NavigationBarStrings {
     convenience init(presentationStrings: PresentationStrings) {
-        self.init(back: presentationStrings.Common_Back, close: presentationStrings.Common_Close, tab: presentationStrings.VoiceOver_Tab)
+        self.init(back: presentationStrings.Common_Back, close: presentationStrings.Common_Close)
     }
 }
 

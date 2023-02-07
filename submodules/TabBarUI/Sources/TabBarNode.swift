@@ -344,7 +344,6 @@ class TabBarNode: ASDisplayNode {
     private let swipeAction: (Int, TabBarItemSwipeDirection) -> Void
     
     private var theme: TabBarControllerTheme
-    private var tabString: String
     private var validLayout: (CGSize, CGFloat, CGFloat, UIEdgeInsets, CGFloat)?
     private var horizontal: Bool = false
     private var centered: Bool = false
@@ -357,12 +356,11 @@ class TabBarNode: ASDisplayNode {
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
-    init(theme: TabBarControllerTheme, tabString: String, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void) {
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void) {
         self.itemSelected = itemSelected
         self.contextAction = contextAction
         self.swipeAction = swipeAction
         self.theme = theme
-        self.tabString = tabString
 
         self.backgroundNode = NavigationBackgroundNode(color: theme.tabBarBackgroundColor)
         
@@ -409,10 +407,9 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
-    func updateTheme(_ theme: TabBarControllerTheme, tabString: String) {
+    func updateTheme(_ theme: TabBarControllerTheme) {
         if self.theme !== theme {
             self.theme = theme
-            self.tabString = tabString
             
             self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
             self.backgroundNode.updateColor(color: theme.tabBarBackgroundColor, transition: .immediate)
@@ -507,7 +504,6 @@ class TabBarNode: ASDisplayNode {
                 node.contextImageNode.image = contextImage
                 node.accessibilityLabel = item.item.title
                 node.accessibilityTraits = [.button, .selected]
-                node.accessibilityHint = self.tabString
                 node.contentWidth = max(contentWidth, imageContentWidth)
                 node.isSelected = true
             } else {
@@ -522,7 +518,6 @@ class TabBarNode: ASDisplayNode {
                 node.textImageNode.image = textImage
                 node.accessibilityLabel = item.item.title
                 node.accessibilityTraits = [.button]
-                node.accessibilityHint = self.tabString
                 node.imageNode.image = image
                 node.contextTextImageNode.image = contextTextImage
                 node.contextImageNode.image = contextImage
@@ -585,7 +580,6 @@ class TabBarNode: ASDisplayNode {
                 node.textImageNode.image = textImage
                 node.accessibilityLabel = item.item.title
                 node.accessibilityTraits = [.button, .selected]
-                node.accessibilityHint = self.tabString
                 node.imageNode.image = image
                 node.contextTextImageNode.image = contextTextImage
                 node.contextImageNode.image = contextImage
@@ -619,7 +613,6 @@ class TabBarNode: ASDisplayNode {
                 node.textImageNode.image = textImage
                 node.accessibilityLabel = item.item.title
                 node.accessibilityTraits = [.button]
-                node.accessibilityHint = self.tabString
                 node.imageNode.image = image
                 node.contextTextImageNode.image = contextTextImage
                 node.contextImageNode.image = contextImage

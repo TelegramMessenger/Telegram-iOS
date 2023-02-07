@@ -527,7 +527,6 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityLabel = item.label
         self.activateArea.accessibilityValue = item.text
         
-        
         let contentSize = CGSize(width: width, height: height)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
         self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: contentSize)

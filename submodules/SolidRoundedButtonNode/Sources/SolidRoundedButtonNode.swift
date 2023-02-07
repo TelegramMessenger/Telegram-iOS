@@ -101,6 +101,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             if self.isEnabled != oldValue {
                 self.updateColors(animated: true)
             }
+            self.updateAccessibilityLabels()
         }
     }
     
@@ -130,6 +131,11 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     private func updateAccessibilityLabels() {
         self.accessibilityLabel = (self.title ?? "") + " " + (self.subtitle ?? "")
+        if !self.isEnabled {
+            self.accessibilityTraits = [.button, .notEnabled]
+        } else {
+            self.accessibilityTraits = [.button]
+        }
     }
     
     private var animationTimer: SwiftSignalKit.Timer?
@@ -289,6 +295,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.updateAccessibilityLabels()
     }
     
     public override func didLoad() {
@@ -795,6 +803,11 @@ public final class SolidRoundedButtonView: UIView {
     private func updateAccessibilityLabels() {
         self.accessibilityLabel = (self.title ?? "") + " " + (self.subtitle ?? "")
         self.accessibilityValue = self.label
+        if !self.isEnabled {
+            self.accessibilityTraits = [.button, .notEnabled]
+        } else {
+            self.accessibilityTraits = [.button]
+        }
     }
     
     public var icon: UIImage? {
@@ -808,6 +821,7 @@ public final class SolidRoundedButtonView: UIView {
             if self.isEnabled != oldValue {
                 self.titleNode.alpha = self.isEnabled ? 1.0 : 0.6
             }
+            self.updateAccessibilityLabels()
         }
     }
     
@@ -976,6 +990,8 @@ public final class SolidRoundedButtonView: UIView {
         if #available(iOS 13.0, *) {
             self.buttonBackgroundNode.layer.cornerCurve = .continuous
         }
+        
+        self.updateAccessibilityLabels()
     }
         
     required public init(coder: NSCoder) {

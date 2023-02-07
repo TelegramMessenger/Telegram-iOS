@@ -341,6 +341,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.authorNameNode.maximumNumberOfLines = 1
         self.authorNameNode.isUserInteractionEnabled = false
         self.authorNameNode.displaysAsynchronously = false
+    
         self.dateNode = ASTextNode()
         self.dateNode.maximumNumberOfLines = 1
         self.dateNode.isUserInteractionEnabled = false
@@ -428,9 +429,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.contentNode.addSubnode(self.statusButtonNode)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
+        self.deleteButton.accessibilityTraits = [.button]
+        self.deleteButton.accessibilityLabel = presentationData.strings.Gallery_VoiceOver_Delete
+        
         self.fullscreenButton.addTarget(self, action: #selector(self.fullscreenButtonPressed), for: [.touchUpInside])
+        self.fullscreenButton.accessibilityTraits = [.button]
+        self.fullscreenButton.accessibilityLabel = presentationData.strings.Gallery_VoiceOver_Fullscreen
+        
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
+        self.actionButton.accessibilityTraits = [.button]
+        self.actionButton.accessibilityLabel = presentationData.strings.Gallery_VoiceOver_Share
+        
         self.editButton.addTarget(self, action: #selector(self.editButtonPressed), for: [.touchUpInside])
+        self.editButton.accessibilityTraits = [.button]
+        self.editButton.accessibilityLabel = presentationData.strings.Gallery_VoiceOver_Edit
         
         self.backwardButton.addTarget(self, action: #selector(self.backwardButtonPressed), forControlEvents: .touchUpInside)
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
@@ -595,12 +607,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             } else {
                 self.authorNameNode.attributedText = nil
             }
+            self.authorNameNode.accessibilityLabel = self.authorNameNode.attributedText?.string
+            
             if let dateText = dateText {
                 self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
             } else {
                 self.dateNode.attributedText = nil
             }
-
+            self.dateNode.accessibilityLabel = self.dateNode.attributedText?.string
+            
             self.requestLayout?(.immediate)
         }
         
@@ -763,8 +778,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             } else {
                 self.authorNameNode.attributedText = nil
             }
+            self.authorNameNode.accessibilityLabel = self.authorNameNode.attributedText?.string
+           
             self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
-
+            self.dateNode.accessibilityLabel = self.dateNode.attributedText?.string
+            
             if canFullscreen {
                 self.fullscreenButton.isHidden = false
                 self.deleteButton.isHidden = true

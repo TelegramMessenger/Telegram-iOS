@@ -102,6 +102,8 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
     private let textNode: ImmediateTextNode
     private var action: (() -> Void)?
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     private var locked = false
     
     override init() {
@@ -122,12 +124,16 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = [.button]
+        
         super.init()
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.overlayNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.lockNode)
+        self.addSubnode(self.activateAreaNode)
     }
     
     func setup(theme: PresentationTheme, icon: UIImage, title: NSAttributedString, locked: Bool, color: UIColor, bordered: Bool, selected: Bool, action: @escaping () -> Void) {
@@ -138,6 +144,13 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.lockNode.image = locked ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: color) : nil
         self.action = {
             action()
+        }
+        
+        self.activateAreaNode.accessibilityLabel = title.string
+        if locked {
+            self.activateAreaNode.accessibilityTraits = [.button, .notEnabled]
+        } else {
+            self.activateAreaNode.accessibilityTraits = [.button]
         }
         
         self.setNeedsLayout()
@@ -171,6 +184,8 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.textNode.frame = textFrame
         
         self.lockNode.frame = CGRect(x: self.textNode.frame.minX - 10.0, y: 90.0, width: 6.0, height: 8.0)
+        
+        self.activateAreaNode.frame = self.bounds
     }
 }
 
@@ -186,7 +201,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
     
     private let scrollNode: ASScrollNode
     private var nodes: [ThemeSettingsAppIconNode] = []
-    
+        
     private var item: ThemeSettingsAppIconItem?
     private var layoutParams: ListViewItemLayoutParams?
     
