@@ -894,6 +894,26 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 containerSize: CGSize(width: buttonWidth, height: buttonSize.height)
             )
             buttonTransition.setFrame(view: buttonView, frame: buttonFrame)
+            var accessibilityTitle = ""
+            switch type {
+            case .gallery:
+                accessibilityTitle = self.presentationData.strings.Attachment_Gallery
+            case .file:
+                accessibilityTitle = self.presentationData.strings.Attachment_File
+            case .location:
+                accessibilityTitle = self.presentationData.strings.Attachment_Location
+            case .contact:
+                accessibilityTitle = self.presentationData.strings.Attachment_Contact
+            case .poll:
+                accessibilityTitle = self.presentationData.strings.Attachment_Poll
+            case let .app(_, appName, _):
+                accessibilityTitle = appName
+            case .standalone:
+                accessibilityTitle = ""
+            }
+            buttonView.isAccessibilityElement = true
+            buttonView.accessibilityLabel = accessibilityTitle
+            buttonView.accessibilityTraits = [.button]
         }
     }
     
