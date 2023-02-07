@@ -48,7 +48,9 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             
             self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             if _image == nil {
-                self.item?.accessibilityLabel = value
+                if self.item?.accessibilityLabel == nil {
+                    self.item?.accessibilityLabel = value
+                }
             }
         }
     }

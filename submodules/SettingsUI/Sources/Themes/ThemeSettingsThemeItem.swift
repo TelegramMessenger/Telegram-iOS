@@ -207,6 +207,8 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     private let titleNode: TextNode
     var snapshotView: UIView?
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     var item: ThemeSettingsThemeIconItem?
 
     init() {
@@ -222,13 +224,17 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
 
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
-
+        
+        self.activateAreaNode = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
 
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.overlayNode)
         self.containerNode.addSubnode(self.titleNode)
+        
+        self.addSubnode(self.activateAreaNode)
 
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.item else {
@@ -308,6 +314,15 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     
                     strongSelf.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 13.0), size: CGSize(width: 100.0, height: 64.0))
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 88.0), size: CGSize(width: itemLayout.contentSize.width, height: 16.0))
+                    
+                    strongSelf.activateAreaNode.accessibilityLabel = item.title
+                    if item.selected {
+                        strongSelf.activateAreaNode.accessibilityTraits = [.button, .selected]
+                    } else {
+                        strongSelf.activateAreaNode.accessibilityTraits = [.button]
+                    }
+                    
+                    strongSelf.activateAreaNode.frame = CGRect(origin: .zero, size: itemLayout.size)
                 }
             })
         }

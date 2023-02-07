@@ -77,7 +77,7 @@ final class BackgroundColorComponent: Component {
             let itemSize = CGSize(width: 30.0, height: 30.0)
             let sideInset: CGFloat = 12.0
             let height: CGFloat = 50.0
-            let delta = (availableSize.width - sideInset * 2.0 - CGFloat(values.count) * itemSize.width) / CGFloat(values.count - 1)
+            let delta = floorToScreenPixels((availableSize.width - sideInset * 2.0 - CGFloat(values.count) * itemSize.width) / CGFloat(values.count - 1))
             
             for i in 0 ..< values.count {
                 let view: ComponentView<Empty>

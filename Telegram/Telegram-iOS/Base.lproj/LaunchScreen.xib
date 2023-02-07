@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="21507" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" colorMatched="YES">
-    <device id="retina4_7" orientation="portrait" appearance="light"/>
+    <device id="retina6_7" orientation="portrait" appearance="light"/>
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21505"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
@@ -10,27 +10,13 @@
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
         <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
         <view contentMode="scaleToFill" id="O8c-13-3vw">
-            <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+            <rect key="frame" x="0.0" y="0.0" width="428" height="926"/>
             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-            <subviews>
-                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Components/LaunchLogo" translatesAutoresizingMaskIntoConstraints="NO" id="Ra6-Gz-QsF">
-                    <rect key="frame" x="138" y="284" width="99" height="99"/>
-                    <constraints>
-                        <constraint firstAttribute="width" constant="99" id="Mhj-0F-KYG"/>
-                        <constraint firstAttribute="height" constant="99" id="gdP-J3-bQE"/>
-                    </constraints>
-                </imageView>
-            </subviews>
             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-            <constraints>
-                <constraint firstItem="Ra6-Gz-QsF" firstAttribute="centerY" secondItem="O8c-13-3vw" secondAttribute="centerY" id="54l-Rw-Siu"/>
-                <constraint firstItem="Ra6-Gz-QsF" firstAttribute="centerX" secondItem="O8c-13-3vw" secondAttribute="centerX" id="zdX-Zd-oe6"/>
-            </constraints>
             <point key="canvasLocation" x="139" y="117"/>
         </view>
     </objects>
     <resources>
-        <image name="Components/LaunchLogo" width="99" height="99"/>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>

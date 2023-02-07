@@ -1322,6 +1322,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.theme = presentationData.theme
             
             let text: String
+            var accessibilityText: String
             var icon: UIImage?
             var isBold = false
             var isGestureEnabled = false
@@ -1330,33 +1331,42 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             switch key {
                 case .edit:
                     text = presentationData.strings.Common_Edit
+                    accessibilityText = text
                 case .done, .cancel, .selectionDone:
                     text = presentationData.strings.Common_Done
+                    accessibilityText = text
                     isBold = true
                 case .select:
                     text = presentationData.strings.Common_Select
+                    accessibilityText = text
                 case .search:
                     text = ""
+                    accessibilityText = presentationData.strings.Common_Search
                     icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
                     isAnimation = true
                     animationState = .search
                 case .editPhoto:
                     text = presentationData.strings.Settings_EditPhoto
+                    accessibilityText = text
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
+                    accessibilityText = text
                 case .more:
                     text = ""
+                    accessibilityText = presentationData.strings.Common_More
                     icon = nil// PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
                     isGestureEnabled = true
                     isAnimation = true
                     animationState = .more
                 case .qrCode:
                     text = ""
+                    accessibilityText = presentationData.strings.PeerInfo_QRCode_Title
                     icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
                 case .moreToSearch:
                     text = ""
+                    accessibilityText = ""
             }
-            self.accessibilityLabel = text
+            self.accessibilityLabel = accessibilityText
             self.containerNode.isGestureEnabled = isGestureEnabled
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
@@ -1703,6 +1713,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
+        self.clearButtonNode.isAccessibilityElement = false
         
         self.topSeparator = ASDisplayNode()
         
@@ -1863,6 +1874,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
+        self.clearButtonNode.isAccessibilityElement = false
         
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
@@ -2510,10 +2522,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     func updateAvatarIsHidden(entry: AvatarGalleryEntry?) {
         if let entry = entry {
             self.avatarListNode.avatarContainerNode.containerNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
-            self.editingContentNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
+            self.editingContentNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
         } else {
             self.avatarListNode.avatarContainerNode.containerNode.isHidden = false
-            self.editingContentNode.isHidden = false
+            self.editingContentNode.avatarNode.isHidden = false
         }
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
@@ -2906,7 +2918,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: MultiScaleTextState(attributes: titleAttributes, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: smallTitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.titleNode.accessibilityLabel = titleStringText
         
         let subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),

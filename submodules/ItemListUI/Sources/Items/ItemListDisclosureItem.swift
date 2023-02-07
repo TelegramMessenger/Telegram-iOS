@@ -430,9 +430,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.label
                     if item.enabled {
-                        strongSelf.activateArea.accessibilityTraits = []
+                        strongSelf.activateArea.accessibilityTraits = [.button]
                     } else {
-                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                        strongSelf.activateArea.accessibilityTraits = [.button, .notEnabled]
                     }
                     
                     if let icon = item.icon {

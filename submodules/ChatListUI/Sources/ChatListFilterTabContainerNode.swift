@@ -76,9 +76,7 @@ private final class ItemNode: ASDisplayNode {
     
     private var deleteButtonNode: ItemNodeDeleteButtonNode?
     private let buttonNode: HighlightTrackingButtonNode
-    
-    private let activateArea: AccessibilityAreaNode
-    
+        
     private var selectionFraction: CGFloat = 0.0
     private(set) var unreadCount: Int = 0
     
@@ -140,13 +138,9 @@ private final class ItemNode: ASDisplayNode {
         self.badgeBackgroundInactiveNode.displayWithoutProcessing = true
         
         self.buttonNode = HighlightTrackingButtonNode()
-        
-        self.activateArea = AccessibilityAreaNode()
-        
+                
         super.init()
-        
-        self.isAccessibilityElement = true
-        
+                
         self.extractedContainerNode.contentNode.addSubnode(self.extractedBackgroundNode)
         self.extractedContainerNode.contentNode.addSubnode(self.titleContainer)
         self.titleContainer.addSubnode(self.titleNode)
@@ -163,9 +157,7 @@ private final class ItemNode: ASDisplayNode {
         self.containerNode.addSubnode(self.extractedContainerNode)
         self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
         self.addSubnode(self.containerNode)
-    
-        self.addSubnode(self.activateArea)
-        
+            
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.containerNode.activated = { [weak self] gesture, _ in
@@ -212,11 +204,16 @@ private final class ItemNode: ASDisplayNode {
             self.badgeBackgroundInactiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor)
         }
         
-        self.activateArea.accessibilityLabel = title
+        self.buttonNode.accessibilityLabel = title
         if unreadCount > 0 {
-            self.activateArea.accessibilityValue = strings.VoiceOver_Chat_UnreadMessages(Int32(unreadCount))
+            self.buttonNode.accessibilityValue = strings.VoiceOver_Chat_UnreadMessages(Int32(unreadCount))
         } else {
-            self.activateArea.accessibilityValue = ""
+            self.buttonNode.accessibilityValue = ""
+        }
+        if selectionFraction == 1.0 {
+            self.buttonNode.accessibilityTraits = [.button, .selected]
+        } else {
+            self.buttonNode.accessibilityTraits = [.button]
         }
         
         self.containerNode.isGestureEnabled = !isEditing && !isReordering
@@ -338,7 +335,6 @@ private final class ItemNode: ASDisplayNode {
         self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
         self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundNode.frame.minX, y: 0.0), size: CGSize(width:self.extractedBackgroundNode.frame.width, height: size.height))
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.activateArea.frame = CGRect(origin: CGPoint(), size: size)
         
         self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -sideInset, bottom: 0.0, right: -sideInset)
         self.extractedContainerNode.hitTestSlop = self.hitTestSlop

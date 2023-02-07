@@ -95,6 +95,8 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
     private let customTextNode: TextNode
     private var sliderView: TGPhotoEditorSliderView?
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: AutodownloadDataUsagePickerItem?
     private var layoutParams: ListViewItemLayoutParams?
     
@@ -126,12 +128,27 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         self.customTextNode.isUserInteractionEnabled = false
         self.customTextNode.displaysAsynchronously = false
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.lowTextNode)
         self.addSubnode(self.mediumTextNode)
         self.addSubnode(self.highTextNode)
         self.addSubnode(self.customTextNode)
+        self.addSubnode(self.activateArea)
+        
+        self.activateArea.increment = { [weak self] in
+            if let self {
+                self.sliderView?.increase()
+            }
+        }
+        
+        self.activateArea.decrement = { [weak self] in
+            if let self {
+                self.sliderView?.decrease()
+            }
+        }
     }
     
     func updateSliderView() {
@@ -154,6 +171,8 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
             sliderView.isUserInteractionEnabled = item.enabled
             sliderView.alpha = item.enabled ? 1.0 : 0.4
             sliderView.layer.allowsGroupOpacity = !item.enabled
+            
+            self.updateAccessibilityLabels()
         }
     }
     
@@ -323,9 +342,31 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
                         
                         strongSelf.updateSliderView()
                     }
+                    strongSelf.activateArea.accessibilityLabel = item.strings.AutoDownloadSettings_DataUsage
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                 }
             })
         }
+    }
+    
+    private func updateAccessibilityLabels() {
+        guard let item = self.item else {
+            return
+        }
+        var textNodes: [TextNode] = [self.lowTextNode, self.mediumTextNode, self.highTextNode]
+        if let customPosition = item.customPosition {
+            textNodes.insert(self.customTextNode, at: customPosition)
+        }
+        if let value = self.sliderView?.value {
+            self.activateArea.accessibilityValue = textNodes[Int(value)].cachedLayout?.attributedString?.string ?? ""
+        }
+        var accessibilityTraits: UIAccessibilityTraits = [.adjustable]
+        if item.enabled {
+        } else {
+            accessibilityTraits.insert(.notEnabled)
+        }
+        self.activateArea.accessibilityTraits = accessibilityTraits
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {

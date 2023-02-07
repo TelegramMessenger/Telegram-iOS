@@ -126,6 +126,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var selectedFilterPromise = Promise<ChatListSearchFilterEntry?>()
     private var transitionFraction: CGFloat = 0.0
     
+    private var appearanceTimestamp: Double?
+    
     private weak var copyProtectionTooltipController: TooltipController?
     
     private lazy var hapticFeedback = { HapticFeedback() }()
@@ -303,6 +305,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         self.filterContainerNode.filterPressed = { [weak self] filter in
             guard let strongSelf = self else {
+                return
+            }
+            
+            if let appearanceTimestamp = strongSelf.appearanceTimestamp, CACurrentMediaTime() - appearanceTimestamp < 0.5 {
                 return
             }
             
@@ -667,6 +673,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         if isFirstTime {
             self.filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.appearanceTimestamp = CACurrentMediaTime()
         }
         
         var bottomIntrinsicInset = layout.intrinsicInsets.bottom

@@ -214,6 +214,7 @@ final class ChatMessageAccessibilityData {
                 
                 loop: for media in message.media {
                     if let _ = media as? TelegramMediaImage {
+                        traits.insert(.image)
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {
                                 label = item.presentationData.strings.VoiceOver_Chat_PhotoFrom(authorName).string

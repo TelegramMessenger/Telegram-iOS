@@ -337,12 +337,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.window = window
         self.nativeWindow = window
         
-        let launchIconSize = CGSize(width: 99.0, height: 99.0)
-        let launchIconView = UIImageView(image: UIImage(bundleImageName: "Components/LaunchLogo"))
-        launchIconView.autoresizingMask = [.flexibleTopMargin, .flexibleLeftMargin, .flexibleRightMargin, .flexibleBottomMargin]
-        launchIconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((hostView.containerView.frame.width - launchIconSize.width) / 2.0), y: floorToScreenPixels((hostView.containerView.frame.height - launchIconSize.height) / 2.0)), size: launchIconSize)
-        hostView.containerView.addSubview(launchIconView)
-        
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {
                 UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
@@ -1072,7 +1066,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let startTime = CFAbsoluteTimeGetCurrent()
         self.contextDisposable.set((self.context.get()
-        |> deliverOnMainQueue).start(next: { [weak launchIconView] context in
+        |> deliverOnMainQueue).start(next: { context in
             print("Application: context took \(CFAbsoluteTimeGetCurrent() - startTime) to become available")
             
             var network: Network?
@@ -1104,13 +1098,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
                     self.mainWindow.debugAction = nil
                     self.mainWindow.viewController = context.rootController
-                    
-                    if let launchIconView {
-                        launchIconView.alpha = 0.0
-                        launchIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak launchIconView] _ in
-                            launchIconView?.removeFromSuperview()
-                        })
-                    }
                     
                     if firstTime {
                         let layer = context.rootController.view.layer
@@ -1158,7 +1145,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let authContextReadyDisposable = MetaDisposable()
         
         self.authContextDisposable.set((self.authContext.get()
-        |> deliverOnMainQueue).start(next: { [weak launchIconView] context in
+        |> deliverOnMainQueue).start(next: { context in
             var network: Network?
             if let context = context {
                 network = context.account.network
@@ -1211,17 +1198,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 |> deliverOnMainQueue).start(next: { _ in
                     progressDisposable.dispose()
                     self.mainWindow.present(context.rootController, on: .root)
-                    
-                    if let launchIconView {
-                        if context.rootController.topViewController is AuthorizationSequenceSplashController {
-                            context.rootController.view.addSubview(launchIconView)
-                            Queue.mainQueue().after(0.01, {
-                                launchIconView.removeFromSuperview()
-                            })
-                        } else {
-                            launchIconView.removeFromSuperview()
-                        }
-                    }
                 }))
             } else {
                 authContextReadyDisposable.set(nil)

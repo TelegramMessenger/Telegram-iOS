@@ -8886,3 +8886,25 @@ Sorry for the inconvenience.";
 "Translation.Language.ta" = "Tamil";
 "Translation.Language.tr" = "Turkish";
 "Translation.Language.uz" = "Uzbek";
+
+"Settings.RaiseToListen" = "Raise to Listen";
+"Settings.RaiseToListenInfo" = "Raise to Listen allows you to quickly listen and reply to incoming audio messages by raising the phone to your ear.";
+
+"Login.CodeSentCallText" = "Calling **%@** to dictate the code.";
+
+"Premium.Purchase.OnlyOneSubscriptionAllowed" = "You have already purchased Telegram Premium for another account. You can only have one Telegram Premium subscription on one Apple ID.";
+
+"Call.VoiceOver.Minimize" = "Minimize Call";
+
+"Login.VoiceOver.PhoneCountryCode" = "Phone country code";
+"Login.VoiceOver.PhoneNumber" = "Phone number";
+"Login.VoiceOver.Password" = "Password";
+
+"Gallery.VoiceOver.Delete" = "Delete";
+"Gallery.VoiceOver.Fullscreen" = "Fullscreen";
+"Gallery.VoiceOver.Share" = "Share";
+"Gallery.VoiceOver.Edit" = "Edit";
+"Gallery.VoiceOver.Stickers" = "Stickers";
+"Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
+
+"Appearance.VoiceOver.Theme" = "%@ Theme";

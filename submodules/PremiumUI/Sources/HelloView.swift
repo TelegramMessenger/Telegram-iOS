@@ -55,7 +55,7 @@ final class HelloView: UIView, PhoneDemoDecorationView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-        
+    
     func setupAnimations() {
         guard self.activePhrases.isEmpty else {
             return
@@ -121,11 +121,13 @@ final class HelloView: UIView, PhoneDemoDecorationView {
         self.activePositions.insert(positionIndex)
         
         let duration: Double = Double.random(in: 1.75...2.25)
-        view.layer.animateKeyframes(values: [0.0, 1.0, 0.0] as [NSNumber], duration: duration, keyPath: "opacity", removeOnCompletion: false, completion: { [weak view] _ in
-            self.activePhrases.remove(index)
-            self.activePositions.remove(positionIndex)
-            view?.removeFromSuperview()
-            self.spawnNextPhrase()
+        view.layer.animateKeyframes(values: [0.0, 1.0, 0.0] as [NSNumber], duration: duration, keyPath: "opacity", removeOnCompletion: false, completion: { [weak view, weak self] _ in
+            if let self {
+                self.activePhrases.remove(index)
+                self.activePositions.remove(positionIndex)
+                view?.removeFromSuperview()
+                self.spawnNextPhrase()
+            }
         })
         view.layer.animateScale(from: CGFloat.random(in: 0.4 ..< 0.6), to: CGFloat.random(in: 0.9 ..< 1.2), duration: duration, removeOnCompletion: false)
         

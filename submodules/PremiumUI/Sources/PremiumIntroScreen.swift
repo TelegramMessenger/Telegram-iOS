@@ -842,17 +842,22 @@ private final class CheckComponent: Component {
 final class SectionGroupComponent: Component {
     public final class Item: Equatable {
         public let content: AnyComponentWithIdentity<Empty>
+        public let accessibilityLabel: String
         public let isEnabled: Bool
         public let action: () -> Void
         
-        public init(_ content: AnyComponentWithIdentity<Empty>, isEnabled: Bool = true, action: @escaping () -> Void) {
+        public init(_ content: AnyComponentWithIdentity<Empty>, accessibilityLabel: String, isEnabled: Bool = true, action: @escaping () -> Void) {
             self.content = content
+            self.accessibilityLabel = accessibilityLabel
             self.isEnabled = isEnabled
             self.action = action
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.content != rhs.content {
+                return false
+            }
+            if lhs.accessibilityLabel != rhs.accessibilityLabel {
                 return false
             }
             if lhs.isEnabled != rhs.isEnabled {
@@ -947,6 +952,7 @@ final class SectionGroupComponent: Component {
                     self.buttonViews[item.content.id] = buttonView
                     self.addSubview(buttonView)
                 }
+                buttonView.accessibilityLabel = item.accessibilityLabel
                 
                 if let current = self.itemViews[item.content.id] {
                     itemView = current
@@ -1105,7 +1111,8 @@ final class PerkComponent: CombinedComponent {
                     colors: component.iconBackgroundColors,
                     cornerRadius: 7.0,
                     gradientDirection: .vertical),
-                availableSize: iconSize, transition: context.transition
+                availableSize: iconSize,
+                transition: context.transition
             )
             
             let icon = icon.update(
@@ -1179,7 +1186,7 @@ final class PerkComponent: CombinedComponent {
             context.add(arrow
                 .position(CGPoint(x: context.availableSize.width - 7.0 - arrow.size.width / 2.0, y: size.height / 2.0))
             )
-        
+            
             return size
         }
     }
@@ -1196,14 +1203,28 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     let otherPeerName: String?
     let products: [PremiumProduct]?
     let selectedProductId: String?
-    let validTransactionIds: [String]
+    let validPurchases: [InAppPurchaseManager.ReceiptPurchase]
     let promoConfiguration: PremiumPromoConfiguration?
     let present: (ViewController) -> Void
     let selectProduct: (String) -> Void
     let buy: () -> Void
     let updateIsFocused: (Bool) -> Void
     
-    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, justBought: Bool, otherPeerName: String?, products: [PremiumProduct]?, selectedProductId: String?, validTransactionIds: [String], promoConfiguration: PremiumPromoConfiguration?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
+    init(
+        context: AccountContext,
+        source: PremiumSource,
+        isPremium: Bool?,
+        justBought: Bool,
+        otherPeerName: String?,
+        products: [PremiumProduct]?,
+        selectedProductId: String?,
+        validPurchases: [InAppPurchaseManager.ReceiptPurchase],
+        promoConfiguration: PremiumPromoConfiguration?,
+        present: @escaping (ViewController) -> Void,
+        selectProduct: @escaping (String) -> Void,
+        buy: @escaping () -> Void,
+        updateIsFocused: @escaping (Bool) -> Void
+    ) {
         self.context = context
         self.source = source
         self.isPremium = isPremium
@@ -1211,7 +1232,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         self.otherPeerName = otherPeerName
         self.products = products
         self.selectedProductId = selectedProductId
-        self.validTransactionIds = validTransactionIds
+        self.validPurchases = validPurchases
         self.promoConfiguration = promoConfiguration
         self.present = present
         self.selectProduct = selectProduct
@@ -1241,7 +1262,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         if lhs.selectedProductId != rhs.selectedProductId {
             return false
         }
-        if lhs.validTransactionIds != rhs.validTransactionIds {
+        if lhs.validPurchases != rhs.validPurchases {
             return false
         }
         if lhs.promoConfiguration != rhs.promoConfiguration {
@@ -1256,7 +1277,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     
         var products: [PremiumProduct]?
         var selectedProductId: String?
-        var validTransactionIds: [String] = []
+        var validPurchases: [InAppPurchaseManager.ReceiptPurchase] = []
         
         var isPremium: Bool?
         
@@ -1276,7 +1297,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         var canUpgrade: Bool {
             if let products = self.products, let current = products.first(where: { $0.isCurrent }), let transactionId = current.transactionId {
-                if self.validTransactionIds.contains(transactionId) {
+                if self.validPurchases.contains(where: { $0.transactionId == transactionId }) {
                     return products.first(where: { $0.months > current.months }) != nil
                 } else {
                     return false
@@ -1373,7 +1394,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let state = context.state
             state.products = context.component.products
             state.selectedProductId = context.component.selectedProductId
-            state.validTransactionIds = context.component.validTransactionIds
+            state.validPurchases = context.component.validPurchases
             state.isPremium = context.component.isPremium
             
             let theme = environment.theme
@@ -1543,14 +1564,17 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
                         
                         var subtitle = ""
+                        var accessibilitySubtitle = ""
                         var pricePerMonth = product.price
                         if product.months > 1 {
                             pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
                             
                             if discountValue > 0 {
                                 subtitle = "**\(defaultPrice)** \(product.price)"
+                                accessibilitySubtitle = product.price
                                 if product.months == 12 {
                                     subtitle = environment.strings.Premium_PricePerYear(subtitle).string
+                                    accessibilitySubtitle = environment.strings.Premium_PricePerYear(accessibilitySubtitle).string
                                 }
                             } else {
                                 subtitle = product.price
@@ -1558,6 +1582,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         }
                         if product.isCurrent {
                             subtitle = environment.strings.Premium_CurrentPlan
+                            accessibilitySubtitle = subtitle
                         }
                         pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
                         
@@ -1580,6 +1605,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         )
                                     )
                                 ),
+                                accessibilityLabel: "\(giftTitle). \(accessibilitySubtitle). \(pricePerMonth)",
                                 isEnabled: product.months > currentProductMonths,
                                 action: {
                                     selectProduct(product.id)
@@ -1637,6 +1663,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 )
                             )
                         ),
+                        accessibilityLabel: "\(perk.title(strings: strings)). \(perk.subtitle(strings: strings))",
                         action: { [weak state] in
                             var demoSubject: PremiumDemoScreen.Subject
                             switch perk {
@@ -1986,7 +2013,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         private(set) var products: [PremiumProduct]?
         private(set) var selectedProductId: String?
-        fileprivate var validTransactionIds: [String] = []
+        fileprivate var validPurchases: [InAppPurchaseManager.ReceiptPurchase] = []
         
         var isPremium: Bool?
         var otherPeerName: String?
@@ -2015,7 +2042,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         var canUpgrade: Bool {
             if let products = self.products, let current = products.first(where: { $0.isCurrent }), let transactionId = current.transactionId {
-                if self.validTransactionIds.contains(transactionId) {
+                if self.validPurchases.contains(where: { $0.transactionId == transactionId }) {
                     return products.first(where: { $0.months > current.months }) != nil
                 } else {
                     return false
@@ -2036,7 +2063,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             super.init()
             
-            self.validTransactionIds = context.inAppPurchaseManager?.getValidTransactionIds() ?? []
+            self.validPurchases = context.inAppPurchaseManager?.getReceiptPurchases() ?? []
             
             let availableProducts: Signal<[InAppPurchaseManager.Product], NoError>
             if let inAppPurchaseManager = context.inAppPurchaseManager {
@@ -2136,7 +2163,28 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                   let premiumProduct = self.products?.first(where: { $0.id == self.selectedProductId }), !self.inProgress else {
                 return
             }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            
             let isUpgrade = self.products?.first(where: { $0.isCurrent }) != nil
+            
+            var hasActiveSubsciption = false
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_receipt_check"] {
+                
+            } else if !self.validPurchases.isEmpty && !isUpgrade {
+                let now = Date()
+                for purchase in self.validPurchases.reversed() {
+                    if (purchase.productId.hasSuffix(".monthly") || purchase.productId.hasSuffix(".annual")) && purchase.expirationDate > now {
+                        hasActiveSubsciption = true
+                    }
+                }
+            }
+            
+            if hasActiveSubsciption {
+                let errorText = presentationData.strings.Premium_Purchase_OnlyOneSubscriptionAllowed
+                let alertController = textAlertController(context: self.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                self.present(alertController)
+                return
+            }
                         
             addAppLogEvent(postbox: self.context.account.postbox, type: "premium.promo_screen_accept")
 
@@ -2173,7 +2221,6 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                         
                                         addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
                                         
-                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                         let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
                                         let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                                         strongSelf.present(alertController)
@@ -2198,7 +2245,6 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                 strongSelf.updateInProgress(false)
                                 strongSelf.updated(transition: .immediate)
 
-                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 var errorText: String?
                                 switch error {
                                     case .generic:
@@ -2475,7 +2521,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         otherPeerName: state.otherPeerName,
                         products: state.products,
                         selectedProductId: state.selectedProductId,
-                        validTransactionIds: state.validTransactionIds,
+                        validPurchases: state.validPurchases,
                         promoConfiguration: state.promoConfiguration,
                         present: context.component.present,
                         selectProduct: { [weak state] productId in

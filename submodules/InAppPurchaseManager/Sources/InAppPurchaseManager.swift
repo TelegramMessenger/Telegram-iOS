@@ -83,7 +83,7 @@ public final class InAppPurchaseManager: NSObject {
         }
         
         public func pricePerMonth(_ monthsCount: Int) -> String {
-            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).prettyPrice().round(2)
+            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).round(2)
             return self.numberFormatter.string(from: price) ?? ""
         }
         
@@ -308,11 +308,17 @@ public final class InAppPurchaseManager: NSObject {
         return signal
     }
     
-    public func getValidTransactionIds() -> [String] {
+    public struct ReceiptPurchase: Equatable {
+        public let productId: String
+        public let transactionId: String
+        public let expirationDate: Date
+    }
+    
+    public func getReceiptPurchases() -> [ReceiptPurchase] {
         guard let data = getReceiptData(), let receipt = parseReceipt(data) else {
             return []
         }
-        return receipt.purchases.map { $0.transactionId }
+        return receipt.purchases.map { ReceiptPurchase(productId: $0.productId, transactionId: $0.transactionId, expirationDate: $0.expirationDate) }
     }
 }
 
@@ -359,7 +365,6 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 switch transaction.transactionState {
                     case .purchased:
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
-                    
                         transactionState = .purchased(transactionId: transaction.transactionIdentifier)
                         transactionsToAssign.append(transaction)
                     case .restored:

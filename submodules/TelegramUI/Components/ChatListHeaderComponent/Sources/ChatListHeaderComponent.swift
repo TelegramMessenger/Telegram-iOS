@@ -237,6 +237,9 @@ public final class ChatListHeaderComponent: Component {
             self.titleView.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
             let titleSize = self.titleView.updateLayout(CGSize(width: 100.0, height: 44.0))
             
+            self.accessibilityLabel = title
+            self.accessibilityTraits = [.button]
+            
             if self.currentColor != theme.rootController.navigationBar.accentTextColor {
                 self.currentColor = theme.rootController.navigationBar.accentTextColor
                 self.arrowView.image = NavigationBarTheme.generateBackArrowImage(color: theme.rootController.navigationBar.accentTextColor)

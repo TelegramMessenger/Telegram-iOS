@@ -91,6 +91,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.moreButton = HighlightableButtonNode()
         self.actionButton = HighlightableButtonNode()
         self.scrollToTopButton = HighlightableButtonNode()
+        self.scrollToTopButton.isAccessibilityElement = false
         
         self.actionButton.setImage(actionImage, for: [])
         self.intrinsicActionSize = CGSize(width: 44.0, height: 44.0)
@@ -127,6 +128,9 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.addSubnode(self.actionButton)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.progressNode)
+        
+        self.actionButton.accessibilityLabel = strings.KeyCommand_Share
+        self.backButton.accessibilityLabel = strings.Common_Back
         
         self.backButton.addTarget(self, action: #selector(self.backPressed), forControlEvents: .touchUpInside)
         self.actionButton.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)

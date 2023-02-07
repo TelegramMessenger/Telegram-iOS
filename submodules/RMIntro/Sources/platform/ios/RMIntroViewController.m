@@ -254,11 +254,13 @@ typedef enum {
         _glkView.transform = CGAffineTransformIdentity;
     } completion:nil];
     
+    _glkView.alpha = 0.0;
     _pageScrollView.alpha = 0.0;
     _pageControl.alpha = 0.0;
     _startButton.alpha = 0.0;
     
     [UIView animateWithDuration:0.3 delay:0.15 options:kNilOptions animations:^{
+        _glkView.alpha = 1.0;
         _pageScrollView.alpha = 1.0;
         _pageControl.alpha = 1.0;
         _startButton.alpha = 1.0;

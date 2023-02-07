@@ -35,6 +35,47 @@ private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
     })
 }
 
+private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 16.0), rotatedContext: { size, context in
+        UIGraphicsPushContext(context)
+
+        context.clear(CGRect(origin: CGPoint(), size: size))
+
+        let lineWidth = 1.0 + UIScreenPixel
+        context.setLineWidth(lineWidth)
+        context.setStrokeColor(color.cgColor)
+        
+
+        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: color)
+
+        var offset = CGPoint(x: 1.0, y: 0.0)
+        var width: CGFloat
+        if rate.count >= 3 {
+            if rate == "0.5X" {
+                string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+                offset.x += -0.5
+            } else {
+                string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+                offset.x += -0.3
+            }
+            width = 29.0
+        } else {
+            string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+            width = 19.0
+            offset.x += -0.3
+        }
+        
+        let path = UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: 0.0, width: width, height: 16.0).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 2.0, height: 2.0))
+        context.addPath(path.cgPath)
+        context.strokePath()
+        
+        let boundingRect = string.boundingRect(with: size, options: [], context: nil)
+        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + UIScreenPixel + floor((size.height - boundingRect.height) / 2.0)))
+
+        UIGraphicsPopContext()
+    })
+}
+
 private let digitsSet = CharacterSet(charactersIn: "0123456789")
 private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
     let text: String
@@ -375,8 +416,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 
                 let baseRate: AudioPlaybackRate
-                if !value.status.baseRate.isEqual(to: 1.0) {
+                if value.status.baseRate.isEqual(to: 2.0) {
                     baseRate = .x2
+                } else if value.status.baseRate.isEqual(to: 1.5) {
+                    baseRate = .x1_5
                 } else {
                     baseRate = .x1
                 }
@@ -715,10 +758,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     }
     
     private func updateOrderButton(_ order: MusicPlaybackSettingsOrder) {
-        let baseColor = self.presentationData.theme.list.itemSecondaryTextColor
         switch order {
             case .regular:
-                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: baseColor)
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.presentationData.theme.list.itemSecondaryTextColor)
             case .reversed:
                 self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.presentationData.theme.list.itemAccentColor)
             case .random:
@@ -740,10 +782,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private func updateRateButton(_ baseRate: AudioPlaybackRate) {
         switch baseRate {
-            case .x2:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.presentationData.theme), for: [])
-            default:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateInactiveIcon(self.presentationData.theme), for: [])
+        case .x2:
+            self.rateButton.setImage(optionsRateImage(rate: "2X", color: self.presentationData.theme.list.itemAccentColor), for: [])
+        case .x1_5:
+            self.rateButton.setImage(optionsRateImage(rate: "1.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
+        default:
+            self.rateButton.setImage(optionsRateImage(rate: "1X", color: self.presentationData.theme.list.itemSecondaryTextColor), for: [])
         }
     }
     
@@ -959,12 +1003,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if let currentRate = self.currentRate {
             switch currentRate {
                 case .x1:
+                    nextRate = .x1_5
+                case .x1_5:
                     nextRate = .x2
                 default:
                     nextRate = .x1
             }
         } else {
-            nextRate = .x2
+            nextRate = .x1_5
         }
         self.control?(.setBaseRate(nextRate))
     }

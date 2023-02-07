@@ -3513,6 +3513,7 @@ func replayFinalState(
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
                     var updatedLocalTags = message.localTags
+                    var updatedAttributes = message.attributes
                     if previousMessage.localTags.contains(.OutgoingLiveLocation) {
                         updatedLocalTags.insert(.OutgoingLiveLocation)
                     }
@@ -3528,10 +3529,20 @@ func replayFinalState(
                         return current
                     })
                     
+                    if previousMessage.text == message.text {
+                        let previousEntities = previousMessage.textEntitiesAttribute?.entities ?? []
+                        let updatedEntities = (message.attributes.first(where: { $0 is TextEntitiesMessageAttribute }) as? TextEntitiesMessageAttribute)?.entities ?? []
+                        if previousEntities == updatedEntities, let translation = previousMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute {
+                            if message.attributes.firstIndex(where: { $0 is TranslationMessageAttribute }) == nil {
+                                updatedAttributes.append(translation)
+                            }
+                        }
+                    }
+                    
                     if let message = locallyRenderedMessage(message: message, peers: peers) {
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
+                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)

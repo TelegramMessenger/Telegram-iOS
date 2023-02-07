@@ -1475,6 +1475,8 @@
             }
         }
         
+        bool spoiler = [editingContext spoilerForItem:asset];
+        
         if ([asset isKindOfClass:[UIImage class]]) {
             if (intent == TGMediaAssetsControllerSendFileIntent)
             {
@@ -1512,6 +1514,10 @@
                     
                     if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
+                    
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
                     
                     id generatedItem = descriptionGenerator(dict, caption, nil, nil);
                     return generatedItem;
@@ -1559,6 +1565,10 @@
                     
                     if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
+                    
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
                     
                     id generatedItem = descriptionGenerator(dict, caption, nil, nil);
                     return generatedItem;
@@ -1635,6 +1645,10 @@
                         dict[@"timer"] = timer;
                     else if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
+                    
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
                     
                     id generatedItem = descriptionGenerator(dict, caption, nil, nil);
                     return generatedItem;

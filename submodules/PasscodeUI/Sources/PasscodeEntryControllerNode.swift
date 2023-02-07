@@ -125,8 +125,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }
         
         self.cancelButtonNode.setTitle(strings.Common_Cancel, with: buttonFont, with: .white, for: .normal)
+        self.cancelButtonNode.accessibilityLabel = strings.Common_Cancel
+        self.cancelButtonNode.accessibilityTraits = [.button]
         self.deleteButtonNode.setTitle(strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
-    
+        self.deleteButtonNode.accessibilityLabel = strings.Common_Delete
+        self.deleteButtonNode.accessibilityTraits = [.button]
+        
         if let biometricsType = self.biometricsType {
             switch biometricsType {
                 case .touchId:
