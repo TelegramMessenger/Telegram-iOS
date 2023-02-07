@@ -93,12 +93,10 @@ public final class NavigationBarTheme {
 public final class NavigationBarStrings {
     public let back: String
     public let close: String
-    public let tab: String
     
-    public init(back: String, close: String, tab: String) {
+    public init(back: String, close: String) {
         self.back = back
         self.close = close
-        self.tab = tab
     }
 }
 

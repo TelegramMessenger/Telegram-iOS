@@ -78,7 +78,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
         self.decline = decline
         self.openUrl = openUrl
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: presentationData.strings.Common_Back, close: presentationData.strings.Common_Close, tab: presentationData.strings.VoiceOver_Tab)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: presentationData.strings.Common_Back, close: presentationData.strings.Common_Close)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         

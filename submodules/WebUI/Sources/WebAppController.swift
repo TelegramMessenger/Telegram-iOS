@@ -1056,7 +1056,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
-        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: "", tab: ""))
+        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -1087,7 +1087,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 
-                let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: "", close: "", tab: ""))
+                let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
                 strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 strongSelf.titleView?.theme = presentationData.theme
                 
