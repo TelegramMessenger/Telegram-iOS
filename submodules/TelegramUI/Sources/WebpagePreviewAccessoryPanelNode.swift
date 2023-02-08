@@ -132,8 +132,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 text = self.url
             case let .Loaded(content):
                 if let contentText = content.text {
-                    text = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: contentText, mayRemoveWholeText: false) : contentText
-                } else {
+                    text = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: contentText, mayRemoveWholeText: content.image != nil || content.file != nil) : contentText
+                }
+                if text.isEmpty {
                     if let file = content.file, let mediaKind = mediaContentKind(EngineMedia(file)) {
                         if content.type == "telegram_background" {
                             text = strings.Message_Wallpaper
