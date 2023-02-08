@@ -249,7 +249,8 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         }
         
         let size = validLayout.size
-        if let background = self.background, background.size == size {
+        // added fix to prevent transparent passcode lock screen when rotating device
+        if let background = self.background, background.size == size || background.makeBackgroundNode() is GradientBackgroundNode {
             return
         }
         
