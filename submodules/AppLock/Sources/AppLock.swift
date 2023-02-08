@@ -65,7 +65,6 @@ public final class AppLockContextImpl: AppLockContext {
         |> distinctUntilChanged
     }
     
-    private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
     public weak var sharedAccountContext: SharedAccountContext?
@@ -134,24 +133,13 @@ public final class AppLockContextImpl: AppLockContext {
                 }
             }
             
-            let timestamp = CFAbsoluteTimeGetCurrent()
             var becameActiveRecently = false
             if appInForeground {
                 if !strongSelf.lastActiveValue {
                     strongSelf.lastActiveValue = true
-                    strongSelf.lastActiveTimestamp = timestamp
-                    
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: strongSelf.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
-                        strongSelf.currentStateValue = current
-                    }
+                    becameActiveRecently = true
                 }
-                
-                if let lastActiveTimestamp = strongSelf.lastActiveTimestamp {
-                    if lastActiveTimestamp + 0.5 > timestamp {
-                        becameActiveRecently = true
-                    }
-                }
-            } else {
+            } else if !appInForegroundReal {
                 strongSelf.lastActiveValue = false
             }
             
@@ -335,7 +323,9 @@ public final class AppLockContextImpl: AppLockContext {
     private func updateTimestampRenewTimer(shouldRun: Bool) {
         if shouldRun {
             if self.timestampRenewTimer == nil {
-                self.updateApplicationActivityTimestamp()
+                Queue.mainQueue().justDispatch {
+                    self.updateApplicationActivityTimestamp()
+                }
                 let timestampRenewTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -354,7 +344,9 @@ public final class AppLockContextImpl: AppLockContext {
             if let timestampRenewTimer = self.timestampRenewTimer {
                 self.timestampRenewTimer = nil
                 timestampRenewTimer.invalidate()
-                self.updateApplicationActivityTimestamp()
+                Queue.mainQueue().justDispatch {
+                    self.updateApplicationActivityTimestamp()
+                }
             }
             
             if self.secretPasscodesTimeoutCheckTimer == nil && self.applicationBindings.isMainApp {
