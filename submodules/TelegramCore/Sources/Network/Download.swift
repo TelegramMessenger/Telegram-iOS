@@ -78,12 +78,6 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         let mtProto = self.mtProto
         self.shouldKeepConnectionDisposable = (shouldKeepConnection |> distinctUntilChanged |> deliverOn(queue)).start(next: { [weak mtProto] value in
             if let mtProto = mtProto {
-                #if DEBUG
-                if "".isEmpty {
-                    return
-                }
-                #endif
-                
                 if value {
                     Logger.shared.log("Network", "Resume worker network connection")
                     mtProto.resume()
