@@ -220,3 +220,29 @@ private func updateSettings(_ context: AccountContext, _ statePromise: Promise<P
         }).start()
     })
 }
+
+extension PtgSettings {
+    public func withUpdated(showPeerId: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(suppressForeignAgentNotice: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(enableForeignAgentNoticeSearchFiltering: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(enableLiveText: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(preferAppleVoiceToText: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(isOriginallyInstalledViaTestFlightOrForDevelopment: Bool?) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+}

@@ -372,6 +372,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let _ = strongSelf.currentPtgSettings.swap(next)
             }
         })
+        
+        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isOriginallyInstalledViaTestFlightOrForDevelopment == nil {
+            let _ = accountManager.transaction({ transaction in
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.ptgSettings, { entry in
+                    return PreferencesEntry(PtgSettings(entry).withUpdated(isOriginallyInstalledViaTestFlightOrForDevelopment: Bundle.isTestFlightOrDevelopment))
+                })
+            }).start()
+        }
 
         var ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError> = .single(initialPresentationDataAndSettings.ptgSecretPasscodes)
         if applicationBindings.isMainApp {

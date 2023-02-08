@@ -2434,6 +2434,8 @@ private final class AnimationSupportContext {
     }
     
     @objc func debugPressed() {
+        // exporting logs is not secure, may reveal deleted/hidden data
+        #if DEBUG
         let _ = (Logger.shared.collectShortLogFiles()
         |> deliverOnMainQueue).start(next: { logs in
             var activityItems: [Any] = []
@@ -2445,6 +2447,7 @@ private final class AnimationSupportContext {
             
             self.window?.rootViewController?.present(activityController, animated: true, completion: nil)
         })
+        #endif
     }
     
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
