@@ -4,9 +4,9 @@ import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
 
-
 func managedAppChangelog(postbox: Postbox, network: Network, stateManager: AccountStateManager, appVersion: String) -> Signal<Void, NoError> {
-    return stateManager.pollStateUpdateCompletion()
+    return stateManager.isUpdating
+    |> filter { !$0 }
     |> take(1)
     |> mapToSignal { _ -> Signal<Void, NoError> in
         return postbox.transaction { transaction -> AppChangelogState in

@@ -6,6 +6,22 @@ public enum DeviceType {
 }
 
 public enum DeviceMetrics: CaseIterable, Equatable {
+    public struct Performance {
+        public let isGraphicallyCapable: Bool
+        
+        init() {
+            var length: Int = 4
+            var cpuCount: UInt32 = 0
+            sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
+            
+            #if DEBUG
+            cpuCount = 2
+            #endif
+            
+            self.isGraphicallyCapable = cpuCount >= 6
+        }
+    }
+    
     case iPhone4
     case iPhone5
     case iPhone6
@@ -33,6 +49,8 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     case iPadPro3rdGen
     case iPadMini6thGen
     case unknown(screenSize: CGSize, statusBarHeight: CGFloat, onScreenNavigationHeight: CGFloat?)
+    
+    public static let performance = Performance()
 
     public static var allCases: [DeviceMetrics] {
         return [
