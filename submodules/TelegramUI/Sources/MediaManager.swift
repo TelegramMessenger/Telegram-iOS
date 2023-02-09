@@ -189,6 +189,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
+    var animationsTemporarilyDisabledForCoverUp: (() -> Bool)?
+    
     init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
@@ -530,6 +532,9 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                             }
                             voiceMediaPlayer.control(control)
                         } else {
+                            if strongSelf.animationsTemporarilyDisabledForCoverUp?() == true {
+                                strongSelf.voiceMediaPlayer?.disableAnimationsOnDisposal = true
+                            }
                             strongSelf.voiceMediaPlayer = nil
                         }
                     case .music, .file:
@@ -551,6 +556,9 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                             }
                             strongSelf.musicMediaPlayer?.control(control)
                         } else {
+                            if strongSelf.animationsTemporarilyDisabledForCoverUp?() == true {
+                                strongSelf.musicMediaPlayer?.disableAnimationsOnDisposal = true
+                            }
                             strongSelf.musicMediaPlayer = nil
                         }
                 }

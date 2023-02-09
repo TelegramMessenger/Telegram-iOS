@@ -29,13 +29,6 @@ public struct PtgSecretPasscode: Codable, Equatable {
         self.secretChats = secretChats
     }
     
-    public init(passcode: String) {
-        self.passcode = passcode
-        self.active = false
-        self.timeout = 5 * 60
-        self.secretChats = []
-    }
-    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         
@@ -54,20 +47,8 @@ public struct PtgSecretPasscode: Codable, Equatable {
         try container.encodeIfPresent(self.secretChats, forKey: "sc")
     }
     
-    public func withUpdated(passcode: String) -> PtgSecretPasscode {
-        return PtgSecretPasscode(passcode: passcode, active: self.active, timeout: self.timeout, secretChats: self.secretChats)
-    }
-    
     public func withUpdated(active: Bool) -> PtgSecretPasscode {
         return PtgSecretPasscode(passcode: self.passcode, active: active, timeout: self.timeout, secretChats: self.secretChats)
-    }
-    
-    public func withUpdated(timeout: Int32?) -> PtgSecretPasscode {
-        return PtgSecretPasscode(passcode: self.passcode, active: self.active, timeout: timeout, secretChats: self.secretChats)
-    }
-    
-    public func withUpdated(secretChats: Set<PtgSecretChatId>) -> PtgSecretPasscode {
-        return PtgSecretPasscode(passcode: self.passcode, active: self.active, timeout: self.timeout, secretChats: secretChats)
     }
 }
 
@@ -107,20 +88,6 @@ public struct PtgSecretPasscodes: Codable, Equatable {
         var result = Set<PeerId>()
         for secretPasscode in self.secretPasscodes {
             if !secretPasscode.active {
-                for secretChat in secretPasscode.secretChats {
-                    if secretChat.accountRecordId == accountId {
-                        result.insert(secretChat.peerId)
-                    }
-                }
-            }
-        }
-        return result
-    }
-    
-    public func activeSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
-        var result = Set<PeerId>()
-        for secretPasscode in self.secretPasscodes {
-            if secretPasscode.active {
                 for secretChat in secretPasscode.secretChats {
                     if secretChat.accountRecordId == accountId {
                         result.insert(secretChat.peerId)

@@ -1,3 +1,5 @@
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Immediately";
+
 "Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
 
 "PasscodeSettings.BadAttempts" = "Bad Passcode Attempts";
@@ -1353,7 +1355,6 @@
 
 "PasscodeSettings.AutoLock" = "Auto-Lock";
 "PasscodeSettings.AutoLock.Disabled" = "Disabled";
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "If switched the app";
 "PasscodeSettings.AutoLock.IfAwayFor_1minute" = "If away for 1 min";
 "PasscodeSettings.AutoLock.IfAwayFor_5minutes" = "If away for 5 min";
 "PasscodeSettings.AutoLock.IfAwayFor_1hour" = "If away for 1 hour";

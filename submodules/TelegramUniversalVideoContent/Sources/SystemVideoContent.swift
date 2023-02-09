@@ -14,7 +14,7 @@ import RangeSet
 
 public final class SystemVideoContent: UniversalVideoContent {
     public let id: AnyHashable
-    let userLocation: MediaResourceUserLocation
+    public let userLocation: MediaResourceUserLocation
     let url: String
     let imageReference: ImageMediaReference
     public let dimensions: CGSize

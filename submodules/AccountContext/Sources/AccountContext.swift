@@ -756,10 +756,12 @@ public protocol SharedAccountContext: AnyObject {
     var immediateExperimentalUISettings: ExperimentalUISettings { get }
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
+    
     var ptgSettings: Signal<PtgSettings, NoError> { get }
     var currentPtgSettings: Atomic<PtgSettings> { get }
     var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> { get }
     var currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes> { get }
+    var animationsTemporarilyDisabledForCoverUp: Bool { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     

@@ -27,6 +27,15 @@ final class LockedWindowCoveringView: WindowCoveringView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    func duplicate() -> LockedWindowCoveringView {
+        let result = LockedWindowCoveringView(theme: self.theme, wallpaper: self.wallpaper, accountManager: self.accountManager)
+        result.contentView = self.contentView?.snapshotView(afterScreenUpdates: true)
+        if let contentView = result.contentView {
+            result.addSubview(contentView)
+        }
+        return result
+    }
+    
     override func updateLayout(_ size: CGSize) {
         if let contentView = self.contentView, contentView.frame.size == size {
             return

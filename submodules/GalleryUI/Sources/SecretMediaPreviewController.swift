@@ -121,7 +121,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
 
 public final class SecretMediaPreviewController: ViewController {
     private let context: AccountContext
-    private let messageId: MessageId
+    public let messageId: MessageId
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {

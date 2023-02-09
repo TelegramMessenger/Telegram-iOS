@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Пры пераключэнні праграмы";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Неадкладна";
 
 "PasscodeSettings.FakePasscodes" = "Несапраўдныя кады доступу";
 "PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";

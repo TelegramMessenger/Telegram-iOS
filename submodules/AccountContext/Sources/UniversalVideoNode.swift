@@ -38,6 +38,7 @@ public protocol UniversalVideoContent {
     var id: AnyHashable { get }
     var dimensions: CGSize { get }
     var duration: Int32 { get }
+    var userLocation: MediaResourceUserLocation { get }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode
     

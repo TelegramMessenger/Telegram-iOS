@@ -71,7 +71,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
     
     public let id: AnyHashable
     let nativeId: PlatformVideoContentId
-    let userLocation: MediaResourceUserLocation
+    public let userLocation: MediaResourceUserLocation
     let content: Content
     public let dimensions: CGSize
     public let duration: Int32

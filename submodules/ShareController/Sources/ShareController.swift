@@ -1018,6 +1018,10 @@ public final class ShareController: ViewController {
         self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true, completion: {})
     }
     
+    public func updatePeers() {
+        self.switchToAccount(account: self.currentContext.account, animateIn: false)
+    }
+    
     private func switchToAccount(account: Account, animateIn: Bool) {
         self.currentAccount = account
         self.accountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))

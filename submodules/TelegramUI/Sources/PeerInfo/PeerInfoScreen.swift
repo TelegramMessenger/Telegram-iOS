@@ -9310,7 +9310,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let isSettings: Bool
     private let hintGroupInCommon: PeerId?
     private weak var requestsContext: PeerInvitationImportersContext?
-    private let chatLocation: ChatLocation
+    public let chatLocation: ChatLocation
     private let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
     
     weak var parentController: TelegramRootController?
@@ -9962,6 +9962,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 )
             ]
         }
+    }
+    
+    public func hideChat() {
+        self.dismissAllTooltips()
+        (self.navigationController as? NavigationController)?.popToRoot(animated: false)
     }
 }
 

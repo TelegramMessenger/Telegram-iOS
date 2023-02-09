@@ -1799,6 +1799,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                     var toMedia: Media?
                                     var storageResource: TelegramMediaResource?
                                     var contentType: MediaResourceUserContentType?
+                                    var fromMediaResoures: [MediaResourceId] = []
                                     
                                     if let fromMedia = fromMedia as? TelegramMediaFile {
                                         var updatedImmediateThumbnailData: Data?
@@ -1821,6 +1822,10 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         
                                         storageResource = updatedFile.resource
                                         contentType = MediaResourceUserContentType(file: updatedFile)
+                                        
+                                        fromMediaResoures.append(fromMedia.resource.id)
+                                        fromMediaResoures.append(contentsOf: fromMedia.previewRepresentations.map { $0.resource.id })
+                                        fromMediaResoures.append(contentsOf: fromMedia.videoThumbnails.map { $0.resource.id })
                                     } else if let fromMedia = fromMedia as? TelegramMediaImage, let largestRepresentation = largestImageRepresentation(fromMedia.representations) {
                                         var updatedImmediateThumbnailData: Data?
                                         if let immediateThumbnailData = fromMedia.immediateThumbnailData {
@@ -1842,6 +1847,13 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         
                                         storageResource = updatedImage.representations.first!.resource
                                         contentType = .image
+                                        
+                                        fromMediaResoures.append(contentsOf: fromMedia.representations.map { $0.resource.id })
+                                        fromMediaResoures.append(contentsOf: fromMedia.videoRepresentations.map { $0.resource.id })
+                                    }
+                                    
+                                    if let toMedia = toMedia {
+                                        applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
                                     }
                                     
                                     // 0 in messageNamespace and messageId are intended for secret chats
@@ -1849,8 +1861,10 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                         postbox.mediaBox.storageBox.add(reference: StorageBox.Reference(peerId: messageId.peerId.toInt64(), messageNamespace: UInt8(clamping: 0), messageId: 0), to: storageResource.id.stringRepresentation.data(using: .utf8)!, contentType: contentType.rawValue, size: storageResource.size)
                                     }
                                     
-                                    if let toMedia = toMedia {
-                                        applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
+                                    if !fromMediaResoures.isEmpty {
+                                        postbox.mediaBox.storageBox.remove(ids: fromMediaResoures.map { $0.stringRepresentation.data(using: .utf8)! })
+                                        
+                                        let _ = postbox.mediaBox.removeCachedResources(fromMediaResoures).start()
                                     }
                                 }
                                 

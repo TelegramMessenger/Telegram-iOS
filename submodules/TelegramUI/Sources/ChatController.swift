@@ -5595,6 +5595,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        /* blur is not needed, screen is already always covered with opaque view when app is inactive
         if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
             self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
             |> distinctUntilChanged
@@ -5605,6 +5606,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatDisplayNode.updateIsBlurred(!value)
             })
         }
+        */
         
         self.canReadHistoryDisposable = (combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
             return a && b
@@ -17572,6 +17574,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.shakeFeedback?.error()
         
         self.chatDisplayNode.historyNodeContainer.layer.addShakeAnimation(amplitude: -6.0, decay: true)
+    }
+    
+    public func hideChat() {
+        self.stopMediaRecorder()
+        self.dismissAllTooltips()
+        self.commitPurposefulAction()
+        self.effectiveNavigationController?.popToRoot(animated: false)
     }
 }
 

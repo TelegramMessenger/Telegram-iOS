@@ -38,6 +38,8 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
     public var customClose: (() -> Void)?
     public var controlsAreShowingUpdated: ((Bool) -> Void)?
     
+    private let close: () -> Void
+    
     private var statusDisposable: Disposable?
     private var status: MediaPlayerStatus?
     
@@ -64,6 +66,8 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
         })
         self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
         self.decoration = decoration
+        
+        self.close = close
         
         super.init()
         
@@ -138,6 +142,11 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
     deinit {
         self.shouldBeDismissedDisposable?.dispose()
         self.statusDisposable?.dispose()
+    }
+    
+    public func closeVideo() {
+        self.dismiss()
+        self.close()
     }
     
     override public func didLoad() {

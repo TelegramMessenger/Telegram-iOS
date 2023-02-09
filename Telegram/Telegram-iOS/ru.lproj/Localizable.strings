@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "При переключении приложения";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Сразу";
 
 "PasscodeSettings.FakePasscodes" = "Ложные код-пароли";
 "PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";
@@ -101,7 +101,7 @@
 "SecretPasscodeSettings.AutoHide" = "Авто-скрытие";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код-пароль";
 "Settings.EnterSecretPasscode" = "Ввести секретный код-пароль";
-"Settings.ManageSecretPasscodes" = "Управлять секрет. кодами-паролями";
+"Settings.ManageSecretPasscodes" = "Управлять секретными код-паролями";
 "SecretPasscodeMenu.Add" = "Добавить секретный код-пароль";
 "SecretPasscodeMenu.Edit" = "Изменить секретный код-пароль";
 "SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";
