@@ -605,9 +605,9 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 if let localResource = item.stickerItem.resource {
                     self.context.account.postbox.mediaBox.copyResourceData(from: localResource.id, to: resource.id)
                 }
-                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType))
+                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
             } else if let resource = item.stickerItem.resource {
-                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType))
+                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
             }
         }
         var thumbnailSticker: ImportSticker?
@@ -618,7 +618,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             }
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
-            thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions, mimeType: thumbnail.mimeType)
+            thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions, mimeType: thumbnail.mimeType, keywords: thumbnail.keywords)
         }
         
         let firstStickerItem = thumbnailSticker ?? stickers.first
@@ -636,7 +636,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     if let (_, _, count) = strongSelf.progress {
                         strongSelf.progress = (1.0, count, count)
                         var animated = false
-                        if case .image = stickerPack.type {
+                        if case .image = stickerPack.type.contentType {
                             animated = true
                         }
                         strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: animated, synchronous: true, completion: {})
@@ -804,7 +804,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         }
         self.pendingItems = updatedItems
       
-        if case .image = stickerPack.type {
+        if case .image = stickerPack.type.contentType {
         } else {
             self.stickerPackReady = stickerPack.stickers.count == (verifiedStickers.count + declinedStickers.count) && updatedItems.count > 0
         }
