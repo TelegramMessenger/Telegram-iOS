@@ -171,7 +171,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     
     public var tapAction: (() -> Void)?
     public var close: (() -> Void)?
-    public var setRate: ((AudioPlaybackRate) -> Void)?
+    public var setRate: ((AudioPlaybackRate, Bool) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
@@ -184,21 +184,27 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             guard self.playbackBaseRate != oldValue, let playbackBaseRate = self.playbackBaseRate else {
                 return
             }
+            self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
+            self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
             switch playbackBaseRate {
                 case .x0_5:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "0.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRate05X
                 case .x1:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "1X", color: self.theme.rootController.navigationBar.controlColor)))
-                    self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateNormal
-                    self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
+                case .x1_25:
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.25X", color: self.theme.rootController.navigationBar.accentTextColor)))
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRate125X
                 case .x1_5:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "1.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRate15X
+                case .x1_75:
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.75X", color: self.theme.rootController.navigationBar.accentTextColor)))
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRate175X
                 case .x2:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.accentTextColor)))
-                    self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
-                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateFast
-                    self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRate2X
                 default:
                     break
             }
@@ -379,8 +385,12 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     self.rateButton.setContent(.image(optionsRateImage(rate: "0.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x1:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "1X", color: self.theme.rootController.navigationBar.controlColor)))
+                case .x1_25:
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.25X", color: self.theme.rootController.navigationBar.controlColor)))
                 case .x1_5:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "1.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
+                case .x1_75:
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1.75X", color: self.theme.rootController.navigationBar.controlColor)))
                 case .x2:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 default:
@@ -493,6 +503,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 30.0, height: minHeight)
         transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 33.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
+        
         transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
@@ -520,14 +531,16 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         } else {
             nextRate = .x2
         }
-        self.setRate?(nextRate)
+        self.setRate?(nextRate, false)
     }
     
     private func speedList(strings: PresentationStrings) -> [(String, String, AudioPlaybackRate)] {
         let speedList: [(String, String, AudioPlaybackRate)] = [
             ("0.5x", "0.5x", .x0_5),
             (strings.PlaybackSpeed_Normal, "1x", .x1),
+            ("1.25x", "1.25x", .x1_25),
             ("1.5x", "1.5x", .x1_5),
+            ("1.75x", "1.75x", .x1_75),
             ("2x", "2x", .x2)
         ]
         return speedList
@@ -547,7 +560,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             }, action: { [weak self] _, f in
                 f(.default)
                 
-                self?.setRate?(rate)
+                self?.setRate?(rate, true)
             })))
         }
 
@@ -626,7 +639,7 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
 }
 
 private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 16.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 36.0, height: 16.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
 
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -640,7 +653,11 @@ private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage?
 
         var offset = CGPoint(x: 1.0, y: 0.0)
         var width: CGFloat
-        if rate.count >= 3 {
+        if rate.count >= 5 {
+            string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+            offset.x += -0.5
+            width = 34.0
+        } else if rate.count >= 3 {
             if rate == "0.5X" {
                 string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
                 offset.x += -0.5

@@ -8910,3 +8910,11 @@ Sorry for the inconvenience.";
 "Appearance.VoiceOver.Theme" = "%@ Theme";
 
 "ChatList.EmptyChatListWithArchive" = "All of your chats are archived.";
+
+"VoiceOver.Media.PlaybackRate05X" = "0.5X";
+"VoiceOver.Media.PlaybackRate125X" = "1.25X";
+"VoiceOver.Media.PlaybackRate15X" = "1.5X";
+"VoiceOver.Media.PlaybackRate175X" = "1.75X";
+"VoiceOver.Media.PlaybackRate2X" = "2X";
+
+"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5X speed.";

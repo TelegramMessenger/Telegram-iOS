@@ -18,7 +18,9 @@ public enum MusicPlaybackSettingsLooping: Int32 {
 public enum AudioPlaybackRate: Int32 {
     case x0_5 = 500
     case x1 = 1000
+    case x1_25 = 1250
     case x1_5 = 1500
+    case x1_75 = 1750
     case x2 = 2000
     case x4 = 4000
     case x8 = 8000
