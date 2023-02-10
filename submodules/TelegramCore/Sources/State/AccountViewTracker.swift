@@ -333,6 +333,8 @@ public final class AccountViewTracker {
     
     public let chatListPreloadItems = Promise<Set<ChatHistoryPreloadItem>>([])
     
+    var resetPeerHoleManagement: ((PeerId) -> Void)?
+    
     init(account: Account) {
         self.account = account
         
@@ -1615,9 +1617,11 @@ public final class AccountViewTracker {
                         addHole = true
                         pollingCompleted = .single(true)
                     }
+                    let resetPeerHoleManagement = self.resetPeerHoleManagement
                     let isAutomaticallyTracked = self.account!.postbox.transaction { transaction -> Bool in
                         if transaction.getPeerChatListIndex(peerId) == nil {
                             if addHole {
+                                resetPeerHoleManagement?(peerId)
                                 transaction.addHole(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                             }
                             return false
