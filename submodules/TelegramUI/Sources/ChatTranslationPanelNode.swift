@@ -152,7 +152,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         self.moreButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - moreButtonSize.width, y: floorToScreenPixels((panelHeight - moreButtonSize.height) / 2.0)), size: moreButtonSize)
      
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        self.closeButton.frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize)
+        self.closeButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize)
         
         if interfaceState.isPremium {
             self.moreButton.isHidden = false
