@@ -898,7 +898,10 @@ public class Account {
     public private(set) var stateManager: AccountStateManager!
     private(set) var contactSyncManager: ContactSyncManager!
     public private(set) var callSessionManager: CallSessionManager!
+    
     public private(set) var viewTracker: AccountViewTracker!
+    private var resetPeerHoleManagement: ((PeerId) -> Void)?
+    
     public private(set) var pendingMessageManager: PendingMessageManager!
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
@@ -911,6 +914,7 @@ public class Account {
     fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
+    private let managedServiceViewsActionDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
     private var storageSettingsDisposable: Disposable?
     private var automaticCacheEvictionContext: AutomaticCacheEvictionContext?
@@ -982,6 +986,9 @@ public class Account {
         }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
         
         self.viewTracker = AccountViewTracker(account: self)
+        self.viewTracker.resetPeerHoleManagement = { [weak self] peerId in
+            self?.resetPeerHoleManagement?(peerId)
+        }
         
         self.taskManager = AccountTaskManager(
             stateManager: self.stateManager,
@@ -1085,18 +1092,25 @@ public class Account {
         self.network.shouldExplicitelyKeepWorkerConnections.set(self.shouldExplicitelyKeepWorkerConnections.get())
         self.network.shouldKeepBackgroundDownloadConnections.set(self.shouldKeepBackgroundDownloadConnections.get())
         
-        let serviceTasksMaster = shouldBeMaster
-        |> deliverOn(self.serviceQueue)
-        |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
-            if let strongSelf = self, value {
+        self.managedServiceViewsDisposable.set(shouldBeMaster.start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if value {
                 Logger.shared.log("Account", "Became master")
-                return managedServiceViews(accountPeerId: peerId, network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                
+                let resetPeerHoles = data.resetPeerHoles
+                strongSelf.resetPeerHoleManagement = { peerId in
+                    resetPeerHoles(peerId)
+                }
+                strongSelf.managedServiceViewsActionDisposable.set(data.disposable)
             } else {
                 Logger.shared.log("Account", "Resigned master")
-                return .never()
+                strongSelf.managedServiceViewsActionDisposable.set(nil)
             }
-        }
-        self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
+        }))
         
         let pendingMessageManager = self.pendingMessageManager
         Logger.shared.log("Account", "Begin watching unsent message ids")
@@ -1198,6 +1212,7 @@ public class Account {
         self.managedContactsDisposable.dispose()
         self.managedStickerPacksDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
+        self.managedServiceViewsActionDisposable.dispose()
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
