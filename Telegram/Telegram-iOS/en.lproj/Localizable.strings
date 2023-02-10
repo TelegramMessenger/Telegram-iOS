@@ -8908,3 +8908,5 @@ Sorry for the inconvenience.";
 "Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
 
 "Appearance.VoiceOver.Theme" = "%@ Theme";
+
+"ChatList.EmptyChatListWithArchive" = "All of your chats are archived.";
