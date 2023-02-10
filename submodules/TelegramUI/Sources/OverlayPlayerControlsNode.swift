@@ -422,11 +422,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 let baseRate: AudioPlaybackRate
                 if value.status.baseRate.isEqual(to: 2.0) {
                     baseRate = .x2
-                } else if value.status.baseRate.isEqual(to: 1.75) {
-                    baseRate = .x1_75
                 } else if value.status.baseRate.isEqual(to: 1.5) {
-                    baseRate = .x1_25
-                } else if value.status.baseRate.isEqual(to: 1.25) {
                     baseRate = .x1_5
                 } else if value.status.baseRate.isEqual(to: 0.5) {
                     baseRate = .x0_5
@@ -794,12 +790,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         switch baseRate {
         case .x2:
             self.rateButton.setImage(optionsRateImage(rate: "2X", color: self.presentationData.theme.list.itemAccentColor), for: [])
-        case .x1_75:
-            self.rateButton.setImage(optionsRateImage(rate: "1.75X", color: self.presentationData.theme.list.itemAccentColor), for: [])
         case .x1_5:
             self.rateButton.setImage(optionsRateImage(rate: "1.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
-        case .x1_25:
-            self.rateButton.setImage(optionsRateImage(rate: "1.25X", color: self.presentationData.theme.list.itemAccentColor), for: [])
         case .x0_5:
             self.rateButton.setImage(optionsRateImage(rate: "0.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
         default:

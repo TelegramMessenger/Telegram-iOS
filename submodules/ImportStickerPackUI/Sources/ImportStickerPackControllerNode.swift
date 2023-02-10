@@ -394,19 +394,39 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             forceTitleUpdate = true
         }
         
-        if let _ = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count || self.pendingItems != self.currentItems || forceTitleUpdate {
+        let itemsPerRow: Int
+        if let stickerPack = self.stickerPack, case .emoji = stickerPack.type {
+            itemsPerRow = 8
+        } else {
+            itemsPerRow = 4
+        }
+        if let stickerPack = self.stickerPack, self.currentItems.isEmpty || self.currentItems.count != self.pendingItems.count || self.pendingItems != self.currentItems || forceTitleUpdate {
             let previousItems = self.currentItems
             self.currentItems = self.pendingItems
             
             let titleFont = Font.medium(20.0)
             let title: String
             if let _ = self.progress {
-                title = self.presentationData.strings.ImportStickerPack_ImportingStickers
+                if case .emoji = stickerPack.type {
+                    title = self.presentationData.strings.ImportStickerPack_ImportingEmojis
+                } else {
+                    title = self.presentationData.strings.ImportStickerPack_ImportingStickers
+                }
             } else {
-                title = self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count))
+                if case .emoji = stickerPack.type {
+                    title = self.presentationData.strings.ImportStickerPack_EmojiCount(Int32(self.currentItems.count))
+                } else {
+                    title = self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count))
+                }
             }
             self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
 
+            if case .emoji = stickerPack.type {
+                self.createActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateNewEmojiPack, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+            } else {
+                self.createActionButtonNode.setTitle(self.presentationData.strings.ImportStickerPack_CreateNewStickerSet, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+            }
+            
             if !forceTitleUpdate {
                 transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
             }
@@ -422,7 +442,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX, y: self.contentBackgroundNode.frame.minY + titleAreaHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
-        let itemsPerRow = 4
+        
         let itemWidth = floor(contentFrame.size.width / CGFloat(itemsPerRow))
         let rowCount = itemCount / itemsPerRow + (itemCount % itemsPerRow != 0 ? 1 : 0)
         
