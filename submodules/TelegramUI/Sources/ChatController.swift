@@ -3550,7 +3550,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let f = {
                     let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { sharedData in
+                    |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                        guard let strongSelf = self else {
+                            return
+                        }
                         let translationSettings: TranslationSettings
                         if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
                             translationSettings = current
@@ -3564,6 +3567,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                        
+                        let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).start()
                         
                         let controller = TranslateScreen(context: context, text: text.string, canCopy: canCopy, fromLanguage: language)
                         controller.pushController = { [weak self] c in
@@ -6717,9 +6722,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.translationStateDisposable = (combineLatest(
                     queue: .concurrentDefaultQueue(),
                     isPremium,
-                    isHidden
-                ) |> mapToSignal { isPremium, isHidden -> Signal<ChatPresentationTranslationState?, NoError> in
-                    if isPremium && !isHidden {
+                    isHidden,
+                    ApplicationSpecificNotice.translationSuggestion(accountManager: self.context.sharedContext.accountManager)
+                ) |> mapToSignal { isPremium, isHidden, counterAndTimestamp -> Signal<ChatPresentationTranslationState?, NoError> in
+                    var maybeSuggestPremium = false
+                    if counterAndTimestamp.0 >= 3 {
+                        maybeSuggestPremium = true
+                    }
+                    if (isPremium || maybeSuggestPremium) && !isHidden {
                         return chatTranslationState(context: context, peerId: peerId)
                         |> map { translationState -> ChatPresentationTranslationState? in
                             if let translationState, !translationState.fromLang.isEmpty {

@@ -3650,13 +3650,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         return .action({
                             self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage)
                         })
-                    case let .peerMention(peerId, _):
+                    case let .peerMention(peerId, _, openProfile):
                         return .action({ [weak self] in
                             if let item = self?.item {
                                 let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                 |> deliverOnMainQueue).start(next: { peer in
                                     if let self = self, let item = self.item, let peer = peer {
-                                        item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                        item.controllerInteraction.openPeer(peer, openProfile ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                     }
                                 })
                             }
@@ -3791,7 +3791,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             return .action({
                                 item.controllerInteraction.longTap(.url(url), message)
                             })
-                        case let .peerMention(peerId, mention):
+                        case let .peerMention(peerId, mention, _):
                             return .action({
                                 item.controllerInteraction.longTap(.peerMention(peerId, mention), message)
                             })

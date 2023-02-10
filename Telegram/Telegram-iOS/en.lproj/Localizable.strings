@@ -8910,3 +8910,12 @@ Sorry for the inconvenience.";
 "Appearance.VoiceOver.Theme" = "%@ Theme";
 
 "ChatList.EmptyChatListWithArchive" = "All of your chats are archived.";
+
+"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5X speed.";
+"Conversation.AudioRateOptionsTooltip" = "Long tap for more speed values.";
+
+"ImportStickerPack.EmojiCount_1" = "%@ Emoji";
+"ImportStickerPack.EmojiCount_any" = "%@ Emojis";
+
+"ImportStickerPack.ImportingEmojis" = "Importing Emojis";
+"ImportStickerPack.CreateNewEmojiPack" = "Create a New Emoji Pack";

@@ -36,7 +36,7 @@ private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
 }
 
 private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 16.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 36.0, height: 16.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
 
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -50,7 +50,11 @@ private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage?
 
         var offset = CGPoint(x: 1.0, y: 0.0)
         var width: CGFloat
-        if rate.count >= 3 {
+        if rate.count >= 5 {
+            string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+            offset.x += -0.5
+            width = 33.0
+        } else if rate.count >= 3 {
             if rate == "0.5X" {
                 string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
                 offset.x += -0.5
@@ -420,6 +424,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     baseRate = .x2
                 } else if value.status.baseRate.isEqual(to: 1.5) {
                     baseRate = .x1_5
+                } else if value.status.baseRate.isEqual(to: 0.5) {
+                    baseRate = .x0_5
                 } else {
                     baseRate = .x1
                 }
@@ -786,6 +792,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             self.rateButton.setImage(optionsRateImage(rate: "2X", color: self.presentationData.theme.list.itemAccentColor), for: [])
         case .x1_5:
             self.rateButton.setImage(optionsRateImage(rate: "1.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
+        case .x0_5:
+            self.rateButton.setImage(optionsRateImage(rate: "0.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
         default:
             self.rateButton.setImage(optionsRateImage(rate: "1X", color: self.presentationData.theme.list.itemSecondaryTextColor), for: [])
         }
