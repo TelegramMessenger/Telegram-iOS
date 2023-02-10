@@ -109,7 +109,7 @@ enum ChatMessageBubbleContentTapAction {
     case none
     case url(url: String, concealed: Bool)
     case textMention(String)
-    case peerMention(PeerId, String)
+    case peerMention(peerId: PeerId, mention: String, openProfile: Bool)
     case botCommand(String)
     case hashtag(String?, String)
     case instantPage
