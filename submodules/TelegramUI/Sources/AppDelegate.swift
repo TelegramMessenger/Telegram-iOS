@@ -2410,6 +2410,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         })
     }
     
+    func requestNotificationTokenInvalidation() {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+            UIApplication.shared.registerForRemoteNotifications()
+        })
+    }
+    
     private func registerForNotifications(context: AccountContextImpl, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Bool in
