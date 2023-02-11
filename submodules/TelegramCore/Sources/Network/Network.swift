@@ -186,6 +186,10 @@ private struct UsageCalculationTag {
                 return 4 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
             case .call:
                 return 5 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .stickers:
+                return 6 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .voiceMessages:
+                return 7 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
         }
     }
 }
@@ -234,19 +238,17 @@ public struct NetworkUsageStatsConnectionsEntry: Equatable {
 }
 
 public struct NetworkUsageStats: Equatable {
-    public let generic: NetworkUsageStatsConnectionsEntry
-    public let image: NetworkUsageStatsConnectionsEntry
-    public let video: NetworkUsageStatsConnectionsEntry
-    public let audio: NetworkUsageStatsConnectionsEntry
-    public let file: NetworkUsageStatsConnectionsEntry
-    public let call: NetworkUsageStatsConnectionsEntry
+    public var generic: NetworkUsageStatsConnectionsEntry
+    public var image: NetworkUsageStatsConnectionsEntry
+    public var video: NetworkUsageStatsConnectionsEntry
+    public var audio: NetworkUsageStatsConnectionsEntry
+    public var file: NetworkUsageStatsConnectionsEntry
+    public var call: NetworkUsageStatsConnectionsEntry
+    public var sticker: NetworkUsageStatsConnectionsEntry
+    public var voiceMessage: NetworkUsageStatsConnectionsEntry
     
-    public let resetWifiTimestamp: Int32
-    public let resetCellularTimestamp: Int32
-    
-    public static func ==(lhs: NetworkUsageStats, rhs: NetworkUsageStats) -> Bool {
-        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.call == rhs.call && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp
-    }
+    public var resetWifiTimestamp: Int32
+    public var resetCellularTimestamp: Int32
 }
 
 public struct ResetNetworkUsageStats: OptionSet {
@@ -313,7 +315,17 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
             UsageCalculationTag(connection: .cellular, direction: .incoming, category: .call),
             UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .call),
             UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call),
-            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call)
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .stickers),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .stickers),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .stickers),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .stickers),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .voiceMessages),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .voiceMessages),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .voiceMessages),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .voiceMessages)
         ]
         
         var keys: [NSNumber] = rawKeys.map { $0.key as NSNumber }
@@ -386,6 +398,20 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
                     wifi: NetworkUsageStatsDirectionsEntry(
                         incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call).key]!,
                         outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call).key]!)),
+                sticker: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .stickers).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .stickers).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .stickers).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .stickers).key]!)),
+                voiceMessage: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .voiceMessages).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .voiceMessages).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .voiceMessages).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .voiceMessages).key]!)),
                 resetWifiTimestamp: Int32(dict[UsageCalculationResetKey.wifi.rawValue]!),
                 resetCellularTimestamp: Int32(dict[UsageCalculationResetKey.cellular.rawValue]!)
             ))

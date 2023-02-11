@@ -65,6 +65,11 @@ public struct ContextMenuActionItemIconSource {
     }
 }
 
+public enum ContextMenuActionItemIconPosition {
+    case left
+    case right
+}
+
 public enum ContextMenuActionBadgeColor {
     case accent
     case inactive
@@ -102,6 +107,7 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
+    public let iconPosition: ContextMenuActionItemIconPosition
     public let animationName: String?
     public let textIcon: (PresentationTheme) -> UIImage?
     public let textLinkAction: () -> Void
@@ -117,6 +123,7 @@ public final class ContextMenuActionItem {
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
+        iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
@@ -132,6 +139,7 @@ public final class ContextMenuActionItem {
             badge: badge,
             icon: icon,
             iconSource: iconSource,
+            iconPosition: iconPosition,
             animationName: animationName,
             textIcon: textIcon,
             textLinkAction: textLinkAction,
@@ -153,6 +161,7 @@ public final class ContextMenuActionItem {
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
+        iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
@@ -167,6 +176,7 @@ public final class ContextMenuActionItem {
         self.badge = badge
         self.icon = icon
         self.iconSource = iconSource
+        self.iconPosition = iconPosition
         self.animationName = animationName
         self.textIcon = textIcon
         self.textLinkAction = textLinkAction
@@ -2205,12 +2215,18 @@ public final class ContextControllerReferenceViewInfo {
 }
 
 public protocol ContextReferenceContentSource: AnyObject {
+    var keepInPlace: Bool { get }
+    
     var shouldBeDismissed: Signal<Bool, NoError> { get }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo?
 }
 
 public extension ContextReferenceContentSource {
+    var keepInPlace: Bool {
+        return false
+    }
+    
     var shouldBeDismissed: Signal<Bool, NoError> {
         return .single(false)
     }

@@ -13,6 +13,7 @@ enum ChatListNodeEntryId: Hashable {
     case ThreadId(Int64)
     case GroupId(EngineChatList.Group)
     case ArchiveIntro
+    case Notice
     case additionalCategory(Int)
 }
 
@@ -43,6 +44,13 @@ enum ChatListNodeEntrySortIndex: Comparable {
 public enum ChatListNodeEntryPromoInfo: Equatable {
     case proxy
     case psa(type: String, message: String?)
+}
+
+enum ChatListNotice: Equatable {
+    case clearStorage(sizeFraction: Double)
+    case setupPassword
+    case premiumUpgrade(discount: Int32)
+    case premiumAnnualDiscount(discount: Int32)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
@@ -234,6 +242,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
     case GroupReferenceEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, editing: Bool, unreadCount: Int, revealed: Bool, hiddenByDefault: Bool)
     case ArchiveIntro(presentationData: ChatListPresentationData)
+    case Notice(presentationData: ChatListPresentationData, notice: ChatListNotice)
     case AdditionalCategory(index: Int, id: Int, title: String, image: UIImage?, appearance: ChatListNodeAdditionalCategory.Appearance, selected: Bool, presentationData: ChatListPresentationData)
     
     var sortIndex: ChatListNodeEntrySortIndex {
@@ -248,6 +257,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(index)
         case .ArchiveIntro:
             return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor))
+        case .Notice:
+            return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor.successor))
         case let .AdditionalCategory(index, _, _, _, _, _, _):
             return .additionalCategory(index)
         }
@@ -270,6 +281,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .GroupId(groupId)
         case .ArchiveIntro:
             return .ArchiveIntro
+        case .Notice:
+            return .Notice
         case let .AdditionalCategory(_, id, _, _, _, _, _):
             return .additionalCategory(id)
         }
@@ -342,6 +355,18 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .Notice(lhsPresentationData, lhsInfo):
+                if case let .Notice(rhsPresentationData, rhsInfo) = rhs {
+                    if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    if lhsInfo != rhsInfo {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
             case let .AdditionalCategory(lhsIndex, lhsId, lhsTitle, lhsImage, lhsAppearance, lhsSelected, lhsPresentationData):
                 if case let .AdditionalCategory(rhsIndex, rhsId, rhsTitle, rhsImage, rhsAppearance, rhsSelected, rhsPresentationData) = rhs {
                     if lhsIndex != rhsIndex {
@@ -381,7 +406,7 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -647,14 +672,29 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                 result.append(.ArchiveIntro(presentationData: state.presentationData))
             }
             
+            if let notice {
+                result.append(.Notice(presentationData: state.presentationData, notice: notice))
+            }
+            
             result.append(.HeaderEntry)
         }
         
-        if !view.hasLater, case let .peers(_, _, additionalCategories, _, _) = mode {
-            var index = 0
-            for category in additionalCategories.reversed(){
-                result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))
-                index += 1
+        if !view.hasLater {
+            if case let .peers(_, _, additionalCategories, _, _) = mode {
+                var index = 0
+                for category in additionalCategories.reversed() {
+                    result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))
+                    index += 1
+                }
+            } else if case let .peerType(type) = mode, !result.isEmpty {
+                switch type {
+                case .group:
+                    result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewGroup, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
+                case .channel:
+                    result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewChannel, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
+                default:
+                    break
+                }
             }
         }
     }

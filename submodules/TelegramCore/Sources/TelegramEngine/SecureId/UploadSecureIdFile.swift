@@ -104,7 +104,7 @@ public func uploadSecureIdFile(context: SecureIdAccessContext, postbox: Postbox,
             return .fail(.generic)
         }
         
-        return multipartUpload(network: network, postbox: postbox, source: .data(encryptedData.data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+        return multipartUpload(network: network, postbox: postbox, source: .data(encryptedData.data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
         |> mapError { _ -> UploadSecureIdFileError in
             return .generic
         }

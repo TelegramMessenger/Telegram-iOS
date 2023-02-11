@@ -41,19 +41,26 @@ func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
             }
             
             var videoRepresentations: [TelegramMediaImage.VideoRepresentation] = []
+            var emojiMarkup: TelegramMediaImage.EmojiMarkup?
             if let videoSizes = videoSizes {
                 for size in videoSizes {
                     switch size {
-                        case let .videoSize(_, type, w, h, size, videoStartTs):
-                            let resource: TelegramMediaResource
-                            resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: Int64(size), fileReference: fileReference.makeData())
-                            
-                            videoRepresentations.append(TelegramMediaImage.VideoRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, startTimestamp: videoStartTs))
+                    case let .videoSize(_, type, w, h, size, videoStartTs):
+                        let resource: TelegramMediaResource
+                        resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: Int64(size), fileReference: fileReference.makeData())
+                        
+                        videoRepresentations.append(TelegramMediaImage.VideoRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, startTimestamp: videoStartTs))
+                    case let .videoSizeEmojiMarkup(fileId, backgroundColors):
+                        emojiMarkup = TelegramMediaImage.EmojiMarkup(content: .emoji(fileId: fileId), backgroundColors: backgroundColors)
+                    case let .videoSizeStickerMarkup(stickerSet, fileId, backgroundColors):
+                        if let packReference = StickerPackReference(apiInputSet: stickerSet) {
+                            emojiMarkup = TelegramMediaImage.EmojiMarkup(content: .sticker(packReference: packReference, fileId: fileId), backgroundColors: backgroundColors)
+                        }
                     }
                 }
             }
             
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, videoRepresentations: videoRepresentations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil, flags: imageFlags)
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, videoRepresentations: videoRepresentations, immediateThumbnailData: immediateThumbnailData, emojiMarkup: emojiMarkup, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil, flags: imageFlags)
         case .photoEmpty:
             return nil
     }

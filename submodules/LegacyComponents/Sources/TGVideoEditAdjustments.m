@@ -130,6 +130,50 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return adjustments;
 }
 
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values preset:(TGMediaVideoConversionPreset)preset documentId:(int64_t)documentId colors:(NSArray *)colors {
+    TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
+    adjustments->_originalSize = values.originalSize;
+    CGRect cropRect = values.cropRect;
+    if (CGRectIsEmpty(cropRect)) {
+        cropRect = CGRectMake(0.0f, 0.0f, values.originalSize.width, values.originalSize.height);
+    }
+    adjustments->_cropRect = cropRect;
+    adjustments->_cropOrientation = values.cropOrientation;
+    adjustments->_cropRotation = values.cropRotation;
+    adjustments->_cropLockedAspectRatio = values.cropLockedAspectRatio;
+    adjustments->_cropMirrored = values.cropMirrored;
+    adjustments->_paintingData = [values.paintingData dataForAnimation];
+    adjustments->_sendAsGif = true;
+    adjustments->_preset = preset;
+    adjustments->_documentId = documentId;
+    adjustments->_colors = colors;
+    
+    return adjustments;
+}
+
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values preset:(TGMediaVideoConversionPreset)preset stickerPackId:(int64_t)stickerPackId stickerPackAccessHash:(int64_t)stickerPackAccessHash documentId:(int64_t)documentId colors:(NSArray *)colors {
+    TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
+    adjustments->_originalSize = values.originalSize;
+    CGRect cropRect = values.cropRect;
+    if (CGRectIsEmpty(cropRect)) {
+        cropRect = CGRectMake(0.0f, 0.0f, values.originalSize.width, values.originalSize.height);
+    }
+    adjustments->_cropRect = cropRect;
+    adjustments->_cropOrientation = values.cropOrientation;
+    adjustments->_cropRotation = values.cropRotation;
+    adjustments->_cropLockedAspectRatio = values.cropLockedAspectRatio;
+    adjustments->_cropMirrored = values.cropMirrored;
+    adjustments->_paintingData = [values.paintingData dataForAnimation];
+    adjustments->_sendAsGif = true;
+    adjustments->_preset = preset;
+    adjustments->_stickerPackId = stickerPackId;
+    adjustments->_stickerPackAccessHash = stickerPackAccessHash;
+    adjustments->_documentId = documentId;
+    adjustments->_colors = colors;
+    
+    return adjustments;
+}
+
 - (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration
 {
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];

@@ -63,6 +63,8 @@ final class MultiScaleTextNode: ASDisplayNode {
         for (key, state) in states {
             if let node = self.stateNodes[key] {
                 node.textNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
+                node.textNode.isAccessibilityElement = true
+                node.textNode.accessibilityLabel = text
                 let nodeSize = node.textNode.updateLayout(state.constrainedSize)
                 let nodeLayout = MultiScaleTextLayout(size: nodeSize)
                 if key == mainState {

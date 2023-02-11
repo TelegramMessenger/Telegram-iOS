@@ -230,6 +230,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     func internalClose() {
+        self.clearStatements()
         self.database = nil
     }
     
@@ -362,7 +363,14 @@ public final class SqliteValueBox: ValueBox {
                 for fileName in dabaseFileNames {
                     let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
                 }
-                database = Database(path, readOnly: false)!
+                
+                let maybeDatabase = Database(path, readOnly: false)
+                if let maybeDatabase = maybeDatabase {
+                    database = maybeDatabase
+                } else {
+                    let _ = try? FileManager.default.removeItem(atPath: path)
+                    database = Database(path, readOnly: false)!
+                }
                 
                 resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
                 assert(resultCode)

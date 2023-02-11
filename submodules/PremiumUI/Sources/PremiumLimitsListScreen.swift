@@ -836,7 +836,7 @@ public class PremiumLimitsListScreen: ViewController {
                 } else {
                     topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
                 }
-            } else if let dismissOffset = self.dismissOffset {
+            } else if let dismissOffset = self.dismissOffset, !dismissOffset.isZero {
                 topInset = edgeTopInset * dismissOffset
             } else {
                 topInset = effectiveExpanded ? 0.0 : edgeTopInset
@@ -1178,6 +1178,26 @@ public class PremiumLimitsListScreen: ViewController {
                                 )),
                                 title: strings.Premium_AnimatedEmoji,
                                 text: isStandalone ? strings.Premium_AnimatedEmojiStandaloneInfo : strings.Premium_AnimatedEmojiInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.translation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.translation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["translations"],
+                                    decoration: .hello
+                                )),
+                                title: strings.Premium_Translation,
+                                text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
                                 textColor: textColor
                             )
                         )

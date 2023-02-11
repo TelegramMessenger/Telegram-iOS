@@ -107,7 +107,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var buttonText: String?
         var canShare = true
         switch entry {
-            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _, isFallback):
+            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _, isFallback, _):
                 if date != 0 || isFallback {
                     nameText = peer.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 }

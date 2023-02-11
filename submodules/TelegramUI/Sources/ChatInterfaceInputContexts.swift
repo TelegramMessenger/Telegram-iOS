@@ -280,6 +280,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     var currentAutoremoveTimeout: Int32? = chatPresentationInterfaceState.autoremoveTimeout
     var canSetupAutoremoveTimeout = false
     
+    var canSendTextMessages = true
+    
     var accessoryItems: [ChatTextInputAccessoryItem] = []
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
         var extendedSearchLayout = false
@@ -298,6 +300,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         if !group.hasBannedPermission(.banChangeInfo) {
             canSetupAutoremoveTimeout = true
         }
+        canSendTextMessages = !group.hasBannedPermission(.banSendText)
     } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
         if user.botInfo == nil {
             canSetupAutoremoveTimeout = true
@@ -306,6 +309,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         if channel.hasPermission(.changeInfo) {
             canSetupAutoremoveTimeout = true
         }
+        canSendTextMessages = channel.hasBannedPermission(.banSendText) == nil
     }
     
     if canSetupAutoremoveTimeout {
@@ -375,10 +379,16 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         accessoryItems.append(.commands)
                     }
                     
-                    if stickersEnabled {
-                        accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
+                    if !canSendTextMessages {
+                        if stickersEnabled && !stickersAreEmoji {
+                            accessoryItems.append(.input(isEnabled: true, inputMode: .stickers))
+                        }
                     } else {
-                        accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
+                        if stickersEnabled {
+                            accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
+                        } else {
+                            accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
+                        }
                     }
                     
                     if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {

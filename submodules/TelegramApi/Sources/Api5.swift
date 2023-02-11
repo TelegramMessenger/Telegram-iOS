@@ -221,6 +221,56 @@ public extension Api {
     }
 }
 public extension Api {
+    enum EmojiGroup: TypeConstructorDescription {
+        case emojiGroup(title: String, iconEmojiId: Int64, emoticons: [String])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiGroup(let title, let iconEmojiId, let emoticons):
+                    if boxed {
+                        buffer.appendInt32(2056961449)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeInt64(iconEmojiId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(emoticons.count))
+                    for item in emoticons {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiGroup(let title, let iconEmojiId, let emoticons):
+                return ("emojiGroup", [("title", title as Any), ("iconEmojiId", iconEmojiId as Any), ("emoticons", emoticons as Any)])
+    }
+    }
+    
+        public static func parse_emojiGroup(_ reader: BufferReader) -> EmojiGroup? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: [String]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.EmojiGroup.emojiGroup(title: _1!, iconEmojiId: _2!, emoticons: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum EmojiKeyword: TypeConstructorDescription {
         case emojiKeyword(keyword: String, emoticons: [String])
         case emojiKeywordDeleted(keyword: String, emoticons: [String])
@@ -382,6 +432,64 @@ public extension Api {
             else {
                 return nil
             }
+        }
+    
+    }
+}
+public extension Api {
+    enum EmojiList: TypeConstructorDescription {
+        case emojiList(hash: Int64, documentId: [Int64])
+        case emojiListNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiList(let hash, let documentId):
+                    if boxed {
+                        buffer.appendInt32(2048790993)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(documentId.count))
+                    for item in documentId {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .emojiListNotModified:
+                    if boxed {
+                        buffer.appendInt32(1209970170)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiList(let hash, let documentId):
+                return ("emojiList", [("hash", hash as Any), ("documentId", documentId as Any)])
+                case .emojiListNotModified:
+                return ("emojiListNotModified", [])
+    }
+    }
+    
+        public static func parse_emojiList(_ reader: BufferReader) -> EmojiList? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Int64]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.EmojiList.emojiList(hash: _1!, documentId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiListNotModified(_ reader: BufferReader) -> EmojiList? {
+            return Api.EmojiList.emojiListNotModified
         }
     
     }
@@ -988,142 +1096,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum FileHash: TypeConstructorDescription {
-        case fileHash(offset: Int64, limit: Int32, hash: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .fileHash(let offset, let limit, let hash):
-                    if boxed {
-                        buffer.appendInt32(-207944868)
-                    }
-                    serializeInt64(offset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    serializeBytes(hash, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .fileHash(let offset, let limit, let hash):
-                return ("fileHash", [("offset", offset as Any), ("limit", limit as Any), ("hash", hash as Any)])
-    }
-    }
-    
-        public static func parse_fileHash(_ reader: BufferReader) -> FileHash? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.FileHash.fileHash(offset: _1!, limit: _2!, hash: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum Folder: TypeConstructorDescription {
-        case folder(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .folder(let flags, let id, let title, let photo):
-                    if boxed {
-                        buffer.appendInt32(-11252123)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {photo!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .folder(let flags, let id, let title, let photo):
-                return ("folder", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("photo", photo as Any)])
-    }
-    }
-    
-        public static func parse_folder(_ reader: BufferReader) -> Folder? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.ChatPhoto?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.ChatPhoto
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Folder.folder(flags: _1!, id: _2!, title: _3!, photo: _4)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum FolderPeer: TypeConstructorDescription {
-        case folderPeer(peer: Api.Peer, folderId: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .folderPeer(let peer, let folderId):
-                    if boxed {
-                        buffer.appendInt32(-373643672)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(folderId, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .folderPeer(let peer, let folderId):
-                return ("folderPeer", [("peer", peer as Any), ("folderId", folderId as Any)])
-    }
-    }
-    
-        public static func parse_folderPeer(_ reader: BufferReader) -> FolderPeer? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.FolderPeer.folderPeer(peer: _1!, folderId: _2!)
             }
             else {
                 return nil

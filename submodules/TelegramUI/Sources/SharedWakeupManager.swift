@@ -49,6 +49,7 @@ public final class SharedWakeupManager {
     private let beginBackgroundTask: (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?
     private let endBackgroundTask: (UIBackgroundTaskIdentifier) -> Void
     private let backgroundTimeRemaining: () -> Double
+    private let acquireIdleExtension: () -> Disposable?
     
     private var inForeground: Bool = false
     private var hasActiveAudioSession: Bool = false
@@ -65,15 +66,17 @@ public final class SharedWakeupManager {
     private var currentExternalCompletionValidationTimer: SwiftSignalKit.Timer?
     
     private var managedPausedInBackgroundPlayer: Disposable?
+    private var keepIdleDisposable: Disposable?
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
-    public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
+    public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
         assert(Queue.mainQueue().isCurrent())
         
         self.beginBackgroundTask = beginBackgroundTask
         self.endBackgroundTask = endBackgroundTask
         self.backgroundTimeRemaining = backgroundTimeRemaining
+        self.acquireIdleExtension = acquireIdleExtension
         
         self.inForegroundDisposable = (inForeground
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -186,6 +189,7 @@ public final class SharedWakeupManager {
         self.hasActiveAudioSessionDisposable?.dispose()
         self.tasksDisposable?.dispose()
         self.managedPausedInBackgroundPlayer?.dispose()
+        self.keepIdleDisposable?.dispose()
         if let (taskId, _, timer) = self.currentTask {
             timer.invalidate()
             self.endBackgroundTask(taskId)
@@ -263,7 +267,20 @@ public final class SharedWakeupManager {
     
     func checkTasks(backgroundTaskExpired: Bool = false) {
         var hasTasksForBackgroundExtension = false
-        if self.inForeground || self.hasActiveAudioSession || backgroundTaskExpired {
+        
+        var hasActiveCalls = false
+        var hasPendingMessages = false
+        for (_, _, tasks) in self.accountsAndTasks {
+            if tasks.activeCalls {
+                hasActiveCalls = true
+                break
+            }
+            if tasks.importantTasks.contains(.pendingMessages) {
+                hasPendingMessages = true
+            }
+        }
+        
+        if self.inForeground || self.hasActiveAudioSession || hasActiveCalls || backgroundTaskExpired {
             if let (completion, timer) = self.currentExternalCompletion {
                 self.currentExternalCompletion = nil
                 completion()
@@ -341,6 +358,17 @@ public final class SharedWakeupManager {
             }
         }
         self.updateAccounts(hasTasks: hasTasksForBackgroundExtension)
+        
+        if hasPendingMessages {
+            if self.keepIdleDisposable == nil {
+                self.keepIdleDisposable = self.acquireIdleExtension()
+            }
+        } else {
+            if let keepIdleDisposable = self.keepIdleDisposable {
+                self.keepIdleDisposable = nil
+                keepIdleDisposable.dispose()
+            }
+        }
     }
     
     private func updateAccounts(hasTasks: Bool) {

@@ -29,6 +29,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     }
     
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
+    public let automaticDownloadPeerId: EnginePeer.Id?
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     public let isRecentActions: Bool
     public let subject: ChatControllerSubject?
@@ -47,9 +48,11 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let accountPeer: EnginePeer?
     public let topicAuthorId: EnginePeer.Id?
     public let hasBots: Bool
+    public let translateToLanguage: String?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil, hasBots: Bool = false) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadPeerId: EnginePeer.Id?, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil, hasBots: Bool = false, translateToLanguage: String? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
+        self.automaticDownloadPeerId = automaticDownloadPeerId
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
         self.subject = subject
@@ -68,10 +71,14 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.topicAuthorId = topicAuthorId
         self.alwaysDisplayTranscribeButton = alwaysDisplayTranscribeButton
         self.hasBots = hasBots
+        self.translateToLanguage = translateToLanguage
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
         if lhs.automaticDownloadPeerType != rhs.automaticDownloadPeerType {
+            return false
+        }
+        if lhs.automaticDownloadPeerId != rhs.automaticDownloadPeerId {
             return false
         }
         if lhs.automaticDownloadNetworkType != rhs.automaticDownloadNetworkType {
@@ -123,6 +130,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.hasBots != rhs.hasBots {
+            return false
+        }
+        if lhs.translateToLanguage != rhs.translateToLanguage {
             return false
         }
         return true
@@ -609,6 +619,8 @@ public protocol ChatController: ViewController {
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)
+    
+    func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition)
     
     func hintPlayNextOutgoingGift()
     

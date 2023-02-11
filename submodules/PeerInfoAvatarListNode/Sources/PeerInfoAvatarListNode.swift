@@ -16,6 +16,7 @@ import UniversalMediaPlayer
 import RadialStatusNode
 import TelegramUIPreferences
 import AvatarNode
+import AvatarVideoNode
 
 private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     private var currentInHierarchy = false
@@ -91,7 +92,7 @@ private struct CustomListItemResourceId {
 public enum PeerInfoAvatarListItem: Equatable {
     case custom(ASDisplayNode)
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
-    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?, Bool)
+    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?, Bool, TelegramMediaImage.EmojiMarkup?)
     
     var id: MediaResourceId {
         switch self {
@@ -100,7 +101,7 @@ public enum PeerInfoAvatarListItem: Equatable {
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return representation.resource.id
-        case let .image(_, representations, _, _, _):
+        case let .image(_, representations, _, _, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
             return representation.resource.id
         }
@@ -115,7 +116,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 } else {
                     return false
                 }
-            } else if case let .image(_, rhsRepresentations, _, _, _) = self {
+            } else if case let .image(_, rhsRepresentations, _, _, _, _) = self {
                 if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
                     let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
                     return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
@@ -125,7 +126,7 @@ public enum PeerInfoAvatarListItem: Equatable {
             } else {
                 return false
             }
-        } else if case let .image(_, lhsRepresentations, _, _, _) = self {
+        } else if case let .image(_, lhsRepresentations, _, _, _, _) = self {
             if case let .topImage(rhsRepresentations, _, _) = self {
                 if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
                     let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
@@ -133,7 +134,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 } else {
                     return false
                 }
-            } else if case let .image(_, rhsRepresentations, _, _, _) = self {
+            } else if case let .image(_, rhsRepresentations, _, _, _, _) = self {
                 if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
                     let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
                     return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
@@ -154,7 +155,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 return []
             case let .topImage(representations, _, _):
                 return representations
-            case let .image(_, representations, _, _, _):
+            case let .image(_, representations, _, _, _, _):
                 return representations
         }
     }
@@ -166,7 +167,7 @@ public enum PeerInfoAvatarListItem: Equatable {
                 return []
             case let .topImage(_, videoRepresentations, _):
                 return videoRepresentations
-            case let .image(_, _, videoRepresentations, _, _):
+            case let .image(_, _, videoRepresentations, _, _, _):
                 return videoRepresentations
         }
     }
@@ -175,8 +176,17 @@ public enum PeerInfoAvatarListItem: Equatable {
         switch self {
             case .custom, .topImage:
                 return false
-            case let .image(_, _, _, _, isFallback):
+            case let .image(_, _, _, _, isFallback, _):
                 return isFallback
+        }
+    }
+    
+    var emojiMarkup: TelegramMediaImage.EmojiMarkup? {
+        switch self {
+            case let .image(_, _, _, _, _, emojiMarkup):
+                return emojiMarkup
+            default:
+                return nil
         }
     }
     
@@ -184,11 +194,11 @@ public enum PeerInfoAvatarListItem: Equatable {
         switch entry {
             case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                 self = .topImage(representations, videoRepresentations, immediateThumbnailData)
-            case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback):
+            case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback, emojiMarkup):
                 if representations.isEmpty {
                     return nil
                 }
-                self = .image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback)
+                self = .image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup)
         }
     }
 }
@@ -201,6 +211,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     private let playbackStartDisposable = MetaDisposable()
+    private var markupNode: AvatarVideoNode?
     private let statusDisposable = MetaDisposable()
     private let preloadDisposable = MetaDisposable()
     private let statusNode: RadialStatusNode
@@ -251,6 +262,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                     self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: videoContent.fileReference.resourceReference(videoContent.fileReference.media.resource), duration: duration).start())
                 }
             }
+            self.markupNode?.updateVisibility(isCentral)
         }
     }
     
@@ -337,6 +349,12 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 return
             }
             transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
+        }
+        if let markupNode = self.markupNode {
+            if case .immediate = transition, fraction == 1.0 {
+                return
+            }
+            transition.updateAlpha(node: markupNode, alpha: 1.0 - fraction)
         }
     }
     
@@ -435,24 +453,27 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         let videoRepresentations: [VideoRepresentationWithReference]
         let immediateThumbnailData: Data?
         var id: Int64
+        let markup: TelegramMediaImage.EmojiMarkup?
         switch item {
         case let .custom(node):
-            id = 0
             representations = []
             videoRepresentations = []
             immediateThumbnailData = nil
+            id = 0
+            markup = nil
             if !synchronous {
                 self.addSubnode(node)
             }
         case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
+            id = self.peer.id.id._internalGetInt64Value()
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
             immediateThumbnailData = immediateThumbnail
-            id = self.peer.id.id._internalGetInt64Value()
             if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                 id = id &+ resource.photoId
             }
-        case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _):
+            markup = nil
+        case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _, markupValue):
             representations = imageRepresentations
             videoRepresentations = videoRepresentationsValue
             immediateThumbnailData = immediateThumbnail
@@ -461,12 +482,39 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             } else {
                 id = self.peer.id.id._internalGetInt64Value()
             }
+            markup = markupValue
         }
         self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly, skipBlurIfLarge: isMain), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
         
-        if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
+        if let markup {
+            if let videoNode = self.videoNode {
+                self.videoContent = nil
+                self.videoStartTimestamp = nil
+                self.videoNode = nil
+                          
+                videoNode.removeFromSupernode()
+            }
+            self.statusPromise.set(.single(nil))
+            self.statusDisposable.set(nil)
+            
+            let markupNode: AvatarVideoNode
+            if let current = self.markupNode {
+                markupNode = current
+            } else {
+                markupNode = AvatarVideoNode(context: self.context)
+                self.insertSubnode(markupNode, belowSubnode: self.statusNode)
+                self.markupNode = markupNode
+            }
+            markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
+            markupNode.updateVisibility(self.isCentral ?? true)
+           
+            if !self.didSetReady {
+                self.didSetReady = true
+                self.isReady.set(.single(true))
+            }
+        } else if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: fullSizeOnly, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: fullSizeOnly, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, storeAfterDownload: nil)
             
             if videoContent.id != self.videoContent?.id {
                 self.videoContent = videoContent
@@ -483,7 +531,6 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             }
             
             self.statusPromise.set(.single(nil))
-            
             self.statusDisposable.set(nil)
             
             self.imageNode.imageUpdated = { [weak self] _ in
@@ -511,6 +558,10 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         if let videoNode = self.videoNode {
             videoNode.updateLayout(size: imageSize, transition: .immediate)
             videoNode.frame = imageFrame
+        }
+        if let markupNode = self.markupNode {
+            markupNode.updateLayout(size: imageSize, cornerRadius: 0.0, transition: .immediate)
+            markupNode.frame = imageFrame
         }
     }
 }
@@ -1001,7 +1052,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     func setMainItem(_ item: PeerInfoAvatarListItem) {
-        guard case let .image(imageReference, _, _, _, _) = item else {
+        guard case let .image(imageReference, _, _, _, _, _) = item else {
             return
         }
         var items: [PeerInfoAvatarListItem] = []
@@ -1011,16 +1062,16 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                     entries.append(entry)
                     items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
-                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback):
+                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback, emojiMarkup):
                     if representations.isEmpty {
                         continue
                     }
                     if imageReference == reference {
                         entries.insert(entry, at: 0)
-                        items.insert(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback), at: 0)
+                        items.insert(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup), at: 0)
                     } else {
                         entries.append(entry)
-                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback))
+                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup))
                     }
             }
         }
@@ -1039,7 +1090,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     public func deleteItem(_ item: PeerInfoAvatarListItem) -> Bool {
-        guard case let .image(imageReference, _, _, _, _) = item else {
+        guard case let .image(imageReference, _, _, _, _, _) = item else {
             return false
         }
                 
@@ -1054,13 +1105,13 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
                     entries.append(entry)
                     items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
-                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback):
+                case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _, isFallback, emojiMarkup):
                     if representations.isEmpty {
                         continue
                     }
                     if imageReference != reference {
                         entries.append(entry)
-                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback))
+                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData, isFallback, emojiMarkup))
                     } else {
                         deletedIndex = index
                     }
@@ -1126,8 +1177,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
                 
                 var synchronous = false
-                if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(mediaId, reference, _, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, _) = updated, !videoRepresentations.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(representations, _, _, _, _, _) = previous {
-                    let firstEntry = AvatarGalleryEntry.image(mediaId, reference, representations, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, false)
+                if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(mediaId, reference, _, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, _, emojiMarkup) = updated, !videoRepresentations.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(representations, _, _, _, _, _) = previous {
+                    let firstEntry = AvatarGalleryEntry.image(mediaId, reference, representations, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption, false, emojiMarkup)
                     entries.remove(at: 0)
                     entries.insert(firstEntry, at: 0)
                     synchronous = true

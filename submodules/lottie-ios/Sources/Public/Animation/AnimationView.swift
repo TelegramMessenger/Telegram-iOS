@@ -8,6 +8,7 @@
 import Foundation
 import QuartzCore
 import UIKit
+import Display
 
 // MARK: - LottieBackgroundBehavior
 
@@ -395,31 +396,15 @@ final public class AnimationView: AnimationViewBase {
     }
   }
     
-    private var workaroundDisplayLink: CADisplayLink?
+    private var workaroundDisplayLink: SharedDisplayLinkDriver.Link?
     private var needsWorkaroundDisplayLink: Bool = false {
         didSet {
             if self.needsWorkaroundDisplayLink != oldValue {
                 if self.needsWorkaroundDisplayLink {
-                    if workaroundDisplayLink == nil {
-                        class WorkaroundDisplayLinkTarget {
-                            private let f: () -> Void
-                            
-                            init(_ f: @escaping () -> Void) {
-                                self.f = f
-                            }
-                            
-                            @objc func update() {
-                                self.f()
-                            }
-                        }
-                        self.workaroundDisplayLink = CADisplayLink(target: WorkaroundDisplayLinkTarget { [weak self] in
+                    if self.workaroundDisplayLink == nil {
+                        self.workaroundDisplayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
                             let _ = self?.realtimeAnimationProgress
-                        }, selector: #selector(WorkaroundDisplayLinkTarget.update))
-                        if #available(iOS 15.0, *) {
-                          let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-                            self.workaroundDisplayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
                         }
-                        self.workaroundDisplayLink?.add(to: .main, forMode: .common)
                     }
                 } else {
                     if let workaroundDisplayLink = self.workaroundDisplayLink {
@@ -1305,12 +1290,6 @@ final public class AnimationView: AnimationViewBase {
     layerAnimation.fillMode = CAMediaTimingFillMode.both
     layerAnimation.repeatCount = loopMode.caAnimationConfiguration.repeatCount
     layerAnimation.autoreverses = loopMode.caAnimationConfiguration.autoreverses
-    if #available(iOS 15.0, *) {
-      let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-      if maxFps > 61.0 {
-          layerAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
-      }
-    }
 
     layerAnimation.isRemovedOnCompletion = false
     if timeOffset != 0 {

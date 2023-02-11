@@ -414,7 +414,7 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
     })
 }
 
-public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent], silently: Bool) -> Signal<Float, Void> {
+public func sentShareItems(account: Account, to peerIds: [PeerId], threadIds: [PeerId: Int64], items: [PreparedShareItemContent], silently: Bool) -> Signal<Float, Void> {
     var messages: [EnqueueMessage] = []
     var groupingKey: Int64?
     var mediaTypes: (photo: Int, video: Int, music: Int, other: Int) = (0, 0, 0, 0)
@@ -474,7 +474,7 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
         }
     }
     
-    return enqueueMessagesToMultiplePeers(account: account, peerIds: peerIds, messages: messages)
+    return enqueueMessagesToMultiplePeers(account: account, peerIds: peerIds, threadIds: threadIds, messages: messages)
     |> castError(Void.self)
     |> mapToSignal { messageIds -> Signal<Float, Void> in
         return TelegramEngine(account: account).data.subscribe(EngineDataMap(

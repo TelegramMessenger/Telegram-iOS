@@ -41,17 +41,47 @@ public class AuthorizedAccountState: AccountState {
         }
     }
     
+    public struct InvalidatedChannel: PostboxCoding, Equatable {
+        public var peerId: PeerId
+        public var pts: Int32?
+        public var validityMarker: Int64
+        
+        public init(peerId: PeerId, pts: Int32?, validityMarker: Int64) {
+            self.peerId = peerId
+            self.pts = pts
+            self.validityMarker = validityMarker
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.peerId = PeerId(decoder.decodeInt64ForKey("i", orElse: 0))
+            self.pts = decoder.decodeOptionalInt32ForKey("p")
+            self.validityMarker = decoder.decodeInt64ForKey("m", orElse: 0)
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt64(self.peerId.toInt64(), forKey: "i")
+            if let pts = self.pts {
+                encoder.encodeInt32(pts, forKey: "p")
+            } else {
+                encoder.encodeNil(forKey: "p")
+            }
+            encoder.encodeInt64(self.validityMarker, forKey: "m")
+        }
+    }
+    
     public let isTestingEnvironment: Bool
     public let masterDatacenterId: Int32
     public let peerId: PeerId
     
     public let state: State?
+    public let invalidatedChannels: [InvalidatedChannel]
     
     public required init(decoder: PostboxDecoder) {
         self.isTestingEnvironment = decoder.decodeInt32ForKey("isTestingEnvironment", orElse: 0) != 0
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId", orElse: 0)
         self.peerId = PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0))
         self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
+        self.invalidatedChannels = decoder.decodeObjectArrayWithDecoderForKey("invalidatedChannels")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -61,24 +91,31 @@ public class AuthorizedAccountState: AccountState {
         if let state = self.state {
             encoder.encodeObject(state, forKey: "state")
         }
+        encoder.encodeObjectArray(self.invalidatedChannels, forKey: "invalidatedChannels")
     }
     
-    public init(isTestingEnvironment: Bool, masterDatacenterId: Int32, peerId: PeerId, state: State?) {
+    public init(isTestingEnvironment: Bool, masterDatacenterId: Int32, peerId: PeerId, state: State?, invalidatedChannels: [InvalidatedChannel]) {
         self.isTestingEnvironment = isTestingEnvironment
         self.masterDatacenterId = masterDatacenterId
         self.peerId = peerId
         self.state = state
+        self.invalidatedChannels = invalidatedChannels
     }
     
     public func changedState(_ state: State) -> AuthorizedAccountState {
-        return AuthorizedAccountState(isTestingEnvironment: self.isTestingEnvironment, masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
+        return AuthorizedAccountState(isTestingEnvironment: self.isTestingEnvironment, masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state, invalidatedChannels: self.invalidatedChannels)
+    }
+    
+    public func withInvalidatedChannels(_ invalidatedChannels: [InvalidatedChannel]) -> AuthorizedAccountState {
+        return AuthorizedAccountState(isTestingEnvironment: self.isTestingEnvironment, masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: self.state, invalidatedChannels: invalidatedChannels)
     }
     
     public func equalsTo(_ other: AccountState) -> Bool {
         if let other = other as? AuthorizedAccountState {
             return self.isTestingEnvironment == other.isTestingEnvironment && self.masterDatacenterId == other.masterDatacenterId &&
                 self.peerId == other.peerId &&
-                self.state == other.state
+                self.state == other.state &&
+                self.invalidatedChannels == other.invalidatedChannels
         } else {
             return false
         }

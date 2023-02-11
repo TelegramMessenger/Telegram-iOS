@@ -352,6 +352,12 @@ public class AttachmentController: ViewController {
                 }
             }
             
+            self.panel.longPressed = { [weak self] _ in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last {
+                    currentController.longTapWithTabBar?()
+                }
+            }
+            
             self.panel.beganTextEditing = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))

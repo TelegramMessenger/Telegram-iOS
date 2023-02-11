@@ -95,11 +95,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             self.titleLabelNode.attributedText = NSAttributedString(string: presentationData.strings.Common_Back, font: Font.regular(17.0), textColor: presentationData.theme.contextMenu.primaryColor)
             let titleSize = self.titleLabelNode.updateLayout(CGSize(width: size.width - sideInset - standardIconWidth, height: 100.0))
-            self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+            self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset + 36.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
             
             if let iconImage = self.iconNode.image {
-                let iconWidth = max(standardIconWidth, iconImage.size.width)
-                let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconImage.size.width) / 2.0), y: floor((size.height - iconImage.size.height) / 2.0)), size: iconImage.size)
+                let iconFrame = CGRect(origin: CGPoint(x: iconSideInset, y: floor((size.height - iconImage.size.height) / 2.0)), size: iconImage.size)
                 self.iconNode.frame = iconFrame
             }
             
@@ -1314,10 +1313,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             var apparentHeight = topContentHeight
             
             if let interactiveTransitionState = self.interactiveTransitionState, let fromTabLayout = tabLayouts[self.currentTabIndex], let toTabLayout = tabLayouts[interactiveTransitionState.toIndex] {
-                let megedTabLayoutHeight = fromTabLayout.height * (1.0 - interactiveTransitionState.progress) + toTabLayout.height * interactiveTransitionState.progress
+                let mergedTabLayoutHeight = fromTabLayout.height * (1.0 - interactiveTransitionState.progress) + toTabLayout.height * interactiveTransitionState.progress
                 let megedTabLayoutApparentHeight = fromTabLayout.apparentHeight * (1.0 - interactiveTransitionState.progress) + toTabLayout.apparentHeight * interactiveTransitionState.progress
                 
-                contentSize.height += megedTabLayoutHeight
+                contentSize.height += mergedTabLayoutHeight
                 apparentHeight += megedTabLayoutApparentHeight
             } else if let tabLayout = tabLayouts[self.currentTabIndex] {
                 contentSize.height += tabLayout.height

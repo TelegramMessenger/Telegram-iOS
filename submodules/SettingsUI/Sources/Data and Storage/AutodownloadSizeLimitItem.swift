@@ -54,15 +54,17 @@ final class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
     let decimalSeparator: String
     let text: String
     let value: Int64
+    let range: Range<Int64>?
     let sectionId: ItemListSectionId
     let updated: (Int64) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, decimalSeparator: String, text: String, value: Int64, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, decimalSeparator: String, text: String, value: Int64, range: Range<Int64>?, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void) {
         self.theme = theme
         self.strings = strings
         self.decimalSeparator = decimalSeparator
         self.text = text
         self.value = value
+        self.range = range
         self.sectionId = sectionId
         self.updated = updated
     }
@@ -195,9 +197,11 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode {
             
             let formatting = DataSizeStringFormatting(strings: item.strings, decimalSeparator: item.decimalSeparator)
             
-            let (minTextLayout, minTextApply) = makeMinTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(512 * 1024, formatting: formatting), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            let range = item.range ?? (512 * 1024 ..< 1536 * 1024 * 1024)
             
-            let (maxTextLayout, maxTextApply) = makeMaxTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(1536 * 1024 * 1024, formatting: formatting), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            let (minTextLayout, minTextApply) = makeMinTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(range.lowerBound, formatting: formatting), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (maxTextLayout, maxTextApply) = makeMaxTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(range.upperBound, formatting: formatting), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             contentSize = CGSize(width: params.width, height: 88.0)
             insets = itemListNeighborsGroupedInsets(neighbors, params)

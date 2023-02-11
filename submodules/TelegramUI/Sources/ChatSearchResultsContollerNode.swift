@@ -271,6 +271,9 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             }
         }, present: { _ in
         }, openForumThread: { _, _ in
+        }, openStorageManagement: {
+        }, openPasswordSetup: {
+        }, openPremiumIntro: {
         })
         interaction.searchTextHighightState = searchQuery
         self.interaction = interaction

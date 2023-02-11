@@ -1,6 +1,6 @@
 import Postbox
 
-public struct LocalizationListState: Codable {
+public struct LocalizationListState: Codable, Equatable {
     public var availableOfficialLocalizations: [LocalizationInfo]
     public var availableSavedLocalizations: [LocalizationInfo]
     

@@ -128,6 +128,9 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         
         super.init()
         
+        self.accessibilityLabel = title
+        self.accessibilityTraits = .keyboardKey
+        
         if let gradientBackgroundNode = self.gradientBackgroundNode {
             self.addSubnode(gradientBackgroundNode)
         }

@@ -170,8 +170,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         _items = [[NSMutableArray alloc] init];
         
-        if (_intent != TGCameraControllerGenericIntent)
+        if (_intent != TGCameraControllerGenericIntent) {
             _allowCaptions = false;
+        }
+        if (_intent == TGCameraControllerGenericVideoOnlyIntent || _intent == TGCameraControllerGenericPhotoOnlyIntent) {
+            _allowCaptions = false;
+        }
         _saveEditedPhotos = saveEditedPhotos;
         _saveCapturedMedia = saveCapturedMedia;
         
@@ -303,12 +307,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
+        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
     }
     else
     {
-        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
+        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
         
         CGSize referenceSize = [self referenceViewSizeForOrientation:interfaceOrientation];
@@ -451,8 +455,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     };
     
-    if (_intent != TGCameraControllerGenericIntent && _intent != TGCameraControllerAvatarIntent)
+    if (_intent != TGCameraControllerGenericIntent && _intent != TGCameraControllerAvatarIntent) {
         [_interfaceView setHasModeControl:false];
+    }
+    if (_intent == TGCameraControllerGenericVideoOnlyIntent || _intent == TGCameraControllerGenericPhotoOnlyIntent) {
+        [_interfaceView setHasModeControl:false];
+    }
 
     if (@available(iOS 11.0, *)) {
         _backgroundView.accessibilityIgnoresInvertColors = true;
@@ -1527,7 +1535,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             }
         }];
         
-        bool hasCamera = !self.inhibitMultipleCapture && (((_intent == TGCameraControllerGenericIntent || _intent == TGCameraControllerGenericPhotoOnlyIntent) && !_shortcut) || (_intent == TGCameraControllerPassportMultipleIntent));
+        bool hasCamera = !self.inhibitMultipleCapture && (((_intent == TGCameraControllerGenericIntent || _intent == TGCameraControllerGenericPhotoOnlyIntent || _intent == TGCameraControllerGenericVideoOnlyIntent) && !_shortcut) || (_intent == TGCameraControllerPassportMultipleIntent));
         TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
         model.inhibitMute = self.inhibitMute;
         model.controller = galleryController;

@@ -576,6 +576,9 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
 #define ABSL_INTERNAL_APPLE_CXX17_TYPES_UNAVAILABLE 0
 #endif
 
+#undef ABSL_INTERNAL_APPLE_CXX17_TYPES_UNAVAILABLE
+#define ABSL_INTERNAL_APPLE_CXX17_TYPES_UNAVAILABLE 1
+
 // ABSL_HAVE_STD_ANY
 //
 // Checks whether C++17 std::any is available by checking whether <any> exists.

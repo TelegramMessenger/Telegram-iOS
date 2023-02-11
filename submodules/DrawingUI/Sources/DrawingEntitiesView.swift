@@ -134,6 +134,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
+    public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
+    
     public var hasSelectionChanged: (Bool) -> Void = { _ in }
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
     var requestedMenuForEntityView: (DrawingEntityView, Bool) -> Void = { _, _ in }
@@ -223,8 +225,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    var entitiesData: Data? {
-        let entities = self.entities
+    public static func encodeEntities(_ entities: [DrawingEntity]) -> Data? {
+        let entities = entities
         guard !entities.isEmpty else {
             return nil
         }
@@ -237,6 +239,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         } else {
             return nil
         }
+    }
+    
+    var entitiesData: Data? {
+        return DrawingEntitiesView.encodeEntities(self.entities)
     }
     
     var hasChanges: Bool {

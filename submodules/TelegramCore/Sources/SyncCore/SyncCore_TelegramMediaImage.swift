@@ -130,10 +130,58 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         }
     }
     
+    public final class EmojiMarkup: Equatable, PostboxCoding {
+        public enum Content: Equatable {
+            case emoji(fileId: Int64)
+            case sticker(packReference: StickerPackReference, fileId: Int64)
+        }
+        public let content: Content
+        public let backgroundColors: [Int32]
+        
+        public init(content: Content, backgroundColors: [Int32]) {
+            self.content = content
+            self.backgroundColors = backgroundColors
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            if let fileId = decoder.decodeOptionalInt64ForKey("f") {
+                self.content = .emoji(fileId: fileId)
+            } else if let packReference = decoder.decodeObjectForKey("p", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference {
+                self.content = .sticker(packReference: packReference, fileId: decoder.decodeInt64ForKey("sf", orElse: 0))
+            } else {
+                fatalError()
+            }
+            self.backgroundColors = decoder.decodeInt32ArrayForKey("b")
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            switch self.content {
+            case let .emoji(fileId):
+                encoder.encodeInt64(fileId, forKey: "f")
+            case let .sticker(packReference, fileId):
+                encoder.encodeObject(packReference, forKey: "p")
+                encoder.encodeInt64(fileId, forKey: "sf")
+            }
+            encoder.encodeInt32Array(self.backgroundColors, forKey: "b")
+        }
+        
+        public static func ==(lhs: EmojiMarkup, rhs: EmojiMarkup) -> Bool {
+            if lhs.content != rhs.content {
+                return false
+            }
+            if lhs.backgroundColors != rhs.backgroundColors {
+                return false
+            }
+            return true
+        }
+    }
+    
+    
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
     public let videoRepresentations: [TelegramMediaImage.VideoRepresentation]
     public let immediateThumbnailData: Data?
+    public let emojiMarkup: TelegramMediaImage.EmojiMarkup?
     public let reference: TelegramMediaImageReference?
     public let partialReference: PartialMediaReference?
     public let peerIds: [PeerId] = []
@@ -143,11 +191,12 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], videoRepresentations: [TelegramMediaImage.VideoRepresentation] = [], immediateThumbnailData: Data?, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], videoRepresentations: [TelegramMediaImage.VideoRepresentation] = [], immediateThumbnailData: Data?, emojiMarkup: TelegramMediaImage.EmojiMarkup? = nil, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags) {
         self.imageId = imageId
         self.representations = representations
         self.videoRepresentations = videoRepresentations
         self.immediateThumbnailData = immediateThumbnailData
+        self.emojiMarkup = emojiMarkup
         self.reference = reference
         self.partialReference = partialReference
         self.flags = flags
@@ -158,6 +207,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.representations = decoder.decodeObjectArrayForKey("r")
         self.videoRepresentations = decoder.decodeObjectArrayForKey("vr")
         self.immediateThumbnailData = decoder.decodeDataForKey("itd")
+        self.emojiMarkup = decoder.decodeObjectForKey("em", decoder: { TelegramMediaImage.EmojiMarkup(decoder: $0) }) as? TelegramMediaImage.EmojiMarkup
         self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
         self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
         self.flags = TelegramMediaImageFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
@@ -173,6 +223,11 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             encoder.encodeData(immediateThumbnailData, forKey: "itd")
         } else {
             encoder.encodeNil(forKey: "itd")
+        }
+        if let emojiMarkup = self.emojiMarkup {
+            encoder.encodeObject(emojiMarkup, forKey: "em")
+        } else {
+            encoder.encodeNil(forKey: "em")
         }
         if let reference = self.reference {
             encoder.encodeObject(reference, forKey: "rf")
@@ -198,6 +253,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.representations = object.representations
         self.videoRepresentations = object.videoRepresentations
         self.immediateThumbnailData = object.immediateThumbnailData
+        self.emojiMarkup = object.emojiMarkup
         self.reference = object.reference
         self.partialReference = object.partialReference
         self.flags = object.flags
@@ -252,10 +308,13 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             if other.immediateThumbnailData != self.immediateThumbnailData {
                 return false
             }
-            if self.partialReference != other.partialReference {
+            if other.emojiMarkup != self.emojiMarkup {
                 return false
             }
-            if self.flags != other.flags {
+            if other.partialReference != self.partialReference {
+                return false
+            }
+            if other.flags != self.flags {
                 return false
             }
             return true

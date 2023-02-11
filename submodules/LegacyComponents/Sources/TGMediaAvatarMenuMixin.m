@@ -193,24 +193,79 @@
     }];
     [itemViews addObject:galleryItem];
     
-//    if (_hasSearchButton)
-//    {
-//        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-//        {
-//            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-//            if (strongSelf == nil)
-//                return;
-//            
-//            __strong TGMenuSheetController *strongController = weakController;
-//            if (strongController == nil)
-//                return;
-//            
-//            [strongController dismissAnimated:true];
-//            if (strongSelf != nil)
-//                strongSelf.requestSearchController(nil);
-//        }];
-//        [itemViews addObject:viewItem];
-//    }
+    if (!_signup) {
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SetEmoji") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+                                                   {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            if (strongSelf != nil) {
+                strongSelf.requestAvatarEditor(^(UIImage *image, void (^commit)(void)) {
+                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    if (strongSelf.willFinishWithImage != nil) {
+                        strongSelf.willFinishWithImage(image, ^{
+                            if (strongSelf.didFinishWithImage != nil)
+                                strongSelf.didFinishWithImage(image);
+                            
+                            commit();
+                        });
+                    } else {
+                        if (strongSelf.didFinishWithImage != nil)
+                            strongSelf.didFinishWithImage(image);
+                        
+                        commit();
+                    }
+                }, ^(UIImage *image, NSURL *asset, TGVideoEditAdjustments *adjustments, void (^commit)(void)) {
+                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    if (strongSelf.willFinishWithVideo != nil) {
+                        strongSelf.willFinishWithVideo(image, ^{
+                            if (strongSelf.didFinishWithVideo != nil)
+                                strongSelf.didFinishWithVideo(image, asset, adjustments);
+                            
+                            commit();
+                        });
+                    } else {
+                        if (strongSelf.didFinishWithVideo != nil)
+                            strongSelf.didFinishWithVideo(image, asset, adjustments);
+                        
+                        commit();
+                    }
+                });
+            }
+        }];
+        [itemViews addObject:viewItem];
+    }
+    
+    if (_hasSearchButton)
+    {
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+        {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            if (strongSelf != nil)
+                strongSelf.requestSearchController(nil);
+        }];
+        [itemViews addObject:viewItem];
+    }
     
     if (_hasViewButton)
     {
@@ -385,8 +440,8 @@
     __weak TGMediaAvatarMenuMixin *weakSelf = self;
     UIViewController *(^presentBlock)(TGMediaAssetsController *) = nil;
     
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
-    {
+//    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+//    {
         presentBlock = ^UIViewController * (TGMediaAssetsController *controller)
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
@@ -413,48 +468,51 @@
             
             return controller;
         };
-    }
-    else
-    {
-        presentBlock = ^UIViewController * (TGMediaAssetsController *controller)
-        {
-            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return nil;
-            
-            controller.presentationStyle = TGNavigationControllerPresentationStyleInFormSheet;
-            controller.modalPresentationStyle = UIModalPresentationFormSheet;
-            
-            TGOverlayFormsheetWindow *formSheetWindow = [[TGOverlayFormsheetWindow alloc] initWithContext:strongSelf->_context parentController:strongSelf->_parentController contentController:controller];
-            [formSheetWindow showAnimated:true];
-            
-            __weak TGNavigationController *weakNavController = controller;
-            __weak TGOverlayFormsheetWindow *weakFormSheetWindow = formSheetWindow;
-            controller.dismissalBlock = ^
-            {
-                __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-                if (strongSelf == nil)
-                    return;
-                
-                __strong TGOverlayFormsheetWindow *strongFormSheetWindow = weakFormSheetWindow;
-                if (strongFormSheetWindow == nil)
-                    return;
-                
-                __strong TGNavigationController *strongNavController = weakNavController;
-                if (strongNavController != nil)
-                {
-                    if (strongNavController.presentingViewController != nil)
-                        [strongNavController.presentingViewController dismissViewControllerAnimated:true completion:nil];
-                    else
-                        [strongFormSheetWindow dismissAnimated:true];
-                }
-                
-                if (strongSelf.didDismiss != nil)
-                    strongSelf.didDismiss();
-            };
-            return nil;
-        };
-    }
+//    }
+//    else
+//    {
+//        presentBlock = ^UIViewController * (TGMediaAssetsController *controller)
+//        {
+//            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+//            if (strongSelf == nil)
+//                return nil;
+//
+//            controller.presentationStyle = TGNavigationControllerPresentationStyleInFormSheet;
+//            controller.modalPresentationStyle = UIModalPresentationFormSheet;
+//
+//            id<LegacyComponentsOverlayWindowManager> windowManager = nil;
+//            windowManager = [strongSelf->_context makeOverlayWindowManager];
+//
+//            TGOverlayFormsheetWindow *formSheetWindow = [[TGOverlayFormsheetWindow alloc] initWithManager:windowManager parentController:strongSelf->_parentController contentController:controller];
+//            [formSheetWindow showAnimated:true];
+//
+//            __weak TGNavigationController *weakNavController = controller;
+//            __weak TGOverlayFormsheetWindow *weakFormSheetWindow = formSheetWindow;
+//            controller.dismissalBlock = ^
+//            {
+//                __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+//                if (strongSelf == nil)
+//                    return;
+//
+//                __strong TGOverlayFormsheetWindow *strongFormSheetWindow = weakFormSheetWindow;
+//                if (strongFormSheetWindow == nil)
+//                    return;
+//
+//                __strong TGNavigationController *strongNavController = weakNavController;
+//                if (strongNavController != nil)
+//                {
+//                    if (strongNavController.presentingViewController != nil)
+//                        [strongNavController.presentingViewController dismissViewControllerAnimated:true completion:nil];
+//                    else
+//                        [strongFormSheetWindow dismissAnimated:true];
+//                }
+//
+//                if (strongSelf.didDismiss != nil)
+//                    strongSelf.didDismiss();
+//            };
+//            return nil;
+//        };
+//    }
     
     void (^showMediaPicker)(TGMediaAssetGroup *) = ^(TGMediaAssetGroup *group)
     {

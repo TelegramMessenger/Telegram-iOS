@@ -18,15 +18,15 @@ import SoftwareVideo
 import MultiplexedVideoNode
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let result: ChatContextResult
     let resultSelected: (ChatContextResult, ASDisplayNode, CGRect) -> Bool
     
     let selectable: Bool = true
     
-    public init(account: Account, theme: PresentationTheme,  result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme,  result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
+        self.context = context
         self.theme = theme
         self.result = result
         self.resultSelected = resultSelected
@@ -265,9 +265,9 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     }
                 
                     if let file = videoFile {
-                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(file.resource)
+                        updatedStatusSignal = item.context.account.postbox.mediaBox.resourceStatus(file.resource)
                     } else if let imageResource = imageResource {
-                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
+                        updatedStatusSignal = item.context.account.postbox.mediaBox.resourceStatus(imageResource)
                     }
                 case let .internalReference(internalReference):
                     if let image = internalReference.image {
@@ -296,12 +296,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         if file.isVideo && file.isAnimated {
                             videoFile = file
                             imageResource = nil
-                            updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(file.resource)
+                            updatedStatusSignal = item.context.account.postbox.mediaBox.resourceStatus(file.resource)
                         } else if let imageResource = imageResource {
-                            updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
+                            updatedStatusSignal = item.context.account.postbox.mediaBox.resourceStatus(imageResource)
                         }
                     } else if let imageResource = imageResource {
-                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
+                        updatedStatusSignal = item.context.account.postbox.mediaBox.resourceStatus(imageResource)
                     }
             }
             
@@ -351,11 +351,11 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             if updatedImageResource {
                 if let imageResource = imageResource {
                     if let stickerFile = stickerFile {
-                        updateImageSignal = chatMessageSticker(account: item.account, userLocation: .other, file: stickerFile, small: false, fetched: true)
+                        updateImageSignal = chatMessageSticker(account: item.context.account, userLocation: .other, file: stickerFile, small: false, fetched: true)
                     } else {
                         let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0)), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                        updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, userLocation: .other, photoReference: .standalone(media: tmpImage), synchronousLoad: true)
+                        updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .other, photoReference: .standalone(media: tmpImage), synchronousLoad: true)
                     }
                 } else {
                     updateImageSignal = .complete()
@@ -391,7 +391,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                         
                         if let videoFile = videoFile {
-                            let thumbnailLayer = SoftwareVideoThumbnailNode(account: item.account, fileReference: .standalone(media: videoFile), synchronousLoad: synchronousLoads)
+                            let thumbnailLayer = SoftwareVideoThumbnailNode(account: item.context.account, fileReference: .standalone(media: videoFile), synchronousLoad: synchronousLoads)
                             thumbnailLayer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.addSubnode(thumbnailLayer)
                             let layerHolder = takeSampleBufferLayer()
@@ -399,7 +399,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             layerHolder.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             strongSelf.layer.addSublayer(layerHolder.layer)
                             
-                            let manager = SoftwareVideoLayerFrameManager(account: item.account, userLocation: .other, userContentType: .other, fileReference: .standalone(media: videoFile), layerHolder: layerHolder)
+                            let manager = SoftwareVideoLayerFrameManager(account: item.context.account, userLocation: .other, userContentType: .other, fileReference: .standalone(media: videoFile), layerHolder: layerHolder)
                             strongSelf.videoLayer = (thumbnailLayer, manager, layerHolder)
                             thumbnailLayer.ready = { [weak thumbnailLayer, weak manager] in
                                 if let strongSelf = self, let thumbnailLayer = thumbnailLayer, let manager = manager {
@@ -437,8 +437,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             }
                             let dimensions = animatedStickerFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                            strongSelf.fetchDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, userLocation: .other, fileReference: stickerPackFileReference(animatedStickerFile), resource: animatedStickerFile.resource).start())
-                            animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource, isVideo: animatedStickerFile.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                            strongSelf.fetchDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: stickerPackFileReference(animatedStickerFile), resource: animatedStickerFile.resource).start())
+                            animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: animatedStickerFile.resource, isVideo: animatedStickerFile.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                         }
                     }
                     

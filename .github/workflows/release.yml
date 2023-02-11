@@ -21,10 +21,9 @@ jobs:
       - name: Create canonical source directory
         run: |
           set -x
-          sudo mkdir /Users/telegram
-          sudo chown -R $(whoami) /Users/telegram
-          cp -R $GITHUB_WORKSPACE /Users/telegram/
-          mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+          sudo mkdir -p /Users/Shared
+          cp -R $GITHUB_WORKSPACE /Users/Shared/
+          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
 
       - name: Build the App
         env:
@@ -43,10 +42,10 @@ jobs:
           set -x
 
           # source code paths are included in the final binary, so we need to make them stable across builds
-          SOURCE_DIR=/Users/telegram/telegram-ios
+          SOURCE_DIR=/Users/Shared/telegram-ios
 
           # use canonical bazel root
-          BAZEL_USER_ROOT="/private/var/tmp/_bazel_telegram"
+          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
 
           cd $SOURCE_DIR
 
@@ -93,7 +92,7 @@ jobs:
           echo "$PROVISIONING_PROFILE_WIDGET_DATA" | base64 -di - > "$PROVISIONING_PATH/Widget.mobileprovision"
 
           # build the app
-          python3 build-system/Make/Make.py \
+          python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
             --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
@@ -134,7 +133,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa
+          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
           asset_name: Telegram.ipa
           asset_content_type: application/zip
 
@@ -145,7 +144,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/telegram/telegram-ios/build/artifacts/Telegram.DSYMs.zip
+          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
           asset_name: Telegram.DSYMs.zip
           asset_content_type: application/zip
 
@@ -155,6 +154,6 @@ jobs:
           APP_STORE_CONNECT_PASSWORD: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
         run: |
           xcrun altool --upload-app --type ios \
-            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
+            --file /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa \
             --username "$APP_STORE_CONNECT_USERNAME" \
             --password "$APP_STORE_CONNECT_PASSWORD"

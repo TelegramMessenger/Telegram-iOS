@@ -192,6 +192,8 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramExtendedMedia.self, f: { TelegramExtendedMedia(decoder: $0) })
     declareEncodable(TelegramPeerUsername.self, f: { TelegramPeerUsername(decoder: $0) })
     declareEncodable(MediaSpoilerMessageAttribute.self, f: { MediaSpoilerMessageAttribute(decoder: $0) })
+    declareEncodable(TranslationMessageAttribute.self, f: { TranslationMessageAttribute(decoder: $0) })
+    declareEncodable(SynchronizeAutosaveItemOperation.self, f: { SynchronizeAutosaveItemOperation(decoder: $0) })
     return
 }()
 
@@ -438,23 +440,14 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<Void, NoError> in
-                    let _ = (accountManager.transaction { transaction -> Void in
-                        var tokens = transaction.getStoredLoginTokens()
-                        switch result {
-                        case let .loggedOut(_, futureAuthToken):
-                            if let futureAuthToken = futureAuthToken {
-                                tokens.insert(futureAuthToken.makeData(), at: 0)
-                            }
-                        default:
-                            break
+                    switch result {
+                    case let .loggedOut(_, futureAuthToken):
+                        if let futureAuthToken = futureAuthToken {
+                            storeFutureLoginToken(accountManager: accountManager, token: futureAuthToken.makeData())
                         }
-                        
-                        if tokens.count > 20 {
-                            tokens.removeLast(tokens.count - 20)
-                        }
-                        
-                        transaction.setStoredLoginTokens(tokens)
-                    }).start()
+                    default:
+                        break
+                    }
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                     return accountManager.transaction { transaction -> Void in
                         transaction.updateRecord(id, { _ in

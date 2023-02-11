@@ -38,7 +38,7 @@ public enum StandaloneUploadMediaEvent {
 }
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, data: Data) -> Signal<Api.InputFile?, StandaloneUploadMediaError> {
-    return multipartUpload(network: network, postbox: postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: network, postbox: postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     |> mapToSignal { result -> Signal<Api.InputFile?, StandaloneUploadMediaError> in
         switch result {
@@ -53,7 +53,7 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, data: Data) -
 }
 
 public func standaloneUploadedImage(account: Account, peerId: PeerId, text: String, data: Data, thumbnailData: Data? = nil, dimensions: PixelDimensions) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
         switch next {
@@ -114,7 +114,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
 }
 
 public func standaloneUploadedFile(account: Account, peerId: PeerId, text: String, source: MultipartUploadSource, thumbnailData: Data? = nil, mimeType: String, attributes: [TelegramMediaFileAttribute], hintFileIsLarge: Bool) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    let upload = multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)), hintFileSize: nil, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: false)
+    let upload = multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes), userContentType: nil), hintFileSize: nil, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     
     let uploadThumbnail: Signal<StandaloneUploadMediaThumbnailResult, StandaloneUploadMediaError>

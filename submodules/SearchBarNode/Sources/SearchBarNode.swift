@@ -1067,6 +1067,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         node.isHidden = true
         
+        self.textField.isUserInteractionEnabled = false
+        
         if !self.clearButton.isHidden {
             let xOffset = targetTextBackgroundFrame.width - self.textBackgroundNode.frame.width
             if !xOffset.isZero {
@@ -1118,10 +1120,11 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         var backgroundCompleted = false
         var separatorCompleted = false
         var textBackgroundCompleted = false
-        let intermediateCompletion: () -> Void = { [weak node] in
+        let intermediateCompletion: () -> Void = { [weak node, weak self] in
             if backgroundCompleted && separatorCompleted && textBackgroundCompleted {
                 completion()
                 node?.isHidden = false
+                self?.textField.isUserInteractionEnabled = true
             }
         }
         

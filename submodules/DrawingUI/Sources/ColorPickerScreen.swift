@@ -2026,6 +2026,8 @@ private final class ColorPickerContent: CombinedComponent {
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
             let state = context.state
+            let strings = environment.strings
+            
             state.colorChanged = component.colorChanged
             
             let sideInset: CGFloat = 16.0
@@ -2079,7 +2081,7 @@ private final class ColorPickerContent: CombinedComponent {
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "Colors",
+                        string: strings.Paint_ColorTitle,
                         font: Font.semibold(17.0),
                         textColor: .white,
                         paragraphAlignment: .center
@@ -2098,7 +2100,7 @@ private final class ColorPickerContent: CombinedComponent {
             
             let modeControl = modeControl.update(
                 component: SegmentedControlComponent(
-                    values: ["Grid", "Spectrum", "Sliders"],
+                    values: [strings.Paint_ColorGrid, strings.Paint_ColorSpectrum, strings.Paint_ColorSliders],
                     selectedIndex: 0,
                     selectionChanged: { [weak state] index in
                         state?.updateSelectedMode(index)
@@ -2172,7 +2174,7 @@ private final class ColorPickerContent: CombinedComponent {
             let opacityTitle = opacityTitle.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "OPACITY",
+                        string: strings.Paint_ColorOpacity,
                         font: Font.semibold(13.0),
                         textColor: UIColor(rgb: 0x9b9da5),
                         paragraphAlignment: .center

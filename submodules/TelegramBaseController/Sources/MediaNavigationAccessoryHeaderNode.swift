@@ -41,7 +41,7 @@ private class MediaHeaderItemNode: ASDisplayNode {
         var subtitleString: NSAttributedString?
         if let playbackItem = playbackItem, let displayData = playbackItem.displayData {
             switch displayData {
-                case let .music(title, performer, _, long):
+                case let .music(title, performer, _, long, _):
                     rateButtonHidden = !long
                     let titleText: String = title ?? strings.MediaPlayer_UnknownTrack
                     let subtitleText: String = performer ?? strings.MediaPlayer_UnknownArtist
@@ -188,7 +188,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                 case .x0_5:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "0.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x1:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1X", color: self.theme.rootController.navigationBar.controlColor)))
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateNormal
                     self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
@@ -378,7 +378,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                 case .x0_5:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "0.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x1:
-                    self.rateButton.setContent(.image(optionsRateImage(rate: "2X", color: self.theme.rootController.navigationBar.controlColor)))
+                    self.rateButton.setContent(.image(optionsRateImage(rate: "1X", color: self.theme.rootController.navigationBar.controlColor)))
                 case .x1_5:
                     self.rateButton.setContent(.image(optionsRateImage(rate: "1.5X", color: self.theme.rootController.navigationBar.accentTextColor)))
                 case .x2:
@@ -511,6 +511,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         if let rate = self.playbackBaseRate {
             switch rate {
             case .x1:
+                nextRate = .x1_5
+            case .x1_5:
                 nextRate = .x2
             default:
                 nextRate = .x1

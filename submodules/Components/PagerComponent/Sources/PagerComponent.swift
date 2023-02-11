@@ -46,15 +46,18 @@ public final class PagerComponentChildEnvironment: Equatable {
     public let containerInsets: UIEdgeInsets
     public let onChildScrollingUpdate: (ContentScrollingUpdate) -> Void
     public let onWantsExclusiveModeUpdated: (Bool) -> Void
+    public let scrollToTop: ActionSlot<Void>
     
     init(
         containerInsets: UIEdgeInsets,
         onChildScrollingUpdate: @escaping (ContentScrollingUpdate) -> Void,
-        onWantsExclusiveModeUpdated: @escaping (Bool) -> Void
+        onWantsExclusiveModeUpdated: @escaping (Bool) -> Void,
+        scrollToTop: ActionSlot<Void>
     ) {
         self.containerInsets = containerInsets
         self.onChildScrollingUpdate = onChildScrollingUpdate
         self.onWantsExclusiveModeUpdated = onWantsExclusiveModeUpdated
+        self.scrollToTop = scrollToTop
     }
     
     public static func ==(lhs: PagerComponentChildEnvironment, rhs: PagerComponentChildEnvironment) -> Bool {
@@ -67,6 +70,7 @@ public final class PagerComponentChildEnvironment: Equatable {
 }
 
 public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatable {
+    public let isContentInFocus: Bool
     public let contentOffset: CGFloat
     public let contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>]
     public let contentIcons: [PagerComponentContentIcon]
@@ -78,6 +82,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
     public let isExpandedUpdated: (Bool, Transition) -> Void
     
     init(
+        isContentInFocus: Bool,
         contentOffset: CGFloat,
         contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>],
         contentIcons: [PagerComponentContentIcon],
@@ -88,6 +93,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
         visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>,
         isExpandedUpdated: @escaping (Bool, Transition) -> Void
     ) {
+        self.isContentInFocus = isContentInFocus
         self.contentOffset = contentOffset
         self.contentTopPanels = contentTopPanels
         self.contentIcons = contentIcons
@@ -100,6 +106,9 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
     }
     
     public static func ==(lhs: PagerComponentPanelEnvironment, rhs: PagerComponentPanelEnvironment) -> Bool {
+        if lhs.isContentInFocus != rhs.isContentInFocus {
+            return false
+        }
         if lhs.contentOffset != rhs.contentOffset {
             return false
         }
@@ -143,15 +152,18 @@ public enum PagerComponentPanelHideBehavior {
     case hideOnScroll
     case show
     case hide
+    case disable
 }
 
 public final class PagerComponentContentIcon: Equatable {
     public let id: AnyHashable
     public let imageName: String
+    public let title: String
     
-    public init(id: AnyHashable, imageName: String) {
+    public init(id: AnyHashable, imageName: String, title: String) {
         self.id = id
         self.imageName = imageName
+        self.title = title
     }
     
     public static func ==(lhs: PagerComponentContentIcon, rhs: PagerComponentContentIcon) -> Bool {
@@ -164,6 +176,9 @@ public final class PagerComponentContentIcon: Equatable {
         if lhs.imageName != rhs.imageName {
             return false
         }
+        if lhs.title != rhs.title {
+            return false
+        }
         return true
     }
 }
@@ -171,6 +186,7 @@ public final class PagerComponentContentIcon: Equatable {
 public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvironment: Equatable>: Component {
     public typealias EnvironmentType = ChildEnvironmentType
     
+    public let isContentInFocus: Bool
     public let contentInsets: UIEdgeInsets
     public let contents: [AnyComponentWithIdentity<(ChildEnvironmentType, PagerComponentChildEnvironment)>]
     public let contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>]
@@ -186,10 +202,12 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?
     public let isTopPanelExpandedUpdated: (Bool, Transition) -> Void
     public let isTopPanelHiddenUpdated: (Bool, Transition) -> Void
+    public let contentIdUpdated: (AnyHashable) -> Void
     public let panelHideBehavior: PagerComponentPanelHideBehavior
     public let clipContentToTopPanel: Bool
     
     public init(
+        isContentInFocus: Bool,
         contentInsets: UIEdgeInsets,
         contents: [AnyComponentWithIdentity<(ChildEnvironmentType, PagerComponentChildEnvironment)>],
         contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>],
@@ -205,9 +223,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?,
         isTopPanelExpandedUpdated: @escaping (Bool, Transition) -> Void,
         isTopPanelHiddenUpdated: @escaping (Bool, Transition) -> Void,
+        contentIdUpdated: @escaping (AnyHashable) -> Void,
         panelHideBehavior: PagerComponentPanelHideBehavior,
         clipContentToTopPanel: Bool
     ) {
+        self.isContentInFocus = isContentInFocus
         self.contentInsets = contentInsets
         self.contents = contents
         self.contentTopPanels = contentTopPanels
@@ -223,11 +243,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.panelStateUpdated = panelStateUpdated
         self.isTopPanelExpandedUpdated = isTopPanelExpandedUpdated
         self.isTopPanelHiddenUpdated = isTopPanelHiddenUpdated
+        self.contentIdUpdated = contentIdUpdated
         self.panelHideBehavior = panelHideBehavior
         self.clipContentToTopPanel = clipContentToTopPanel
     }
     
     public static func ==(lhs: PagerComponent, rhs: PagerComponent) -> Bool {
+        if lhs.isContentInFocus != rhs.isContentInFocus {
+            return false
+        }
         if lhs.contentInsets != rhs.contentInsets {
             return false
         }
@@ -275,6 +299,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var scrollingPanelOffsetToBottomEdge: CGFloat = .greatestFiniteMagnitude
             var scrollingPanelOffsetFraction: CGFloat = 0.0
             var wantsExclusiveMode: Bool = false
+            let scrollToTop = ActionSlot<Void>()
                                             
             init(view: ComponentHostView<(ChildEnvironmentType, PagerComponentChildEnvironment)>) {
                 self.view = view
@@ -286,6 +311,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         
         private struct PaneTransitionGestureState {
             var fraction: CGFloat = 0.0
+            var nextIndex: Int? = nil
         }
         
         private var contentClippingView: UIView
@@ -346,7 +372,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             case .began:
                 self.paneTransitionGestureState = PaneTransitionGestureState()
             case .changed:
-                if let centralId = self.centralId, let component = self.component, let centralIndex = component.contents.firstIndex(where: {  $0.id == centralId }), var paneTransitionGestureState = self.paneTransitionGestureState, self.bounds.width > 0.0 {
+                if let centralId = self.centralId, let component = self.component, let centralIndex = component.contents.firstIndex(where: { $0.id == centralId }), let centralView = self.contentViews[centralId], !centralView.wantsExclusiveMode, var paneTransitionGestureState = self.paneTransitionGestureState, self.bounds.width > 0.0 {
                     var fraction = recognizer.translation(in: self).x / self.bounds.width
                     if centralIndex <= 0 {
                         fraction = min(0.0, fraction)
@@ -355,6 +381,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                         fraction = max(0.0, fraction)
                     }
                     paneTransitionGestureState.fraction = fraction
+                    
+                    let nextIndex: Int
+                    if fraction > 0.0 {
+                        nextIndex = max(0, centralIndex - 1)
+                    } else {
+                        nextIndex = min(component.contents.count - 1, centralIndex + 1)
+                    }
+                    
+                    paneTransitionGestureState.nextIndex = nextIndex
                     
                     self.paneTransitionGestureState = paneTransitionGestureState
                     self.state?.updated(transition: .immediate)
@@ -397,10 +432,51 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     } else {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                     }
+                    if let centralId = self.centralId {
+                        self.component?.contentIdUpdated(centralId)
+                    }
                 }
             default:
                 break
             }
+        }
+        
+        public func navigateToContentId(_ id: AnyHashable) {
+            guard let centralId = self.centralId, let component = self.component, let _ = component.contents.firstIndex(where: { $0.id == centralId }), let nextIndex = component.contents.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+            
+            var updateTopPanelExpanded = false
+            if self.centralId != id {
+                var paneTransitionGestureState = PaneTransitionGestureState()
+                paneTransitionGestureState.fraction = 0.0
+                paneTransitionGestureState.nextIndex = nextIndex
+                
+                self.paneTransitionGestureState = paneTransitionGestureState
+                self.state?.updated(transition: .immediate)
+                
+                self.paneTransitionGestureState = nil
+                
+                /*paneTransitionGestureState.fraction = 1.0
+                
+                self.paneTransitionGestureState = paneTransitionGestureState
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))*/
+                
+                self.centralId = id
+                
+                if self.isTopPanelExpanded {
+                    updateTopPanelExpanded = true
+                }
+            } else {
+                self.contentViews[id]?.scrollToTop.invoke(Void())
+            }
+            
+            if updateTopPanelExpanded {
+                self.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            } else {
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            }
+            self.component?.contentIdUpdated(id)
         }
         
         func update(component: PagerComponent<ChildEnvironmentType, TopPanelEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -418,21 +494,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 guard let strongSelf = self else {
                     return
                 }
-                
-                var updateTopPanelExpanded = false
-                if strongSelf.centralId != id {
-                    strongSelf.centralId = id
-                    
-                    if strongSelf.isTopPanelExpanded {
-                        updateTopPanelExpanded = true
-                    }
-                }
-                
-                if updateTopPanelExpanded {
-                    strongSelf.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                } else {
-                    strongSelf.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                }
+                strongSelf.navigateToContentId(id)
             }
             
             var centralId: AnyHashable?
@@ -448,8 +510,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     }
                 }
                 if centralId == nil {
-                   centralId = component.contents.first?.id
-               }
+                    centralId = component.contents.first?.id
+                }
             }
             
             if self.centralId != centralId {
@@ -472,8 +534,46 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 scrollingPanelOffsetFraction = 0.0
             }
             
+            var topPanelVisibility: CGFloat = 1.0
+            if let centralId = centralId, let index = component.contents.firstIndex(where: { $0.id == centralId }) {
+                if let paneTransitionGestureState = self.paneTransitionGestureState {
+                    var nextIndex: Int
+                    if paneTransitionGestureState.fraction > 0.0 {
+                        nextIndex = max(0, index - 1)
+                    } else {
+                        nextIndex = min(component.contents.count - 1, index + 1)
+                    }
+                    if let nextIndexValue = paneTransitionGestureState.nextIndex {
+                        nextIndex = nextIndexValue
+                    }
+                    
+                    let nextId = component.contents[nextIndex].id
+                    
+                    var centralPanelFraction: CGFloat = 1.0
+                    if !component.contentTopPanels.contains(where: { $0.id == centralId }) {
+                        centralPanelFraction = 0.0
+                    }
+                    var nextPanelFraction: CGFloat = 1.0
+                    if !component.contentTopPanels.contains(where: { $0.id == nextId }) {
+                        nextPanelFraction = 0.0
+                    }
+                    
+                    topPanelVisibility = centralPanelFraction * (1.0 - abs(paneTransitionGestureState.fraction)) + nextPanelFraction * abs(paneTransitionGestureState.fraction)
+                } else {
+                    if !component.contentTopPanels.contains(where: { $0.id == centralId }) {
+                        topPanelVisibility = 0.0
+                    }
+                }
+            }
+            
+            if case .disable = component.panelHideBehavior {
+                topPanelVisibility = 0.0
+            }
+            
             var topPanelHeight: CGFloat = 0.0
             if let topPanel = component.topPanel {
+                let effectiveTopPanelOffsetFraction = scrollingPanelOffsetFraction
+                
                 let topPanelView: ComponentHostView<PagerComponentPanelEnvironment<TopPanelEnvironment>>
                 var topPanelTransition = panelStateTransition
                 if let current = self.topPanelView {
@@ -489,17 +589,23 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     topPanelSuperview.addSubview(topPanelView)
                 }
                 
+                var effectivePanelActiveContentId = centralId
+                if let centralId = centralId, !component.contentTopPanels.contains(where: { $0.id == centralId }) {
+                    effectivePanelActiveContentId = component.contentTopPanels.first?.id
+                }
+                
                 let topPanelSize = topPanelView.update(
                     transition: topPanelTransition,
                     component: topPanel,
                     environment: {
                         PagerComponentPanelEnvironment(
+                            isContentInFocus: component.isContentInFocus,
                             contentOffset: 0.0,
                             contentTopPanels: component.contentTopPanels,
                             contentIcons: [],
                             contentAccessoryLeftButtons: [],
                             contentAccessoryRightButtons: [],
-                            activeContentId: centralId,
+                            activeContentId: effectivePanelActiveContentId,
                             navigateToContentId: navigateToContentId,
                             visibilityFractionUpdated: self.topPanelVisibilityFractionUpdated,
                             isExpandedUpdated: { [weak self] isExpanded, transition in
@@ -515,17 +621,20 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 
                 self.topPanelHeight = topPanelSize.height
                 
-                var topPanelOffset = topPanelSize.height * scrollingPanelOffsetFraction
+                var topPanelOffset = topPanelSize.height * effectiveTopPanelOffsetFraction
                 
-                var topPanelVisibilityFraction: CGFloat = 1.0 - scrollingPanelOffsetFraction
+                topPanelOffset = min(topPanelSize.height, topPanelOffset + topPanelSize.height * (1.0 - topPanelVisibility))
+                
+                var topPanelVisibilityFraction: CGFloat = 1.0 - effectiveTopPanelOffsetFraction
                 switch component.panelHideBehavior {
-                case .hide:
+                case .hide, .disable:
                     topPanelVisibilityFraction = 0.0
                 case .show:
                     topPanelVisibilityFraction = 1.0
                 case .hideOnScroll:
                     break
                 }
+                topPanelVisibilityFraction *= topPanelVisibility
                 
                 self.topPanelVisibilityFractionUpdated.invoke((topPanelVisibilityFraction, topPanelTransition))
                 
@@ -533,11 +642,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 
                 if case .hide = component.panelHideBehavior {
                     topPanelOffset = topPanelSize.height
+                } else if case .disable = component.panelHideBehavior {
+                    topPanelOffset = topPanelSize.height
                 }
                 
                 if component.externalTopPanelContainer != nil {
                     var visibleTopPanelHeight = max(0.0, topPanelSize.height - topPanelOffset)
                     if case .hide = component.panelHideBehavior {
+                        visibleTopPanelHeight = 0.0
+                    } else if case .disable = component.panelHideBehavior {
                         visibleTopPanelHeight = 0.0
                     }
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(), size: CGSize(width: topPanelSize.width, height: visibleTopPanelHeight)))
@@ -586,6 +699,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     component: bottomPanel,
                     environment: {
                         PagerComponentPanelEnvironment<TopPanelEnvironment>(
+                            isContentInFocus: component.isContentInFocus,
                             contentOffset: 0.0,
                             contentTopPanels: [],
                             contentIcons: component.contentIcons,
@@ -606,6 +720,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 bottomPanelOffset = bottomPanelSize.height * scrollingPanelOffsetFraction
                 if case .hide = component.panelHideBehavior {
                     bottomPanelOffset = bottomPanelSize.height
+                } else if case .disable = component.panelHideBehavior {
+                    bottomPanelOffset = bottomPanelSize.height
                 }
                 
                 panelStateTransition.setFrame(view: bottomPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height + bottomPanelOffset), size: bottomPanelSize))
@@ -621,9 +737,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 self.bottomPanelHeight = 0.0
             }
             
+            contentInsets.top *= topPanelVisibility
+            
             let effectiveTopPanelHeight: CGFloat
             switch component.panelHideBehavior {
-            case .hide:
+            case .hide, .disable:
                 effectiveTopPanelHeight = 0.0
             case .show, .hideOnScroll:
                 if component.externalTopPanelContainer != nil {
@@ -675,13 +793,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     var checkingContentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(indexOffset), y: 0.0), size: contentSize)
                     var contentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(clippedIndexOffset), y: 0.0), size: contentSize)
                     
+                    var isInBounds = CGRect(origin: CGPoint(), size: availableSize).intersects(checkingContentFrame)
                     if let paneTransitionGestureState = self.paneTransitionGestureState {
                         checkingContentFrame.origin.x += paneTransitionGestureState.fraction * availableSize.width
                         contentFrame.origin.x += paneTransitionGestureState.fraction * availableSize.width
+                        if let nextIndex = paneTransitionGestureState.nextIndex, nextIndex == index {
+                            isInBounds = true
+                        }
                     }
                     let content = component.contents[index]
-                    
-                    let isInBounds = CGRect(origin: CGPoint(), size: availableSize).intersects(checkingContentFrame)
                     
                     var isPartOfTransition = false
                     if case .none = transition.animation {
@@ -729,7 +849,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                                     return
                                 }
                                 strongSelf.onChildWantsExclusiveModeUpdated(id: id, wantsExclusiveMode: wantsExclusiveMode)
-                            }
+                            },
+                            scrollToTop: contentView.scrollToTop
                         )
                         
                         let _ = contentView.view.update(

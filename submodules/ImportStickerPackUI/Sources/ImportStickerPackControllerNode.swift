@@ -259,7 +259,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                             }
                         })))
                     }
-                    return .single((itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems)))
+                    return .single((itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, item: item, menu: menuItems)))
                 }
             }
             return nil
