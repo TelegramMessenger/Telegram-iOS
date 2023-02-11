@@ -34,7 +34,7 @@ func _internal_checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -
             if index == 0 {
                 return .startsWithUnderscore
             } else if index == length - 1 {
-                return length < 4 ? .tooShort : .endsWithUnderscore
+                return length <= 4 ? .tooShort : .endsWithUnderscore
             }
         }
         if index == 0 && char >= "0" && char <= "9" {
@@ -46,7 +46,7 @@ func _internal_checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -
         index += 1
     }
     
-    if length < 4 && (!canEmpty || length != 0) {
+    if length <= 4 && (!canEmpty || length != 0) {
         return .tooShort
     }
     return nil
@@ -87,7 +87,7 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                         if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
                             return .single(.purchaseAvailable)
                         } else {
-                            return .single(.invalid)
+                            return .single(.taken)
                         }
                     }
                 } else if peerId.namespace == Namespaces.Peer.CloudGroup {
