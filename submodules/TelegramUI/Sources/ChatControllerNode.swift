@@ -2485,6 +2485,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
                             if let validLayout = self.validLayout, validLayout.0.inputHeight != nil {
                                 waitForKeyboardLayout = true
+                            } else {
+                                waitForKeyboardLayout = true
                             }
                         }
                         textView.reloadInputViews()
