@@ -22,4 +22,8 @@
 #define LOTTIE_IMAGE_MODULE_DISABLED
 #endif
 
+#ifndef LOTTIE_CACHE_SUPPORT
+#define LOTTIE_CACHE_SUPPORT
+#endif
+
 #endif  // CONFIG_H

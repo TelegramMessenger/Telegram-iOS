@@ -45,6 +45,7 @@ swift_library(
         "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
     ],
     visibility = [
         "//visibility:public",

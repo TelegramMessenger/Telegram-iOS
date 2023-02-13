@@ -5,7 +5,7 @@ import ComponentFlow
 import HierarchyTrackingLayer
 import RLottieBinding
 import SwiftSignalKit
-import Accelerate
+import AppBundle
 
 public final class LottieComponent: Component {
     public typealias EnvironmentType = Empty
@@ -25,8 +25,34 @@ public final class LottieComponent: Component {
             preconditionFailure()
         }
         
-        open func load(_ f: @escaping (Data) -> Void) -> Disposable {
+        open func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
             preconditionFailure()
+        }
+    }
+    
+    public final class AppBundleContent: Content {
+        public let name: String
+        
+        public init(name: String) {
+            self.name = name
+        }
+        
+        override public func isEqual(to other: Content) -> Bool {
+            guard let other = other as? AppBundleContent else {
+                return false
+            }
+            if self.name != other.name {
+                return false
+            }
+            return true
+        }
+        
+        override public func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
+            if let url = getAppBundle().url(forResource: self.name, withExtension: "json"), let data = try? Data(contentsOf: url) {
+                f(data, url.path)
+            }
+            
+            return EmptyDisposable
         }
     }
 
@@ -63,6 +89,9 @@ public final class LottieComponent: Component {
         private var currentFrame: Int = 0
         private var currentFrameStartTime: Double?
         
+        private var hierarchyTrackingLayer: HierarchyTrackingLayer?
+        private var isVisible: Bool = false
+        
         private var displayLink: SharedDisplayLinkDriver.Link?
         
         private var currentTemplateFrameImage: UIImage?
@@ -76,11 +105,30 @@ public final class LottieComponent: Component {
         }
         
         override init(frame: CGRect) {
-            //self.hierarchyTrackingLayer = HierarchyTrackingLayer()
-            
             super.init(frame: frame)
             
-            //self.layer.addSublayer(self.hierarchyTrackingLayer)
+            let hierarchyTrackingLayer = HierarchyTrackingLayer()
+            self.hierarchyTrackingLayer = hierarchyTrackingLayer
+            self.layer.addSublayer(hierarchyTrackingLayer)
+            
+            hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+                guard let self else {
+                    return
+                }
+                if !self.isVisible {
+                    self.isVisible = true
+                    self.visibilityUpdated()
+                }
+            }
+            hierarchyTrackingLayer.didExitHierarchy = { [weak self] in
+                guard let self else {
+                    return
+                }
+                if self.isVisible {
+                    self.isVisible = false
+                    self.visibilityUpdated()
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -91,9 +139,20 @@ public final class LottieComponent: Component {
             self.currentContentDisposable?.dispose()
         }
         
+        private func visibilityUpdated() {
+            if self.isVisible {
+                if self.scheduledPlayOnce {
+                    self.playOnce()
+                }
+            }
+        }
+        
         public func playOnce(delay: Double = 0.0) {
             guard let _ = self.animationInstance else {
                 self.scheduledPlayOnce = true
+                return
+            }
+            if !self.isVisible {
                 return
             }
             
@@ -135,8 +194,8 @@ public final class LottieComponent: Component {
             }
         }
         
-        private func loadAnimation(data: Data) {
-            self.animationInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "")
+        private func loadAnimation(data: Data, cacheKey: String?) {
+            self.animationInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: cacheKey ?? "")
             if self.scheduledPlayOnce {
                 self.scheduledPlayOnce = false
                 self.playOnce()
@@ -184,12 +243,6 @@ public final class LottieComponent: Component {
                 return
             }
             
-            var destinationBuffer = vImage_Buffer()
-            destinationBuffer.width = UInt(context.scaledSize.width)
-            destinationBuffer.height = UInt(context.scaledSize.height)
-            destinationBuffer.data = context.bytes
-            destinationBuffer.rowBytes = context.bytesPerRow
-            
             animationInstance.renderFrame(with: Int32(self.currentFrame % Int(animationInstance.frameCount)), into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(currentDisplaySize.width), height: Int32(currentDisplaySize.height), bytesPerRow: Int32(context.bytesPerRow))
             self.currentTemplateFrameImage = context.generateImage()?.withRenderingMode(.alwaysTemplate)
             self.image = self.currentTemplateFrameImage
@@ -216,12 +269,12 @@ public final class LottieComponent: Component {
             if previousComponent?.content != component.content {
                 self.currentContentDisposable?.dispose()
                 let content = component.content
-                self.currentContentDisposable = component.content.load { [weak self, weak content] data in
+                self.currentContentDisposable = component.content.load { [weak self, weak content] data, cacheKey in
                     Queue.mainQueue().async {
                         guard let self, self.component?.content == content else {
                             return
                         }
-                        self.loadAnimation(data: data)
+                        self.loadAnimation(data: data, cacheKey: cacheKey)
                     }
                 }
             } else if redrawImage {

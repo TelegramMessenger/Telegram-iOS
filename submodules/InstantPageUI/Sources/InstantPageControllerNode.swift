@@ -776,10 +776,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             } else {
                 maxBarHeight = containerLayout.safeInsets.top + 34.0
             }
-            minBarHeight = containerLayout.safeInsets.top + 8.0
+            minBarHeight = containerLayout.safeInsets.top + 8.0 + 20.0
         } else {
             maxBarHeight = (containerLayout.statusBarHeight ?? 0.0) + 44.0
-            minBarHeight = 20.0
+            minBarHeight = (containerLayout.statusBarHeight ?? 20.0) + 20.0
         }
         
         var pageProgress: CGFloat = 0.0

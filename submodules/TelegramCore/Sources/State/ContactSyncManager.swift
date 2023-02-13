@@ -179,7 +179,9 @@ private final class ContactSyncManagerImpl {
     func startOperation(_ operation: ContactSyncOperationContent, disposable: DisposableSet, completion: @escaping () -> Void) {
         switch operation {
             case .waitForUpdatedState:
-                disposable.add((self.stateManager.pollStateUpdateCompletion()
+                disposable.add((self.stateManager.isUpdating
+                |> filter { !$0 }
+                |> take(1)
                 |> deliverOn(self.queue)).start(next: { _ in
                     completion()
                 }))

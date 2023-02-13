@@ -935,7 +935,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     return .single(nil)
                 }
             }
-            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, acquireIdleExtension: {
+            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in
+                let id = application.beginBackgroundTask(withName: name, expirationHandler: expiration)
+                Logger.shared.log("App \(self.episodeId)", "Begin background task \(name): \(id)")
+                return id
+            }, endBackgroundTask: { id in
+                print("App \(self.episodeId)", "End background task \(id)")
+                application.endBackgroundTask(id)
+            }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, acquireIdleExtension: {
                 return applicationBindings.pushIdleTimerExtension()
             }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
                 return sharedContext.accountUserInterfaceInUse(id)
@@ -1639,9 +1646,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     extendNow = true
                 }
             }
-            #if DEBUG
-            extendNow = false
-            #endif
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: extendNow)
         })
         
@@ -1713,7 +1717,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Logger.shared.log("App \(self.episodeId)", "register for notifications: didRegisterForRemoteNotificationsWithDeviceToken (deviceToken: \(deviceToken))")
+        Logger.shared.log("App \(self.episodeId)", "register for notifications: didRegisterForRemoteNotificationsWithDeviceToken (deviceToken: \(hexString(deviceToken)))")
         self.notificationTokenPromise.set(.single(deviceToken))
     }
     
@@ -2407,6 +2411,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             } else {
                 completionHandler()
             }
+        })
+    }
+    
+    func requestNotificationTokenInvalidation() {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+            UIApplication.shared.registerForRemoteNotifications()
         })
     }
     
