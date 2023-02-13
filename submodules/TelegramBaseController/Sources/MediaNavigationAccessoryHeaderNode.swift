@@ -527,14 +527,14 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     private func contextMenuSpeedItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         var items: [ContextMenuItem] = []
 
-        items.append(.custom(SliderContextItem(minValue: 0.05, maxValue: 2.5, value: self.playbackBaseRate?.doubleValue ?? 1.0, valueChanged: { [weak self] newValue, finished in
-            self?.setRate?(AudioPlaybackRate(newValue), true)
-            if finished {
-                dismiss()
-            }
-        }), true))
+//        items.append(.custom(SliderContextItem(minValue: 0.05, maxValue: 2.5, value: self.playbackBaseRate?.doubleValue ?? 1.0, valueChanged: { [weak self] newValue, finished in
+//            self?.setRate?(AudioPlaybackRate(newValue), true)
+//            if finished {
+//                dismiss()
+//            }
+//        }), true))
         
-        items.append(.separator)
+//        items.append(.separator)
         
         for (text, _, rate) in self.speedList(strings: self.strings) {
             let isSelected = self.playbackBaseRate == rate

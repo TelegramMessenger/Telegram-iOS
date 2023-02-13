@@ -4757,8 +4757,9 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 }
             }
                                     
-            let buttonHeight = self.scheduleCancelButton.updateLayout(width: size.width - 32.0, transition: .immediate)
-            self.scheduleCancelButton.frame = CGRect(x: 16.0, y: 137.0, width: size.width - 32.0, height: buttonHeight)
+            let buttonWidth = min(size.width - 32.0, centralButtonSize.width)
+            let buttonHeight = self.scheduleCancelButton.updateLayout(width: buttonWidth, transition: .immediate)
+            self.scheduleCancelButton.frame = CGRect(x: floorToScreenPixels(centerButtonFrame.midX - buttonWidth / 2.0), y: 137.0, width: buttonWidth, height: buttonHeight)
             
             if self.actionButton.supernode === self.bottomPanelNode {
                 transition.updateFrame(node: self.actionButton, frame: thirdButtonFrame, completion: transition.isAnimated ? { [weak self] _ in
