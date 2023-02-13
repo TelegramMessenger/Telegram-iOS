@@ -993,6 +993,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1891070632] = { return Api.contacts.TopPeers.parse_topPeers($0) }
     dict[-1255369827] = { return Api.contacts.TopPeers.parse_topPeersDisabled($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
+    dict[-585598930] = { return Api.help.AppConfig.parse_appConfig($0) }
+    dict[2094949405] = { return Api.help.AppConfig.parse_appConfigNotModified($0) }
     dict[-860107216] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
     dict[-2016381538] = { return Api.help.CountriesList.parse_countriesList($0) }
@@ -1774,6 +1776,8 @@ public extension Api {
             case let _1 as Api.contacts.ResolvedPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.TopPeers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.AppConfig:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppUpdate:
                 _1.serialize(buffer, boxed)

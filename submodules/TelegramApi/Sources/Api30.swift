@@ -3334,15 +3334,15 @@ public extension Api.functions.help {
                 }
 }
 public extension Api.functions.help {
-                static func getAppConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.JSONValue>) {
+                static func getAppConfig(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.AppConfig>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1735311088)
-                    
-                    return (FunctionDescription(name: "help.getAppConfig", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.JSONValue? in
+                    buffer.appendInt32(1642330196)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.getAppConfig", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.AppConfig? in
                         let reader = BufferReader(buffer)
-                        var result: Api.JSONValue?
+                        var result: Api.help.AppConfig?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.JSONValue
+                            result = Api.parse(reader, signature: signature) as? Api.help.AppConfig
                         }
                         return result
                     })
