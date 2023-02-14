@@ -21,15 +21,15 @@ public enum ArchivedStickerPacksControllerMode {
 }
 
 private final class ArchivedStickerPacksControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
     let addPack: (StickerPackCollectionInfo) -> Void
     let removePack: (StickerPackCollectionInfo) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void, removePack: @escaping (StickerPackCollectionInfo) -> Void) {
-        self.account = account
+    init(context: AccountContext, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void, removePack: @escaping (StickerPackCollectionInfo) -> Void) {
+        self.context = context
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
         self.addPack = addPack
@@ -135,7 +135,7 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
             case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -264,7 +264,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = ArchivedStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
+    let arguments = ArchivedStickerPacksControllerArguments(context: context, openStickerPack: { info in
         presentStickerPackController?(info)
     }, setPackIdWithRevealedOptions: { packId, fromPackId in
         updateState { state in

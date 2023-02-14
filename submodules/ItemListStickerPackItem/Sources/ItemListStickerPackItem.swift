@@ -12,6 +12,7 @@ import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
+import AccountContext
 
 public struct ItemListStickerPackItemEditing: Equatable {
     public var editable: Bool
@@ -38,7 +39,7 @@ public enum ItemListStickerPackItemControl: Equatable {
 
 public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let account: Account
+    let context: AccountContext
     let packInfo: StickerPackCollectionInfo
     let itemCount: String
     let topItem: StickerPackItem?
@@ -54,9 +55,9 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let removePack: () -> Void
     let toggleSelected: () -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
         self.presentationData = presentationData
-        self.account = account
+        self.context = context
         self.packInfo = packInfo
         self.itemCount = itemCount
         self.topItem = topItem
@@ -506,18 +507,18 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource, nilIfEmpty: true)
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: representation.resource, nilIfEmpty: true)
                         }
                     case let .animated(resource, dimensions, _):
                         imageSize = dimensions.cgSize.aspectFitted(imageBoundingSize)
                     
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageBoundingSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: resource, animated: true, nilIfEmpty: true)
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: resource, animated: true, nilIfEmpty: true)
                         }
                 }
                 if fileUpdated, let resourceReference = resourceReference {
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: resourceReference)
+                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: resourceReference)
                 }
             } else {
                 updatedImageSignal = .single({ _ in return nil })
@@ -768,7 +769,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
                                     
-                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: resource, isVideo: isVideo), width: 80, height: 80, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers
@@ -794,7 +795,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         
                         placeholderNode.frame = imageFrame
                         
-                        placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: immediateThumbnailData, size: imageFrame.size, imageSize: imageSize.cgSize)
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: immediateThumbnailData, size: imageFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: imageSize.cgSize)
                     }
                     
                     if let updatedImageSignal = updatedImageSignal {

@@ -1318,7 +1318,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if isKnown {
                         let photo = personalPhoto ?? profilePhoto
-                        if let photo = photo, !photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil {
+                        if let photo = photo, item.context.sharedContext.energyUsageSettings.loopEmoji, (!photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil) {
                             let videoNode: AvatarVideoNode
                             if let current = strongSelf.avatarVideoNode {
                                 videoNode = current

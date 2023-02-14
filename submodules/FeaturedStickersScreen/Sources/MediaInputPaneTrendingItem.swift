@@ -107,7 +107,7 @@ final class TrendingTopItemNode: ASDisplayNode {
         }
         
         if let placeholderNode = self.placeholderNode, let file = self.file {
-            placeholderNode.update(backgroundColor: backgroundColor, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: file.immediateThumbnailData, size: self.itemSize ?? CGSize(width: 75.0, height: 75.0))
+            placeholderNode.update(backgroundColor: backgroundColor, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: file.immediateThumbnailData, size: self.itemSize ?? CGSize(width: 75.0, height: 75.0), enableEffect: true)
         }
     }
     

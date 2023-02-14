@@ -744,7 +744,7 @@ public protocol SharedAccountContext: AnyObject {
     var currentPresentationData: Atomic<PresentationData> { get }
     var presentationData: Signal<PresentationData, NoError> { get }
     
-    var currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings> { get }
+    var currentAutomaticMediaDownloadSettings: MediaAutoDownloadSettings { get }
     var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> { get }
     var currentAutodownloadSettings: Atomic<AutodownloadSettings> { get }
     var immediateExperimentalUISettings: ExperimentalUISettings { get }

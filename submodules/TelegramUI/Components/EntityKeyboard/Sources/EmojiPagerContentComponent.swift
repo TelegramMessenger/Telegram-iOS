@@ -3650,7 +3650,7 @@ public final class EmojiPagerContentComponent: Component {
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
             
-            if ProcessInfo.processInfo.processorCount > 2 {
+            if ProcessInfo.processInfo.processorCount > 4 {
                 self.shimmerHostView = PortalSourceView()
                 self.standaloneShimmerEffect = StandaloneShimmerEffect()
             } else {

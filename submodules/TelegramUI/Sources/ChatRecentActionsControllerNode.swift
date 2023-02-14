@@ -107,7 +107,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.presentController = presentController
         self.getNavigationController = getNavigationController
         
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
+        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
         
         self.backgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true)
         self.backgroundNode.isUserInteractionEnabled = false
@@ -125,7 +125,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
+        self.loadingNode = ChatLoadingNode(context: context, theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode.alpha = 0.0
                 

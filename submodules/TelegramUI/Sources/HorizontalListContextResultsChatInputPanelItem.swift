@@ -499,7 +499,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         placeholderNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                         placeholderNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                         
-                        placeholderNode.update(backgroundColor: item.theme.list.plainBackgroundColor, foregroundColor: item.theme.list.mediaPlaceholderColor.mixedWith(item.theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: item.theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        placeholderNode.update(backgroundColor: item.theme.list.plainBackgroundColor, foregroundColor: item.theme.list.mediaPlaceholderColor.mixedWith(item.theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: item.theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height), enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                     }
                 }
             })

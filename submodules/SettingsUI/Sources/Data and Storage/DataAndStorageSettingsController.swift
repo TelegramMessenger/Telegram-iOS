@@ -442,7 +442,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }, tag: DataAndStorageEntryTag.autoplayVideos)
             case .energySaving:
                 //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, title: "Energy Settings", label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: "Energy Saving", label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openEnergySavingSettings()
                 })
             case let .useLessVoiceData(_, text, value):

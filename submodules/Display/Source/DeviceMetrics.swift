@@ -14,10 +14,6 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             var cpuCount: UInt32 = 0
             sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
             
-            #if DEBUG
-            cpuCount = 2
-            #endif
-            
             self.isGraphicallyCapable = cpuCount >= 6
         }
     }

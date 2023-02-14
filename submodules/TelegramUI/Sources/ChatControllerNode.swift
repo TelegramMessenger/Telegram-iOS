@@ -447,7 +447,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             onTransitionEventImpl?(transition)
         })
         
-        self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners)
+        self.loadingNode = ChatLoadingNode(context: context, theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners)
                 
         self.inputPanelContainerNode = ChatInputPanelContainer()
         self.inputPanelOverlayNode = SparseNode()
