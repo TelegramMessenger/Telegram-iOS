@@ -361,7 +361,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
         
-    private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         self.isUpdatingContainers = true
                 
         var layout = rawLayout
@@ -1447,7 +1447,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             return controller
         }
         if let layout = self.validLayout {
-            self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
+            self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate, completion: { [weak self] in
+                self?.notifyAccessibilityScreenChanged()
+            })
         }
         self._viewControllersPromise.set(self.viewControllers)
     }
@@ -1704,5 +1706,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             hidden = hidden || overlayController.prefersOnScreenNavigationHidden
         }
         return hidden
+    }
+    
+    private func notifyAccessibilityScreenChanged() {
+        UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
     }
 }

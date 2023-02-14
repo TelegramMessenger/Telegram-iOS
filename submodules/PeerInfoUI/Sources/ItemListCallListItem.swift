@@ -255,7 +255,7 @@ public class ItemListCallListItemNode: ListViewItemNode {
                 let type = stringForCallType(message: message, strings: item.presentationData.strings)
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: type, font: typeFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                accessibilityText.append("\(time) - \(type)")
+                accessibilityText.append("\(time) - \(type).\n")
                 
                 nodesLayout.append((timeLayout, typeLayout))
                 nodesApply.append((timeApply, typeApply))

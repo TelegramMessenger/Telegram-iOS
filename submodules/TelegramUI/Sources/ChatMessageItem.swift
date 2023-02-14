@@ -287,6 +287,33 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
+    var unsent: Bool {
+        switch self.content {
+            case let .message(message, _, _, _, _):
+                return message.flags.contains(.Unsent)
+            case let .group(messages):
+                return messages[0].0.flags.contains(.Unsent)
+        }
+    }
+    
+    var sending: Bool {
+        switch self.content {
+            case let .message(message, _, _, _, _):
+                return message.flags.contains(.Sending)
+            case let .group(messages):
+                return messages[0].0.flags.contains(.Sending)
+        }
+    }
+    
+    var failed: Bool {
+        switch self.content {
+            case let .message(message, _, _, _, _):
+                return message.flags.contains(.Failed)
+            case let .group(messages):
+                return messages[0].0.flags.contains(.Failed)
+        }
+    }
+    
     public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
         self.presentationData = presentationData
         self.context = context

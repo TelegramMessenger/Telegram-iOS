@@ -7048,6 +7048,35 @@ public final class EmojiPagerContentComponent: Component {
             var itemGroups: [ItemGroup] = []
             var itemGroupIndexById: [AnyHashable: Int] = [:]
             
+            let appendUnicodeEmoji = {
+                if areUnicodeEmojiEnabled {
+                    for (subgroupId, list) in staticEmojiMapping {
+                        let groupId: AnyHashable = "static"
+                        for emojiString in list {
+                            let resultItem = EmojiPagerContentComponent.Item(
+                                animationData: nil,
+                                content: .staticEmoji(emojiString),
+                                itemFile: nil,
+                                subgroupId: subgroupId.rawValue,
+                                icon: .none,
+                                tintMode: .none
+                            )
+                            
+                            if let groupIndex = itemGroupIndexById[groupId] {
+                                itemGroups[groupIndex].items.append(resultItem)
+                            } else {
+                                itemGroupIndexById[groupId] = itemGroups.count
+                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if !hasPremium {
+                appendUnicodeEmoji()
+            }
+            
             var installedCollectionIds = Set<ItemCollectionId>()
             for (id, _, _) in view.collectionInfos {
                 installedCollectionIds.insert(id)
@@ -7835,29 +7864,10 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
-            if areUnicodeEmojiEnabled {
-                for (subgroupId, list) in staticEmojiMapping {
-                    let groupId: AnyHashable = "static"
-                    for emojiString in list {
-                        let resultItem = EmojiPagerContentComponent.Item(
-                            animationData: nil,
-                            content: .staticEmoji(emojiString),
-                            itemFile: nil,
-                            subgroupId: subgroupId.rawValue,
-                            icon: .none,
-                            tintMode: .none
-                        )
-                        
-                        if let groupIndex = itemGroupIndexById[groupId] {
-                            itemGroups[groupIndex].items.append(resultItem)
-                        } else {
-                            itemGroupIndexById[groupId] = itemGroups.count
-                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
-                        }
-                    }
-                }
+            if hasPremium {
+                appendUnicodeEmoji()
             }
-            
+                        
             var displaySearchWithPlaceholder: String?
             let searchInitiallyHidden = true
             if hasSearch {

@@ -25,6 +25,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
         
         super.init()
         
+        self.clipsToBounds = true
+        
         self.addSubnode(self.containerNode)
         
         self.containerNode.headerNode.close = { [weak self] in
@@ -71,30 +73,26 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
         }
     }
     
-    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: isHidden ? -size.height : 0.0), size: size))
+        transition.updateAlpha(node: self.containerNode, alpha: isHidden ? 0.0 : 1.0)
         self.containerNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
     public func animateIn(transition: ContainedViewLayoutTransition) {
-        self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
 
         self.containerNode.animateIn(transition: transition)
         
-        transition.animatePosition(node: self.containerNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), completion: { [weak self] _ in
-            self?.clipsToBounds = false
-        })
+        transition.animatePosition(node: self.containerNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0))
     }
     
     public func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
 
         self.containerNode.animateOut(transition: transition)
 
-        transition.animatePosition(node: self.containerNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { [weak self] _ in
-            self?.clipsToBounds = false
+        transition.animatePosition(node: self.containerNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { _ in
             completion()
         })
     }

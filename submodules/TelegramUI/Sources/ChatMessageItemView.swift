@@ -544,12 +544,37 @@ final class ChatMessageAccessibilityData {
                 let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
                 
                 result += "\n\(dateString)"
-                if !isIncoming && item.read && !isReply {
+                if !isIncoming && !isReply {
                     result += "\n"
-                    if announceIncomingAuthors {
-                        result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
+                    if item.sending {
+                        result += item.presentationData.strings.VoiceOver_Chat_Sending
+                    } else if item.failed {
+                        result += item.presentationData.strings.VoiceOver_Chat_Failed
                     } else {
-                        result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
+                        if item.read {
+                            if announceIncomingAuthors {
+                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
+                            } else {
+                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
+                            }
+                        }
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? ConsumableContentMessageAttribute {
+                                if !attribute.consumed {
+                                    if announceIncomingAuthors {
+                                        result += item.presentationData.strings.VoiceOver_Chat_NotPlayedByRecipients
+                                    } else {
+                                        result += item.presentationData.strings.VoiceOver_Chat_NotPlayedByRecipient
+                                    }
+                                } else {
+                                    if announceIncomingAuthors {
+                                        result += item.presentationData.strings.VoiceOver_Chat_PlayedByRecipients
+                                    } else {
+                                        result += item.presentationData.strings.VoiceOver_Chat_PlayedByRecipient
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 value = result
