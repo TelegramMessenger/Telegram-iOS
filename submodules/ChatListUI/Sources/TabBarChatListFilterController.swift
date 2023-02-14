@@ -9,7 +9,7 @@ import Postbox
 import TelegramUIPreferences
 import TelegramCore
 
-func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
+public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
     return context.engine.peers.updatedChatListFilters()
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in

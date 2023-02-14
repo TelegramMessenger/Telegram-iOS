@@ -78,6 +78,6 @@ final class SwirlStarsView: UIView, PhoneDemoDecorationView {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        self.sceneView.frame = CGRect(origin: .zero, size: frame.size)
+        self.sceneView.frame = CGRect(origin: .zero, size: self.frame.size)
     }
 }

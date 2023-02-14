@@ -127,7 +127,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 case let .media(inputMedia, text):
                     sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: nil, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
-                            return .complete()
+                        return .complete()
                     }
             }
             

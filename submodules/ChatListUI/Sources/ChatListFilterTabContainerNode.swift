@@ -419,21 +419,26 @@ private final class ItemNode: ASDisplayNode {
     }
 }
 
-enum ChatListFilterTabEntryId: Hashable {
+public enum ChatListFilterTabEntryId: Hashable {
     case all
     case filter(Int32)
 }
 
-struct ChatListFilterTabEntryUnreadCount: Equatable {
+public struct ChatListFilterTabEntryUnreadCount: Equatable {
     let value: Int
     let hasUnmuted: Bool
+    
+    public init(value: Int, hasUnmuted: Bool) {
+        self.value = value
+        self.hasUnmuted = hasUnmuted
+    }
 }
 
-enum ChatListFilterTabEntry: Equatable {
+public enum ChatListFilterTabEntry: Equatable {
     case all(unreadCount: Int)
     case filter(id: Int32, text: String, unread: ChatListFilterTabEntryUnreadCount)
     
-    var id: ChatListFilterTabEntryId {
+    public var id: ChatListFilterTabEntryId {
         switch self {
         case .all:
             return .all
@@ -461,12 +466,12 @@ enum ChatListFilterTabEntry: Equatable {
     }
 }
 
-final class ChatListFilterTabContainerNode: ASDisplayNode {
+public final class ChatListFilterTabContainerNode: ASDisplayNode {
     private let scrollNode: ASScrollNode
     private let selectedLineNode: ASImageNode
     private var itemNodes: [ChatListFilterTabEntryId: ItemNode] = [:]
     
-    var tabSelected: ((ChatListFilterTabEntryId, Bool) -> Void)?
+    public var tabSelected: ((ChatListFilterTabEntryId, Bool) -> Void)?
     var tabRequestedDeletion: ((ChatListFilterTabEntryId) -> Void)?
     var addFilter: (() -> Void)?
     var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void)?
@@ -510,7 +515,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    public override init() {
         self.scrollNode = ASScrollNode()
         
         self.selectedLineNode = ASImageNode()
@@ -656,12 +661,12 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     private var previousSelectedAbsFrame: CGRect?
     private var previousSelectedFrame: CGRect?
     
-    func cancelAnimations() {
+    public func cancelAnimations() {
         self.selectedLineNode.layer.removeAllAnimations()
         self.scrollNode.layer.removeAllAnimations()
     }
     
-    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, canReorderAllChats: Bool, filtersLimit: Int32?, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, canReorderAllChats: Bool, filtersLimit: Int32?, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
         let isFirstTime = self.currentParams == nil
         let transition: ContainedViewLayoutTransition = isFirstTime ? .immediate : proposedTransition
         

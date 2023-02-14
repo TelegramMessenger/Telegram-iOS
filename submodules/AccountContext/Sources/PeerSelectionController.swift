@@ -43,6 +43,7 @@ public final class PeerSelectionControllerParams {
     public let filter: ChatListNodePeersFilter
     public let requestPeerType: ReplyMarkupButtonRequestPeerType?
     public let forumPeerId: EnginePeer.Id?
+    public let hasFilters: Bool
     public let hasChatListSelector: Bool
     public let hasContactSelector: Bool
     public let hasGlobalSearch: Bool
@@ -55,12 +56,13 @@ public final class PeerSelectionControllerParams {
     public let hasTypeHeaders: Bool
     public let selectForumThreads: Bool
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], requestPeerType: ReplyMarkupButtonRequestPeerType? = nil, forumPeerId: EnginePeer.Id? = nil, hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer, Int64?) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = [], hasTypeHeaders: Bool = false, selectForumThreads: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], requestPeerType: ReplyMarkupButtonRequestPeerType? = nil, forumPeerId: EnginePeer.Id? = nil, hasFilters: Bool = false, hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer, Int64?) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = [], hasTypeHeaders: Bool = false, selectForumThreads: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.filter = filter
         self.requestPeerType = requestPeerType
         self.forumPeerId = forumPeerId
+        self.hasFilters = hasFilters
         self.hasChatListSelector = hasChatListSelector
         self.hasContactSelector = hasContactSelector
         self.hasGlobalSearch = hasGlobalSearch

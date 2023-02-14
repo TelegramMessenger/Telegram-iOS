@@ -30,7 +30,7 @@
 @property (nonatomic, copy) void(^ _Nullable focusUpdated)(BOOL focused);
 @property (nonatomic, copy) void(^ _Nullable heightUpdated)(BOOL animated);
 
-- (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset;
+- (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset animated:(bool)animated;
 - (CGFloat)baseHeight;
 
 @end

@@ -331,12 +331,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             )
                             animation.animator.updateFrame(layer: strongSelf.backdropMaskForeground, frame: backdropMaskFrame, completion: nil)
                                                         
-                            let videoLayoutData: ChatMessageInstantVideoItemLayoutData
-                            if incoming {
-                                videoLayoutData = .constrained(left: 0.0, right: 0.0) //max(0.0, availableContentWidth - videoFrame.width))
-                            } else {
-                                videoLayoutData = .constrained(left: 0.0, right: 0.0)
-                            }
+                            let videoLayoutData: ChatMessageInstantVideoItemLayoutData = .constrained(left: 0.0, right: 0.0)
                             
                             var videoAnimation = animation
                             var fileAnimation = animation

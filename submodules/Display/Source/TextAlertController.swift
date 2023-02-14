@@ -120,6 +120,8 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
                 break
         }
         self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
+        self.accessibilityLabel = self.action.title
+        self.accessibilityTraits = [.button]
     }
     
     @objc func pressed() {
@@ -193,6 +195,7 @@ public final class TextAlertContentNode: AlertContentNode {
             titleNode.maximumNumberOfLines = 4
             titleNode.truncationType = .end
             titleNode.isAccessibilityElement = true
+            titleNode.accessibilityLabel = title.string
             self.titleNode = titleNode
         } else {
             self.titleNode = nil

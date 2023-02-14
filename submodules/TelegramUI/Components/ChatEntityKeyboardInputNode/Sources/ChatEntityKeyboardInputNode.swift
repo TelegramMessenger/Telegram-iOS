@@ -1913,9 +1913,14 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         var updatedGroups: [EmojiPagerContentComponent.ItemGroup] = []
         
+        var staticIsFirst = false
+        if let first = itemGroups.first, first.groupId == AnyHashable("static") {
+            staticIsFirst = true
+        }
+        
         for group in itemGroups {
             if !(group.groupId.base is ItemCollectionId) {
-                if group.groupId != AnyHashable("static") {
+                if group.groupId != AnyHashable("static") || staticIsFirst {
                     updatedGroups.append(group)
                 }
             } else {

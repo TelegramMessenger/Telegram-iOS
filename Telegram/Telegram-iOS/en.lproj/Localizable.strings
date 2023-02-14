@@ -8919,3 +8919,12 @@ Sorry for the inconvenience.";
 
 "ImportStickerPack.ImportingEmojis" = "Importing Emojis";
 "ImportStickerPack.CreateNewEmojiPack" = "Create a New Emoji Pack";
+
+"VoiceOver.Chat.Sending" = "Sending";
+"VoiceOver.Chat.Failed" = "Failed to send";
+
+"VoiceOver.Chat.PlayedByRecipient" = "Played by recipient";
+"VoiceOver.Chat.PlayedByRecipients" = "Played by recipients";
+
+"VoiceOver.Chat.NotPlayedByRecipient" = "Not played by recipient";
+"VoiceOver.Chat.NotPlayedByRecipients" = "Not played by recipients";
