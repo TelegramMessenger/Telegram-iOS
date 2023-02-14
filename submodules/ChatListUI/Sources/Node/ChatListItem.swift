@@ -675,7 +675,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         animationCache: context.animationCache,
                         animationRenderer: context.animationRenderer,
                         content: titleTopicIconContent,
-                        isVisibleForAnimations: currentNode?.visibilityStatus ?? false,
+                        isVisibleForAnimations: (currentNode?.visibilityStatus ?? false) && context.sharedContext.energyUsageSettings.loopEmoji,
                         action: nil
                     )
                     
@@ -2788,7 +2788,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animationCache: item.interaction.animationCache,
                             animationRenderer: item.interaction.animationRenderer,
                             content: avatarIconContent,
-                            isVisibleForAnimations: strongSelf.visibilityStatus,
+                            isVisibleForAnimations: strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji,
                             action: nil
                         )
                         strongSelf.avatarIconComponent = avatarIconComponent
@@ -3285,7 +3285,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animationCache: item.interaction.animationCache,
                             animationRenderer: item.interaction.animationRenderer,
                             content: currentCredibilityIconContent,
-                            isVisibleForAnimations: strongSelf.visibilityStatus,
+                            isVisibleForAnimations: strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji,
                             action: nil
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent

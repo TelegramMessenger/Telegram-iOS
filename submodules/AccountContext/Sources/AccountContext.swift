@@ -751,6 +751,8 @@ public protocol SharedAccountContext: AnyObject {
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
     
+    var energyUsageSettings: EnergyUsageSettings { get }
+    
     var applicationBindings: TelegramApplicationBindings { get }
     
     var authorizationPushConfiguration: Signal<AuthorizationCodePushNotificationConfiguration?, NoError> { get }

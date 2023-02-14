@@ -1342,7 +1342,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
                 let itemFrame = itemLayout.frame(at: index)
                 itemLayer.frame = itemFrame
                 
-                itemLayer.isVisibleForAnimations = true
+                itemLayer.isVisibleForAnimations = context.sharedContext.energyUsageSettings.loopEmoji
             }
         }
         
@@ -2160,7 +2160,7 @@ private final class EmptySearchResultsView: UIView {
                     animationCache: context.animationCache,
                     animationRenderer: context.animationRenderer,
                     content: .animation(content: .file(file: file), size: CGSize(width: 32.0, height: 32.0), placeholderColor: titleColor, themeColor: nil, loopMode: .forever),
-                    isVisibleForAnimations: true,
+                    isVisibleForAnimations: context.sharedContext.energyUsageSettings.loopEmoji,
                     action: nil
                 )),
                 environment: {},
@@ -5795,7 +5795,7 @@ public final class EmojiPagerContentComponent: Component {
                             placeholderView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                         }
                         
-                        itemLayer.isVisibleForAnimations = keyboardChildEnvironment.isContentInFocus
+                        itemLayer.isVisibleForAnimations = keyboardChildEnvironment.isContentInFocus && component.context.sharedContext.energyUsageSettings.loopEmoji
                     }
                 }
                 if itemGroup.fillWithLoadingPlaceholders {

@@ -522,7 +522,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         }
         self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: 38.0, height: 38.0))
         
-        if peer.isPremium {
+        if peer.isPremium && context.sharedContext.energyUsageSettings.playVideoAvatars {
             self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                 guard let strongSelf = self else {

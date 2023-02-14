@@ -152,6 +152,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return self._automaticMediaDownloadSettings.get()
     }
     
+    public var energyUsageSettings: EnergyUsageSettings {
+        return self.currentAutomaticMediaDownloadSettings.with({ $0 }).energyUsageSettings
+    }
+    
     public let currentAutodownloadSettings: Atomic<AutodownloadSettings>
     private let _autodownloadSettings = Promise<AutodownloadSettings>()
     private var currentAutodownloadSettingsDisposable = MetaDisposable()

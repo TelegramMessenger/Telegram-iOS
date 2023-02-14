@@ -8,6 +8,7 @@ import ActivityIndicator
 import WallpaperBackgroundNode
 import ShimmerEffect
 import ChatPresentationInterfaceState
+import AccountContext
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
@@ -134,6 +135,8 @@ final class ChatLoadingPlaceholderMessageContainer {
 final class ChatLoadingPlaceholderNode: ASDisplayNode {
     private weak var backgroundNode: WallpaperBackgroundNode?
     
+    private let context: AccountContext
+    
     private let maskNode: ASDisplayNode
     private let borderMaskNode: ASDisplayNode
     
@@ -151,7 +154,8 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var validLayout: (CGSize, UIEdgeInsets)?
     
-    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
+    init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
+        self.context = context
         self.backgroundNode = backgroundNode
         
         self.maskNode = ASDisplayNode()
@@ -185,13 +189,13 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundColorNode)
         
-        if DeviceMetrics.performance.isGraphicallyCapable {
+        if context.sharedContext.energyUsageSettings.fullTranslucency {
             self.containerNode.addSubnode(self.effectNode)
         }
         
         self.addSubnode(self.borderNode)
         
-        if DeviceMetrics.performance.isGraphicallyCapable {
+        if context.sharedContext.energyUsageSettings.fullTranslucency {
             self.borderNode.addSubnode(self.borderEffectNode)
         }
     }
@@ -202,7 +206,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.containerNode.view.mask = self.maskNode.view
         self.borderNode.view.mask = self.borderMaskNode.view
         
-        if DeviceMetrics.performance.isGraphicallyCapable {
+        if self.context.sharedContext.energyUsageSettings.fullTranslucency {
             self.backgroundNode?.updateIsLooping(true)
         }
     }

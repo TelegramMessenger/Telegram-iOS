@@ -735,9 +735,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        #if DEBUG
-        loopIdle = true
-        #endif
+        if !self.context.sharedContext.energyUsageSettings.loopEmoji {
+            loopIdle = false
+        }
         
         var validIndices = Set<Int>()
         var nextX: CGFloat = sideInset

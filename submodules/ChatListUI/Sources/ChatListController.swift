@@ -1754,12 +1754,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             Queue.mainQueue().after(1.0, {
                 let _ = (
-                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Notices.Notice(key: ApplicationSpecificNotice.forcedPasswordSetupKey()))
-                    |> map { entry -> Int32? in
-                        return entry?.get(ApplicationSpecificCounterNotice.self)?.value
+                    self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId),
+                        TelegramEngine.EngineData.Item.Notices.Notice(key: ApplicationSpecificNotice.forcedPasswordSetupKey())
+                    )
+                    |> map { peer, entry -> (phoneNumber: String?, nortice: Int32?) in
+                        var phoneNumber: String?
+                        if case let .user(user) = peer {
+                            phoneNumber = user.phone
+                        }
+                        return (phoneNumber, entry?.get(ApplicationSpecificCounterNotice.self)?.value)
                     }
                     |> deliverOnMainQueue
-                ).start(next: { [weak self] value in
+                ).start(next: { [weak self] phoneNumber, value in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1772,7 +1779,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_Title,
                         text: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_Text,
                         actionText: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_Action,
-                        doneText: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DoneAction
+                        doneText: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DoneAction,
+                        phoneNumber: phoneNumber
                     )))
                     controller.dismissConfirmation = { [weak controller] f in
                         guard let strongSelf = self, let controller = controller else {

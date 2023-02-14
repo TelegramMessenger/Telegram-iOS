@@ -1646,6 +1646,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     extendNow = true
                 }
             }
+            if !sharedApplicationContext.sharedContext.energyUsageSettings.extendBackgroundWork {
+                extendNow = false
+            }
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: extendNow)
         })
         

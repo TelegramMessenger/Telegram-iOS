@@ -249,7 +249,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             loadingPlaceholderNode.setup(self.historyNode, updating: true)
                         }
                     } else {
-                        loadingPlaceholderNode = ChatLoadingPlaceholderNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
+                        loadingPlaceholderNode = ChatLoadingPlaceholderNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
                         loadingPlaceholderNode.updatePresentationInterfaceState(self.chatPresentationInterfaceState)
                         self.backgroundNode.supernode?.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
                         
@@ -491,7 +491,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if (strongSelf.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
                 return
             }
-            if DeviceMetrics.performance.isGraphicallyCapable {
+            if strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency {
                 strongSelf.backgroundNode.animateEvent(transition: transition, extendAnimation: false)
             }
         }
@@ -2216,7 +2216,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if (self.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
                     return
                 }
-                if DeviceMetrics.performance.isGraphicallyCapable {
+                if self.context.sharedContext.energyUsageSettings.fullTranslucency {
                     self.backgroundNode.animateEvent(transition: transition, extendAnimation: false)
                 }
             }
