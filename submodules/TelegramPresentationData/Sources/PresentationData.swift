@@ -289,7 +289,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             contactSynchronizationSettings: contactSynchronizationSettings
         )
     }
-    |> deliverOn(Queue.mainQueue())
+    |> deliverOn(Queue(name: "PresentationData-Load", qos: .userInteractive))
     |> map { internalData -> InitialPresentationDataAndSettings in
         let localizationSettings: LocalizationSettings?
         if let current = internalData.localizationSettings?.get(LocalizationSettings.self) {
