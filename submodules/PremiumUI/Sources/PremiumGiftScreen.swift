@@ -13,6 +13,7 @@ import SolidRoundedButtonComponent
 import MultilineTextComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
+import BlurredBackgroundComponent
 import Markdown
 import InAppPurchaseManager
 import ConfettiEffect
@@ -673,10 +674,10 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         let background = Child(Rectangle.self)
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
         let star = Child(GiftAvatarComponent.self)
-        let topPanel = Child(BlurredRectangle.self)
+        let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
-        let bottomPanel = Child(BlurredRectangle.self)
+        let bottomPanel = Child(BlurredBackgroundComponent.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
@@ -692,7 +693,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             }
                             
             let topPanel = topPanel.update(
-                component: BlurredRectangle(
+                component: BlurredBackgroundComponent(
                     color: environment.theme.rootController.navigationBar.blurredBackgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: environment.navigationHeight),
@@ -851,7 +852,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 transition: context.transition)
                            
             let bottomPanel = bottomPanel.update(
-                component: BlurredRectangle(
+                component: BlurredBackgroundComponent(
                     color: environment.theme.rootController.tabBar.backgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: bottomPanelPadding + button.size.height + bottomInset),

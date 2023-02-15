@@ -14,6 +14,7 @@ import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
+import BlurredBackgroundComponent
 import Markdown
 import InAppPurchaseManager
 import ConfettiEffect
@@ -1915,58 +1916,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     }
 }
 
-class BlurredRectangle: Component {
-    let color: UIColor
-    let radius: CGFloat
-
-    init(color: UIColor, radius: CGFloat = 0.0) {
-        self.color = color
-        self.radius = radius
-    }
-
-    static func ==(lhs: BlurredRectangle, rhs: BlurredRectangle) -> Bool {
-        if !lhs.color.isEqual(rhs.color) {
-            return false
-        }
-        if lhs.radius != rhs.radius {
-            return false
-        }
-        return true
-    }
-
-    final class View: UIView {
-        private let background: NavigationBackgroundNode
-
-        init() {
-            self.background = NavigationBackgroundNode(color: .clear)
-
-            super.init(frame: CGRect())
-
-            self.addSubview(self.background.view)
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-
-        func update(component: BlurredRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
-            transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            self.background.updateColor(color: component.color, transition: .immediate)
-            self.background.update(size: availableSize, cornerRadius: component.radius, transition: .immediate)
-
-            return availableSize
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
 private final class PremiumIntroScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -2298,11 +2247,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
         let star = Child(PremiumStarComponent.self)
         let emoji = Child(EmojiHeaderComponent.self)
-        let topPanel = Child(BlurredRectangle.self)
+        let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
         let secondaryTitle = Child(MultilineTextWithEntitiesComponent.self)
-        let bottomPanel = Child(BlurredRectangle.self)
+        let bottomPanel = Child(BlurredBackgroundComponent.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
@@ -2351,7 +2300,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
             
             let topPanel = topPanel.update(
-                component: BlurredRectangle(
+                component: BlurredBackgroundComponent(
                     color: environment.theme.rootController.navigationBar.blurredBackgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: environment.navigationHeight),
@@ -2670,7 +2619,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     transition: context.transition)
                                
                 let bottomPanel = bottomPanel.update(
-                    component: BlurredRectangle(
+                    component: BlurredBackgroundComponent(
                         color: environment.theme.rootController.tabBar.backgroundColor
                     ),
                     availableSize: CGSize(width: context.availableSize.width, height: bottomPanelPadding + button.size.height + bottomInset),

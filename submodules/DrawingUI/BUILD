@@ -82,6 +82,7 @@ swift_library(
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
         "//submodules/Components/SheetComponent:SheetComponent",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/BlurredBackgroundComponent:BlurredBackgroundComponent",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/StickerResources:StickerResources",

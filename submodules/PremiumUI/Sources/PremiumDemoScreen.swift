@@ -14,6 +14,7 @@ import SheetComponent
 import MultilineTextComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
+import BlurredBackgroundComponent
 import Markdown
 import TelegramUIPreferences
 
@@ -956,9 +957,8 @@ private final class DemoSheetContent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "background",
                             component: AnyComponent(
-                                BlurredRectangle(
-                                    color:  UIColor(rgb: 0x888888, alpha: 0.1),
-                                    radius: 15.0
+                                BlurredBackgroundComponent(
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.1)
                                 )
                             )
                         ),
@@ -978,6 +978,8 @@ private final class DemoSheetContent: CombinedComponent {
             )
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
+                .clipsToBounds(true)
+                .cornerRadius(15.0)
             )
                          
             let buttonText: String

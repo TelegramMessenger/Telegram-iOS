@@ -15,6 +15,7 @@ import LegacyComponents
 import ComponentDisplayAdapters
 import LottieAnimationComponent
 import ViewControllerComponent
+import BlurredBackgroundComponent
 import ContextUI
 import ChatEntityKeyboardInputNode
 import EntityKeyboard
@@ -1787,9 +1788,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "background",
                             component: AnyComponent(
-                                BlurredRectangle(
-                                    color:  UIColor(rgb: 0x888888, alpha: 0.3),
-                                    radius: 12.0
+                                BlurredBackgroundComponent(
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.3)
                                 )
                             )
                         ),
@@ -1826,6 +1826,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: rightEdge - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
+                .cornerRadius(12.0)
             )
             
             let doneButton = doneButton.update(
@@ -2224,9 +2225,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             return self._contentWrapperView!
         }
         
-        init(controller: DrawingScreen, context: AccountContext) {
+        init(controller: DrawingScreen) {
             self.controller = controller
-            self.context = context
+            self.context = controller.context
             self.updateState = ActionSlot<DrawingView.NavigationState>()
             self.updateColor = ActionSlot<DrawingColor>()
             self.performAction = ActionSlot<DrawingView.Action>()
@@ -2918,6 +2919,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
+    required public init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
     public var drawingView: DrawingView {
         return self.node.drawingView
     }
@@ -2934,12 +2939,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         return self.node.contentWrapperView
     }
     
-    required public init(coder: NSCoder) {
-        preconditionFailure()
-    }
-    
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context)
+        self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
         
@@ -2983,6 +2984,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.entitiesView.layer.render(in: context)
         }, opaque: false, scale: 1.0)
         
+        if #available(iOS 16.0, *) {
+            let path = NSTemporaryDirectory() + "img.jpg"
+            try? finalImage?.jpegData(compressionQuality: 0.9)?.write(to: URL(filePath: path))
+        }
+        
         var image = paintingImage
         var stillImage: UIImage?
         if hasAnimatedEntities {
@@ -3024,7 +3030,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: orientation, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: self.orientation, transition: Transition(transition))
     }
     
     public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {

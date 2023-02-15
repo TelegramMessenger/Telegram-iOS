@@ -15,6 +15,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import Markdown
 import SolidRoundedButtonNode
+import BlurredBackgroundComponent
 
 private final class LimitComponent: CombinedComponent {
     let title: String
@@ -487,7 +488,7 @@ private final class LimitsPageComponent: CombinedComponent {
     static var body: Body {
         let background = Child(Rectangle.self)
         let scroll = Child(ScrollComponent<Empty>.self)
-        let topPanel = Child(BlurredRectangle.self)
+        let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
         
@@ -544,7 +545,7 @@ private final class LimitsPageComponent: CombinedComponent {
             )
             
             let topPanel = topPanel.update(
-                component: BlurredRectangle(
+                component: BlurredBackgroundComponent(
                     color: theme.rootController.navigationBar.blurredBackgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: topInset),
@@ -1253,9 +1254,8 @@ public class PremiumLimitsListScreen: ViewController {
                             AnyComponentWithIdentity(
                                 id: "background",
                                 component: AnyComponent(
-                                    BlurredRectangle(
-                                        color:  UIColor(rgb: 0x888888, alpha: 0.3),
-                                        radius: 15.0
+                                    BlurredBackgroundComponent(
+                                        color:  UIColor(rgb: 0x888888, alpha: 0.3)
                                     )
                                 )
                             ),
@@ -1274,6 +1274,8 @@ public class PremiumLimitsListScreen: ViewController {
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )
+            self.closeView.clipsToBounds = true
+            self.closeView.layer.cornerRadius = 15.0
             self.closeView.frame = CGRect(origin: CGPoint(x: contentSize.width - closeSize.width * 1.5, y: 28.0 - closeSize.height / 2.0), size: closeSize)
         }
         private var cachedCloseImage: UIImage?
