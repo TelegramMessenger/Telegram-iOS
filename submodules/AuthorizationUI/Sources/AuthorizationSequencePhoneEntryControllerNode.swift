@@ -782,8 +782,8 @@ final class PhoneConfirmationController: ViewController {
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
             
             self.backgroundNode = ASDisplayNode()
-            self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor
-            self.backgroundNode.cornerRadius = 11.0
+            self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
+            self.backgroundNode.cornerRadius = 24.0
             
             self.textNode = ImmediateTextNode()
             self.textNode.displaysAsynchronously = false
