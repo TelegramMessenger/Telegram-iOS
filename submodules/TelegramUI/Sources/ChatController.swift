@@ -598,7 +598,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
+        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
         
         self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
         
@@ -4281,6 +4281,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, scrollToMessageId: { [weak self] index in
             self?.chatDisplayNode.historyNode.scrollToMessage(index: index)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
+        controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
         self.controllerInteraction = controllerInteraction
         

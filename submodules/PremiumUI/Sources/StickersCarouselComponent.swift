@@ -268,7 +268,7 @@ private class StickerNode: ASDisplayNode {
             if self.placeholderNode.supernode != nil {
                 let placeholderFrame = CGRect(origin: CGPoint(x: -10.0, y: 0.0), size: imageSize)
                 let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
-                self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: self.file.immediateThumbnailData, size: placeholderFrame.size, imageSize: thumbnailDimensions.cgSize)
+                self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: self.file.immediateThumbnailData, size: placeholderFrame.size, enableEffect: true, imageSize: thumbnailDimensions.cgSize)
                 self.placeholderNode.frame = placeholderFrame
             }
         }

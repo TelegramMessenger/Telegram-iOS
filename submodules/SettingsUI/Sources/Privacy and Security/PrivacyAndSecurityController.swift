@@ -944,28 +944,37 @@ public func privacyAndSecurityController(
             }
         })
     }, openTwoStepVerification: { data in
-        if let data = data {
-            switch data {
-            case .set:
-                break
-            case let .notSet(pendingEmail):
-                if pendingEmail == nil {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro(.init(
-                        title: presentationData.strings.TwoFactorSetup_Intro_Title,
-                        text: presentationData.strings.TwoFactorSetup_Intro_Text,
-                        actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
-                        doneText: presentationData.strings.TwoFactorSetup_Done_Action
-                    )))
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            if let data = data {
+                switch data {
+                case .set:
+                    break
+                case let .notSet(pendingEmail):
+                    if pendingEmail == nil {
+                        var phoneNumber: String?
+                        if case let .user(user) = peer {
+                            phoneNumber = user.phone
+                        }
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro(.init(
+                            title: presentationData.strings.TwoFactorSetup_Intro_Title,
+                            text: presentationData.strings.TwoFactorSetup_Intro_Text,
+                            actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
+                            doneText: presentationData.strings.TwoFactorSetup_Done_Action,
+                            phoneNumber: phoneNumber
+                        )))
 
-                    pushControllerImpl?(controller, true)
-                    return
+                        pushControllerImpl?(controller, true)
+                        return
+                    }
                 }
             }
-        }
 
-        let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
-        pushControllerImpl?(controller, true)
+            let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+            pushControllerImpl?(controller, true)
+        })
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: true), true)
     }, toggleArchiveAndMuteNonContacts: { archiveValue in

@@ -18,17 +18,20 @@ public enum TwoFactorAuthSplashMode {
         public var text: String
         public var actionText: String
         public var doneText: String
+        public var phoneNumber: String?
         
         public init(
             title: String,
             text: String,
             actionText: String,
-            doneText: String
+            doneText: String,
+            phoneNumber: String?
         ) {
             self.title = title
             self.text = text
             self.actionText = actionText
             self.doneText = doneText
+            self.phoneNumber = phoneNumber
         }
     }
     
@@ -100,7 +103,7 @@ public final class TwoFactorAuthSplashScreen: ViewController {
             }
             switch strongSelf.mode {
             case let .intro(intro):
-                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password(doneText: intro.doneText), stateUpdated: { _ in
+                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password(phoneNumber: intro.phoneNumber, doneText: intro.doneText), stateUpdated: { _ in
                 }, presentation: strongSelf.navigationPresentation))
             case .done, .remember:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {

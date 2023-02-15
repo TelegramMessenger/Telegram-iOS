@@ -269,7 +269,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 immediateThumbnailData = data
             }
             
-            placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: immediateThumbnailData, size: boundingImageSize, imageSize: imageSize.cgSize)
+            placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: immediateThumbnailData, size: boundingImageSize, enableEffect: true, imageSize: imageSize.cgSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)

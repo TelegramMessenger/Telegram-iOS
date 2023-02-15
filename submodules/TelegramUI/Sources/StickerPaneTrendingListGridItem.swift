@@ -328,7 +328,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                 immediateThumbnailData = data
             }
             
-            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: boundingImageSize, imageSize: imageSize.cgSize)
+            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: boundingImageSize, enableEffect: true, imageSize: imageSize.cgSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: boundingSize)

@@ -431,7 +431,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                     itemNode = current
                 } else {
                     let item = HorizontalStickerGridItem(
-                        account: self.context.account,
+                        context: self.context,
                         file: item.file,
                         theme: self.theme,
                         isPreviewed: { [weak self] item in

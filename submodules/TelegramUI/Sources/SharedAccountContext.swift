@@ -146,10 +146,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let currentInAppNotificationSettings: Atomic<InAppNotificationSettings>
     private var inAppNotificationSettingsDisposable: Disposable?
     
-    public let currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings>
+    public var currentAutomaticMediaDownloadSettings: MediaAutoDownloadSettings
     private let _automaticMediaDownloadSettings = Promise<MediaAutoDownloadSettings>()
     public var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> {
         return self._automaticMediaDownloadSettings.get()
+    }
+    
+    public var energyUsageSettings: EnergyUsageSettings {
+        return self.currentAutomaticMediaDownloadSettings.energyUsageSettings
     }
     
     public let currentAutodownloadSettings: Atomic<AutodownloadSettings>
@@ -230,7 +234,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         self._currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
-        self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        self.currentAutomaticMediaDownloadSettings = initialPresentationDataAndSettings.automaticMediaDownloadSettings
         self.currentAutodownloadSettings = Atomic(value: initialPresentationDataAndSettings.autodownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
@@ -363,7 +367,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.automaticMediaDownloadSettingsDisposable.set(self._automaticMediaDownloadSettings.get().start(next: { [weak self] next in
             if let strongSelf = self {
-                let _ = strongSelf.currentAutomaticMediaDownloadSettings.swap(next)
+                strongSelf.currentAutomaticMediaDownloadSettings = next
             }
         }))
         

@@ -181,7 +181,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     
                     animation.animator.updateFrame(layer: node.backgroundBlurNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0)), completion: nil)
                     node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: 0.0, animator: animation.animator)
-                    node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)
+                    node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: context.sharedContext.energyUsageSettings.fullTranslucency && dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)
                     
                     if backgroundNode?.hasExtraBubbleBackground() == true {
                         if node.backgroundContent == nil, let backgroundContent = backgroundNode?.makeBubbleBackground(for: .free) {

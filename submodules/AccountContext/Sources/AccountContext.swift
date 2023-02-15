@@ -744,12 +744,14 @@ public protocol SharedAccountContext: AnyObject {
     var currentPresentationData: Atomic<PresentationData> { get }
     var presentationData: Signal<PresentationData, NoError> { get }
     
-    var currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings> { get }
+    var currentAutomaticMediaDownloadSettings: MediaAutoDownloadSettings { get }
     var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> { get }
     var currentAutodownloadSettings: Atomic<AutodownloadSettings> { get }
     var immediateExperimentalUISettings: ExperimentalUISettings { get }
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
+    
+    var energyUsageSettings: EnergyUsageSettings { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     

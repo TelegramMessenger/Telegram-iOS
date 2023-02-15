@@ -248,7 +248,8 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
                         title: presentationData.strings.TwoFactorSetup_Intro_Title,
                         text: presentationData.strings.TwoFactorSetup_Intro_Text,
                         actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
-                        doneText: presentationData.strings.TwoFactorSetup_Done_Action
+                        doneText: presentationData.strings.TwoFactorSetup_Done_Action,
+                        phoneNumber: nil
                     )))
 
                     replaceTopControllerImpl?(controller, false)

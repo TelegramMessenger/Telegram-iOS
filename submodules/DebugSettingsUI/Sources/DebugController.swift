@@ -73,6 +73,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case crashOnSlowQueries(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case resetTranslationStates(PresentationTheme)
+    case resetNotifications
     case crash(PresentationTheme)
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
@@ -116,7 +117,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetTranslationStates, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetTranslationStates, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -167,58 +168,60 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 17
         case .resetTranslationStates:
             return 18
-        case .crash:
+        case .resetNotifications:
             return 19
-        case .resetData:
+        case .crash:
             return 20
-        case .resetDatabase:
+        case .resetData:
             return 21
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 22
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 23
-        case .reindexUnread:
+        case .resetHoles:
             return 24
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 25
-        case .reindexCache:
+        case .resetCacheIndex:
             return 26
-        case .resetBiometricsData:
+        case .reindexCache:
             return 27
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 28
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 29
-        case .photoPreview:
+        case .optimizeDatabase:
             return 30
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 31
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 32
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 33
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 34
-        case .experimentalBackground:
+        case .acceleratedStickers:
             return 35
-        case .inlineForums:
+        case .experimentalBackground:
             return 36
-        case .localTranscription:
+        case .inlineForums:
             return 37
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 38
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 39
-        case .playerEmbedding:
+        case .restorePurchases:
             return 40
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 41
-        case .enableQuickReactionSwitch:
+        case .playlistPlayback:
             return 42
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 43
+        case .voiceConference:
+            return 44
         case let .preferredVideoCodec(index, _, _, _):
-            return 44 + index
+            return 45 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -952,6 +955,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ]).start()
                 }
             })
+        case .resetNotifications:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Notifications", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                UIApplication.shared.unregisterForRemoteNotifications()
+                
+                if let context = arguments.context {
+                    let controller = textAlertController(context: context, title: nil, text: "Now restart the app", actions: [TextAlertAction(type: .genericAction, title: "OK", action: {})])
+                    arguments.presentController(controller, nil)
+                }
+            })
         case .crash:
             return ItemListActionItem(presentationData: presentationData, title: "Crash", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 preconditionFailure()
@@ -1340,6 +1352,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if isMainApp {
         entries.append(.clearTips(presentationData.theme))
         entries.append(.resetTranslationStates(presentationData.theme))
+        entries.append(.resetNotifications)
     }
     entries.append(.crash(presentationData.theme))
     entries.append(.resetData(presentationData.theme))

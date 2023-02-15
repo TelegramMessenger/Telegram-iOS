@@ -24,20 +24,19 @@ jobs:
       - name: Create canonical source directory
         run: |
           set -x
-          sudo mkdir /Users/telegram
-          sudo chown -R $(whoami) /Users/telegram
-          cp -R $GITHUB_WORKSPACE /Users/telegram/
-          mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+          sudo mkdir -p /Users/Shared
+          cp -R $GITHUB_WORKSPACE /Users/Shared/
+          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
 
       - name: Build the App
         run: |
           set -x
 
           # source code paths are included in the final binary, so we need to make them stable across builds
-          SOURCE_DIR=/Users/telegram/telegram-ios
+          SOURCE_DIR=/Users/Shared/telegram-ios
 
           # use canonical bazel root
-          BAZEL_USER_ROOT="/private/var/tmp/_bazel_telegram"
+          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
 
           cd $SOURCE_DIR
 
@@ -50,37 +49,14 @@ jobs:
           echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
           echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
 
-          # prepare temporary keychain
-          export MY_KEYCHAIN="temp.keychain"
-          export MY_KEYCHAIN_PASSWORD="secret"
-          security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
-          security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
-          security set-keychain-settings "$MY_KEYCHAIN"
-          security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
-
-          # install fake certificates
-          export CERTS_PATH="build-system/fake-codesigning/certs/distribution"
-          for f in "$CERTS_PATH"/*.p12; do
-            security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security || true
-          done
-          for f in "$CERTS_PATH"/*.cer; do
-            security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security || true
-          done
-          security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
-
-          # use the official release configuration
-          rm -rf $HOME/telegram-configuration
-          mkdir -p $HOME/telegram-configuration
-          cp -R build-system/example-configuration/* $HOME/telegram-configuration/
-
-          # build the app
-          python3 build-system/Make/Make.py \
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
-            --disableParallelSwiftmoduleGeneration \
-            --configurationPath="$HOME/telegram-configuration" \
-            --buildNumber=$BUILD_NUMBER \
-            --configuration=release_universal
+            --configurationPath="build-system/appstore-configuration.json" \
+            --codesigningInformationPath=build-system/fake-codesigning \
+            --configuration=release_arm64 \
+            --buildNumber="$BUILD_NUMBER"
 
           # collect ipa
           OUTPUT_PATH="build/artifacts"
@@ -117,7 +93,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa
+          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
           asset_name: Telegram.ipa
           asset_content_type: application/zip
 
@@ -128,6 +104,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/telegram/telegram-ios/build/artifacts/Telegram.DSYMs.zip
+          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
           asset_name: Telegram.DSYMs.zip
           asset_content_type: application/zip

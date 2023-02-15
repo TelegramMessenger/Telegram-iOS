@@ -13,6 +13,7 @@ import SearchUI
 import ContextUI
 import AnimationCache
 import MultiAnimationRenderer
+import TelegramUIPreferences
 
 public enum ChatListContainerNodeFilter: Equatable {
     case all
@@ -648,13 +649,26 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             return (state, filterId)
         })
         
+        let enablePreload = context.sharedContext.accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
+        |> map { sharedData -> Bool in
+            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                automaticMediaDownloadSettings = value
+            } else {
+                automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
+            }
+            return automaticMediaDownloadSettings.energyUsageSettings.autodownloadInBackground
+        }
+        |> distinctUntilChanged
+        
         if self.controlsHistoryPreload, case .chatList(groupId: .root) = self.location {
             self.context.account.viewTracker.chatListPreloadItems.set(combineLatest(queue: .mainQueue(),
                 context.sharedContext.hasOngoingCall.get(),
-                itemNode.listNode.preloadItems.get()
+                itemNode.listNode.preloadItems.get(),
+                enablePreload
             )
-            |> map { hasOngoingCall, preloadItems -> Set<ChatHistoryPreloadItem> in
-                if hasOngoingCall {
+            |> map { hasOngoingCall, preloadItems, enablePreload -> Set<ChatHistoryPreloadItem> in
+                if hasOngoingCall || !enablePreload {
                     return Set()
                 } else {
                     return Set(preloadItems)

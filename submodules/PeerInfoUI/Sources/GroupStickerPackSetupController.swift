@@ -13,15 +13,15 @@ import StickerPackPreviewUI
 import ItemListStickerPackItem
 
 private final class GroupStickerPackSetupControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let selectStickerPack: (StickerPackCollectionInfo) -> Void
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let updateSearchText: (String) -> Void
     let openStickersBot: () -> Void
     
-    init(account: Account, selectStickerPack: @escaping (StickerPackCollectionInfo) -> Void, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, updateSearchText: @escaping (String) -> Void, openStickersBot: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, selectStickerPack: @escaping (StickerPackCollectionInfo) -> Void, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, updateSearchText: @escaping (String) -> Void, openStickersBot: @escaping () -> Void) {
+        self.context = context
         self.selectStickerPack = selectStickerPack
         self.openStickerPack = openStickerPack
         self.updateSearchText = updateSearchText
@@ -218,7 +218,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
             case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, playAnimatedStickers, selected):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     if selected {
                         arguments.openStickerPack(info)
                     } else {
@@ -230,7 +230,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                 }, toggleSelected: {
                 })
             case let .currentPack(_, theme, strings, content):
-                return GroupStickerPackCurrentItem(theme: theme, strings: strings, account: arguments.account, content: content, sectionId: self.section, action: {
+                return GroupStickerPackCurrentItem(theme: theme, strings: strings, account: arguments.context.account, content: content, sectionId: self.section, action: {
                     if case let .found(packInfo, _, _) = content {
                         arguments.openStickerPack(packInfo)
                     }
@@ -385,7 +385,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = GroupStickerPackSetupControllerArguments(account: context.account, selectStickerPack: { info in
+    let arguments = GroupStickerPackSetupControllerArguments(context: context, selectStickerPack: { info in
         searchText.set(info.shortName)
     }, openStickerPack: { info in
         presentStickerPackController?(info)

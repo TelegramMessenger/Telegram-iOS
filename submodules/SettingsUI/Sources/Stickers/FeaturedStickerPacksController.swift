@@ -13,13 +13,13 @@ import StickerPackPreviewUI
 import ItemListStickerPackItem
 
 private final class FeaturedStickerPacksControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let addPack: (StickerPackCollectionInfo) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
-        self.account = account
+    init(context: AccountContext, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
+        self.context = context
         self.openStickerPack = openStickerPack
         self.addPack = addPack
     }
@@ -102,7 +102,7 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
         let arguments = arguments as! FeaturedStickerPacksControllerArguments
         switch self {
             case let .pack(_, _, _, info, unread, topItem, count, playAnimatedStickers, installed):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
@@ -168,7 +168,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = FeaturedStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
+    let arguments = FeaturedStickerPacksControllerArguments(context: context, openStickerPack: { info in
         presentStickerPackController?(info)
     }, addPack: { info in
         let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)

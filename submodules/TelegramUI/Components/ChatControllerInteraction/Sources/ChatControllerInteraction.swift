@@ -192,6 +192,7 @@ public final class ChatControllerInteraction {
     public var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let presentationContext: ChatPresentationContext
     public var playNextOutgoingGift: Bool = false
+    public var enableFullTranslucency: Bool = true
     
     public init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,

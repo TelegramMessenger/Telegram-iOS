@@ -93,6 +93,8 @@ public final class TextNodeWithEntities {
     public let textNode: TextNode
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
     
+    private var enableLooping: Bool = true
+    
     public var visibilityRect: CGRect? {
         didSet {
             if !self.inlineStickerItemLayers.isEmpty && oldValue != self.visibilityRect {
@@ -107,7 +109,7 @@ public final class TextNodeWithEntities {
                     } else {
                         isItemVisible = false
                     }
-                    itemLayer.isVisibleForAnimations = isItemVisible
+                    itemLayer.isVisibleForAnimations = self.enableLooping && isItemVisible
                 }
             }
         }
@@ -218,6 +220,8 @@ public final class TextNodeWithEntities {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor, attemptSynchronousLoad: Bool) {
+        self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
+        
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -250,7 +254,7 @@ public final class TextNodeWithEntities {
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         
-                        itemLayer.isVisibleForAnimations = self.isItemVisible(itemRect: itemFrame)
+                        itemLayer.isVisibleForAnimations = self.enableLooping && self.isItemVisible(itemRect: itemFrame)
                     }
                     
                     itemLayer.frame = itemFrame
@@ -284,6 +288,8 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var cutout: TextNodeCutout?
     public var displaySpoilers = false
     
+    private var enableLooping: Bool = true
+    
     public var arguments: TextNodeWithEntities.Arguments?
     
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
@@ -293,7 +299,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
             if !self.inlineStickerItemLayers.isEmpty && oldValue != self.visibility {
                 for (_, itemLayer) in self.inlineStickerItemLayers {
                     let isItemVisible: Bool = self.visibility
-                    itemLayer.isVisibleForAnimations = isItemVisible
+                    itemLayer.isVisibleForAnimations = self.enableLooping && isItemVisible
                 }
             }
         }
@@ -385,6 +391,8 @@ public class ImmediateTextNodeWithEntities: TextNode {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor) {
+        self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
+        
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -415,7 +423,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)
                         
-                        itemLayer.isVisibleForAnimations = self.visibility
+                        itemLayer.isVisibleForAnimations = self.enableLooping && self.visibility
                     }
                     
                     itemLayer.frame = itemFrame
