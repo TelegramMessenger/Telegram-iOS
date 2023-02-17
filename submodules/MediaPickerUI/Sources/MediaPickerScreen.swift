@@ -192,6 +192,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         private let backgroundNode: NavigationBackgroundNode
         private let gridNode: GridNode
         fileprivate var cameraView: TGAttachmentCameraView?
+        private var cameraActivateAreaNode: AccessibilityAreaNode
         private var placeholderNode: MediaPickerPlaceholderNode?
         private var manageNode: MediaPickerManageNode?
         private var scrollingArea: SparseItemGridScrollingArea
@@ -232,6 +233,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.backgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.gridNode = GridNode()
             self.scrollingArea = SparseItemGridScrollingArea()
+            
+            self.cameraActivateAreaNode = AccessibilityAreaNode()
+            self.cameraActivateAreaNode.accessibilityLabel = "Camera"
+            self.cameraActivateAreaNode.accessibilityTraits = [.button]
             
             super.init()
             
@@ -416,6 +421,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 cameraView.startPreview()
                 
                 self.gridNode.scrollView.addSubview(cameraView)
+                self.gridNode.addSubnode(self.cameraActivateAreaNode)
             } else {
                 self.containerNode.clipsToBounds = true
             }
@@ -1067,6 +1073,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if let cameraView = self.cameraView {
                 if let cameraRect = cameraRect {
                     transition.updateFrame(view: cameraView, frame: cameraRect)
+                    self.cameraActivateAreaNode.frame = cameraRect
                     cameraView.isHidden = false
                 } else {
                     cameraView.isHidden = true
