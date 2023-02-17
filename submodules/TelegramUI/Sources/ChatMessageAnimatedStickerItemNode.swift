@@ -59,7 +59,8 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
 
 class ChatMessageShareButton: HighlightableButtonNode {
     private var backgroundContent: WallpaperBubbleBackgroundNode?
-    private let backgroundNode: NavigationBackgroundNode
+    //private let backgroundNode: NavigationBackgroundNode
+    private var backgroundBlurView: PortalView?
     
     private let iconNode: ASImageNode
     private var iconOffset = CGPoint()
@@ -72,14 +73,14 @@ class ChatMessageShareButton: HighlightableButtonNode {
     private var absolutePosition: (CGRect, CGSize)?
     
     init() {
-        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        //self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.iconNode = ASImageNode()
         
         super.init(pointerStyle: nil)
         
         self.allowsGroupOpacity = true
         
-        self.addSubnode(self.backgroundNode)
+        //self.addSubnode(self.backgroundNode)
         self.addSubnode(self.iconNode)
     }
     
@@ -125,7 +126,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             } else {
                 updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             }
-            self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+            //self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
             self.iconNode.image = updatedIconImage
             self.iconOffset = updatedIconOffset
         }
@@ -162,8 +163,22 @@ class ChatMessageShareButton: HighlightableButtonNode {
             self.textNode = nil
             textNode.removeFromSupernode()
         }
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0, transition: .immediate)
+        
+        if self.backgroundBlurView == nil {
+            if let backgroundBlurView = controllerInteraction.presentationContext.backgroundNode?.makeFreeBackground() {
+                self.backgroundBlurView = backgroundBlurView
+                self.view.insertSubview(backgroundBlurView.view, at: 0)
+                
+                backgroundBlurView.view.clipsToBounds = true
+            }
+        }
+        if let backgroundBlurView = self.backgroundBlurView {
+            backgroundBlurView.view.frame = CGRect(origin: CGPoint(), size: size)
+            backgroundBlurView.view.layer.cornerRadius = min(size.width, size.height) / 2.0
+        }
+        
+        //self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        //self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0, transition: .immediate)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.iconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.iconOffset.y), size: image.size)
         }
@@ -181,9 +196,10 @@ class ChatMessageShareButton: HighlightableButtonNode {
         }
         
         if let backgroundContent = self.backgroundContent {
-            self.backgroundNode.isHidden = true
-            backgroundContent.cornerRadius =  min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0
-            backgroundContent.frame = self.backgroundNode.frame
+            //self.backgroundNode.isHidden = true
+            self.backgroundBlurView?.view.isHidden = true
+            backgroundContent.cornerRadius = min(size.width, size.height) / 2.0
+            backgroundContent.frame = CGRect(origin: CGPoint(), size: size)
             if let (rect, containerSize) = self.absolutePosition {
                 var backgroundFrame = backgroundContent.frame
                 backgroundFrame.origin.x += rect.minX
@@ -191,7 +207,8 @@ class ChatMessageShareButton: HighlightableButtonNode {
                 backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
             }
         } else {
-            self.backgroundNode.isHidden = false
+            //self.backgroundNode.isHidden = false
+            self.backgroundBlurView?.view.isHidden = false
         }
         
         return size
