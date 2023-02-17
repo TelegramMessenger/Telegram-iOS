@@ -119,6 +119,10 @@ public struct Transition {
     public static func easeInOut(duration: Double) -> Transition {
         return Transition(animation: .curve(duration: duration, curve: .easeInOut))
     }
+    
+    public static func spring(duration: Double) -> Transition {
+        return Transition(animation: .curve(duration: duration, curve: .spring))
+    }
 
     public init(animation: Animation) {
         self.animation = animation

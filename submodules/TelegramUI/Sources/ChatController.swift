@@ -7203,8 +7203,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
-                    }, updateExtraNavigationBarBackgroundHeight: { value, _ in
+                    }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, _ in
                         strongSelf.additionalNavigationBarBackgroundHeight = value
+                        strongSelf.additionalNavigationBarHitTestSlop = hitTestSlop
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -11064,6 +11065,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var suspendNavigationBarLayout: Bool = false
     private var suspendedNavigationBarLayout: ContainerViewLayout?
     private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
+    private var additionalNavigationBarHitTestSlop: CGFloat = 0.0
 
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {
@@ -11100,9 +11102,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var navigationBarTransition = transition
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
-        }, updateExtraNavigationBarBackgroundHeight: { value, extraNavigationTransition in
+        }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, extraNavigationTransition in
             navigationBarTransition = extraNavigationTransition
             self.additionalNavigationBarBackgroundHeight = value
+            self.additionalNavigationBarHitTestSlop = hitTestSlop
         })
         
         if case .compact = layout.metrics.widthClass {
@@ -11123,6 +11126,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
             self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
+        self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {

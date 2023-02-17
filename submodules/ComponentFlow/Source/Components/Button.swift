@@ -126,7 +126,7 @@ public final class Button: Component {
                     alpha = 1.0
                 }
             } else {
-                alpha = 0.4
+                alpha = 0.3
             }
             transition.setAlpha(view: self.contentView, alpha: alpha)
         }

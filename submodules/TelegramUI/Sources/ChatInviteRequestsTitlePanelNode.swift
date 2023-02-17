@@ -208,7 +208,7 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.activateAreaNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
         self.activateAreaNode.accessibilityLabel = interfaceState.strings.Conversation_RequestsToJoin(self.count)
         
-        return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight)
+        return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
     
     @objc func buttonPressed() {
