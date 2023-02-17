@@ -123,6 +123,7 @@ public var supportedTranslationLanguages = [
 public var popularTranslationLanguages = [
     "en",
     "ar",
+    "be",
     "zh",
     "fr",
     "de",

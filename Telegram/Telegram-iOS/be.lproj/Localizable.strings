@@ -99,7 +99,9 @@
 "SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код доступу";
 "SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце сакрэтны код доступу яшчэ раз";
 "SecretPasscodeSettings.AutoHide" = "Аўта-схаванне";
+"SecretPasscodeSettings.SecretChatsHeader" = "Хаваныя сакрэтныя чаты";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код доступу";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Усе хаваныя сакрэтныя чаты і акаўнты застануцца і стануць бачныя ўвесь час.";
 "Settings.EnterSecretPasscode" = "Увесці сакрэтны код доступу";
 "Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі доступу";
 "SecretPasscodeMenu.Add" = "Дадаць сакрэтны код доступу";

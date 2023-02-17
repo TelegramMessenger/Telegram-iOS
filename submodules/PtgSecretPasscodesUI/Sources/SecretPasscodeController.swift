@@ -167,7 +167,7 @@ private func secretPasscodeControllerEntries(presentationData: PresentationData,
     
     entries.append(.timeout(presentationData.strings.SecretPasscodeSettings_AutoHide, autolockStringForTimeout(strings: presentationData.strings, timeout: state.settings.timeout)))
     
-    entries.append(.secretChatsHeader(presentationData.strings.Privacy_SecretChatsTitle.uppercased()))
+    entries.append(.secretChatsHeader(presentationData.strings.SecretPasscodeSettings_SecretChatsHeader.uppercased()))
     entries.append(.secretChatsAdd(presentationData.strings.SecretPasscode_AddSecretChats))
     
     for (index, value) in secretChatEntries.enumerated() {
@@ -338,6 +338,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
         
         actionSheet.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscodeNotice),
                 ActionSheetButtonItem(title: presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscode, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
