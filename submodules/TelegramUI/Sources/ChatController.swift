@@ -1,4 +1,6 @@
 import PtgForeignAgentNoticeSearchFiltering
+import PtgSettings
+import FakePasscodeUI
 
 import Foundation
 import UIKit
@@ -7322,6 +7324,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
                 
                 strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
+                
+                if peerId == strongSelf.context.account.peerId, messages.count == 1, case let .message(text, _, _, _, _, _, _, _) = messages.first, text.count > 0 && text.count < 50 {
+                    let text = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    switch text {
+                    case "!disable-restrictions", "!enable-restrictions":
+                        let ignoreAllContentRestrictions = (text == "!disable-restrictions")
+                        let _ = updatePtgAccountSettings(engine: strongSelf.context.engine, { settings in
+                            return settings.withUpdated(ignoreAllContentRestrictions: ignoreAllContentRestrictions)
+                        }).start()
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: ignoreAllContentRestrictions ? "Content restrictions are now ignored." : "Content restrictions are now respected."), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    default:
+                        break
+                    }
+                }
             }
         }
         

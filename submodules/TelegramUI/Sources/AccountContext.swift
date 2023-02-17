@@ -1,3 +1,5 @@
+import PtgSettings
+
 import Foundation
 import SwiftSignalKit
 import UIKit
@@ -317,7 +319,13 @@ public final class AccountContextImpl: AccountContext {
             let _ = currentLimitsConfiguration.swap(value)
         })
         
-        let updatedContentSettings = getContentSettings(postbox: account.postbox)
+        let ignoreAllContentRestrictions = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.ptgAccountSettings])
+        |> map { view in
+            let ptgAccountSettings = PtgAccountSettings(view.values[ApplicationSpecificPreferencesKeys.ptgAccountSettings])
+            return ptgAccountSettings.ignoreAllContentRestrictions
+        }
+        
+        let updatedContentSettings = getContentSettings(postbox: account.postbox, ignoreAllContentRestrictions: ignoreAllContentRestrictions)
         self.currentContentSettings = Atomic(value: contentSettings)
         self._contentSettings.set(.single(contentSettings) |> then(updatedContentSettings))
         

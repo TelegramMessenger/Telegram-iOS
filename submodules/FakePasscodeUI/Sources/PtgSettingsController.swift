@@ -246,3 +246,15 @@ extension PtgSettings {
         return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: isOriginallyInstalledViaTestFlightOrForDevelopment)
     }
 }
+
+extension PtgAccountSettings {
+    public func withUpdated(ignoreAllContentRestrictions: Bool) -> PtgAccountSettings {
+        return PtgAccountSettings(ignoreAllContentRestrictions: ignoreAllContentRestrictions)
+    }
+}
+
+public func updatePtgAccountSettings(engine: TelegramEngine, _ f: @escaping (PtgAccountSettings) -> PtgAccountSettings) -> Signal<Never, NoError> {
+    return engine.preferences.update(id: ApplicationSpecificPreferencesKeys.ptgAccountSettings, { entry in
+        return PreferencesEntry(f(PtgAccountSettings(entry)))
+    })
+}

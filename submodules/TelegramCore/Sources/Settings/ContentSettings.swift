@@ -4,19 +4,21 @@ import TelegramApi
 import SwiftSignalKit
 
 public struct ContentSettings: Equatable {
-    public static var `default` = ContentSettings(ignoreContentRestrictionReasons: [], addContentRestrictionReasons: [])
+    public static var `default` = ContentSettings(ignoreContentRestrictionReasons: [], addContentRestrictionReasons: [], ignoreAllContentRestrictions: false)
     
     public var ignoreContentRestrictionReasons: Set<String>
     public var addContentRestrictionReasons: [String]
+    public let ignoreAllContentRestrictions: Bool
     
-    public init(ignoreContentRestrictionReasons: Set<String>, addContentRestrictionReasons: [String]) {
+    public init(ignoreContentRestrictionReasons: Set<String>, addContentRestrictionReasons: [String], ignoreAllContentRestrictions: Bool) {
         self.ignoreContentRestrictionReasons = ignoreContentRestrictionReasons
         self.addContentRestrictionReasons = addContentRestrictionReasons
+        self.ignoreAllContentRestrictions = ignoreAllContentRestrictions
     }
 }
 
 extension ContentSettings {
-    init(appConfiguration: AppConfiguration) {
+    init(appConfiguration: AppConfiguration, ignoreAllContentRestrictions: Bool = false) {
         var reasons: [String] = []
         var addContentRestrictionReasons: [String] = []
         if let data = appConfiguration.data {
@@ -27,7 +29,7 @@ extension ContentSettings {
                 addContentRestrictionReasons = addContentRestrictionReasonsData
             }
         }
-        self.init(ignoreContentRestrictionReasons: Set(reasons), addContentRestrictionReasons: addContentRestrictionReasons)
+        self.init(ignoreContentRestrictionReasons: Set(reasons), addContentRestrictionReasons: addContentRestrictionReasons, ignoreAllContentRestrictions: ignoreAllContentRestrictions)
     }
 }
 
@@ -36,11 +38,11 @@ public func getContentSettings(transaction: Transaction) -> ContentSettings {
     return ContentSettings(appConfiguration: appConfiguration)
 }
 
-public func getContentSettings(postbox: Postbox) -> Signal<ContentSettings, NoError> {
-    return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-    |> map { view -> ContentSettings in
+public func getContentSettings(postbox: Postbox, ignoreAllContentRestrictions: Signal<Bool, NoError>) -> Signal<ContentSettings, NoError> {
+    return combineLatest(postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]), ignoreAllContentRestrictions)
+    |> map { view, ignoreAllContentRestrictions -> ContentSettings in
         let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-        return ContentSettings(appConfiguration: appConfiguration)
+        return ContentSettings(appConfiguration: appConfiguration, ignoreAllContentRestrictions: ignoreAllContentRestrictions)
     }
     |> distinctUntilChanged
 }

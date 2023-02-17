@@ -691,11 +691,11 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
     entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
     
-    #if DEBUG
+//    #if DEBUG
     if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
         entries.append(.enableSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
     }
-    #endif
+//    #endif
     
     return entries
 }
