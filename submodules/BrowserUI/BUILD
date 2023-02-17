@@ -20,6 +20,12 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
+        "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/BundleIconComponent:BundleIconComponent",
+        "//submodules/Components/BlurredBackgroundComponent:BlurredBackgroundComponent",
     ],
     visibility = [
         "//visibility:public",
