@@ -914,6 +914,7 @@ private struct UrlHandlingConfiguration {
                 return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: urlAuthDomains)
             }
         }
+        //TODO:loc move to getConfig
         return .defaultValue
     }
 }

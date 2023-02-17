@@ -938,9 +938,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in
                 let id = application.beginBackgroundTask(withName: name, expirationHandler: expiration)
                 Logger.shared.log("App \(self.episodeId)", "Begin background task \(name): \(id)")
+                print("App \(self.episodeId)", "Begin background task \(name): \(id)")
                 return id
             }, endBackgroundTask: { id in
                 print("App \(self.episodeId)", "End background task \(id)")
+                Logger.shared.log("App \(self.episodeId)", "End background task \(id)")
                 application.endBackgroundTask(id)
             }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, acquireIdleExtension: {
                 return applicationBindings.pushIdleTimerExtension()

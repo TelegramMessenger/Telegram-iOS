@@ -389,10 +389,10 @@ public final class Transaction {
         return self.postbox?.chatListTable.getPeerChatListIndex(peerId: peerId)
     }
     
-    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
+    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool) -> [PeerId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate)
+            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate, additionalFilter: additionalFilter, stopOnFirstMatch: stopOnFirstMatch)
         } else {
             return []
         }
@@ -1564,7 +1564,7 @@ final class PostboxImpl {
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     var installedStoreOrUpdateMessageActionsByPeerId: [PeerId: Bag<StoreOrUpdateMessageAction>] = [:]
     
-    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, tempDir: TempBoxDirectory?, useCaches: Bool) {
+    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, tempDir: TempBoxDirectory?, useCaches: Bool, isInTransaction: Atomic<Bool>) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1575,6 +1575,8 @@ final class PostboxImpl {
         self.tempDir = tempDir
 
         self.valueBox = valueBox
+        
+        self.isInTransaction = isInTransaction
         
         self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0), useCaches: useCaches)
         
@@ -2597,7 +2599,7 @@ final class PostboxImpl {
         return result
     }
     
-    private let canBeginTransactionsValue = Atomic<Bool>(value: true)
+    let canBeginTransactionsValue = Atomic<Bool>(value: true)
     public func setCanBeginTransactions(_ value: Bool) {
         self.queue.async {
             let previous = self.canBeginTransactionsValue.swap(value)
@@ -2625,7 +2627,11 @@ final class PostboxImpl {
         }
     }
     
+    let isInTransaction: Atomic<Bool>
+    
     private func internalTransaction<T>(_ f: (Transaction) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
+        let _ = self.isInTransaction.swap(true)
+        
         self.valueBox.begin()
         let transaction = Transaction(queue: self.queue, postbox: self)
         self.afterBegin(transaction: transaction)
@@ -2633,6 +2639,8 @@ final class PostboxImpl {
         let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit(currentTransaction: transaction)
         transaction.disposed = true
         self.valueBox.commit()
+        
+        let _ = self.isInTransaction.swap(false)
         
         if let currentUpdatedState = self.currentUpdatedState {
             self.statePipe.putNext(currentUpdatedState)
@@ -3848,6 +3856,8 @@ public class Postbox {
 
     public let seedConfiguration: SeedConfiguration
     public let mediaBox: MediaBox
+    
+    private let isInTransaction = Atomic<Bool>(value: false)
 
     init(
         queue: Queue,
@@ -3866,8 +3876,10 @@ public class Postbox {
         postboxLog("MediaBox path: \(basePath + "/media")")
         self.mediaBox = MediaBox(basePath: basePath + "/media")
 
+        let isInTransaction = self.isInTransaction
+        
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return PostboxImpl(
+            let impl = PostboxImpl(
                 queue: queue,
                 basePath: basePath,
                 seedConfiguration: seedConfiguration,
@@ -3875,8 +3887,10 @@ public class Postbox {
                 timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations,
                 isTemporary: isTemporary,
                 tempDir: tempDir,
-                useCaches: useCaches
+                useCaches: useCaches,
+                isInTransaction: isInTransaction
             )
+            return impl
         })
     }
 
@@ -3898,6 +3912,12 @@ public class Postbox {
     }
 
     public func setCanBeginTransactions(_ value: Bool) {
+        #if DEBUG
+        if !value {
+            assert(!self.isInTransaction.with({ $0 }))
+        }
+        #endif
+        
         self.impl.with { impl in
             impl.setCanBeginTransactions(value)
         }

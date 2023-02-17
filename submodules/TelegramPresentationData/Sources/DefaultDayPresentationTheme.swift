@@ -30,7 +30,7 @@ public func selectReactionFillStaticColor(theme: PresentationTheme, wallpaper: T
 
 public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> Bool {
     if !DeviceMetrics.performance.isGraphicallyCapable {
-        return false
+        //return false
     }
     
     if case .builtin = wallpaper {

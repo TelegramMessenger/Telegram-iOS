@@ -303,6 +303,10 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
         return nil
     }
     
+    func makeFreeBackground() -> PortalView? {
+        return nil
+    }
+    
     func makeDimmedNode() -> ASDisplayNode? {
         return nil
     }

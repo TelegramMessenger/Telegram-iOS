@@ -66,6 +66,7 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
     func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
+    func makeFreeBackground() -> PortalView?
     
     func hasExtraBubbleBackground() -> Bool
     
@@ -586,6 +587,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     
     private let contentNode: ASDisplayNode
     private var blurredBackgroundContents: UIImage?
+    private var blurredBackgroundPortalSourceView: PortalSourceView?
+    private var blurredBackgroundDimmedNode: GradientBackgroundNode.CloneNode?
+    private var blurredBackgroundDimmedOverlayView: UIView?
+    private var blurredBackgroundContentView: UIImageView?
 
     private var gradientBackgroundNode: GradientBackgroundNode?
     private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
@@ -715,6 +720,17 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         
         super.init()
         
+        if #available(iOS 12.0, *) {
+            let blurredBackgroundPortalSourceView = PortalSourceView()
+            self.blurredBackgroundPortalSourceView = blurredBackgroundPortalSourceView
+            blurredBackgroundPortalSourceView.alpha = 0.0001
+            self.view.addSubview(blurredBackgroundPortalSourceView)
+            
+            let blurredBackgroundContentView = UIImageView()
+            self.blurredBackgroundContentView = blurredBackgroundContentView
+            blurredBackgroundPortalSourceView.addSubview(blurredBackgroundContentView)
+        }
+        
         self.clipsToBounds = true
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
@@ -763,11 +779,28 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     scheduleLoopingEvent = true
                 }
             }
+            if let gradientBackgroundNode = self.gradientBackgroundNode {
+                if self.blurredBackgroundDimmedNode == nil {
+                    let blurredBackgroundDimmedNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+                    self.blurredBackgroundDimmedNode = blurredBackgroundDimmedNode
+                    self.blurredBackgroundPortalSourceView?.addSubnode(blurredBackgroundDimmedNode)
+                }
+                if self.blurredBackgroundDimmedOverlayView == nil {
+                    let blurredBackgroundDimmedOverlayView = UIView()
+                    self.blurredBackgroundDimmedOverlayView = blurredBackgroundDimmedOverlayView
+                    self.blurredBackgroundPortalSourceView?.addSubview(blurredBackgroundDimmedOverlayView)
+                }
+            }
             self.gradientBackgroundNode?.updateColors(colors: mappedColors)
+            
+            if let bubbleTheme = self.bubbleTheme {
+                self.blurredBackgroundDimmedOverlayView?.backgroundColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
+            }
 
             self.contentNode.backgroundColor = nil
             self.contentNode.contents = nil
             self.blurredBackgroundContents = nil
+            self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
             self.motionEnabled = false
             self.wallpaperDisposable.set(nil)
         } else {
@@ -776,6 +809,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 gradientBackgroundNode.removeFromSupernode()
                 gradientBackgroundNode.setPatternOverlay(layer: nil)
                 self.layer.insertSublayer(self.patternImageLayer, above: self.contentNode.layer)
+            }
+            if let blurredBackgroundDimmedNode = self.blurredBackgroundDimmedNode {
+                self.blurredBackgroundDimmedNode = nil
+                blurredBackgroundDimmedNode.removeFromSupernode()
+            }
+            if let blurredBackgroundDimmedOverlayView = self.blurredBackgroundDimmedOverlayView {
+                self.blurredBackgroundDimmedOverlayView = nil
+                blurredBackgroundDimmedOverlayView.removeFromSuperview()
             }
 
             self.motionEnabled = wallpaper.settings?.motion ?? false
@@ -797,17 +838,20 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 })
                 self.contentNode.contents = image?.cgImage
                 self.blurredBackgroundContents = image
+                self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                 self.wallpaperDisposable.set(nil)
             } else if gradientColors.count >= 1 {
                 self.contentNode.backgroundColor = UIColor(rgb: gradientColors[0])
                 self.contentNode.contents = nil
                 self.blurredBackgroundContents = nil
+                self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                 self.wallpaperDisposable.set(nil)
             } else {
                 self.contentNode.backgroundColor = .white
                 if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
                     self.blurredBackgroundContents = generateBlurredContents(image: image)
+                    self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
@@ -815,6 +859,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
                     self.blurredBackgroundContents = generateBlurredContents(image: image)
+                    self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
@@ -831,6 +876,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         } else {
                             strongSelf.blurredBackgroundContents = nil
                         }
+                        strongSelf.blurredBackgroundContentView?.image = strongSelf.blurredBackgroundContents
                         strongSelf._isReady.set(true)
                     }))
                 }
@@ -1078,6 +1124,19 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.validLayout == nil
         self.validLayout = size
+        
+        if let blurredBackgroundPortalSourceView = self.blurredBackgroundPortalSourceView {
+            transition.updateFrame(view: blurredBackgroundPortalSourceView, frame: CGRect(origin: CGPoint(), size: size))
+        }
+        if let blurredBackgroundContentView = self.blurredBackgroundContentView {
+            transition.updateFrame(view: blurredBackgroundContentView, frame: CGRect(origin: CGPoint(), size: size))
+        }
+        if let blurredBackgroundDimmedNode = self.blurredBackgroundDimmedNode {
+            transition.updateFrame(view: blurredBackgroundDimmedNode.view, frame: CGRect(origin: CGPoint(), size: size))
+        }
+        if let blurredBackgroundDimmedOverlayView = self.blurredBackgroundDimmedOverlayView {
+            transition.updateFrame(view: blurredBackgroundDimmedOverlayView, frame: CGRect(origin: CGPoint(), size: size))
+        }
 
         transition.updatePosition(node: self.contentNode, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
         transition.updateBounds(node: self.contentNode, bounds: CGRect(origin: CGPoint(), size: size))
@@ -1152,6 +1211,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             } else if let _ = self.outgoingBubbleGradientBackgroundNode {
                 self.outgoingBubbleGradientBackgroundNode = nil
             }
+            
+            if let wallpaper = self.wallpaper {
+                self.blurredBackgroundDimmedOverlayView?.backgroundColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
+            }
 
             self.updateBubbles()
         }
@@ -1215,6 +1278,17 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func makeFreeBackground() -> PortalView? {
+        guard let blurredBackgroundPortalSourceView = self.blurredBackgroundPortalSourceView else {
+            return nil
+        }
+        guard let portalView = PortalView(matchPosition: true) else {
+            return nil
+        }
+        blurredBackgroundPortalSourceView.addPortal(view: portalView)
+        return portalView
     }
     
     func hasExtraBubbleBackground() -> Bool {
@@ -2074,6 +2148,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         let node = WallpaperBackgroundNodeMergedImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func makeFreeBackground() -> PortalView? {
+        return nil
     }
     
     func hasExtraBubbleBackground() -> Bool {
