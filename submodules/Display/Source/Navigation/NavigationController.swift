@@ -1193,22 +1193,25 @@ open class NavigationController: UINavigationController, ContainableController, 
                     split.isInFocus = true
                 }
                 
+                var masterTopHasOpaque = topHasOpaque
+                var detailTopHasOpaque = topHasOpaque
+                
                 if let controller = split.masterControllers.last {
-                    if topHasOpaque {
+                    if masterTopHasOpaque {
                         controller.displayNode.accessibilityElementsHidden = true
                     } else {
                         if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
-                            topHasOpaque = true
+                            masterTopHasOpaque = true
                         }
                         controller.displayNode.accessibilityElementsHidden = false
                     }
                 }
                 if let controller = split.detailControllers.last {
-                    if topHasOpaque {
+                    if detailTopHasOpaque {
                         controller.displayNode.accessibilityElementsHidden = true
                     } else {
                         if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
-                            topHasOpaque = true
+                            detailTopHasOpaque = true
                         }
                         controller.displayNode.accessibilityElementsHidden = false
                     }

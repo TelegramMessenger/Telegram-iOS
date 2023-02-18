@@ -1062,15 +1062,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if !messageText.isEmpty || resourceAvailable || diceEmoji != nil {
-            let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
-            let message = messages[0]
-            var isExpired = false
-            for media in message.media {
-                if let _ = media as? TelegramMediaExpiredContent {
-                    isExpired = true
-                }
+        let message = messages[0]
+        var isExpired = false
+        var isImage = false
+        for media in message.media {
+            if let _ = media as? TelegramMediaExpiredContent {
+                isExpired = true
             }
+            if media is TelegramMediaImage {
+                isImage = true
+            }
+        }
+        
+        if !messageText.isEmpty || (resourceAvailable && isImage) || diceEmoji != nil {
+            let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
+
             if !isExpired {
                 if !isPoll {
                     if !isCopyProtected {

@@ -7202,8 +7202,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
-                    }, updateExtraNavigationBarBackgroundHeight: { value, _ in
+                    }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, _ in
                         strongSelf.additionalNavigationBarBackgroundHeight = value
+                        strongSelf.additionalNavigationBarHitTestSlop = hitTestSlop
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -11063,6 +11064,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var suspendNavigationBarLayout: Bool = false
     private var suspendedNavigationBarLayout: ContainerViewLayout?
     private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
+    private var additionalNavigationBarHitTestSlop: CGFloat = 0.0
 
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {
@@ -11099,9 +11101,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var navigationBarTransition = transition
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
-        }, updateExtraNavigationBarBackgroundHeight: { value, extraNavigationTransition in
+        }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, extraNavigationTransition in
             navigationBarTransition = extraNavigationTransition
             self.additionalNavigationBarBackgroundHeight = value
+            self.additionalNavigationBarHitTestSlop = hitTestSlop
         })
         
         if case .compact = layout.metrics.widthClass {
@@ -11122,6 +11125,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
             self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
+        self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
@@ -16701,101 +16705,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.dismissInput()
         self.present(actionSheet, in: .window(.root))
     }
-    
-    func avatarPreviewingController(from sourceView: UIView) -> (UIViewController, CGRect)? {
-        guard let layout = self.validLayout else {
-            return nil
-        }
-        guard let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view else {
-            return nil
-        }
-        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.smallProfileImage != nil {
-            let galleryController = AvatarGalleryController(context: self.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
-            }, synchronousLoad: true)
-            galleryController.setHintWillBePresentedInPreviewingContext(true)
-            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-            return (galleryController, buttonView.convert(buttonView.bounds, to: sourceView))
-        }
-        return nil
-    }
-    
-    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type, let view = self.chatDisplayNode.view.hitTest(location, with: nil), view.isDescendant(of: self.chatDisplayNode.historyNode.view) else {
-            return nil
-        }
         
-        let historyPoint = sourceView.convert(location, to: self.chatDisplayNode.historyNode.view)
-        var result: (Message, ChatMessagePeekPreviewContent)?
-        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView {
-                if itemNode.frame.contains(historyPoint) {
-                    if let value = itemNode.peekPreviewContent(at: self.chatDisplayNode.historyNode.view.convert(historyPoint, to: itemNode.view)) {
-                        result = value
-                    }
-                }
-            }
-        }
-        if let (message, content) = result {
-            switch content {
-                case let .media(media):
-                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-                    self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView {
-                            if let result = itemNode.transitionNode(id: message.id, media: media) {
-                                selectedTransitionNode = result
-                            }
-                        }
-                    }
-                    
-                    if let selectedTransitionNode = selectedTransitionNode {
-                        if let previewData = chatMessagePreviewControllerData(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.effectiveNavigationController) {
-                            switch previewData {
-                                case let .gallery(gallery):
-                                    gallery.setHintWillBePresentedInPreviewingContext(true)
-                                    let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: sourceView)
-                                    let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
-                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                                    return (gallery, sourceRect)
-                                case .instantPage:
-                                    break
-                            }
-                        }
-                    }
-                case let .url(node, rect, string, concealed):
-                    var parsedUrlValue: URL?
-                    if let parsed = URL(string: string) {
-                        parsedUrlValue = parsed
-                    } else if let encoded = (string as NSString).addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), let parsed = URL(string: encoded) {
-                        parsedUrlValue = parsed
-                    }
-                    
-                    if let parsedUrlValue = parsedUrlValue {
-                        if concealed, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
-                            return nil
-                        }
-                    } else {
-                        return nil
-                    }
-                    
-                    let targetRect = node.view.convert(rect, to: sourceView)
-                    let sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
-                    if let parsedUrl = parsedUrlValue {
-                        if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
-                            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                                let controller = SFSafariViewController(url: parsedUrl)
-                                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
-                                    controller.preferredControlTintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
-                                }
-                                return (controller, sourceRect)
-                            }
-                        }
-                    }
-            }
-        }
-        return nil
-    }
-    
     private func presentBanMessageOptions(accountPeerId: PeerId, author: Peer, messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {
         guard let peerId = self.chatLocation.peerId else {
             return

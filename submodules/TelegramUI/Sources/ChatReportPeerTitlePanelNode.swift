@@ -168,6 +168,14 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         }
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result == self.view {
+            return nil
+        }
+        return result
+    }
+    
     func update(width: CGFloat, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, chatPeer: Peer, invitedBy: Peer, transition: ContainedViewLayoutTransition) -> CGFloat {
         let primaryTextColor = serviceMessageColorComponents(theme: theme, wallpaper: wallpaper).primaryText
         
@@ -603,6 +611,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         if let renderedPeer = interfaceState.renderedPeer {
             chatPeer = renderedPeer.peers[renderedPeer.peerId]
         }
+        var hitTestSlop: CGFloat = 0.0
         if let chatPeer = chatPeer, (updatedButtons.contains(.block) || updatedButtons.contains(.reportSpam) || updatedButtons.contains(.reportUserSpam)), let invitedBy = interfaceState.contactStatus?.invitedBy {
             var inviteInfoTransition = transition
             let inviteInfoNode: ChatInfoTitlePanelInviteInfoNode
@@ -623,6 +632,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let inviteHeight = inviteInfoNode.update(width: width, theme: interfaceState.theme, strings: interfaceState.strings, wallpaper: interfaceState.chatWallpaper, chatPeer: chatPeer, invitedBy: invitedBy, transition: inviteInfoTransition)
                 inviteInfoTransition.updateFrame(node: inviteInfoNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight + panelInset), size: CGSize(width: width, height: inviteHeight)))
                 panelHeight += inviteHeight
+                hitTestSlop = -inviteHeight
             }
         } else if let inviteInfoNode = self.inviteInfoNode {
             self.inviteInfoNode = nil
@@ -658,7 +668,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 peerNearbyInfoNode?.removeFromSupernode()
             })
         }
-        return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight + panelInset)
+        return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight + panelInset, hitTestSlop: hitTestSlop)
     }
     
     @objc func buttonPressed(_ view: UIButton) {
@@ -697,6 +707,9 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             if let result = inviteInfoNode.view.hitTest(self.view.convert(point, to: inviteInfoNode.view), with: event) {
                 return result
             }
+        }
+        if point.y > 40.0 {
+            return nil
         }
         return super.hitTest(point, with: event)
     }

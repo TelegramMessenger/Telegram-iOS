@@ -884,17 +884,19 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 |> take(1)
                 |> map { sharedData, accessChallengeData -> WebBrowserSettings in
                     let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
+                    
+                    var settings: WebBrowserSettings
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
+                        settings = current
+                    } else {
+                        settings = .defaultSettings
+                    }
                     if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil {
-                            return WebBrowserSettings(defaultWebBrowser: "Safari")
+                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == nil {
+                            settings = WebBrowserSettings(defaultWebBrowser: "safari")
                         }
                     }
-                    
-                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
-                        return current   
-                    } else {
-                        return WebBrowserSettings.defaultSettings
-                    }
+                    return settings
                 }
 
                 let _ = (settings
@@ -902,19 +904,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if settings.defaultWebBrowser == nil {
 //                        let controller = BrowserScreen(context: context, subject: .webPage(parsedUrl.absoluteString))
 //                        navigationController?.pushViewController(controller)
-                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                            if let window = navigationController?.view.window {
-                                let controller = SFSafariViewController(url: parsedUrl)
-                                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
-                                    controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                                }
-                                window.rootViewController?.present(controller, animated: true)
-                            } else {
-                                context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
-                            }
+                        if let window = navigationController?.view.window {
+                            let controller = SFSafariViewController(url: parsedUrl)
+                            controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+                            controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
+                            window.rootViewController?.present(controller, animated: true)
                         } else {
-                            context.sharedContext.applicationBindings.openUrl(url)
+                            context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
                         }
                     } else {
                         let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))

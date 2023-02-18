@@ -9,7 +9,7 @@ open class SparseNode: ASDisplayNode {
         if self.alpha.isZero {
             return nil
         }
-        if !self.bounds.contains(point) {
+        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
             return nil
         }
         for view in self.view.subviews.reversed() {

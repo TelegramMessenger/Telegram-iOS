@@ -59,6 +59,6 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         self.activateAreaNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
         self.activateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
-        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
 }

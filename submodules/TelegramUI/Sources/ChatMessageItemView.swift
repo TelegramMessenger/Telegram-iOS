@@ -232,6 +232,9 @@ final class ChatMessageAccessibilityData {
                         }
                     } else if let file = media as? TelegramMediaFile {
                         var isSpecialFile = false
+                        
+                        let isVideo = file.isInstantVideo
+                        
                         for attribute in file.attributes {
                             switch attribute {
                                 case let .Sticker(displayText, _, _):
@@ -259,6 +262,9 @@ final class ChatMessageAccessibilityData {
                                         }
                                     }
                                 case let .Audio(isVoice, duration, title, performer, _):
+                                    if isVideo {
+                                        continue
+                                    }
                                     isSpecialFile = true
                                     if isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
@@ -573,6 +579,7 @@ final class ChatMessageAccessibilityData {
         }
         
         var (label, value) = dataForMessage(item.message, false)
+        var replyValue: String?
         
         for attribute in item.message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -613,8 +620,8 @@ final class ChatMessageAccessibilityData {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 
-//                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
-//                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
+                let (_, replyMessageValue) = dataForMessage(replyMessage, true)
+                replyValue = replyMessageValue
                 
                 label = "\(replyLabel) . \(label)"
             }
@@ -664,6 +671,10 @@ final class ChatMessageAccessibilityData {
                 customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextReply, target: nil, selector: #selector(self.noop), action: .reply))
             }
             customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: nil, selector: #selector(self.noop), action: .options))
+        }
+        
+        if let replyValue {
+            value = "\(value). \(item.presentationData.strings.VoiceOver_Chat_ReplyingToMessage(replyValue).string)"
         }
         
         self.label = label

@@ -56,6 +56,6 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.activateAreaNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
         self.activateAreaNode.accessibilityLabel = interfaceState.strings.Channel_NotificationLoading
         
-        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
 }

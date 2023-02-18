@@ -958,8 +958,8 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                 for scheme in schemes {
                     let basePrefix = scheme + basePath + "/"
                     var url = url
-                    if (url.lowercased().hasPrefix(scheme) && url.lowercased().hasSuffix(".\(basePath)")) {
-                        url = basePrefix + String(url[scheme.endIndex...]).replacingOccurrences(of: ".\(basePath)", with: "")
+                    if (url.lowercased().hasPrefix(scheme) && (url.lowercased().hasSuffix(".\(basePath)") || url.lowercased().contains(".\(basePath)/"))) {
+                        url = basePrefix + String(url[scheme.endIndex...]).replacingOccurrences(of: ".\(basePath)/", with: "").replacingOccurrences(of: ".\(basePath)", with: "")
                     }
                     if url.lowercased().hasPrefix(basePrefix) {
                         if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
