@@ -168,6 +168,10 @@ final class BrowserNavigationBarComponent: CombinedComponent {
                 availableWidth -= item.size.width
             }
             
+            if !leftItemList.isEmpty || !rightItemList.isEmpty {
+                availableWidth -= 32.0
+            }
+            
             let centerItem = context.component.centerItem.flatMap { item in
                 centerItems[item.id].update(
                     component: item.component,
@@ -225,7 +229,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0, y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset * 2.0) / 2.0, y: context.component.topInset + contentHeight / 2.0))
                     .scale(1.0 - 0.35 * context.component.collapseFraction)
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))
