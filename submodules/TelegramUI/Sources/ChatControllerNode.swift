@@ -2508,7 +2508,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 } else {
                     if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
                         if inputPanelNode.isFocused {
+                            inputPanelNode.skipPresentationInterfaceStateUpdate = true
                             self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
+                            inputPanelNode.skipPresentationInterfaceStateUpdate = false
                         }
                     }
                 }
