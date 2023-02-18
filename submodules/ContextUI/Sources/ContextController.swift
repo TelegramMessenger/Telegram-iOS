@@ -2201,16 +2201,22 @@ public extension ContextLocationContentSource {
 }
 
 public final class ContextControllerReferenceViewInfo {
+    public enum ActionsPosition {
+        case bottom
+        case top
+    }
     public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
+    public let actionsPosition: ActionsPosition
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom) {
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
         self.customPosition = customPosition
+        self.actionsPosition = actionsPosition
     }
 }
 

@@ -756,8 +756,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             transition.updateFrame(node: self.contentRectDebugNode, frame: contentRect, beginWithCurrentState: true)
             
-            var actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
-
+            var actionsFrame: CGRect
+            if case let .reference(source) = self.source, let actionsPosition = source.transitionInfo()?.actionsPosition, case .top = actionsPosition {
+                actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.minY - contentActionsSpacing - actionsSize.height), size: actionsSize)
+            } else {
+                actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
+            }
             var contentVerticalOffset: CGFloat = 0.0
             
             if keepInPlace, case .extracted = self.source {
@@ -773,17 +777,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             var additionalVisibleOffsetY: CGFloat = 0.0
             if let reactionContextNode = self.reactionContextNode {
                 additionalVisibleOffsetY += reactionContextNode.visibleExtensionDistance
-            }
-            if case let .reference(source) = self.source {
-                var actionsFrameIsOutOfScreen = false
-                if let contentAreaInScreenSpace = source.transitionInfo()?.contentAreaInScreenSpace {
-                    if !contentAreaInScreenSpace.contains(actionsFrame) {
-                        actionsFrameIsOutOfScreen = true
-                    }
-                }
-                if actionsFrame.maxY > layout.size.height || actionsFrameIsOutOfScreen {
-                    actionsFrame.origin.y = contentRect.minY - actionsSize.height - contentActionsSpacing
-                }
             }
             if case .center = actionsHorizontalAlignment {
                 actionsFrame.origin.x = floor(contentParentGlobalFrame.minX + contentRect.midX - actionsFrame.width / 2.0)
