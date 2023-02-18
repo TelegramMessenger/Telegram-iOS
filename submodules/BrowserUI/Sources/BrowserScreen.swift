@@ -12,6 +12,7 @@ import UndoUI
 import BundleIconComponent
 import TelegramUIPreferences
 import OpenInExternalAppUI
+import MultilineTextComponent
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -89,11 +90,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                 navigationContent = AnyComponentWithIdentity(
                     id: "title",
                     component: AnyComponent(
-                        Text(
-                            text: context.component.contentState?.title ?? "",
-                            font: Font.bold(17.0),
-                            color: environment.theme.rootController.navigationBar.primaryTextColor
-                        )
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: context.component.contentState?.title ?? "", font: Font.bold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor, paragraphAlignment: .center)), horizontalAlignment: .center, maximumNumberOfLines: 1)
                     )
                 )
                 navigationLeftItems = [

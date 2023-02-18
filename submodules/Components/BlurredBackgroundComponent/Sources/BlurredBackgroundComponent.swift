@@ -7,13 +7,16 @@ import ComponentDisplayAdapters
 public final class BlurredBackgroundComponent: Component {
     public let color: UIColor
     public let tintContainerView: UIView?
+    public let cornerRadius: CGFloat
 
     public init(
         color: UIColor,
-        tintContainerView: UIView? = nil
+        tintContainerView: UIView? = nil,
+        cornerRadius: CGFloat = 0.0
     ) {
         self.color = color
         self.tintContainerView = tintContainerView
+        self.cornerRadius = cornerRadius
     }
     
     public static func ==(lhs: BlurredBackgroundComponent, rhs: BlurredBackgroundComponent) -> Bool {
@@ -21,6 +24,9 @@ public final class BlurredBackgroundComponent: Component {
             return false
         }
         if lhs.tintContainerView !== rhs.tintContainerView {
+            return false
+        }
+        if lhs.cornerRadius != rhs.cornerRadius {
             return false
         }
         return true
@@ -106,7 +112,7 @@ public final class BlurredBackgroundComponent: Component {
                 view.frame = CGRect(origin: CGPoint(), size: availableSize)
             }*/
             
-            self.update(size: availableSize, transition: transition.containedViewLayoutTransition)
+            self.update(size: availableSize, cornerRadius: component.cornerRadius, transition: transition.containedViewLayoutTransition)
             
             if let tintContainerView = self.tintContainerView {
                 transition.setFrame(view: tintContainerView, frame: CGRect(origin: CGPoint(), size: availableSize))

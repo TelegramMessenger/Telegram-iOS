@@ -1241,12 +1241,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 var translateToLanguage: String?
                 if let translationState, isPremium && translationState.isEnabled {
-                    translateToLanguage = translationState.toLang ?? presentationData.strings.baseLanguageCode
-                    if translateToLanguage == "nb" {
-                        translateToLanguage = "no"
-                    } else if translateToLanguage == "pt-br" {
-                        translateToLanguage = "pt"
+                    var languageCode = translationState.toLang ?? presentationData.strings.baseLanguageCode
+                    let rawSuffix = "-raw"
+                    if languageCode.hasSuffix(rawSuffix) {
+                        languageCode = String(languageCode.dropLast(rawSuffix.count))
                     }
+                    if languageCode == "nb" {
+                        languageCode = "no"
+                    } else if languageCode == "pt-br" {
+                        languageCode = "pt"
+                    }
+                    translateToLanguage = languageCode
                 }
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage)
