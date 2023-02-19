@@ -170,7 +170,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
     var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     
-    private var interactiveEmojis: InteractiveEmojiConfiguration?
+    var interactiveEmojis: InteractiveEmojiConfiguration?
     private var interactiveEmojisDisposable: Disposable?
     
     private let selectedMessagesPromise = Promise<Set<MessageId>?>(nil)
@@ -3241,7 +3241,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 let peerId = effectivePresentationInterfaceState.chatLocation.peerId
-                if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
+                if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText), effectiveInputText.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) == nil {
                     messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
