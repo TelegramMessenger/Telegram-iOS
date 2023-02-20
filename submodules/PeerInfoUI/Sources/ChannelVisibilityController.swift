@@ -908,7 +908,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
                     selectedType = .publicChannel
                 } else if case .initialSetup = mode {
-                    selectedType = .publicChannel
+                    selectedType = .privateChannel
                 } else {
                     selectedType = .privateChannel
                 }

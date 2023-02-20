@@ -53,6 +53,50 @@ private final class ChatMessageBubbleClippingNode: ASDisplayNode {
     }
 }
 
+private func hasCommentButton(item: ChatMessageItem) -> Bool {
+    let firstMessage = item.content.firstMessage
+    
+    var hasDiscussion = false
+    if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+        hasDiscussion = true
+    }
+    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == firstMessage.id {
+        hasDiscussion = false
+    }
+
+    if firstMessage.adAttribute != nil {
+        hasDiscussion = false
+    }
+    
+    if hasDiscussion {
+        var canComment = false
+        if case .pinnedMessages = item.associatedData.subject {
+            canComment = false
+        } else if firstMessage.id.namespace == Namespaces.Message.Local {
+            canComment = true
+        } else {
+            for attribute in firstMessage.attributes {
+                if let attribute = attribute as? ReplyThreadMessageAttribute, let commentsPeerId = attribute.commentsPeerId {
+                    switch item.associatedData.channelDiscussionGroup {
+                    case .unknown:
+                        canComment = true
+                    case let .known(groupId):
+                        canComment = groupId == commentsPeerId
+                    }
+                    break
+                }
+            }
+        }
+        
+        if canComment {
+            return true
+        }
+    } else if firstMessage.id.peerId.isReplies {
+        return true
+    }
+    return false
+}
+
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)], Bool, Bool) {
     var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
@@ -65,7 +109,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     var needReactions = true
     
-    var disableComments = false
+    var hasSeparateCommentsButton = false
     
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
@@ -87,7 +131,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
                     if file.isInstantVideo {
-                        disableComments = true
+                        hasSeparateCommentsButton = true
                         result.append((message, ChatMessageInstantVideoBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                     } else {
                         if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
@@ -222,43 +266,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         needReactions = false
     }
     
-    if !isAction && !disableComments && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
-        var hasDiscussion = false
-        if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
-            hasDiscussion = true
-        }
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == firstMessage.id {
-            hasDiscussion = false
-        }
-
-        if firstMessage.adAttribute != nil {
-            hasDiscussion = false
-        }
-        
-        if hasDiscussion {
-            var canComment = false
-            if case .pinnedMessages = item.associatedData.subject {
-                canComment = false
-            } else if firstMessage.id.namespace == Namespaces.Message.Local {
-                canComment = true
-            } else {
-                for attribute in firstMessage.attributes {
-                    if let attribute = attribute as? ReplyThreadMessageAttribute, let commentsPeerId = attribute.commentsPeerId {
-                        switch item.associatedData.channelDiscussionGroup {
-                        case .unknown:
-                            canComment = true
-                        case let .known(groupId):
-                            canComment = groupId == commentsPeerId
-                        }
-                        break
-                    }
-                }
-            }
-            
-            if canComment {
-                result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
-            }
-        } else if firstMessage.id.peerId.isReplies {
+    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
+        if hasCommentButton(item: item) {
             result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
         }
     }
@@ -1292,6 +1301,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
                 needsShareButton = true
             }
+            var mayHaveSeparateCommentsButton = false
             if !needsShareButton {
                 loop: for media in item.message.media {
                     if media is TelegramMediaGame || media is TelegramMediaInvoice {
@@ -1307,12 +1317,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     if media is TelegramMediaAction {
                         needsShareButton = false
                         break loop
+                    } else if let media = media as? TelegramMediaFile, media.isInstantVideo {
+                        mayHaveSeparateCommentsButton = true
+                        break loop
                     }
                 }
             }
             
-            if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
-                needsShareButton = false
+            if (item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected()) {
+                if mayHaveSeparateCommentsButton && hasCommentButton(item: item) {
+                } else {
+                    needsShareButton = false
+                }
             }
         }
         

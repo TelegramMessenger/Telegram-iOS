@@ -45,8 +45,6 @@
 
 @property (nonatomic, copy) void(^recognizedQRCode)(NSString *value, AVMetadataMachineReadableCodeObject *object);
 
-@property (nonatomic, assign) bool compressVideo;
-
 - (instancetype)initWithMode:(PGCameraMode)mode position:(PGCameraPosition)position;
 
 - (void)performInitialConfigurationWithCompletion:(void (^)(void))completion;

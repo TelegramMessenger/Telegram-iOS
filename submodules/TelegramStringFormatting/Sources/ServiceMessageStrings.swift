@@ -393,10 +393,18 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             string = strings.Conversation_AutoremoveTimerRemovedUser(authorString).string
                         }
                     } else if let _ = messagePeer as? TelegramGroup {
-                        string = strings.Conversation_AutoremoveTimerRemovedGroup
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerRemovedUserYou
+                        } else {
+                            string = strings.Conversation_AutoremoveTimerRemovedGroup
+                        }
                     } else if let channel = messagePeer as? TelegramChannel {
                         if case .group = channel.info {
-                            string = strings.Conversation_AutoremoveTimerRemovedGroup
+                            if message.author?.id == accountPeerId {
+                                string = strings.Conversation_AutoremoveTimerRemovedUserYou
+                            } else {
+                                string = strings.Conversation_AutoremoveTimerRemovedGroup
+                            }
                         } else {
                             string = strings.Conversation_AutoremoveTimerRemovedChannel
                         }
