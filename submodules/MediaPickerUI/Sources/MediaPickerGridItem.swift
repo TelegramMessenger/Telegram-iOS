@@ -87,6 +87,8 @@ final class MediaPickerGridItemNode: GridItemNode {
     private let typeIconNode: ASImageNode
     private let durationNode: ImmediateTextNode
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     private var interaction: MediaPickerInteraction?
     private var theme: PresentationTheme?
         
@@ -114,10 +116,14 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.typeIconNode.displayWithoutProcessing = true
         
         self.durationNode = ImmediateTextNode()
+        
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = [.image]
                 
         super.init()
         
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.activateAreaNode)
         
         self.imageNode.contentUpdated = { [weak self] image in
             self?.spoilerNode?.setImage(image)
@@ -285,6 +291,10 @@ final class MediaPickerGridItemNode: GridItemNode {
             let editingContext = interaction.editingState
             let asset = fetchResult.object(at: index)
             
+            if #available(iOS 15.0, *) {
+                self.activateAreaNode.accessibilityLabel = "Photo \(asset.creationDate?.formatted(date: .abbreviated, time: .standard) ?? "")"
+            }
+            
             let editedSignal = Signal<UIImage?, NoError> { subscriber in
                 if let signal = editingContext.thumbnailImageSignal(forIdentifier: asset.localIdentifier) {
                     let disposable = signal.start(next: { next in
@@ -411,6 +421,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.imageNode.frame = self.bounds
         self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 24.0, width: self.bounds.width, height: 24.0)
         self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
+        self.activateAreaNode.frame = self.bounds
         
         if self.durationNode.supernode != nil {
             let durationSize = self.durationNode.updateLayout(self.bounds.size)

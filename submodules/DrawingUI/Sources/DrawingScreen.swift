@@ -361,7 +361,7 @@ private final class ReferenceContentSource: ContextReferenceContentSource {
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: self.customPosition)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: self.customPosition, actionsPosition: .top)
     }
 }
 
@@ -1789,7 +1789,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                             id: "background",
                             component: AnyComponent(
                                 BlurredBackgroundComponent(
-                                    color:  UIColor(rgb: 0x888888, alpha: 0.3)
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.3),
+                                    cornerRadius: 12.0
                                 )
                             )
                         ),

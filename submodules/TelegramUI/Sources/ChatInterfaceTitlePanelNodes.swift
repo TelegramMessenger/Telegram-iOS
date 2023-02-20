@@ -52,6 +52,9 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     if inhibitTitlePanelDisplay, let selectedContextValue = selectedContext {
         switch selectedContextValue {
         case .pinnedMessage:
+            if case .peer = chatPresentationInterfaceState.chatLocation {
+                selectedContext = nil
+            }
             break
         default:
             selectedContext = nil

@@ -899,18 +899,26 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     return settings
                 }
 
+                var isCompact = false
+                if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
+                    isCompact = true
+                }
+                
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
                     if settings.defaultWebBrowser == nil {
-//                        let controller = BrowserScreen(context: context, subject: .webPage(parsedUrl.absoluteString))
-//                        navigationController?.pushViewController(controller)
-                        if let window = navigationController?.view.window {
-                            let controller = SFSafariViewController(url: parsedUrl)
-                            controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
-                            controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                            window.rootViewController?.present(controller, animated: true)
+                        if isCompact {
+                            let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
+                            navigationController?.pushViewController(controller)
                         } else {
-                            context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
+                            if let window = navigationController?.view.window {
+                                let controller = SFSafariViewController(url: parsedUrl)
+                                controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+                                controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
+                                window.rootViewController?.present(controller, animated: true)
+                            } else {
+                                context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
+                            }
                         }
                     } else {
                         let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))

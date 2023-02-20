@@ -384,7 +384,7 @@
 "Tour.Text2" = "**Telegram** delivers messages\nfaster than any other application.";
 
 "Tour.Title3" = "Powerful";
-"Tour.Text3" = "**Telegram** has no limits on\nthe size of your chats and media.";
+"Tour.Text3" = "**Telegram** has no limits on\nthe size of your media and chats.";
 
 "Tour.Title4" = "Secure";
 "Tour.Text4" = "**Telegram** keeps your messages\nsafe from hacker attacks.";
@@ -393,30 +393,30 @@
 "Tour.Text5" = "**Telegram** lets you access your\nmessages from multiple devices.";
 
 "Tour.Title6" = "Free";
-"Tour.Text6" = "**Telegram** provides free unlimited cloud storage\nfor chats and media.";
+"Tour.Text6" = "**Telegram** provides free unlimited\ncloud storage for chats and media.";
 
 "Tour.StartButton" = "Start Messaging";
 
 // Login
-"Login.PhoneAndCountryHelp" = "Please confirm your country code and enter your phone number.";
+"Login.PhoneAndCountryHelp" = "Please confirm your country code\nand enter your phone number.";
 "Login.CodeSentInternal" = "We've sent the code to the **Telegram** app on your other device";
-"Login.HaveNotReceivedCodeInternal" = "Haven't received the code?";
-"Login.CodeSentSms" = "We have sent you an SMS with the code";
+"Login.HaveNotReceivedCodeInternal" = "Didn't get the code?";
+"Login.CodeSentSms" = "We've sent you an SMS with the code";
 "Login.Code" = "Code";
-"Login.WillCallYou" = "You can request a voice call in %@";
-"Login.CallRequestState2" = "Requesting a call from Telegram...";
+"Login.WillCallYou" = "Telegram will call you in %@";
+"Login.CallRequestState2" = "Requesting a call from Telegram…";
 "Login.CallRequestState3" = "Telegram dialed your number\n[Didn't get the code?]";
-"Login.EmailNotConfiguredError" = "Please set up an email account.";
+"Login.EmailNotConfiguredError" = "An email account is required so that you can send us details about the error.\n\nPlease go to your device‘s settings > Passwords & Accounts > Add account and set up an email account.";
 "Login.EmailCodeSubject" = "%@, no code";
 "Login.EmailCodeBody" = "My phone number is:\n%@\nI can't get an activation code for Telegram.";
-"Login.UnknownError" = "An error occurred. Please try again later";
-"Login.InvalidCodeError" = "You have entered an invalid code. Please try again.";
+"Login.UnknownError" = "An error occurred, please try again later.";
+"Login.InvalidCodeError" = "Invalid code, please try again.";
 "Login.NetworkError" = "Please check your internet connection and try again.";
-"Login.CodeExpiredError" = "Code expired. Please try again.";
-"Login.CodeFloodError" = "Limit exceeded. Please try again later.";
-"Login.InvalidPhoneError" = "Invalid phone number. Please try again.";
-"Login.InvalidFirstNameError" = "Invalid first name. Please try again.";
-"Login.InvalidLastNameError" = "Invalid last name. Please try again.";
+"Login.CodeExpiredError" = "Code expired, please start over.";
+"Login.CodeFloodError" = "Too many attempts, please try again later.";
+"Login.InvalidPhoneError" = "Invalid phone number, please try again.";
+"Login.InvalidFirstNameError" = "This first name is not allowed, please try another.";
+"Login.InvalidLastNameError" = "Sorry, this last name can't be used.";
 
 "Login.InvalidPhoneEmailSubject" = "Invalid phone number: %@";
 "Login.InvalidPhoneEmailBody" = "I'm trying to use my mobile phone number: %1$@\nBut Telegram says it's invalid. Please help.\n\nApp version: %2$@\nOS version: %3$@\nLocale: %4$@\nMNC: %5$@";
@@ -438,8 +438,8 @@
 "Login.InfoAvatarPhoto" = "photo";
 "Login.InfoFirstNamePlaceholder" = "First Name";
 "Login.InfoLastNamePlaceholder" = "Last Name";
-"Login.InfoDeletePhoto" = "Delete Photo";
-"Login.InfoHelp" = "Enter your name and add a profile picture.";
+"Login.InfoDeletePhoto" = "Remove Photo";
+"Login.InfoHelp" = "Enter your name and add a profile photo.";
 
 // Login.SelectCountry
 "Login.SelectCountry.Title" = "Country";
@@ -8928,3 +8928,5 @@ Sorry for the inconvenience.";
 
 "VoiceOver.Chat.NotPlayedByRecipient" = "Not played by recipient";
 "VoiceOver.Chat.NotPlayedByRecipients" = "Not played by recipients";
+
+"VoiceOver.Chat.ReplyingToMessage" = "In reply to message: %@";

@@ -8,6 +8,7 @@ class ChatTitleAccessoryPanelNode: ASDisplayNode {
     struct LayoutResult {
         var backgroundHeight: CGFloat
         var insetHeight: CGFloat
+        var hitTestSlop: CGFloat
     }
 
     var interfaceInteraction: ChatPanelInterfaceInteraction?

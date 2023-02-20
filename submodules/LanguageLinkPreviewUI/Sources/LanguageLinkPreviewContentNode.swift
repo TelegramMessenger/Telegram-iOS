@@ -82,6 +82,10 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         self.contentOffsetUpdated = f
     }
     
+    func updateTheme(_ theme: PresentationTheme) {
+        
+    }
+    
     func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let insets = UIEdgeInsets(top: 12.0, left: 10.0, bottom: 12.0 + bottomInset, right: 10.0)
         let titleSpacing: CGFloat = 12.0

@@ -121,6 +121,9 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         return true
     }
     
@@ -164,6 +167,8 @@ private func preparedRecentEntryTransition(context: AccountContext, from fromEnt
 final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let sharedContext: SharedAccountContext
     private let context: AccountContext
+    private var theme: PresentationTheme
+    private let themePromise: Promise<PresentationTheme>
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
     
@@ -196,6 +201,9 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
         self.sharedContext = sharedContext
         self.context = context
+        self.theme = theme
+        self.themePromise = Promise<PresentationTheme>()
+        self.themePromise.set(.single(theme))
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         
@@ -237,8 +245,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         
-        let foundItems = self.searchQuery.get()
-        |> mapToSignal { query -> Signal<([ShareSearchPeerEntry]?, Bool), NoError> in
+        let foundItems = combineLatest(self.searchQuery.get(), self.themePromise.get())
+        |> mapToSignal { query, theme -> Signal<([ShareSearchPeerEntry]?, Bool), NoError> in
             if !query.isEmpty {
                 let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
                 let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
@@ -354,8 +362,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
         |> distinctUntilChanged
         
-        let recentItems: Signal<[ShareSearchRecentEntry], NoError> = hasRecentPeers
-        |> map { hasRecentPeers -> [ShareSearchRecentEntry] in
+        let recentItems: Signal<[ShareSearchRecentEntry], NoError> = combineLatest(hasRecentPeers, self.themePromise.get())
+        |> map { hasRecentPeers, theme -> [ShareSearchRecentEntry] in
             var recentItemList: [ShareSearchRecentEntry] = []
             if hasRecentPeers {
                 recentItemList.append(.topPeers(theme, strings))
@@ -402,6 +410,14 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     func deactivate() {
         self.searchNode.deactivateInput()
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.themePromise.set(.single(theme))
+        self.searchNode.updateTheme(theme)
+        self.contentSeparatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
+        self.cancelButtonNode.setTitle(self.strings.Common_Cancel, with: cancelFont, with: self.theme.actionSheet.controlAccentColor, for: [])
     }
     
     private func calculateMetrics(size: CGSize) -> (topInset: CGFloat, itemWidth: CGFloat) {

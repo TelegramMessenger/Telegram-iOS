@@ -1064,6 +1064,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 let textFieldWaitsForTouchUp: Bool
                 if case .regular = metrics.widthClass, bottomInset.isZero {
                     textFieldWaitsForTouchUp = true
+                } else if !textInputNode.textView.text.isEmpty {
+                    textFieldWaitsForTouchUp = true
                 } else {
                     textFieldWaitsForTouchUp = false
                 }
@@ -1700,7 +1702,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         hideInfo = true
                     }
                 case .waitingForPreview:
-                    break
+                    Queue.mainQueue().after(0.3, {
+                        self.actionButtons.micButton.audioRecorder = nil
+                    })
                 }
             }
             
@@ -3235,12 +3239,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.inputMenu.activate()
     }
     
+    var skipPresentationInterfaceStateUpdate = false
     func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
         self.storedInputLanguage = editableTextNode.textInputMode.primaryLanguage
         self.inputMenu.deactivate()
         self.dismissedEmojiSuggestionPosition = nil
         
-        if let presentationInterfaceState = self.presentationInterfaceState {
+        if let presentationInterfaceState = self.presentationInterfaceState, !self.skipPresentationInterfaceStateUpdate {
             if let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, let keyboardButtonsMessage = presentationInterfaceState.keyboardButtonsMessage, let keyboardMarkup = keyboardButtonsMessage.visibleButtonKeyboardMarkup, keyboardMarkup.flags.contains(.persistent) {
                 self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
                     return (.inputButtons(persistent: true), nil)

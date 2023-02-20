@@ -895,9 +895,60 @@ private final class GroupHeaderLayer: UIView {
             }
         }
         
+        var clearSize: CGSize = .zero
+        var clearWidth: CGFloat = 0.0
+        if hasClear {
+            var updateImage = themeUpdated
+            
+            let clearIconLayer: SimpleLayer
+            if let current = self.clearIconLayer {
+                clearIconLayer = current
+            } else {
+                updateImage = true
+                clearIconLayer = SimpleLayer()
+                self.clearIconLayer = clearIconLayer
+                self.layer.addSublayer(clearIconLayer)
+            }
+            let tintClearIconLayer: SimpleLayer
+            if let current = self.tintClearIconLayer {
+                tintClearIconLayer = current
+            } else {
+                updateImage = true
+                tintClearIconLayer = SimpleLayer()
+                self.tintClearIconLayer = tintClearIconLayer
+                self.tintContentLayer.addSublayer(tintClearIconLayer)
+            }
+            
+            tintClearIconLayer.isHidden = !needsVibrancy
+            
+            clearSize = clearIconLayer.bounds.size
+            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor) {
+                clearSize = image.size
+                clearIconLayer.contents = image.cgImage
+            }
+            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: .white) {
+                tintClearIconLayer.contents = image.cgImage
+            }
+                        
+            tintClearIconLayer.frame = clearIconLayer.frame
+            clearWidth = 4.0 + clearSize.width
+        } else {
+            if let clearIconLayer = self.clearIconLayer {
+                self.clearIconLayer = nil
+                clearIconLayer.removeFromSuperlayer()
+            }
+            if let tintClearIconLayer = self.tintClearIconLayer {
+                self.tintClearIconLayer = nil
+                tintClearIconLayer.removeFromSuperlayer()
+            }
+        }
+        
         var textConstrainedWidth = constrainedSize.width - titleHorizontalOffset - 10.0
         if let actionButtonSize = actionButtonSize {
-            textConstrainedWidth -= actionButtonSize.width - 8.0
+            textConstrainedWidth -= actionButtonSize.width - 10.0
+        }
+        if clearWidth > 0.0 {
+            textConstrainedWidth -= clearWidth + 8.0
         }
         
         let textSize: CGSize
@@ -915,13 +966,14 @@ private final class GroupHeaderLayer: UIView {
             }
             let string = NSAttributedString(string: stringValue, font: font, textColor: color)
             let whiteString = NSAttributedString(string: stringValue, font: font, textColor: .white)
-            let stringBounds = string.boundingRect(with: CGSize(width: textConstrainedWidth, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+            let stringBounds = string.boundingRect(with: CGSize(width: textConstrainedWidth, height: 18.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
             textSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))
             self.textLayer.contents = generateImage(textSize, opaque: false, scale: 0.0, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 UIGraphicsPushContext(context)
                 
-                string.draw(in: stringBounds)
+                //string.draw(in: stringBounds)
+                string.draw(with: stringBounds, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
                 
                 UIGraphicsPopContext()
             })?.cgImage
@@ -929,7 +981,8 @@ private final class GroupHeaderLayer: UIView {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 UIGraphicsPushContext(context)
                 
-                whiteString.draw(in: stringBounds)
+                //whiteString.draw(in: stringBounds)
+                whiteString.draw(with: stringBounds, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
                 
                 UIGraphicsPopContext()
             })?.cgImage
@@ -1062,54 +1115,7 @@ private final class GroupHeaderLayer: UIView {
             }
         }
         
-        var clearWidth: CGFloat = 0.0
-        if hasClear {
-            var updateImage = themeUpdated
-            
-            let clearIconLayer: SimpleLayer
-            if let current = self.clearIconLayer {
-                clearIconLayer = current
-            } else {
-                updateImage = true
-                clearIconLayer = SimpleLayer()
-                self.clearIconLayer = clearIconLayer
-                self.layer.addSublayer(clearIconLayer)
-            }
-            let tintClearIconLayer: SimpleLayer
-            if let current = self.tintClearIconLayer {
-                tintClearIconLayer = current
-            } else {
-                updateImage = true
-                tintClearIconLayer = SimpleLayer()
-                self.tintClearIconLayer = tintClearIconLayer
-                self.tintContentLayer.addSublayer(tintClearIconLayer)
-            }
-            
-            tintClearIconLayer.isHidden = !needsVibrancy
-            
-            var clearSize = clearIconLayer.bounds.size
-            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor) {
-                clearSize = image.size
-                clearIconLayer.contents = image.cgImage
-            }
-            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: .white) {
-                tintClearIconLayer.contents = image.cgImage
-            }
-            
-            clearIconLayer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - clearSize.width, y: floorToScreenPixels((textSize.height - clearSize.height) / 2.0)), size: clearSize)
-            
-            tintClearIconLayer.frame = clearIconLayer.frame
-            clearWidth = 4.0 + clearSize.width
-        } else {
-            if let clearIconLayer = self.clearIconLayer {
-                self.clearIconLayer = nil
-                clearIconLayer.removeFromSuperlayer()
-            }
-            if let tintClearIconLayer = self.tintClearIconLayer {
-                self.tintClearIconLayer = nil
-                tintClearIconLayer.removeFromSuperlayer()
-            }
-        }
+        self.clearIconLayer?.frame = CGRect(origin: CGPoint(x: constrainedSize.width - clearSize.width, y: floorToScreenPixels((textSize.height - clearSize.height) / 2.0)), size: clearSize)
         
         var size: CGSize
         size = CGSize(width: constrainedSize.width, height: constrainedSize.height)

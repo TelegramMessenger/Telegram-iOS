@@ -1193,22 +1193,25 @@ open class NavigationController: UINavigationController, ContainableController, 
                     split.isInFocus = true
                 }
                 
+                var masterTopHasOpaque = topHasOpaque
+                var detailTopHasOpaque = topHasOpaque
+                
                 if let controller = split.masterControllers.last {
-                    if topHasOpaque {
+                    if masterTopHasOpaque {
                         controller.displayNode.accessibilityElementsHidden = true
                     } else {
                         if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
-                            topHasOpaque = true
+                            masterTopHasOpaque = true
                         }
                         controller.displayNode.accessibilityElementsHidden = false
                     }
                 }
                 if let controller = split.detailControllers.last {
-                    if topHasOpaque {
+                    if detailTopHasOpaque {
                         controller.displayNode.accessibilityElementsHidden = true
                     } else {
                         if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
-                            topHasOpaque = true
+                            detailTopHasOpaque = true
                         }
                         controller.displayNode.accessibilityElementsHidden = false
                     }
@@ -1351,10 +1354,24 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
-        var controllers = controllers
-        controllers.append(controller)
-        self.setViewControllers(controllers, animated: animated)
-        completion()
+        let action = { [weak self] in
+            guard let self else {
+                return
+            }
+            var controllers = controllers
+            controllers.append(controller)
+            self.setViewControllers(controllers, animated: animated)
+            completion()
+        }
+        if let rootContainer = self.rootContainer, case let .split(container) = rootContainer, let topController = container.detailControllers.last {
+            if topController.attemptNavigation({
+                action()
+            }) {
+                action()
+            }
+        } else {
+            action()
+        }
     }
     
     public func replaceControllers(controllers: [UIViewController], animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {

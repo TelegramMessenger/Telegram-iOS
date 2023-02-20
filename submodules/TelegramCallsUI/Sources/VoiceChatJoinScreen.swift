@@ -690,6 +690,11 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         self.contentOffsetUpdated = f
     }
     
+    func updateTheme(_ theme: PresentationTheme) {
+        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)
+        self.countNode.attributedText = NSAttributedString(string: self.countNode.attributedText?.string ?? "", font: Font.regular(16.0), textColor: theme.actionSheet.secondaryTextColor)
+    }
+    
     func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let sideInset: CGFloat = 16.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))

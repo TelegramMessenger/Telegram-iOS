@@ -388,8 +388,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
-        contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
-        
+        if let inputHeight = layout.inputHeight, inputHeight > 0.0, case .compact = layout.metrics.widthClass {
+            contentHeight = titleHeight + 52.0 + 17.0 + pickerHeight + inputHeight
+            buttonOffset = 0.0
+        } else {
+            contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
+        }
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
@@ -419,7 +423,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight))
         
         let onlineButtonHeight = self.onlineButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.onlineButton, frame: CGRect(x: buttonInset, y: contentHeight - onlineButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: onlineButtonHeight))
+        transition.updateFrame(node: self.onlineButton, frame: CGRect(x: buttonInset, y: contentHeight - onlineButtonHeight - cleanInsets.bottom - 16.0, width: contentFrame.width, height: onlineButtonHeight))
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         

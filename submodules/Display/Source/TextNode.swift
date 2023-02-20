@@ -1654,7 +1654,7 @@ open class TextNode: ASDisplayNode {
             return (layout, {
                 node.cachedLayout = layout
                 if updated {
-                    if layout.size.width.isZero && layout.size.height.isZero {
+                    if layout.size.width.isZero || layout.size.height.isZero {
                         node.contents = nil
                     }
                     node.setNeedsDisplay()

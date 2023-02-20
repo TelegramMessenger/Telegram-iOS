@@ -2276,6 +2276,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         if let closestItem = closestItem, let closestItemNode = self.visibleItemNodes[closestItem.index] as? ReactionNode {
+            if let expandItemView = self.expandItemView, expandItemView.frame.insetBy(dx: -20.0, dy: -20.0).contains(scrollPoint) {
+                return nil
+            }
             return closestItemNode.item
         }
         return nil
