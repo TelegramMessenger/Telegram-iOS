@@ -423,14 +423,14 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         self.isAvatar = ((adjustments as? TGVideoEditAdjustments)?.documentId ?? 0) != 0
         
         var renderEntities: [LegacyPaintEntity] = []
-        if let account = account, let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
+        if let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
             let entities = decodeDrawingEntities(data: entitiesData)
             for entity in entities {
-                if let sticker = entity as? DrawingStickerEntity {
+                if let sticker = entity as? DrawingStickerEntity, let account {
                     renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
                 } else if let text = entity as? DrawingTextEntity {
                     renderEntities.append(LegacyPaintTextEntity(entity: text))
-                    if let renderSubEntities = text.renderSubEntities {
+                    if let renderSubEntities = text.renderSubEntities, let account {
                         for entity in renderSubEntities {
                             renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
                         }

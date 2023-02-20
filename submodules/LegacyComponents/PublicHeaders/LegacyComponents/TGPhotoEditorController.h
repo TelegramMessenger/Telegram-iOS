@@ -86,7 +86,7 @@ typedef enum {
 
 - (void)setToolbarHidden:(bool)hidden animated:(bool)animated;
 
-+ (TGPhotoEditorTab)defaultTabsForAvatarIntent;
++ (TGPhotoEditorTab)defaultTabsForAvatarIntent:(bool)hasStickers;
 
 - (NSTimeInterval)currentTime;
 - (void)setMinimalVideoDuration:(NSTimeInterval)duration;

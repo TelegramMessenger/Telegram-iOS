@@ -1986,7 +1986,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     if (_intent == TGCameraControllerSignupAvatarIntent) {
         intent = TGPhotoEditorControllerSignupAvatarIntent;
     }
-    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:input intent:(TGPhotoEditorControllerFromCameraIntent | intent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:input intent:(TGPhotoEditorControllerFromCameraIntent | intent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent:_intent != TGCameraControllerSignupAvatarIntent] selectedTab:TGPhotoEditorCropTab];
     controller.stickersContext = _stickersContext;
     __weak TGPhotoEditorController *weakController = controller;
     controller.beginTransitionIn = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
