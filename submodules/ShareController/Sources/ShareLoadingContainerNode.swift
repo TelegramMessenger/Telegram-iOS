@@ -27,7 +27,7 @@ protocol ShareLoadingContainer: ASDisplayNode {
 public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode, ShareLoadingContainer {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     private let activityIndicator: ActivityIndicator
     private let statusNode: RadialStatusNode
     private let doneStatusNode: RadialStatusNode
@@ -78,6 +78,10 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
         self.contentOffsetUpdated = f
     }
     
+    public func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+    }
+    
     public func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let nodeHeight: CGFloat = 125.0
         
@@ -98,7 +102,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
 public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareContentContainerNode, ShareLoadingContainer {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     private let strings: PresentationStrings
     
     private let animationNode: AnimatedStickerNode
@@ -269,6 +273,10 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
     
     deinit {
         self.animationStatusDisposable.dispose()
+    }
+    
+    public func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
     }
     
     public func activate() {

@@ -246,7 +246,7 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
         }
     }
     
-    func dismissConfirmation() {
+    public func dismissConfirmation() {
         self.confirmationController?.dismissAnimated()
         self.confirmationController = nil
     }

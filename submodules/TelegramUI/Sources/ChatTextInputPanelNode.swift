@@ -1064,6 +1064,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 let textFieldWaitsForTouchUp: Bool
                 if case .regular = metrics.widthClass, bottomInset.isZero {
                     textFieldWaitsForTouchUp = true
+                } else if !textInputNode.textView.text.isEmpty {
+                    textFieldWaitsForTouchUp = true
                 } else {
                     textFieldWaitsForTouchUp = false
                 }
@@ -1700,7 +1702,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         hideInfo = true
                     }
                 case .waitingForPreview:
-                    break
+                    Queue.mainQueue().after(0.3, {
+                        self.actionButtons.micButton.audioRecorder = nil
+                    })
                 }
             }
             

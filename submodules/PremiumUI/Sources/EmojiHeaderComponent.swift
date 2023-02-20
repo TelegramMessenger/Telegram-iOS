@@ -110,7 +110,9 @@ class EmojiHeaderComponent: Component {
             }
                         
             self.statusView.isHidden = false
-            containerView = containerView.subviews[1].subviews[1]
+            if containerView.subviews.count > 1 && containerView.subviews[1].subviews.count > 1 {
+                containerView = containerView.subviews[1].subviews[1]
+            }
             
             let initialPosition = self.statusView.center
             let targetPosition = self.statusView.superview!.convert(self.statusView.center, to: containerView)

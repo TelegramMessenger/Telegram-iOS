@@ -14576,33 +14576,50 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peerId = self.chatLocation.peerId else {
             return
         }
+        
+        var isScheduledMessages = false
+        if case .scheduledMessages = self.presentationInterfaceState.subject {
+            isScheduledMessages = true
+        }
 
-        let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
-
-        if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
-            self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.collapseInput()
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        var state = state
-                        state = state.updatedInterfaceState { interfaceState in
-                            var interfaceState = interfaceState
-                            interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
-                            interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
-                            interfaceState = interfaceState.withUpdatedComposeDisableUrlPreview(nil)
-                            return interfaceState
-                        }
-                        state = state.updatedInputMode { current in
-                            if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
-                                return .media(mode: mode, expanded: nil, focused: focused)
+        let sendMessage: (Int32?) -> Void = { [weak self] scheduleTime in
+            guard let self else {
+                return
+            }
+            let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
+            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
+                self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            var state = state
+                            state = state.updatedInterfaceState { interfaceState in
+                                var interfaceState = interfaceState
+                                interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
+                                interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+                                interfaceState = interfaceState.withUpdatedComposeDisableUrlPreview(nil)
+                                return interfaceState
                             }
-                            return current
-                        }
-                        return state
-                    })
-                }
-            }, nil)
+                            state = state.updatedInputMode { current in
+                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
+                                    return .media(mode: mode, expanded: nil, focused: focused)
+                                }
+                                return current
+                            }
+                            return state
+                        })
+                    }
+                }, nil)
+            }
+        }
+        
+        if isScheduledMessages {
+            self.presentScheduleTimePicker(style: .default, dismissByTapOutside: false, completion: { time in
+                sendMessage(time)
+            })
+        } else {
+            sendMessage(nil)
         }
     }
     
@@ -14750,6 +14767,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.chatDisplayNode.updateRecordedMediaDeleted(true)
                     self.audioRecorder.set(.single(nil))
                 case .preview:
+                    self.audioRecorder.set(.single(nil))
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in
                             return panelState.withUpdatedMediaRecordingState(.waitingForPreview)
@@ -14779,7 +14797,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     })
-                    self.audioRecorder.set(.single(nil))
                 case .send:
                     self.chatDisplayNode.updateRecordedMediaDeleted(false)
                     let _ = (audioRecorderValue.takenRecordedData()

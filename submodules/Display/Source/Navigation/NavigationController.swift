@@ -1354,10 +1354,24 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
-        var controllers = controllers
-        controllers.append(controller)
-        self.setViewControllers(controllers, animated: animated)
-        completion()
+        let action = { [weak self] in
+            guard let self else {
+                return
+            }
+            var controllers = controllers
+            controllers.append(controller)
+            self.setViewControllers(controllers, animated: animated)
+            completion()
+        }
+        if let rootContainer = self.rootContainer, case let .split(container) = rootContainer, let topController = container.detailControllers.last {
+            if topController.attemptNavigation({
+                action()
+            }) {
+                action()
+            }
+        } else {
+            action()
+        }
     }
     
     public func replaceControllers(controllers: [UIViewController], animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {

@@ -183,6 +183,10 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.contentOffsetUpdated = f
     }
     
+    func updateTheme(_ theme: PresentationTheme) {
+    
+    }
+    
     func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let showPeers = !self.peerNodes.isEmpty && !isLandscape
         var nodeHeight: CGFloat = (!showPeers ? 236.0 : 320.0)
@@ -283,7 +287,7 @@ public enum ShareLoadingState {
 public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     private let activityIndicator: ActivityIndicator
     
     public init(theme: PresentationTheme) {
@@ -306,6 +310,11 @@ public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareCont
     
     public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
         self.contentOffsetUpdated = f
+    }
+    
+    public func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.activityIndicator.type = .custom(theme.actionSheet.controlAccentColor, 22.0, 2.0, false)
     }
     
     public func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -524,6 +524,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         self.actionButtonNode.badgeBackgroundColor = presentationData.theme.actionSheet.controlAccentColor
         self.actionButtonNode.badgeTextColor = presentationData.theme.actionSheet.opaqueItemBackgroundColor
+        
+        self.contentNode?.updateTheme(presentationData.theme)
     }
     
     func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false, animated: Bool = true) {
