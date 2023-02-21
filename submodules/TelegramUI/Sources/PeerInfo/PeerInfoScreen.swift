@@ -8925,7 +8925,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let offsetY = self.scrollNode.view.contentOffset.y
         
         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
-            let bottomOffsetY = max(0.0, self.scrollNode.view.contentSize.height + min(83.0, self.scrollNode.view.contentInset.bottom) - offsetY - self.scrollNode.frame.height)
+            var bottomInset = self.scrollNode.view.contentInset.bottom
+            if let layout = self.validLayout?.0, case .compact = layout.metrics.widthClass {
+                bottomInset = min(83.0, bottomInset)
+            }
+            let bottomOffsetY = max(0.0, self.scrollNode.view.contentSize.height + bottomInset - offsetY - self.scrollNode.frame.height)
             let backgroundAlpha: CGFloat = min(30.0, bottomOffsetY) / 30.0
             
             if let tabBarController = self.controller?.parent as? TabBarController {

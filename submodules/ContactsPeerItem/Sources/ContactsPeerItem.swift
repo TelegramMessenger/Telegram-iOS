@@ -789,10 +789,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     case .none:
                         break
                     case let .presence(presence, dateTimeFormat):
-                        userPresence = presence
-                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
-                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                        if case let .peer(peer, _) = item.peer, let peer, case let .user(user) = peer, user.botInfo != nil {
+                            statusAttributedString = NSAttributedString(string: item.presentationData.strings.Bot_GenericBotStatus, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        } else {
+                            userPresence = presence
+                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                            let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
+                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                        }
                     case let .addressName(suffix):
                         if let addressName = peer.addressName {
                             let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.presentationData.theme.list.itemAccentColor)
