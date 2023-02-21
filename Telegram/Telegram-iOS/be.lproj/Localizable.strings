@@ -117,5 +117,7 @@
 "SecretPasscode.AccountListTitle" = "Акаўнты";
 "SecretPasscode.AccountSelectionTitle" = "Абярыце акаўнт";
 
+"PasscodeAttempts.TryAgainIn" = "Абарона ад атак грубай сілай. Паспрабуйце зноў праз %@.";
+
 "Share.LockedTitle" = "Разблакіруйце Telegram";
 "Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";

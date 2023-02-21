@@ -135,13 +135,15 @@ public func updatePtgSecretPasscodes(_ accountManager: AccountManager<TelegramAc
 
 public func isSecretPasscodeTimedout(timeout: Int32, state: LockState) -> Bool {
     if let applicationActivityTimestamp = state.applicationActivityTimestamp {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+        let timestamp = MonotonicTimestamp()
         
-        if bootTimestamp != applicationActivityTimestamp.bootTimestamp {
+        if timestamp.bootTimestamp.absDiff(with: applicationActivityTimestamp.bootTimestamp) > 0.1 {
             return true
         }
-        if uptime >= applicationActivityTimestamp.uptime + timeout {
+        if timestamp.uptime < applicationActivityTimestamp.uptime {
+            return true
+        }
+        if timestamp.uptime >= applicationActivityTimestamp.uptime + timeout {
             return true
         }
         

@@ -48,6 +48,7 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case badPasscodeAttempts = 101
     case ptgSettings = 102
     case ptgSecretPasscodes = 103
+    case ptgPasscodeAttempts = 104
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -76,6 +77,7 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let badPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.badPasscodeAttempts.rawValue)
     public static let ptgSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgSettings.rawValue)
     public static let ptgSecretPasscodes = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgSecretPasscodes.rawValue)
+    public static let ptgPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgPasscodeAttempts.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {

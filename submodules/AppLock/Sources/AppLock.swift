@@ -15,17 +15,18 @@ import AppLockState
 import PassKit
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState) -> Bool {
-    if state.isManuallyLocked {
+    if state.isLocked {
         return true
     } else if let autolockTimeout = passcodeSettings.autolockTimeout {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+        let timestamp = MonotonicTimestamp()
         
         let applicationActivityTimestamp = state.applicationActivityTimestamp
         
         if let applicationActivityTimestamp = applicationActivityTimestamp {
-            if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
+            if timestamp.bootTimestamp.absDiff(with: applicationActivityTimestamp.bootTimestamp) > 0.1 {
+                return true
+            }
+            if timestamp.uptime < applicationActivityTimestamp.uptime {
                 return true
             }
             if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {
@@ -148,10 +149,10 @@ public final class AppLockContextImpl: AppLockContext {
                         // timeout = 10 has special meaning: it fires immediately if app goes to background.
                         // Actually firing when app comes FROM background so that user using Share extension has a chance to complete sharing in this case.
                         
-                        if accessChallengeData.data.isLockable && passcodeSettings.autolockTimeout == 10 && !state.isManuallyLocked {
+                        if accessChallengeData.data.isLockable && passcodeSettings.autolockTimeout == 10 && !state.isLocked {
                             strongSelf.updateLockState { state in
                                 var state = state
-                                state.isManuallyLocked = true
+                                state.isLocked = true
                                 return state
                             }
                             return
@@ -190,7 +191,7 @@ public final class AppLockContextImpl: AppLockContext {
                 if !appInForeground {
                     if let autolockTimeout = passcodeSettings.autolockTimeout {
                         strongSelf.autolockReportTimeout.set(autolockTimeout)
-                    } else if state.isManuallyLocked {
+                    } else if state.isLocked {
                         strongSelf.autolockReportTimeout.set(1)
                     } else {
                         strongSelf.autolockReportTimeout.set(nil)
@@ -202,6 +203,17 @@ public final class AppLockContextImpl: AppLockContext {
                 strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
                 if isLocked(passcodeSettings: passcodeSettings, state: state) {
+                    if !state.isLocked {
+                        // save locked state to prevent bypassing lock by tampering with device time
+                        Queue.mainQueue().justDispatch {
+                            self?.updateLockState { state in
+                                var state = state
+                                state.isLocked = true
+                                return state
+                            }
+                        }
+                    }
+                    
                     isCurrentlyLocked = true
                     
                     let biometrics: PasscodeEntryControllerBiometricsMode
@@ -533,11 +545,8 @@ public final class AppLockContextImpl: AppLockContext {
     
     private func updateApplicationActivityTimestamp() {
         self.updateLockState { state in
-            var bootTimestamp: Int32 = 0
-            let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-            
             var state = state
-            state.applicationActivityTimestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+            state.applicationActivityTimestamp = MonotonicTimestamp()
             return state
         }
     }
@@ -585,7 +594,7 @@ public final class AppLockContextImpl: AppLockContext {
     public func lock() {
         self.updateLockState { state in
             var state = state
-            state.isManuallyLocked = true
+            state.isLocked = true
             return state
         }
         
@@ -605,12 +614,9 @@ public final class AppLockContextImpl: AppLockContext {
                 
                 state.unlockAttempts = nil
                 
-                state.isManuallyLocked = false
+                state.isLocked = false
                 
-                var bootTimestamp: Int32 = 0
-                let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-                let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
-                state.applicationActivityTimestamp = timestamp
+                state.applicationActivityTimestamp = MonotonicTimestamp()
                 
                 return state
             }
@@ -620,15 +626,11 @@ public final class AppLockContextImpl: AppLockContext {
     public func failedUnlockAttempt() {
         self.updateLockState { state in
             var state = state
-            var unlockAttempts = state.unlockAttempts ?? UnlockAttempts(count: 0, timestamp: MonotonicTimestamp(bootTimestamp: 0, uptime: 0))
+            var unlockAttempts = state.unlockAttempts ?? UnlockAttempts(count: 0, timestamp: MonotonicTimestamp())
             
             unlockAttempts.count += 1
             
-            var bootTimestamp: Int32 = 0
-            let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-            let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
-            
-            unlockAttempts.timestamp = timestamp
+            unlockAttempts.timestamp = MonotonicTimestamp()
             state.unlockAttempts = unlockAttempts
             return state
         }

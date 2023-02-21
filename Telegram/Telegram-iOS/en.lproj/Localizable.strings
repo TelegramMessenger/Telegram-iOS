@@ -83,6 +83,8 @@
 "SecretPasscode.AccountListTitle" = "Accounts";
 "SecretPasscode.AccountSelectionTitle" = "Select Account";
 
+"PasscodeAttempts.TryAgainIn" = "Protection against brute force attacks. Try again in %@.";
+
 "Share.LockedTitle" = "Unlock Telegram";
 "Share.LockedDescription" = "Open and unlock Telegram to share.";
 
