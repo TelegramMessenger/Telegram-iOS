@@ -260,6 +260,9 @@ public struct MediaAutoSaveSettings: Codable, Equatable {
 
 public struct EnergyUsageSettings: Codable, Equatable {
     private enum CodingKeys: CodingKey {
+        case autoplayVideo
+        case autoplayGif
+        case loopStickers
         case loopEmoji
         case playVideoAvatars
         case fullTranslucency
@@ -270,6 +273,9 @@ public struct EnergyUsageSettings: Codable, Equatable {
     
     public static var `default`: EnergyUsageSettings {
         return EnergyUsageSettings(
+            autoplayVideo: true,
+            autoplayGif: true,
+            loopStickers: true,
             loopEmoji: true,
             playVideoAvatars: true,
             fullTranslucency: true,
@@ -279,6 +285,9 @@ public struct EnergyUsageSettings: Codable, Equatable {
         )
     }
     
+    public var autoplayVideo: Bool
+    public var autoplayGif: Bool
+    public var loopStickers: Bool
     public var loopEmoji: Bool
     public var playVideoAvatars: Bool
     public var fullTranslucency: Bool
@@ -287,6 +296,9 @@ public struct EnergyUsageSettings: Codable, Equatable {
     public var autodownloadInBackground: Bool
     
     public init(
+        autoplayVideo: Bool,
+        autoplayGif: Bool,
+        loopStickers: Bool,
         loopEmoji: Bool,
         playVideoAvatars: Bool,
         fullTranslucency: Bool,
@@ -294,6 +306,9 @@ public struct EnergyUsageSettings: Codable, Equatable {
         synchronizeInBackground: Bool,
         autodownloadInBackground: Bool
     ) {
+        self.autoplayVideo = autoplayVideo
+        self.autoplayGif = autoplayGif
+        self.loopStickers = loopStickers
         self.loopEmoji = loopEmoji
         self.playVideoAvatars = playVideoAvatars
         self.fullTranslucency = fullTranslucency
@@ -305,6 +320,9 @@ public struct EnergyUsageSettings: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
+        self.autoplayVideo = try container.decodeIfPresent(Bool.self, forKey: .autoplayVideo) ?? EnergyUsageSettings.default.autoplayVideo
+        self.autoplayGif = try container.decodeIfPresent(Bool.self, forKey: .autoplayGif) ?? EnergyUsageSettings.default.autoplayGif
+        self.loopStickers = try container.decodeIfPresent(Bool.self, forKey: .loopStickers) ?? EnergyUsageSettings.default.loopStickers
         self.loopEmoji = try container.decodeIfPresent(Bool.self, forKey: .loopEmoji) ?? EnergyUsageSettings.default.loopEmoji
         self.playVideoAvatars = try container.decodeIfPresent(Bool.self, forKey: .playVideoAvatars) ?? EnergyUsageSettings.default.playVideoAvatars
         self.fullTranslucency = try container.decodeIfPresent(Bool.self, forKey: .fullTranslucency) ?? EnergyUsageSettings.default.fullTranslucency
@@ -316,7 +334,10 @@ public struct EnergyUsageSettings: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
+        try container.encode(self.autoplayVideo, forKey: .autoplayVideo)
+        try container.encode(self.autoplayGif, forKey: .autoplayGif)
         try container.encode(self.loopEmoji, forKey: .loopEmoji)
+        try container.encode(self.loopStickers, forKey: .loopStickers)
         try container.encode(self.playVideoAvatars, forKey: .playVideoAvatars)
         try container.encode(self.fullTranslucency, forKey: .fullTranslucency)
         try container.encode(self.extendBackgroundWork, forKey: .extendBackgroundWork)
