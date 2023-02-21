@@ -93,10 +93,13 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         [_wrapperView addSubview:_fullPaintingView];
         
         _entitiesWrapperView = [[UIView alloc] init];
-        _fullEntitiesView = fullEntitiesView;
-        _fullEntitiesView.frame = CGRectMake(0.0, 0.0, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
-        _entitiesWrapperView.frame = _fullEntitiesView.frame;
-        
+        if (fullEntitiesView != nil) {
+            _fullEntitiesView = fullEntitiesView;
+            _fullEntitiesView.frame = CGRectMake(0.0, 0.0, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
+            _entitiesWrapperView.frame = _fullEntitiesView.frame;
+        } else {
+            _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _fullPreviewView.frame.size.width, _fullPreviewView.frame.size.height);
+        }
         CGFloat entitiesScale = _fullPreviewView.frame.size.width / _entitiesWrapperView.frame.size.width;
         _entitiesWrapperView.transform = CGAffineTransformMakeScale(entitiesScale, entitiesScale);
         _entitiesWrapperView.frame = _fullPreviewView.frame;

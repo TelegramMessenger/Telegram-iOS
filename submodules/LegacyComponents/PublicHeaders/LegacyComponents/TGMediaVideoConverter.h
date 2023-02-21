@@ -49,7 +49,7 @@
 @interface TGMediaVideoConversionPresetSettings : NSObject
 
 + (CGSize)maximumSizeForPreset:(TGMediaVideoConversionPreset)preset;
-+ (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions;
++ (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions frameRate:(int32_t)frameRate;
 + (NSDictionary *)audioSettingsForPreset:(TGMediaVideoConversionPreset)preset;
 
 @end

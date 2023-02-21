@@ -175,8 +175,9 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                     }
                     for peerId in data.excludePeers {
                         if let (tag, peerCount, _, groupIdValue, isMuted) = peerTagAndCount[peerId], peerCount != 0, let groupId = groupIdValue {
-                            var matches = true
+                            var matches = false
                             if tags.contains(tag) {
+                                matches = true
                                 if isMuted && data.excludeMuted {
                                     matches = false
                                 }

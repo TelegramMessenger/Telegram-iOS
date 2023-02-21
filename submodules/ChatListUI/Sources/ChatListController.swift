@@ -968,7 +968,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             strongSelf.setInlineChatList(location: .forum(peerId: channel.id))
                         }
                     } else {
-                        if let threadId = threadId {
+                        if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId {
                             let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             strongSelf.chatListDisplayNode.clearHighlightAnimated(true)
                         } else {
@@ -1069,7 +1069,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if case .chatList(.root) = strongSelf.location {
                                 navigationAnimationOptions = .removeOnMasterDetails
                             }
-                            if let threadId = threadId  {
+                            if case let .channel(channel) = actualPeer, channel.flags.contains(.isForum), let threadId {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
@@ -1102,7 +1102,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if case .chatList(.root) = strongSelf.location {
                                 navigationAnimationOptions = .removeOnMasterDetails
                             }
-                            if let threadId = threadId  {
+                            if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), purposefulAction: { [weak self] in
@@ -1512,6 +1512,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 }
                             })
                         })))
+                        
+                        if let filterEntries = strongSelf.tabContainerData?.0 {
+                            for filter in filterEntries {
+                                if case let .filter(filterId, _, unread) = filter, filterId == id {
+                                    if unread.value > 0 {
+                                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ReadAll, textColor: .primary, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor)
+                                        }, action: { c, f in
+                                            c.dismiss(completion: {
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.readAllInFilter(id: id)
+                                            })
+                                        })))
+                                    }
+                                    break
+                                }
+                            }
+                        }
                         
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_RemoveFolder, textColor: .destructive, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
@@ -2577,6 +2597,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: updatedFilter.flatMap { .filter($0.id) } ?? .all)
             }
         })
+    }
+    
+    private func readAllInFilter(id: Int32) {
+        guard case let .chatList(groupId) = self.chatListDisplayNode.effectiveContainerNode.location else {
+            return
+        }
+        for filter in self.chatListDisplayNode.mainContainerNode.availableFilters {
+            if case let .filter(filter) = filter, case let .filter(filterId, _, _, data) = filter, filterId == id {
+                let filterPredicate = chatListFilterPredicate(filter: data)
+                var markItems: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)] = []
+                markItems.append((groupId, filterPredicate))
+                for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
+                    markItems.append((EngineChatList.Group(additionalGroupId), filterPredicate))
+                }
+                
+                let _ = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems).start()
+                break
+            }
+        }
     }
     
     private func askForFilterRemoval(id: Int32) {

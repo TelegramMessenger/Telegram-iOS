@@ -277,6 +277,7 @@ public enum ResolvedUrl {
     case inaccessiblePeer
     case botStart(peer: Peer, payload: String)
     case groupBotStart(peerId: PeerId, payload: String, adminRights: ResolvedBotAdminRights?)
+    case gameStart(peerId: PeerId, game: String)
     case channelMessage(peer: Peer, messageId: MessageId, timecode: Double?)
     case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
     case replyThread(messageId: MessageId)

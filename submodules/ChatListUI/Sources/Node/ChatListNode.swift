@@ -1648,6 +1648,10 @@ public final class ChatListNode: ListView {
                         guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
                         
                         if let peer = peer.peer {
+                            if peer.id.isReplies {
+                                return false
+                            }
+                            
                             switch peer {
                             case let .user(user):
                                 if user.botInfo != nil {

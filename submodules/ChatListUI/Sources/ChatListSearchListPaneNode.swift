@@ -2461,7 +2461,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)))
-                
+                if strongSelf.backgroundColor != nil {
+                    strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
+                }
                 strongSelf.listNode.forEachItemHeaderNode({ itemHeaderNode in
                     if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
                         itemHeaderNode.updateTheme(theme: presentationData.theme)

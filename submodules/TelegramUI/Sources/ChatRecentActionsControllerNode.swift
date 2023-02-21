@@ -975,6 +975,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .groupBotStart:
                         break
+                    case .gameStart:
+                        break
                     case let .channelMessage(peer, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))

@@ -80,3 +80,7 @@ public func isBoldTextEnabled() -> Signal<Bool, NoError> {
     }
     |> runOn(Queue.mainQueue())
 }
+
+public func isReduceTransparencyEnabled() -> Bool {
+    UIAccessibility.isReduceTransparencyEnabled
+}
