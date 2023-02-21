@@ -1400,7 +1400,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }
         
-        /*let timestamp = Int(CFAbsoluteTimeGetCurrent())
+        let timestamp = Int(CFAbsoluteTimeGetCurrent())
         let minReindexTimestamp = timestamp - 2 * 24 * 60 * 60
         if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= minReindexTimestamp {
         } else {
@@ -1410,7 +1410,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let _ = self.runCacheReindexTasks(lowImpact: true, completion: {
                 Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground — done")
             })
-        }*/
+        }
         
         if #available(iOS 12.0, *) {
             UIApplication.shared.registerForRemoteNotifications()
