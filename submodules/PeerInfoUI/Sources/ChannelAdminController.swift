@@ -1100,11 +1100,11 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         return
                     }
                     
-                    if updateFlags != currentFlags {
+                    if let updateFlags, updateFlags != currentFlags {
                         updateState { current in
                             return current.withUpdatedUpdating(true)
                         }
-                        updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags ?? []), rank: effectiveRank) |> deliverOnMainQueue).start(error: { error in
+                        updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: effectiveRank) |> deliverOnMainQueue).start(error: { error in
                             updateState { current in
                                 return current.withUpdatedUpdating(false)
                             }
@@ -1145,7 +1145,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             }
                             presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }, completed: {
-                            updated(TelegramChatAdminRights(rights: updateFlags ?? []))
+                            updated(TelegramChatAdminRights(rights: updateFlags))
                             dismissImpl?()
                         }))
                     } else if let updateRank = updateRank, let currentFlags = currentFlags {

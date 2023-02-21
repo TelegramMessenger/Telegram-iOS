@@ -162,6 +162,26 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             dismissInput()
             navigationController?.pushViewController(controller)
+        case let .gameStart(peerId, game):
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title, selectForumThreads: true))
+            controller.peerSelected = { [weak controller] peer, _ in
+                let peerId = peer.id
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                if let peer = peer as? TelegramUser {
+                    text = presentationData.strings.Target_ShareGameConfirmationPrivate(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                } else {
+                    text = presentationData.strings.Target_ShareGameConfirmationGroup(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                }
+                
+                let alertController = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
+                    controller?.dismiss()
+                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                })])
+                present(alertController, nil)
+            }
+            dismissInput()
+            navigationController?.pushViewController(controller)
         case let .channelMessage(peer, messageId, timecode):
             openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: true, timecode: timecode), peekData: nil))
         case let .replyThreadMessage(replyThreadMessage, messageId):

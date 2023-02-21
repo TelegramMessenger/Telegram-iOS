@@ -544,122 +544,142 @@ public final class InviteLinkViewController: ViewController {
                     return
                 }
                 
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                var items: [ContextMenuItem] = []
-
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextCopy, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak self] _, f in
-                    f(.dismissWithoutContent)
-                    
-                    UIPasteboard.general.string = invite.link
-  
-                    self?.controller?.dismissAllTooltips()
-                    
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                })))
+                var creatorIsBot: Signal<Bool, NoError>
+                if case let .link(_, _, _, _, _, adminId, _, _, _, _, _, _) = invite {
+                    creatorIsBot = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: adminId))
+                    |> map { peer -> Bool in
+                        if let peer, case let .user(user) = peer, user.botInfo != nil {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                } else {
+                    creatorIsBot = .single(false)
+                }
                 
-                if invite.isRevoked {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextDelete, textColor: .destructive, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                let _ = (creatorIsBot
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { creatorIsBot in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    var items: [ContextMenuItem] = []
+
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextCopy, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, f in
                         f(.dismissWithoutContent)
                         
-                        let controller = ActionSheetController(presentationData: presentationData)
-                        let dismissAction: () -> Void = { [weak controller] in
-                            controller?.dismissAnimated()
-                        }
-                        controller.setItemGroups([
-                            ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Text),
-                                ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
-                                    dismissAction()
-                                    self?.controller?.dismiss()
-                                    
-                                    if let inviteLink = invite.link {
-                                        let _ = (context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start()
-                                    }
-                                    
-                                    self?.controller?.revokedInvitationsContext?.remove(invite)
-                                })
-                            ]),
-                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                        ])
-                        self?.controller?.present(controller, in: .window(.root))
+                        UIPasteboard.general.string = invite.link
+      
+                        self?.controller?.dismissAllTooltips()
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     })))
-                } else {
-                    if !invitationAvailability(invite).isZero {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
+                    
+                    if invite.isRevoked {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextDelete, textColor: .destructive, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             
-                            let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                                guard let strongSelf = self, let parentController = strongSelf.controller else {
-                                    return
-                                }
-                                let isGroup: Bool
-                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                    isGroup = false
-                                } else {
-                                    isGroup = true
-                                }
-                                let updatedPresentationData = (strongSelf.presentationData, parentController.presentationDataPromise.get())
-                                strongSelf.controller?.present(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), in: .window(.root))
-                            })
-                        })))
-                    }
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
-                    }, action: { [weak self] _, f in
-                        f(.dismissWithoutContent)
-                        
-                        let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                        |> deliverOnMainQueue).start(next: { peer in
-                            let isGroup: Bool
-                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                isGroup = false
-                            } else {
-                                isGroup = true
-                            }
                             let controller = ActionSheetController(presentationData: presentationData)
                             let dismissAction: () -> Void = { [weak controller] in
                                 controller?.dismissAnimated()
                             }
                             controller.setItemGroups([
                                 ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
-                                    ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                                    ActionSheetTextItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Text),
+                                    ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
                                         dismissAction()
                                         self?.controller?.dismiss()
-
+                                        
                                         if let inviteLink = invite.link {
-                                            let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start(next: { result in
-                                                if case let .replace(_, newInvite) = result {
-                                                    self?.controller?.invitationsContext?.add(newInvite)
-                                                }
-                                            })
+                                            let _ = (context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start()
                                         }
                                         
-                                        self?.controller?.invitationsContext?.remove(invite)
-                                        let revokedInvite = invite.withUpdated(isRevoked: true)
-                                        self?.controller?.revokedInvitationsContext?.add(revokedInvite)
-                                        
-                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                        self?.controller?.revokedInvitationsContext?.remove(invite)
                                     })
                                 ]),
                                 ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                             ])
                             self?.controller?.present(controller, in: .window(.root))
-                        })
-                    })))
-                }
-                           
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-                self?.controller?.presentInGlobalOverlay(contextController)
+                        })))
+                    } else {
+                        if !invitationAvailability(invite).isZero {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                    guard let strongSelf = self, let parentController = strongSelf.controller else {
+                                        return
+                                    }
+                                    let isGroup: Bool
+                                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                        isGroup = false
+                                    } else {
+                                        isGroup = true
+                                    }
+                                    let updatedPresentationData = (strongSelf.presentationData, parentController.presentationDataPromise.get())
+                                    strongSelf.controller?.present(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), in: .window(.root))
+                                })
+                            })))
+                        }
+                        if !creatorIsBot {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                let _ = (context.account.postbox.loadedPeerWithId(peerId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    let isGroup: Bool
+                                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                        isGroup = false
+                                    } else {
+                                        isGroup = true
+                                    }
+                                    let controller = ActionSheetController(presentationData: presentationData)
+                                    let dismissAction: () -> Void = { [weak controller] in
+                                        controller?.dismissAnimated()
+                                    }
+                                    controller.setItemGroups([
+                                        ActionSheetItemGroup(items: [
+                                            ActionSheetTextItem(title: isGroup ? presentationData.strings.GroupInfo_InviteLink_RevokeAlert_Text : presentationData.strings.ChannelInfo_InviteLink_RevokeAlert_Text),
+                                            ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
+                                                dismissAction()
+                                                self?.controller?.dismiss()
+                                                
+                                                if let inviteLink = invite.link {
+                                                    let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start(next: { result in
+                                                        if case let .replace(_, newInvite) = result {
+                                                            self?.controller?.invitationsContext?.add(newInvite)
+                                                        }
+                                                    })
+                                                }
+                                                
+                                                self?.controller?.invitationsContext?.remove(invite)
+                                                let revokedInvite = invite.withUpdated(isRevoked: true)
+                                                self?.controller?.revokedInvitationsContext?.add(revokedInvite)
+                                                
+                                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                            })
+                                        ]),
+                                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                                    ])
+                                    self?.controller?.present(controller, in: .window(.root))
+                                })
+                            })))
+                        }
+                    }
+                               
+                    let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                    self?.controller?.presentInGlobalOverlay(contextController)
+                })
             })
             
             let previousEntries = Atomic<[InviteLinkViewEntry]?>(value: nil)

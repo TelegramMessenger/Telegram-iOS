@@ -67,6 +67,7 @@ public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String, ResolvedBotAdminRights?)
     case attachBotStart(String, String?)
+    case gameStart(String)
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
@@ -212,7 +213,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     }
                                     return .peer(.name(peerName), .groupBotStart(value, botAdminRights))
                                 } else if queryItem.name == "game" {
-                                    return nil
+                                    return .peer(.name(peerName), .gameStart(value))
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     return .peer(.name(peerName), .voiceChat(value))
                                 } else if queryItem.name == "startattach" {
@@ -582,6 +583,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.botStart(peer: peer, payload: payload))
                             case let .groupBotStart(payload, adminRights):
                                 return .single(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights))
+                            case let .gameStart(game):
+                                return .single(.gameStart(peerId: peer.id, game: game))
                             case let .attachBotStart(name, payload):
                                 return context.engine.peers.resolvePeerByName(name: name)
                                 |> take(1)

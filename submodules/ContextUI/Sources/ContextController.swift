@@ -994,15 +994,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let _ = self.presentationNode {
             self.currentPresentationStateTransition = .animateOut(result: initialResult, completion: completion)
             if let validLayout = self.validLayout {
-                if case .custom = initialResult {
+                if case let .custom(transition) = initialResult {
                     self.delayLayoutUpdate = true
-                    Queue.mainQueue().after(0.05) {
+                    Queue.mainQueue().after(0.1) {
                         self.delayLayoutUpdate = false
                         self.updateLayout(
                             layout: validLayout,
-                            transition: .animated(duration: 0.35, curve: .easeInOut),
+                            transition: transition,
                             previousActionsContainerNode: nil
                         )
+                        self.isAnimatingOut = true
                     }
                 } else {
                     self.updateLayout(

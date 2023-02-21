@@ -379,11 +379,11 @@ private func calculateTextFieldRealInsets(presentationInterfaceState: ChatPresen
     return UIEdgeInsets(top: 4.5 + top, left: 0.0, bottom: 5.5 + bottom, right: right)
 }
 
-private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, UIImage)?
-private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackgroundColor: UIColor?, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {
+private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, CGFloat, UIImage)?
+private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackgroundColor: UIColor?, strokeColor: UIColor, diameter: CGFloat, strokeWidth: CGFloat) -> UIImage? {
     if let backgroundColor = backgroundColor, let current = currentTextInputBackgroundImage {
-        if current.0.isEqual(backgroundColor) && current.1.isEqual(strokeColor) && current.2.isEqual(to: diameter) {
-            return current.3
+        if current.0.isEqual(backgroundColor) && current.1.isEqual(strokeColor) && current.2.isEqual(to: diameter) && current.3.isEqual(to: strokeWidth) {
+            return current.4
         }
     }
     
@@ -401,13 +401,12 @@ private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackground
             
         context.setBlendMode(.normal)
         context.setStrokeColor(strokeColor.cgColor)
-        let strokeWidth: CGFloat = UIScreenPixel
         context.setLineWidth(strokeWidth)
         context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: diameter - strokeWidth, height: diameter - strokeWidth))
     })?.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
     if let image = image {
         if let backgroundColor = backgroundColor {
-            currentTextInputBackgroundImage = (backgroundColor, strokeColor, diameter, image)
+            currentTextInputBackgroundImage = (backgroundColor, strokeColor, diameter, strokeWidth, image)
         }
         return image
     } else {
@@ -1290,7 +1289,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 if self.theme == nil || !self.theme!.chat.inputPanel.inputTextColor.isEqual(interfaceState.theme.chat.inputPanel.inputTextColor) {
                     let textColor = interfaceState.theme.chat.inputPanel.inputTextColor
-                    let tintColor = interfaceState.theme.list.itemAccentColor
                     let baseFontSize = max(minInputFontSize, interfaceState.fontSize.baseDisplaySize)
                     
                     if let textInputNode = self.textInputNode {
@@ -1302,10 +1300,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             textInputNode.selectedRange = range
                         }
                         textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(baseFontSize), NSAttributedString.Key.foregroundColor.rawValue: textColor]
-                        textInputNode.tintColor = tintColor
                         
                         self.updateSpoiler()
                     }
+                }
+                
+                let tintColor = interfaceState.theme.list.itemAccentColor
+                if let textInputNode = self.textInputNode, tintColor != textInputNode.tintColor {
+                    textInputNode.tintColor = tintColor
+                    textInputNode.tintColorDidChange()
                 }
                 
                 let keyboardAppearance = interfaceState.theme.rootController.keyboardColor.keyboardAppearance
@@ -1332,15 +1335,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 let textFieldMinHeight = calclulateTextFieldMinHeight(interfaceState, metrics: metrics)
                 let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
                 
+                let strokeWidth: CGFloat
                 let backgroundColor: UIColor
                 if case let .color(color) = interfaceState.chatWallpaper, UIColor(rgb: color).isEqual(interfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
                     backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+                    strokeWidth = 1.0 - UIScreenPixel
                 } else {
                     backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColor
+                    strokeWidth = UIScreenPixel
                 }
                 
-                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, inputBackgroundColor: nil, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
-                self.transparentTextInputBackgroundImage = textInputBackgroundImage(backgroundColor: nil, inputBackgroundColor: interfaceState.theme.chat.inputPanel.inputBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
+                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, inputBackgroundColor: nil, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight, strokeWidth: strokeWidth)
+                self.transparentTextInputBackgroundImage = textInputBackgroundImage(backgroundColor: nil, inputBackgroundColor: interfaceState.theme.chat.inputPanel.inputBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight, strokeWidth: strokeWidth)
                 self.textInputContainerBackgroundNode.image = generateStretchableFilledCircleImage(diameter: minimalInputHeight, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor)
                 
                 self.searchLayoutClearImageNode.image = PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme)

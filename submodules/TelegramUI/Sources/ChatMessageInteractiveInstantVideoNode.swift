@@ -238,7 +238,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
-            var updatedReplyBackgroundNode: NavigationBackgroundNode?
             
             var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
@@ -556,17 +555,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
-            
-            if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
-                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                    updatedReplyBackgroundNode = currentReplyBackgroundNode
-                } else {
-                    updatedReplyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
-                }
-                
-                updatedReplyBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
-            }
-            
+                        
             return (result, { [weak self] layoutData, animation in
                 if let strongSelf = self {
                     strongSelf.item = item
@@ -574,6 +563,17 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.secretProgressIcon = secretProgressIcon
                     strongSelf.automaticDownload = automaticDownload
+                    
+                    var updatedReplyBackgroundNode: NavigationBackgroundNode?
+                    if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
+                        if let currentReplyBackgroundNode = currentReplyBackgroundNode {
+                            updatedReplyBackgroundNode = currentReplyBackgroundNode
+                        } else {
+                            updatedReplyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                        }
+                        
+                        updatedReplyBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
+                    }
                     
                     if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                         strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
@@ -928,7 +928,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.addSubnode(viaBotNode)
                         }
                         
-                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? 11.0 : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0), size: viaBotLayout.size)
+                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 6.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0), size: viaBotLayout.size)
                         animation.animator.updateFrame(layer: viaBotNode.layer, frame: viaBotFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: viaBotLayout.size.height)
@@ -1226,6 +1226,30 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
+                            if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
+                                if let item = self.item {
+                                    for attribute in item.message.attributes {
+                                        if let attribute = attribute as? InlineBotMessageAttribute {
+                                            var botAddressName: String?
+                                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                                botAddressName = addressName
+                                            } else {
+                                                botAddressName = attribute.title
+                                            }
+                                            
+                                            if let botAddressName = botAddressName {
+                                                item.controllerInteraction.updateInputState { textInputState in
+                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
+                                                item.controllerInteraction.updateInputMode { _ in
+                                                    return .text
+                                                }
+                                                return
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
@@ -1314,6 +1338,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 return playbackNode.view
             }
+        }
+        if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(point), !viaBotNode.alpha.isZero {
+            return self.view
         }
         if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(point), !forwardInfoNode.alpha.isZero {
             return self.view

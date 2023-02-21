@@ -2495,7 +2495,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         if actions.options.contains(.deleteGlobally) {
                                             let globalTitle: String
                                             if isChannel {
-                                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
                                             } else if let personalPeerName = personalPeerName {
                                                 globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
                                             } else {

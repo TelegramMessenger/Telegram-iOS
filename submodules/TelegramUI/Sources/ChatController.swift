@@ -3061,6 +3061,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.commitPurposefulAction()
             
+            var isScheduledMessages = false
+            if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
+                isScheduledMessages = true
+            }
+            
+            guard !isScheduledMessages else {
+                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_BotActionUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                return
+            }
+            
             let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
             |> deliverOnMainQueue).start(next: { message in
                 guard let strongSelf = self, let message = message else {
@@ -4226,7 +4236,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-                                
+                               
                 let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
                     
                     completion()
@@ -4238,15 +4248,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                var isChannel = false
-                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    isChannel = true
-                }
-                let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-                presentConfirmation(peerName, isChannel, {
+                if case .user = peerType {
                     let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
-                    controller?.dismiss()
-                })
+                } else {
+                    var isChannel = false
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        isChannel = true
+                    }
+                    let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                    presentConfirmation(peerName, isChannel, {
+                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+                        controller?.dismiss()
+                    })
+                }
             }
             createNewGroupImpl = { [weak controller] in
                 switch peerType {
@@ -14591,7 +14605,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
-            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
+            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime) {
                 self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.collapseInput()

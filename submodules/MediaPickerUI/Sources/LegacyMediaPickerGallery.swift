@@ -238,28 +238,29 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
             }
                         
             let legacySheetController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
-            let controller = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
+            let sheetController = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
             let dismissImpl = { [weak model] in
                 model?.dismiss(true, false)
+                dismissAll()
             }
-            controller.send = {
+            sheetController.send = {
                 completed(item.asset, false, nil, {
                     dismissImpl()
                 })
             }
-            controller.sendSilently = {
+            sheetController.sendSilently = {
                 completed(item.asset, true, nil, {
                     dismissImpl()
                 })
             }
-            controller.schedule = {
+            sheetController.schedule = {
                 presentSchedulePicker(true, { time in
                     completed(item.asset, false, time, {
                         dismissImpl()
                     })
                 })
             }
-            controller.sendWithTimer = {
+            sheetController.sendWithTimer = {
                 presentTimerPicker { time in
                     var items = selectionContext.selectedItems() ?? []
                     items.append(item.asset as Any)
@@ -273,10 +274,10 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                     })
                 }
             }
-            controller.customDismissBlock = { [weak legacySheetController] in
+            sheetController.customDismissBlock = { [weak legacySheetController] in
                 legacySheetController?.dismiss()
             }
-            legacySheetController.bind(controller: controller)
+            legacySheetController.bind(controller: sheetController)
             present(legacySheetController, nil)
             
             let hapticFeedback = HapticFeedback()
