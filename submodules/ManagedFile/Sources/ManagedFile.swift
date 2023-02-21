@@ -61,8 +61,10 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
-        close(self.fd)
-        self.isClosed = true
+        if !self.isClosed {
+            close(self.fd)
+            self.isClosed = true
+        }
     }
     
     public func write(_ data: UnsafeRawPointer, count: Int) -> Int {
