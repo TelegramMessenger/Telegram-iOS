@@ -182,9 +182,9 @@ public final class MediaBox {
     }
     
     lazy var ensureDirectoryCreated: Void = {
-        try! FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
-        try! FileManager.default.createDirectory(atPath: self.basePath + "/cache", withIntermediateDirectories: true, attributes: nil)
-        try! FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: self.basePath + "/cache", withIntermediateDirectories: true, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
     }()
     
     public init(basePath: String) {
@@ -677,7 +677,7 @@ public final class MediaBox {
                     if let file = ManagedFile(queue: nil, path: paths.complete, mode: .read) {
                         let clippedLowerBound = min(completeSize, max(0, range.lowerBound))
                         let clippedUpperBound = min(completeSize, max(0, range.upperBound))
-                        if clippedLowerBound < clippedUpperBound {
+                        if clippedLowerBound < clippedUpperBound && (clippedUpperBound - clippedLowerBound) <= 64 * 1024 * 1024 {
                             file.seek(position: clippedLowerBound)
                             let data = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                             subscriber.putNext((data, true))

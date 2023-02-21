@@ -2600,7 +2600,7 @@ final class PostboxImpl {
     }
     
     let canBeginTransactionsValue = Atomic<Bool>(value: true)
-    public func setCanBeginTransactions(_ value: Bool) {
+    public func setCanBeginTransactions(_ value: Bool, afterTransactionIfRunning: @escaping () -> Void) {
         self.queue.async {
             let previous = self.canBeginTransactionsValue.swap(value)
             if previous != value && value {
@@ -2609,6 +2609,7 @@ final class PostboxImpl {
                     f()
                 }
             }
+            afterTransactionIfRunning()
         }
     }
     
@@ -3911,15 +3912,9 @@ public class Postbox {
         }
     }
 
-    public func setCanBeginTransactions(_ value: Bool) {
-        #if DEBUG
-        if !value {
-            assert(!self.isInTransaction.with({ $0 }))
-        }
-        #endif
-        
+    public func setCanBeginTransactions(_ value: Bool, afterTransactionIfRunning: @escaping () -> Void = {}) {
         self.impl.with { impl in
-            impl.setCanBeginTransactions(value)
+            impl.setCanBeginTransactions(value, afterTransactionIfRunning: afterTransactionIfRunning)
         }
     }
 
