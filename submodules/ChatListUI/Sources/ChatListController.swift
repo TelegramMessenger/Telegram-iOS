@@ -1513,6 +1513,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
+                        if let filterEntries = strongSelf.tabContainerData?.0 {
+                            for filter in filterEntries {
+                                if case let .filter(filterId, _, unread) = filter, filterId == id {
+                                    if unread.value > 0 {
+                                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ReadAll, textColor: .primary, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor)
+                                        }, action: { c, f in
+                                            c.dismiss(completion: {
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.readAllInFilter(id: id)
+                                            })
+                                        })))
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                        
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_RemoveFolder, textColor: .destructive, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                         }, action: { c, f in
@@ -2577,6 +2597,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: updatedFilter.flatMap { .filter($0.id) } ?? .all)
             }
         })
+    }
+    
+    private func readAllInFilter(id: Int32) {
+        guard case let .chatList(groupId) = self.chatListDisplayNode.effectiveContainerNode.location else {
+            return
+        }
+        for filter in self.chatListDisplayNode.mainContainerNode.availableFilters {
+            if case let .filter(filter) = filter, case let .filter(filterId, _, _, data) = filter, filterId == id {
+                let filterPredicate = chatListFilterPredicate(filter: data)
+                var markItems: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)] = []
+                markItems.append((groupId, filterPredicate))
+                for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
+                    markItems.append((EngineChatList.Group(additionalGroupId), filterPredicate))
+                }
+                
+                let _ = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems).start()
+                break
+            }
+        }
     }
     
     private func askForFilterRemoval(id: Int32) {
