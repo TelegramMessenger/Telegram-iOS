@@ -623,6 +623,9 @@ public protocol ChatController: ViewController {
     func hintPlayNextOutgoingGift()
     
     var isSendButtonVisible: Bool { get }
+    
+    var isSelectingMessagesUpdated: ((Bool) -> Void)? { get set }
+    func cancelSelectingMessages()
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {

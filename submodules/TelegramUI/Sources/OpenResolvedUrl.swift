@@ -162,10 +162,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             dismissInput()
             navigationController?.pushViewController(controller)
-        case let .gameStart(peerId, game):
+        case let .gameStart(botPeerId, game):
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title, selectForumThreads: true))
             controller.peerSelected = { [weak controller] peer, _ in
-                let peerId = peer.id
+                let _ = peer.id
+                let _ = botPeerId
+                let _ = game
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
                 if let peer = peer as? TelegramUser {

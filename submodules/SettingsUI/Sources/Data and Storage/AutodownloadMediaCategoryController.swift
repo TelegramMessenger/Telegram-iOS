@@ -13,6 +13,9 @@ import AccountContext
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {
         var remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
+        if remainder == 10 {
+            remainder = 9
+        }
         while remainder != 0 && remainder % 10 == 0 {
             remainder /= 10
         }
@@ -24,6 +27,9 @@ public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String =
         }
     } else if size >= 1024 * 1024 {
         var remainder = (size % (1024 * 1024)) / (1024 * 102)
+        if remainder == 10 {
+            remainder = 9
+        }
         while remainder != 0 && remainder % 10 == 0 {
             remainder /= 10
         }

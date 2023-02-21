@@ -713,6 +713,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             itemSize.width -= 60.0
             insets.left += 30.0
             insets.right += 30.0
+        } else {
+            itemSize.width -= layout.safeInsets.left + layout.safeInsets.right
         }
         
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: insets.top, left: insets.left + layout.safeInsets.left, bottom: insets.bottom + layout.safeInsets.bottom, right: insets.right + layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })

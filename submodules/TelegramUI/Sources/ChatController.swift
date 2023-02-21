@@ -513,6 +513,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var updatedClosedPinnedMessageId: ((MessageId) -> Void)?
     var requestedUnpinAllMessages: ((Int, MessageId) -> Void)?
     
+    public var isSelectingMessagesUpdated: ((Bool) -> Void)?
+    
     private let scrolledToMessageId = ValuePromise<ScrolledToMessageId?>(nil, ignoreRepeated: true)
     private var scrolledToMessageIdValue: ScrolledToMessageId? = nil {
         didSet {
@@ -11455,6 +11457,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.recordingActivityPromise.set(recordingActivityValue)
         }
         
+        if (self.presentationInterfaceState.interfaceState.selectionState == nil) != (updatedChatPresentationInterfaceState.interfaceState.selectionState == nil) {
+            self.isSelectingMessagesUpdated?(updatedChatPresentationInterfaceState.interfaceState.selectionState != nil)
+        }
+        
         self.presentationInterfaceState = updatedChatPresentationInterfaceState
         
         self.updateSlowmodeStatus()
@@ -11676,6 +11682,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             return false
         }), in: .current)
+    }
+    
+    public func cancelSelectingMessages() {
+        self.navigationButtonAction(.cancelMessageSelection)
     }
     
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
