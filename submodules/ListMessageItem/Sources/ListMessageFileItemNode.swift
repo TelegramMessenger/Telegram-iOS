@@ -1,3 +1,5 @@
+import TinyThumbnail
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -113,6 +115,7 @@ private enum FileIconImage: Equatable {
     case imageRepresentation(Media, TelegramMediaImageRepresentation)
     case albumArt(TelegramMediaFile, SharedMediaPlaybackAlbumArt)
     case roundVideo(TelegramMediaFile)
+    case immediateThumbnail(TelegramMediaFile)
     
     static func ==(lhs: FileIconImage, rhs: FileIconImage) -> Bool {
         switch lhs {
@@ -130,6 +133,12 @@ private enum FileIconImage: Equatable {
             }
         case let .roundVideo(file):
             if case .roundVideo(file) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .immediateThumbnail(file):
+            if case .immediateThumbnail(file) = rhs {
                 return true
             } else {
                 return false
@@ -741,6 +750,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             if let representation = smallestImageRepresentation(file.previewRepresentations) {
                                 iconImage = .imageRepresentation(file, representation)
+                            } else if let _ = file.immediateThumbnailData {
+                                iconImage = .immediateThumbnail(file)
                             }
                             
                             let dateString = stringForFullDate(timestamp: message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
@@ -996,6 +1007,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         let imageCorners = ImageCorners(radius: iconSize.width / 2.0)
                         let arguments = TransformImageArguments(corners: imageCorners, imageSize: (file.dimensions ?? PixelDimensions(width: 320, height: 320)).cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
                         iconImageApply = iconImageLayout(arguments)
+                    case let .immediateThumbnail(file):
+                        let iconSize = CGSize(width: 40.0, height: 40.0)
+                        let imageCorners = ImageCorners(radius: 6.0)
+                        let thumbSize = file.immediateThumbnailData.flatMap(decodeTinyThumbnail).flatMap(UIImage.init)?.size ?? iconSize
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: thumbSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
+                        iconImageApply = iconImageLayout(arguments)
                 }
             }
             
@@ -1015,6 +1032,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, engine: item.context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.presentationData.theme.theme.list.itemAccentColor)
                             case let .roundVideo(file):
                                 updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3))
+                            case let .immediateThumbnail(file):
+                                // if file is pdf and it is downloaded, will use good-quality thumb generated from document, otherwise immediateThumbnailData is used
+                                updateIconImageSignal = chatMessageImageFile(account: item.context.account, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), thumbnail: true)
                         }
                     } else {
                         updateIconImageSignal = .complete()

@@ -1,3 +1,5 @@
+import PtgSecretPasscodes
+
 import Foundation
 import UIKit
 import TelegramCore
@@ -10,7 +12,6 @@ import PasscodeUI
 import TelegramUIPreferences
 import AppLockState
 import PassKit
-import PtgSecretPasscodes
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState) -> Bool {
     if state.isManuallyLocked {

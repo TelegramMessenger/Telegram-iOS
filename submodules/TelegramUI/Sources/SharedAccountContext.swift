@@ -1,3 +1,6 @@
+import PtgSettings
+import PtgSecretPasscodes
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -27,9 +30,6 @@ import WallpaperBackgroundNode
 import InAppPurchaseManager
 import PremiumUI
 import StickerPackPreviewUI
-
-import PtgSettings
-import PtgSecretPasscodes
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()

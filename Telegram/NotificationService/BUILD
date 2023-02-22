@@ -7,6 +7,9 @@ swift_library(
         "Sources/*.swift",
     ]),
     deps = [
+        "//submodules/FakePasscode:FakePasscode",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
+        
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/BuildConfig:BuildConfig",
@@ -21,8 +24,6 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/GZip:GZip",
         "//submodules/PersistentStringHash:PersistentStringHash",
-        "//submodules/FakePasscode:FakePasscode",
-        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     
     ],
     visibility = [

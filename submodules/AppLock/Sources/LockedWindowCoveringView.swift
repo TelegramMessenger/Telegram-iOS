@@ -1,10 +1,11 @@
+import TelegramCore
+import PasscodeUI
+import GradientBackground
+
 import Foundation
 import Display
 import TelegramPresentationData
 import AsyncDisplayKit
-import TelegramCore
-import PasscodeUI
-import GradientBackground
 
 final class LockedWindowCoveringView: WindowCoveringView {
     private let theme: PresentationTheme

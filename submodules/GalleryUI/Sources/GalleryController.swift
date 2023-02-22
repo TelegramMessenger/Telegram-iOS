@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import Display
@@ -15,7 +17,6 @@ import WebsiteType
 import OpenInExternalAppUI
 import ScreenCaptureDetection
 import UndoUI
-import PtgForeignAgentNoticeRemoval
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {

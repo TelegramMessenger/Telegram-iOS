@@ -20,7 +20,7 @@
 
 - (void)dealloc {
     if (_impl) {
-        av_frame_unref(_impl);
+        av_frame_free(&_impl);
     }
 }
 

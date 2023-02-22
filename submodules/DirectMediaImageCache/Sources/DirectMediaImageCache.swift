@@ -160,7 +160,7 @@ public final class DirectMediaImageCache {
         public let image: UIImage?
         public let loadSignal: Signal<UIImage?, NoError>?
 
-        init(image: UIImage?, loadSignal: Signal<UIImage?, NoError>?) {
+        public init(image: UIImage?, loadSignal: Signal<UIImage?, NoError>?) {
             self.image = image
             self.loadSignal = loadSignal
         }

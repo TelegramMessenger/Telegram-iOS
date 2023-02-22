@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import Postbox
 import TelegramCore
@@ -8,8 +10,6 @@ import ItemListUI
 import Display
 import ItemListPeerItem
 import ItemListPeerActionItem
-
-import PtgForeignAgentNoticeRemoval
 
 private let collapsedResultCount: Int = 10
 private let collapsedInitialLimit: Int = 10

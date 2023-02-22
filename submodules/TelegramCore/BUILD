@@ -36,6 +36,8 @@ swift_library(
         "-Wl,-weak-lswiftCoreGraphics",
     ],
     deps = [
+        "//submodules/ImageCompression:ImageCompression",
+        
         "//submodules/TelegramApi:TelegramApi",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",

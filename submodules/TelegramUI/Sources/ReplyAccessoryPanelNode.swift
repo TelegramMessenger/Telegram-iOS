@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -17,8 +19,6 @@ import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeRemoval
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()

@@ -10,6 +10,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
+        
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -20,7 +22,6 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AppLockState:AppLockState",
-        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
     ],
     visibility = [
         "//visibility:public",

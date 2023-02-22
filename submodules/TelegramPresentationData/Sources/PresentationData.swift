@@ -1,3 +1,6 @@
+import PtgSettings
+import PtgSecretPasscodes
+
 import Foundation
 import UIKit
 import SwiftSignalKit
@@ -10,8 +13,6 @@ import TelegramUIPreferences
 import AppBundle
 import Sunrise
 import PresentationStrings
-import PtgSettings
-import PtgSecretPasscodes
 
 public struct PresentationDateTimeFormat: Equatable {
     public let timeFormat: PresentationTimeFormat

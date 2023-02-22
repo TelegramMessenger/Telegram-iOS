@@ -1,3 +1,9 @@
+import FakePasscode
+import FakePasscodeUI
+import PasscodeUI
+import PtgSecretPasscodes
+import PtgSecretPasscodesUI
+
 import Foundation
 import UIKit
 import Display
@@ -83,12 +89,6 @@ import ChatTimerScreen
 import NotificationPeerExceptionController
 import StickerPackPreviewUI
 import ChatListHeaderComponent
-
-import FakePasscode
-import FakePasscodeUI
-import PasscodeUI
-import PtgSecretPasscodes
-import PtgSecretPasscodesUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -7983,8 +7983,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
             let strings = strongSelf.presentationData.strings
 
-            var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
-            let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+            weak var weakPane = pane
+            func generateAction(_ isZoomIn: Bool) -> ContextMenuActionItem {
+                weak var pane = weakPane
+                
                 let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
                 let canZoom: Bool = nextZoomLevel != nil
 
@@ -7995,14 +7997,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         return
                     }
                     pane.updateZoomLevel(level: zoomLevel)
-                    if let recurseGenerateAction = recurseGenerateAction {
-                        action.updateAction(0, recurseGenerateAction(true))
-                        action.updateAction(1, recurseGenerateAction(false))
-                    }
+                    action.updateAction(0, generateAction(true))
+                    action.updateAction(1, generateAction(false))
                 } : nil)
-            }
-            recurseGenerateAction = { isZoomIn in
-                return generateAction(isZoomIn)
             }
 
             items.append(.action(generateAction(true)))
@@ -8954,7 +8951,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
 }
 
-public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveToPasscodeSwitch, KeyShortcutResponder {
+public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
     private let context: AccountContext
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peerId: PeerId
@@ -9571,10 +9568,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveT
         
         let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
-    }
-    
-    public func passcodeSwitched() {
-        self.requestLayout(transition: .immediate) // show/hide version
     }
     
     public var keyShortcuts: [KeyShortcut] {

@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -20,8 +22,6 @@ import LottieAnimationCache
 import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextNodeWithEntities
-
-import PtgForeignAgentNoticeRemoval
 
 private final class CachedChatMessageText {
     let text: String

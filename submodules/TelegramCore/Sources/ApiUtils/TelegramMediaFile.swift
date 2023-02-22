@@ -3,7 +3,7 @@ import Postbox
 import TelegramApi
 
 
-func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
+public func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
     for attribute in attributes {
         switch attribute {
             case let .Video(_, size, _):

@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import Display
@@ -21,8 +23,6 @@ import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeRemoval
 
 private enum PinnedMessageAnimation {
     case slideToTop

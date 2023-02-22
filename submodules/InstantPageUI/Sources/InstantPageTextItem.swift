@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import TelegramCore
@@ -9,7 +11,6 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import ContextUI
-import PtgForeignAgentNoticeRemoval
 
 public final class InstantPageUrlItem: Equatable {
     public let url: String
@@ -620,6 +621,9 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             let extentBuffer = UnsafeMutablePointer<RunStruct>.allocate(capacity: 1)
             extentBuffer.initialize(to: RunStruct(ascent: 0.0, descent: 0.0, width: dimensions.cgSize.width))
             var callbacks = CTRunDelegateCallbacks(version: kCTRunDelegateVersion1, dealloc: { (pointer) in
+                let d = pointer.assumingMemoryBound(to: RunStruct.self)
+                d.deinitialize(count: 1)
+                d.deallocate()
             }, getAscent: { (pointer) -> CGFloat in
                 let d = pointer.assumingMemoryBound(to: RunStruct.self)
                 return d.pointee.ascent

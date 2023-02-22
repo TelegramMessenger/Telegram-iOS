@@ -188,7 +188,7 @@ open class TransformImageNode: ASDisplayNode {
         let currentArguments = self.currentArguments
         return { [weak self] arguments in
             let updatedImage: UIImage?
-            if currentArguments != arguments {
+            if currentArguments != arguments || self?.captureProtectedContentLayer?.status == .failed {
                 updatedImage = currentTransform?(arguments)?.generateImage()
             } else {
                 updatedImage = nil
@@ -200,6 +200,10 @@ open class TransformImageNode: ASDisplayNode {
                 if let image = updatedImage {
                     if let captureProtectedContentLayer = strongSelf.captureProtectedContentLayer {
                         if let cmSampleBuffer = image.cmSampleBuffer {
+                            // fix for disappearing images in secret chats when device screen turns off
+                            if captureProtectedContentLayer.status == .failed {
+                                captureProtectedContentLayer.flush()
+                            }
                             captureProtectedContentLayer.enqueue(cmSampleBuffer)
                         }
                     } else {

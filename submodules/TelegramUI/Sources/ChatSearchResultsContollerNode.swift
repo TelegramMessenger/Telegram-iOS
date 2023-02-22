@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeSearchFiltering
+
 import Foundation
 import UIKit
 import Display
@@ -14,8 +16,6 @@ import ContextUI
 import ChatListSearchItemHeader
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeSearchFiltering
 
 private enum ChatListSearchEntryStableId: Hashable {
     case messageId(MessageId)

@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -28,8 +30,6 @@ import AnimationCache
 import MultiAnimationRenderer
 import ComponentFlow
 import EmojiStatusComponent
-
-import PtgForeignAgentNoticeRemoval
 
 enum InternalBubbleTapAction {
     case action(() -> Void)

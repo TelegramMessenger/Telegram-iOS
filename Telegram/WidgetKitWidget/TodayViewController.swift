@@ -1,5 +1,7 @@
 #if arch(arm64) || arch(x86_64)
 
+import PtgForeignAgentNoticeRemoval
+
 import UIKit
 import NotificationCenter
 import BuildConfig
@@ -15,8 +17,6 @@ import Postbox
 import TelegramCore
 import OpenSSLEncryptionProvider
 import WidgetItemsUtils
-
-import PtgForeignAgentNoticeRemoval
 
 import GeneratedSources
 

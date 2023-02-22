@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -27,8 +29,6 @@ import HierarchyTrackingLayer
 import TextNodeWithEntities
 import ComponentFlow
 import EmojiStatusComponent
-
-import PtgForeignAgentNoticeRemoval
 
 public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {

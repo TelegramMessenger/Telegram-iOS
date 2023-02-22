@@ -1404,7 +1404,20 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 }
 
                 if let selectedMedia = selectedMedia {
-                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full) {
+                    var result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full)
+                    
+                    // previewRepresentations for videos in secret chats will be empty, so using immediateThumbnailData or generated good-quality thumbnail if video is downloaded
+                    if result == nil, let file = selectedMedia as? TelegramMediaFile, file.isVideo, !file.isInstantVideo, let _ = file.immediateThumbnailData, let dimensions = dimensionsForFileAttributes(file.attributes) {
+                        let loadSignal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), synchronousLoad: synchronous == .full, nilForEmptyResult: true)
+                        |> map { transform in
+                            let boundingSize = CGSize(width: imageWidthSpec, height: imageWidthSpec)
+                            let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
+                            return transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage()
+                        }
+                        result = DirectMediaImageCache.GetMediaResult(image: nil, loadSignal: loadSignal)
+                    }
+                    
+                    if let result = result {
                         if let image = result.image {
                             layer.setContents(image)
                             switch synchronous {

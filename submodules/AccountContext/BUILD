@@ -10,6 +10,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/PtgSettings:PtgSettings",
+        
         "//submodules/TelegramAudio:TelegramAudio",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/TemporaryCachedPeerDataManager:TemporaryCachedPeerDataManager",
@@ -26,8 +28,6 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
-        
-        "//submodules/PtgSettings:PtgSettings",
     ],
     visibility = [
         "//visibility:public",

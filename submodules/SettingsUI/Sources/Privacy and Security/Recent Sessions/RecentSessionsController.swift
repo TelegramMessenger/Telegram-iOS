@@ -1,3 +1,5 @@
+import FakePasscode
+
 import Foundation
 import UIKit
 import Display
@@ -13,7 +15,6 @@ import AuthTransferUI
 import ItemListPeerActionItem
 import DeviceAccess
 import QrCodeUI
-import FakePasscode
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext

@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -15,8 +17,6 @@ import InvisibleInkDustNode
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
-
-import PtgForeignAgentNoticeRemoval
 
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)

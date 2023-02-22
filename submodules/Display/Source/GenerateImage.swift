@@ -38,7 +38,7 @@ private func withImageBytes(image: UIImage, _ f: (UnsafePointer<UInt8>, Int, Int
     
     let bitmapInfo = DeviceGraphicsContextSettings.shared.transparentBitmapInfo
     
-    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue) else {
+    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue, releaseCallback: { _, data in free(data) }, releaseInfo: nil) else {
         return
     }
     
@@ -46,6 +46,8 @@ private func withImageBytes(image: UIImage, _ f: (UnsafePointer<UInt8>, Int, Int
     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: image.size))
     
     f(bytes, Int(scaledSize.width), Int(scaledSize.height), bytesPerRow)
+    
+    withExtendedLifetime(context, {})
 }
 
 public func generateGrayscaleAlphaMaskImage(image: UIImage) -> UIImage? {

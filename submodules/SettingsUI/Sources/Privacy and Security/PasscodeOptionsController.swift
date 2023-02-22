@@ -1,3 +1,7 @@
+import FakePasscode
+import FakePasscodeUI
+import ItemListPeerActionItem
+
 import Foundation
 import UIKit
 import Display
@@ -15,10 +19,6 @@ import LocalAuth
 import PasscodeUI
 import TelegramStringFormatting
 import TelegramIntents
-import FakePasscode
-import FakePasscodeUI
-import ItemListPeerActionItem
-
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void

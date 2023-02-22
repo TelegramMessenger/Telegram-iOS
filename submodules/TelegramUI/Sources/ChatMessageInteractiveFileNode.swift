@@ -1,3 +1,6 @@
+import PresentationDataUtils
+import NaturalLanguage
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -28,9 +31,6 @@ import TextSelectionNode
 import AudioTranscriptionPendingIndicatorComponent
 import UndoUI
 import TelegramNotices
-
-import PresentationDataUtils
-import NaturalLanguage
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

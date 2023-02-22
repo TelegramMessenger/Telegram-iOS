@@ -1,3 +1,5 @@
+import PtgSettings
+
 import Foundation
 import UIKit
 import Postbox
@@ -12,7 +14,6 @@ import TelegramUIPreferences
 import TelegramNotices
 import AccountUtils
 import DeviceAccess
-import PtgSettings
 
 enum PeerInfoUpdatingAvatar {
     case none

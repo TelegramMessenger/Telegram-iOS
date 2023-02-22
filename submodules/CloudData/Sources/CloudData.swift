@@ -1,9 +1,10 @@
+import BuildConfig
+
 import Foundation
 import CloudKit
 import MtProtoKit
 import SwiftSignalKit
 import EncryptionProvider
-import BuildConfig
 
 private enum FetchError {
     case generic

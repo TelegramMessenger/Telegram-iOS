@@ -1,3 +1,5 @@
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -17,8 +19,6 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 import TextFormat
-
-import PtgForeignAgentNoticeRemoval
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let dateTimeFormat: PresentationDateTimeFormat

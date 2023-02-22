@@ -1,3 +1,7 @@
+import FakePasscode
+import PtgForeignAgentNoticeRemoval
+import PtgSettings
+
 import Foundation
 import UserNotifications
 import SwiftSignalKit
@@ -15,9 +19,6 @@ import PersistentStringHash
 import CallKit
 import AppLockState
 import NotificationsPresentationData
-import FakePasscode
-import PtgForeignAgentNoticeRemoval
-import PtgSettings
 
 private let queue = Queue()
 
