@@ -525,6 +525,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var translationStateDisposable: Disposable?
 
     private var nextChannelToReadDisposable: Disposable?
+    private var offerNextChannelToRead = false
     
     private var inviteRequestsContext: PeerInvitationImportersContext?
     private var inviteRequestsDisposable = MetaDisposable()
@@ -5010,7 +5011,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         return
                                     }
 
-                                    strongSelf.chatDisplayNode.historyNode.offerNextChannelToRead = true
+                                    strongSelf.offerNextChannelToRead = true
                                     strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
                                         return (peer: nextPeer.peer, unreadCount: nextPeer.unreadCount, location: nextPeer.location)
                                     }
@@ -5029,6 +5030,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             strongSelf.preloadNextChatPeerIdDisposable.set(nil)
                                         }
                                     }
+                                    
+                                    strongSelf.updateNextChannelToReadVisibility()
                                 })
                             }
                         }
@@ -11459,6 +11462,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if (self.presentationInterfaceState.interfaceState.selectionState == nil) != (updatedChatPresentationInterfaceState.interfaceState.selectionState == nil) {
             self.isSelectingMessagesUpdated?(updatedChatPresentationInterfaceState.interfaceState.selectionState != nil)
+            self.updateNextChannelToReadVisibility()
         }
         
         self.presentationInterfaceState = updatedChatPresentationInterfaceState
@@ -18178,6 +18182,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         return self.presentationData.strings.Chat_SendAllowedContentText(itemListString).string
+    }
+    
+    private func updateNextChannelToReadVisibility() {
+        self.chatDisplayNode.historyNode.offerNextChannelToRead = self.offerNextChannelToRead && self.presentationInterfaceState.interfaceState.selectionState == nil
     }
 }
 
