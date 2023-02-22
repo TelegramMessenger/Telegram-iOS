@@ -67,7 +67,6 @@ public final class ListViewBackingView: UIView {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.isHidden, let target = self.target {
             if target.bounds.contains(point) {
-                target.scroller.forceDecelerating = false
                 if target.decelerationAnimator != nil {
                     target.decelerationAnimator?.isPaused = true
                     target.decelerationAnimator = nil
@@ -836,6 +835,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         self.scrolledToItem = nil
 
+        self.scroller.forceDecelerating = false
         self.isDragging = true
         
         self.beganInteractiveDragging(self.touchesPosition)
