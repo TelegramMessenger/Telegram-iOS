@@ -305,6 +305,8 @@ public final class SharedWakeupManager {
             }
         }
         
+        var endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?
+        
         if self.inForeground || self.hasActiveAudioSession || hasActiveCalls {
             if let (completion, timer) = self.currentExternalCompletion {
                 self.currentExternalCompletion = nil
@@ -389,12 +391,15 @@ public final class SharedWakeupManager {
                 }
             } else if let (taskId, _, timer) = self.currentTask {
                 self.currentTask = nil
+                
                 timer.invalidate()
-                self.endBackgroundTask(taskId)
+                
+                endTaskAfterTransactionsComplete = taskId
+                
                 self.isInBackgroundExtension = false
             }
         }
-        self.updateAccounts(hasTasks: hasTasksForBackgroundExtension)
+        self.updateAccounts(hasTasks: hasTasksForBackgroundExtension, endTaskAfterTransactionsComplete: endTaskAfterTransactionsComplete)
         
         if hasPendingMessages {
             if self.keepIdleDisposable == nil {
@@ -408,7 +413,7 @@ public final class SharedWakeupManager {
         }
     }
     
-    private func updateAccounts(hasTasks: Bool) {
+    private func updateAccounts(hasTasks: Bool, endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?) {
         if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil {
             Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
             
@@ -424,18 +429,55 @@ public final class SharedWakeupManager {
                 account.shouldKeepOnlinePresence.set(.single(primary && self.inForeground))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(tasks.backgroundDownloads))
             }
+            
+            if let endTaskAfterTransactionsComplete {
+                self.endBackgroundTask(endTaskAfterTransactionsComplete)
+            }
         } else {
             var enableBeginTransactions = false
             if self.allowBackgroundTimeExtensionDeadlineTimer != nil {
                 enableBeginTransactions = true
             }
             Logger.shared.log("Wakeup", "enableBeginTransactions: \(enableBeginTransactions)")
+            
+            final class CompletionObservationState {
+                var isCompleted: Bool = false
+                var remainingAccounts: [AccountRecordId]
+                
+                init(remainingAccounts: [AccountRecordId]) {
+                    self.remainingAccounts = remainingAccounts
+                }
+            }
+            let completionState = Atomic<CompletionObservationState>(value: CompletionObservationState(remainingAccounts: self.accountsAndTasks.map(\.0.id)))
+            let checkCompletionState: (AccountRecordId?) -> Void = { id in
+                Queue.mainQueue().async {
+                    var shouldComplete = false
+                    completionState.with { state in
+                        if let id {
+                            state.remainingAccounts.removeAll(where: { $0 == id })
+                        }
+                        if state.remainingAccounts.isEmpty && !state.isCompleted {
+                            state.isCompleted = true
+                            shouldComplete = true
+                        }
+                    }
+                    if shouldComplete, let endTaskAfterTransactionsComplete {
+                        self.endBackgroundTask(endTaskAfterTransactionsComplete)
+                    }
+                }
+            }
+            
             for (account, _, _) in self.accountsAndTasks {
-                account.postbox.setCanBeginTransactions(enableBeginTransactions)
+                let accountId = account.id
+                account.postbox.setCanBeginTransactions(enableBeginTransactions, afterTransactionIfRunning: {
+                    checkCompletionState(accountId)
+                })
                 account.shouldBeServiceTaskMaster.set(.single(.never))
                 account.shouldKeepOnlinePresence.set(.single(false))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(false))
             }
+            
+            checkCompletionState(nil)
         }
     }
 }

@@ -182,9 +182,9 @@ public final class MediaBox {
     }
     
     lazy var ensureDirectoryCreated: Void = {
-        try! FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
-        try! FileManager.default.createDirectory(atPath: self.basePath + "/cache", withIntermediateDirectories: true, attributes: nil)
-        try! FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: self.basePath + "/cache", withIntermediateDirectories: true, attributes: nil)
+        let _ = try? FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
     }()
     
     public init(basePath: String) {
@@ -677,7 +677,7 @@ public final class MediaBox {
                     if let file = ManagedFile(queue: nil, path: paths.complete, mode: .read) {
                         let clippedLowerBound = min(completeSize, max(0, range.lowerBound))
                         let clippedUpperBound = min(completeSize, max(0, range.upperBound))
-                        if clippedLowerBound < clippedUpperBound {
+                        if clippedLowerBound < clippedUpperBound && (clippedUpperBound - clippedLowerBound) <= 64 * 1024 * 1024 {
                             file.seek(position: clippedLowerBound)
                             let data = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                             subscriber.putNext((data, true))
@@ -714,7 +714,7 @@ public final class MediaBox {
                             if clippedUpperBound == clippedLowerBound {
                                 subscriber.putNext((Data(), true))
                                 subscriber.putCompletion()
-                            } else if clippedUpperBound <= fileSize {
+                            } else if clippedUpperBound <= fileSize && (clippedUpperBound - clippedLowerBound) <= 64 * 1024 * 1024 {
                                 file.seek(position: Int64(clippedLowerBound))
                                 let resultData = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                                 subscriber.putNext((resultData, true))
@@ -1781,6 +1781,49 @@ public final class MediaBox {
                     self.didRemoveResourcesPipe.putNext(Void())
                 }
                 
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func removeCachedResourcesWithResult(_ ids: [MediaResourceId], force: Bool = false, notify: Bool = false) -> Signal<[MediaResourceId], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var removedIds: [MediaResourceId] = []
+                for id in ids {
+                    if !force {
+                        if self.fileContexts[id] != nil {
+                            continue
+                        }
+                        if self.keepResourceContexts[id] != nil {
+                            continue
+                        }
+                    }
+                    let paths = self.storePathsForId(id)
+                    unlink(paths.complete)
+                    unlink(paths.partial)
+                    unlink(paths.partial + ".meta")
+                    self.fileContexts.removeValue(forKey: id)
+                    removedIds.append(id)
+                }
+                
+                if notify {
+                    for id in ids {
+                        if let context = self.statusContexts[id] {
+                            context.status = .Remote(progress: 0.0)
+                            for f in context.subscribers.copyItems() {
+                                f(.Remote(progress: 0.0))
+                            }
+                        }
+                    }
+                }
+                
+                self.dataQueue.justDispatch {
+                    self.didRemoveResourcesPipe.putNext(Void())
+                }
+                
+                subscriber.putNext(removedIds)
                 subscriber.putCompletion()
             }
             return EmptyDisposable

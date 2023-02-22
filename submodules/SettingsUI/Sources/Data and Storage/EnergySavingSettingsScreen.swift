@@ -11,6 +11,9 @@ import PresentationDataUtils
 import AccountContext
 
 enum ItemType: CaseIterable {
+    case autoplayVideo
+    case autoplayGif
+    case loopStickers
     case loopEmoji
     case playVideoAvatars
     case fullTranslucency
@@ -20,6 +23,12 @@ enum ItemType: CaseIterable {
     
     var settingsKeyPath: WritableKeyPath<EnergyUsageSettings, Bool> {
         switch self {
+        case .autoplayVideo:
+            return \.autoplayVideo
+        case .autoplayGif:
+            return \.autoplayGif
+        case .loopStickers:
+            return \.loopStickers
         case .loopEmoji:
             return \.loopEmoji
         case .playVideoAvatars:
@@ -35,21 +44,63 @@ enum ItemType: CaseIterable {
         }
     }
     
-    func title(strings: PresentationStrings) -> String {
+    func title(strings: PresentationStrings) -> (String, String, String) {
         //TODO:localize
         switch self {
+        case .autoplayVideo:
+            return (
+                "Settings/Menu/Reactions",
+                "Autoplay Videos",
+                "Autoplay and loop videos and video messages in chats."
+            )
+        case .autoplayGif:
+            return (
+                "Settings/Menu/Reactions",
+                "Autoplay GIFs",
+                "Autoplay and loop GIFs in chats and in the keyboard."
+            )
+        case .loopStickers:
+            return (
+                "Settings/Menu/Reactions",
+                "Sticker Animations",
+                "Autoplay and loop GIFs in chats and in the keyboard."
+            )
         case .loopEmoji:
-            return "Loop Animated Emoji"
+            return (
+                "Settings/Menu/Reactions",
+                "Emoli Animations",
+                "Loop animated emoji in messages, reactions, statuses."
+            )
         case .playVideoAvatars:
-            return "Play Video Avatars"
+            return (
+                "Settings/Menu/Reactions",
+                "Autoplay Video Avatars",
+                "Autoplay and loop video avatars in chats"
+            )
         case .fullTranslucency:
-            return "Translucency Effects"
+            return (
+                "Settings/Menu/Reactions",
+                "Interface Effects",
+                "Various effects and animations that make Telegram look amazing."
+            )
         case .extendBackgroundWork:
-            return "Extended Background Time"
+            return (
+                "Settings/Menu/Reactions",
+                "Extended Background Time",
+                "Extended Background Time Description"
+            )
         case .synchronizeInBackground:
-            return "Background Sync"
+            return (
+                "Settings/Menu/Reactions",
+                "Background Sync",
+                "Background Sync Description"
+            )
         case .autodownloadInBackground:
-            return "Preload Media in Chats"
+            return (
+                "Settings/Menu/Reactions",
+                "Preload Media in Chats",
+                "Preload Media in Chats Description"
+            )
         }
     }
 }
@@ -72,17 +123,21 @@ private enum EnergeSavingSettingsScreenSection: Int32 {
 private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
     enum StableId: Hashable {
         case all
+        case allFooter
+        case itemsHeader
         case item(ItemType)
     }
     
     case all(Bool)
-    case item(index: Int, type: ItemType, value: Bool)
+    case allFooter
+    case item(index: Int, type: ItemType, value: Bool, enabled: Bool)
+    case itemsHeader
     
     var section: ItemListSectionId {
         switch self {
-        case .all:
+        case .all, .allFooter:
             return EnergeSavingSettingsScreenSection.all.rawValue
-        case .item:
+        case .item, .itemsHeader:
             return EnergeSavingSettingsScreenSection.items.rawValue
         }
     }
@@ -90,8 +145,12 @@ private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
     var sortIndex: Int {
         switch self {
         case .all:
+            return -3
+        case .allFooter:
+            return -2
+        case .itemsHeader:
             return -1
-        case let .item(index, _, _):
+        case let .item(index, _, _, _):
             return index
         }
     }
@@ -100,7 +159,11 @@ private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
         switch self {
         case .all:
             return .all
-        case let .item(_, type, _):
+        case .allFooter:
+            return .allFooter
+        case .itemsHeader:
+            return .itemsHeader
+        case let .item(_, type, _, _):
             return .item(type)
         }
     }
@@ -114,11 +177,17 @@ private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
         switch self {
         case let .all(value):
             //TODO:localize
-            return ItemListSwitchItem(presentationData: presentationData, title: "Enable All", value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Power-Saving Mode", value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleAll(value)
             })
-        case let .item(_, type, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: type.title(strings: presentationData.strings), value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+        case .allFooter:
+            return ItemListTextItem(presentationData: presentationData, text: .plain("Reduce all resource-intensive animations and background activity."), sectionId: self.section)
+        case .itemsHeader:
+            //TODO:localize
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: "RESOURCE-INTENSIVE PROCESSES", sectionId: self.section)
+        case let .item(_, type, value, enabled):
+            let (iconName, title, text) = type.title(strings: presentationData.strings)
+            return ItemListSwitchItem(presentationData: presentationData, icon: UIImage(bundleImageName: iconName)?.precomposed(), title: title, text: text, value: value, enableInteractiveChanges: true, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleItem(type)
             })
         }
@@ -131,10 +200,13 @@ private func energeSavingSettingsScreenEntries(
 ) -> [EnergeSavingSettingsScreenEntry] {
     var entries: [EnergeSavingSettingsScreenEntry] = []
     
-    entries.append(.all(ItemType.allCases.allSatisfy({ item in settings.energyUsageSettings[keyPath: item.settingsKeyPath] })))
+    let powerSavingOn = ItemType.allCases.allSatisfy({ item in !settings.energyUsageSettings[keyPath: item.settingsKeyPath] })
+    entries.append(.all(powerSavingOn))
+    entries.append(.allFooter)
     
+    entries.append(.itemsHeader)
     for type in ItemType.allCases {
-        entries.append(.item(index: entries.count, type: type, value: settings.energyUsageSettings[keyPath: type.settingsKeyPath]))
+        entries.append(.item(index: entries.count, type: type, value: settings.energyUsageSettings[keyPath: type.settingsKeyPath], enabled: !powerSavingOn))
     }
     
     return entries
@@ -149,7 +221,7 @@ func energySavingSettingsScreen(context: AccountContext) -> ViewController {
             let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
                 var settings = settings
                 for type in ItemType.allCases {
-                    settings.energyUsageSettings[keyPath: type.settingsKeyPath] = value
+                    settings.energyUsageSettings[keyPath: type.settingsKeyPath] = !value
                 }
                 return settings
             }).start()

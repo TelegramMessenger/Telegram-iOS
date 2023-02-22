@@ -33,13 +33,12 @@ private final class DataAndStorageControllerArguments {
     let toggleRaiseToListen: (Bool) -> Void
     let toggleAutoplayGifs: (Bool) -> Void
     let toggleAutoplayVideos: (Bool) -> Void
-    let openEnergySavingSettings: () -> Void
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, openEnergySavingSettings: @escaping () -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -52,7 +51,6 @@ private final class DataAndStorageControllerArguments {
         self.toggleRaiseToListen = toggleRaiseToListen
         self.toggleAutoplayGifs = toggleAutoplayGifs
         self.toggleAutoplayVideos = toggleAutoplayVideos
-        self.openEnergySavingSettings = openEnergySavingSettings
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
@@ -66,7 +64,6 @@ private enum DataAndStorageSection: Int32 {
     case autoSave
     case backgroundDownload
     case autoPlay
-    case energySaving
     case voiceCalls
     case other
     case connection
@@ -111,8 +108,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case autoplayGifs(PresentationTheme, String, Bool)
     case autoplayVideos(PresentationTheme, String, Bool)
     
-    case energySaving
-    
     case useLessVoiceData(PresentationTheme, String, Bool)
     case useLessVoiceDataInfo(PresentationTheme, String)
     case otherHeader(PresentationTheme, String)
@@ -141,8 +136,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.voiceCalls.rawValue
             case .autoplayHeader, .autoplayGifs, .autoplayVideos:
                 return DataAndStorageSection.autoPlay.rawValue
-            case .energySaving:
-                return DataAndStorageSection.energySaving.rawValue
             case .otherHeader, .shareSheet, .saveEditedPhotos, .openLinksIn, .pauseMusicOnRecording, .raiseToListen, .raiseToListenInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
@@ -186,8 +179,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 26
             case .autoplayVideos:
                 return 27
-            case .energySaving:
-                return 28
             case .otherHeader:
                 return 29
             case .shareSheet:
@@ -281,12 +272,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .autoplayVideos(lhsTheme, lhsText, lhsValue):
                 if case let .autoplayVideos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case .energySaving:
-                if case .energySaving = rhs {
                     return true
                 } else {
                     return false
@@ -440,11 +425,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutoplayVideos(value)
                 }, tag: DataAndStorageEntryTag.autoplayVideos)
-            case .energySaving:
-                //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, title: "Energy Saving", label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.openEnergySavingSettings()
-                })
             case let .useLessVoiceData(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleVoiceUseLessData(value)
@@ -687,8 +667,6 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.autoplayHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayTitle))
     entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayGifs, data.automaticMediaDownloadSettings.autoplayGifs))
     entries.append(.autoplayVideos(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayVideos, data.automaticMediaDownloadSettings.autoplayVideos))
-    
-    entries.append(.energySaving)
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
@@ -945,8 +923,6 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
             settings.autoplayVideos = value
             return settings
         }).start()
-    }, openEnergySavingSettings: {
-        pushControllerImpl?(energySavingSettingsScreen(context: context))
     }, toggleDownloadInBackground: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings

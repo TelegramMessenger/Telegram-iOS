@@ -509,6 +509,40 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
+        let writeAbilityTestFile = TempBox.shared.tempFile(fileName: "test.bin")
+        if let testFile = ManagedFile(queue: nil, path: writeAbilityTestFile.path, mode: .readwrite) {
+            let bufferSize = 128 * 1024
+            let randomBuffer = malloc(bufferSize)!
+            defer {
+                free(randomBuffer)
+            }
+            arc4random_buf(randomBuffer, bufferSize)
+            var writtenBytes = 0
+            var success = true
+            while writtenBytes < 1024 * 1024 {
+                let actualBytes = testFile.write(randomBuffer, count: bufferSize)
+                writtenBytes += actualBytes
+                if actualBytes != bufferSize {
+                    success = false
+                    break
+                }
+            }
+            testFile._unsafeClose()
+            TempBox.shared.dispose(writeAbilityTestFile)
+            
+            if !success {
+                let alertController = UIAlertController(title: nil, message: "There is not enough free space on the device.", preferredStyle: .alert)
+                alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
+                    preconditionFailure()
+                }))
+                self.mainWindow?.presentNative(alertController)
+                
+                return true
+            }
+        } else {
+            preconditionFailure()
+        }
+        
         let legacyLogs: [String] = [
             "broadcast-logs",
             "siri-logs",
@@ -1400,7 +1434,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }
         
-        /*let timestamp = Int(CFAbsoluteTimeGetCurrent())
+        let timestamp = Int(CFAbsoluteTimeGetCurrent())
         let minReindexTimestamp = timestamp - 2 * 24 * 60 * 60
         if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= minReindexTimestamp {
         } else {
@@ -1410,7 +1444,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let _ = self.runCacheReindexTasks(lowImpact: true, completion: {
                 Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground — done")
             })
-        }*/
+        }
         
         if #available(iOS 12.0, *) {
             UIApplication.shared.registerForRemoteNotifications()

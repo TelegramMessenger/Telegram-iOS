@@ -139,19 +139,10 @@ final class ChatMediaInputStickerGridItem: GridItem {
         self.large = large
         self.isLocked = isLocked
         self.selected = selected
-        if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
-            self.section = nil
-        } else {
-            let accessory: ChatMediaInputStickerGridSectionAccessory
-            if hasAccessory && stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, let canManage = canManagePeerSpecificPack, canManage {
-                accessory = .setup
-            } else if hasAccessory && stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
-                accessory = .clear
-            } else {
-                accessory = .none
-            }
-            self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, accessory: accessory, theme: theme, interaction: inputNodeInteraction)
-        }
+        
+        let accessory: ChatMediaInputStickerGridSectionAccessory
+        accessory = .none
+        self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, accessory: accessory, theme: theme, interaction: inputNodeInteraction)
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {

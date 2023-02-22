@@ -164,8 +164,15 @@ final class AutomaticCacheEvictionContext {
                                     if !removeIds.isEmpty {
                                         Logger.shared.log("AutomaticCacheEviction", "peer \(peerId): cleaning \(removeIds.count) resources")
                                         
-                                        let _ = mediaBox.removeCachedResources(removeIds).start(completed: {
-                                            mediaBox.storageBox.remove(ids: removeRawIds)
+                                        let _ = mediaBox.removeCachedResourcesWithResult(removeIds).start(next: { actualIds in
+                                            var actualRawIds: [Data] = []
+                                            for id in actualIds {
+                                                if let data = id.stringRepresentation.data(using: .utf8) {
+                                                    actualRawIds.append(data)
+                                                }
+                                            }
+                                            
+                                            mediaBox.storageBox.remove(ids: actualRawIds)
                                             
                                             subscriber.putCompletion()
                                         })
