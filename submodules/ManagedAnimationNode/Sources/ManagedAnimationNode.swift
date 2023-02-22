@@ -156,6 +156,9 @@ open class ManagedAnimationNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
+    private var previousTimestamp: Double?
+    private var delta: Double?
+    
     public var customColor: UIColor? {
         didSet {
             if let customColor = self.customColor, oldValue?.rgb != customColor.rgb {
@@ -188,7 +191,22 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
         
         displayLinkUpdate = { [weak self] in
-            self?.updateAnimation()
+            if let strongSelf = self {
+                let timestamp = CACurrentMediaTime()
+                var delta: Double
+                if let previousTimestamp = strongSelf.previousTimestamp {
+                    delta = min(timestamp - previousTimestamp, 1.0 / 60.0)
+                    if let currentDelta = strongSelf.delta, currentDelta < delta {
+                        delta = currentDelta
+                    }
+                } else {
+                    delta = 1.0 / 60.0
+                }
+                strongSelf.previousTimestamp = timestamp
+                strongSelf.delta = delta
+                
+                strongSelf.updateAnimation()
+            }
         }
     }
     
@@ -278,9 +296,8 @@ open class ManagedAnimationNode: ASDisplayNode {
             }
         }
         
-        var animationAdvancement: Double = 1.0 / 60.0
+        var animationAdvancement: Double = self.delta ?? 1.0 / 60.0
         animationAdvancement *= Double(min(2, self.trackStack.count + 1))
-        
         state.relativeTime += animationAdvancement
         
         if state.relativeTime >= duration && !self.didTryAdvancingState {
