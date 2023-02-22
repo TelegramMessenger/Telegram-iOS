@@ -397,37 +397,39 @@ public final class AccountContextImpl: AccountContext {
             }
         })
         
-        self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
-        |> map { animatedEmoji -> [String: [StickerPackItem]] in
-            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
-            switch animatedEmoji {
-                case let .result(_, items, _):
-                    for item in items {
-                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
-                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
-                            if animatedEmojiStickers[strippedEmoji] == nil {
-                                animatedEmojiStickers[strippedEmoji] = [item]
+        if !temp {
+            self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
+            |> map { animatedEmoji -> [String: [StickerPackItem]] in
+                var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+                switch animatedEmoji {
+                    case let .result(_, items, _):
+                        for item in items {
+                            if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                                animatedEmojiStickers[emoji.basicEmoji.0] = [item]
+                                let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
+                                if animatedEmojiStickers[strippedEmoji] == nil {
+                                    animatedEmojiStickers[strippedEmoji] = [item]
+                                }
                             }
                         }
-                    }
-                default:
-                    break
+                    default:
+                        break
+                }
+                return animatedEmojiStickers
             }
-            return animatedEmojiStickers
+            |> deliverOnMainQueue).start(next: { [weak self] stickers in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.animatedEmojiStickers = stickers
+                strongSelf.animatedEmojiStickersValue.set(.single(stickers))
+            })
         }
-        |> deliverOnMainQueue).start(next: { [weak self] stickers in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.animatedEmojiStickers = stickers
-            strongSelf.animatedEmojiStickersValue.set(.single(stickers))
-        })
         
         self.userLimitsConfigurationDisposable = (self.account.postbox.peerView(id: self.account.peerId)
-        |> mapToSignal { peerView -> Signal<EngineConfiguration.UserLimits, NoError> in
-            if let peer = peerView.peers[peerView.peerId] {
-                return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer.isPremium))
+        |> mapToSignal { [weak self] peerView -> Signal<EngineConfiguration.UserLimits, NoError> in
+            if let peer = peerView.peers[peerView.peerId], let strongSelf = self {
+                return strongSelf.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer.isPremium))
             } else {
                 return .complete()
             }
