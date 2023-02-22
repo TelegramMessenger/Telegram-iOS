@@ -1518,7 +1518,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 if case let .filter(filterId, _, unread) = filter, filterId == id {
                                     if unread.value > 0 {
                                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ReadAll, textColor: .primary, icon: { theme in
-                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor)
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadAll"), color: theme.contextMenu.primaryColor)
                                         }, action: { c, f in
                                             c.dismiss(completion: {
                                                 guard let strongSelf = self else {
