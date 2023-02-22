@@ -460,7 +460,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.usePlainInputSeparator = false
             self.plainInputSeparatorAlpha = nil
         }
-        self.inputPanelBackgroundNode.isUserInteractionEnabled = false
+        //self.inputPanelBackgroundNode.isUserInteractionEnabled = false
         
         self.inputPanelBackgroundSeparatorNode = ASDisplayNode()
         self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
@@ -2460,7 +2460,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     textView.inputView = updatedInputView
                     if textView.isFirstResponder {
                         if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
-                            if let validLayout = self.validLayout, let inputHeight = validLayout.0.inputHeight, inputHeight > 44.0 {
+                            if let validLayout = self.validLayout, let inputHeight = validLayout.0.inputHeight, inputHeight > 100.0 {
                                 waitForKeyboardLayout = true
                             }
                         }
