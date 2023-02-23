@@ -2177,6 +2177,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             reorderedFilterIdsValue = reorderedFilterIds
         }
         
+        let completion = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.isReorderingFilters = false
+            strongSelf.isReorderingTabsValue.set(false)
+            (strongSelf.parent as? TabBarController)?.updateIsTabBarEnabled(true, transition: .animated(duration: 0.2, curve: .easeInOut))
+            strongSelf.searchContentNode?.setIsEnabled(true, animated: true)
+            if let layout = strongSelf.validLayout {
+                strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+            }
+        }
         if let reorderedFilterIds = reorderedFilterIdsValue {
             let _ = (self.context.engine.peers.updateChatListFiltersInteractively { stateFilters in
                 var updatedFilters: [ChatListFilter] = []
@@ -2199,18 +2211,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 strongSelf.reloadFilters(firstUpdate: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.chatListDisplayNode.isReorderingFilters = false
-                    strongSelf.isReorderingTabsValue.set(false)
-                    (strongSelf.parent as? TabBarController)?.updateIsTabBarEnabled(true, transition: .animated(duration: 0.2, curve: .easeInOut))
-                    strongSelf.searchContentNode?.setIsEnabled(true, animated: true)
-                    if let layout = strongSelf.validLayout {
-                        strongSelf.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
-                    }
+                   completion()
                 })
             })
+        } else {
+            completion()
         }
     }
     

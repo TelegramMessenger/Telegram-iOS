@@ -1426,6 +1426,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             isSelectionEnabled = false
         } else if case .pinnedMessages = self.chatPresentationInterfaceState.subject {
             isSelectionEnabled = false
+        } else if self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
+            isSelectionEnabled = false
         }
         self.historyNode.isSelectionGestureEnabled = isSelectionEnabled
                 
@@ -2459,8 +2461,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if textView.inputView !== updatedInputView {
                     textView.inputView = updatedInputView
                     if textView.isFirstResponder {
-                        if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
-                            if let validLayout = self.validLayout, let inputHeight = validLayout.0.inputHeight, inputHeight > 100.0 {
+                        if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState), let validLayout = self.validLayout {
+                            if case .compact = validLayout.0.metrics.widthClass {
+                                waitForKeyboardLayout = true
+                            } else if let inputHeight = validLayout.0.inputHeight, inputHeight > 100.0 {
                                 waitForKeyboardLayout = true
                             }
                         }

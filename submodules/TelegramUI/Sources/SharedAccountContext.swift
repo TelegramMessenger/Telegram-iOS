@@ -1239,8 +1239,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
             return
         }
-        
-        let controller = storageUsageController(context: context, isModal: true)
+        let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        })
         navigationController.pushViewController(controller)
     }
     

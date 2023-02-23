@@ -32,7 +32,7 @@ func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, fil
             return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.TotalReadCounters())
             |> map { readCounters -> ChatListSelectionOptions in
                 var hasUnread = false
-                if readCounters.count(for: .filtered, in: .chats, with: .all) != 0 {
+                if readCounters.count(for: .raw, in: .chats, with: .all) != 0 {
                     hasUnread = true
                 }
                 return ChatListSelectionOptions(read: .all(enabled: hasUnread), delete: false)

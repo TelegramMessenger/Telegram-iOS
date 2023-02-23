@@ -907,7 +907,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
                     if settings.defaultWebBrowser == nil {
-                        if isCompact {
+                        if !"".isEmpty && isCompact {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {
