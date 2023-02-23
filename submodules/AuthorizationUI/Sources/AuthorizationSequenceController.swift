@@ -168,13 +168,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 guard let self else {
                     return
                 }
+                controller?.inProgress = true
                 let authorizationPushConfiguration = self.sharedContext.authorizationPushConfiguration
                 |> take(1)
                 |> timeout(2.0, queue: .mainQueue(), alternate: .single(nil))
                 let _ = (authorizationPushConfiguration
                 |> deliverOnMainQueue).start(next: { [weak self] authorizationPushConfiguration in
                     if let strongSelf = self {
-                        controller?.inProgress = true
                         strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, pushNotificationConfiguration: authorizationPushConfiguration, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream, syncContacts: syncContacts, forcedPasswordSetupNotice: { value in
                             guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
                                 return nil

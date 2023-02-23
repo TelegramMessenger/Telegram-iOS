@@ -2619,15 +2619,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
 
-//            items.append(.custom(SliderContextItem(minValue: 0.05, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, finished in
-//                guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
-//                    return
-//                }
-//                videoNode.setBaseRate(newValue)
-//                if finished {
-//                    dismiss()
-//                }
-//            }), true))
+            items.append(.custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, finished in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.updatePlaybackRate(newValue)
+                if finished {
+                    dismiss()
+                }
+            }), true))
             
             items.append(.separator)
             
