@@ -1514,7 +1514,7 @@ open class TextNode: ASDisplayNode {
                         if glyphCount == 2, let font = attributes["NSFont"] as? UIFont, font.fontName.contains("ColorEmoji"), let string = layout.attributedString {
                             let range = CTRunGetStringRange(run)
                             
-                            if range.location < string.length && (range.location + range.length) < string.length {
+                            if range.location < string.length && (range.location + range.length) <= string.length {
                                 let substring = string.attributedSubstring(from: NSMakeRange(range.location, range.length)).string
                                 
                                 let heart = Unicode.Scalar(0x2764)!

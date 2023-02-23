@@ -20,6 +20,7 @@ import InstantPageCache
 import NotificationPeerExceptionController
 import QrCodeUI
 import PremiumUI
+import StorageUsageScreen
 
 enum SettingsSearchableItemIcon {
     case profile
@@ -681,16 +682,54 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             presentDataSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .data(1), title: strings.ChatSettings_Cache, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_Storage_Title), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            present(.push, storageUsageController(context: context))
+            let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                return storageUsageExceptionsScreen(context: context, category: category)
+            })
+            present(.push, controller)
         }),
         SettingsSearchableItem(id: .data(2), title: strings.Cache_KeepMedia, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_Storage_KeepMedia), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_Cache], present: { context, _, present in
-            present(.push, storageUsageController(context: context))
+            let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                return storageUsageExceptionsScreen(context: context, category: category)
+            })
+            present(.push, controller)
         }),
         SettingsSearchableItem(id: .data(3), title: strings.Cache_ClearCache, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_Storage_ClearCache), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_Cache], present: { context, _, present in
-            present(.push, storageUsageController(context: context))
+            let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                return storageUsageExceptionsScreen(context: context, category: category)
+            })
+            present(.push, controller)
         }),
         SettingsSearchableItem(id: .data(4), title: strings.NetworkUsageSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_NetworkUsage), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            present(.push, networkUsageStatsController(context: context))
+            let mediaAutoDownloadSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+            |> map { sharedData -> MediaAutoDownloadSettings in
+                var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+                if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                    automaticMediaDownloadSettings = value
+                } else {
+                    automaticMediaDownloadSettings = .defaultSettings
+                }
+                return automaticMediaDownloadSettings
+            }
+            
+            let _ = (combineLatest(
+                accountNetworkUsageStats(account: context.account, reset: []),
+                mediaAutoDownloadSettings
+            )
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { stats, mediaAutoDownloadSettings in
+                var stats = stats
+                
+                if stats.resetWifiTimestamp == 0 {
+                    var value = stat()
+                    if stat(context.account.basePath, &value) == 0 {
+                        stats.resetWifiTimestamp = Int32(value.st_ctimespec.tv_sec)
+                    }
+                }
+                
+                present(.push, DataUsageScreen(context: context, stats: stats, mediaAutoDownloadSettings: mediaAutoDownloadSettings, makeAutodownloadSettingsController: { isCellular in
+                    return autodownloadMediaConnectionTypeController(context: context, connectionType: isCellular ? .cellular : .wifi)
+                }))
+            })
         }),
         SettingsSearchableItem(id: .data(5), title: strings.ChatSettings_AutoDownloadUsingCellular, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle], present: { context, _, present in
             present(.push, autodownloadMediaConnectionTypeController(context: context, connectionType: .cellular))

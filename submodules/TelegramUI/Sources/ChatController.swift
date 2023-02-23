@@ -89,6 +89,7 @@ import ChatListHeaderComponent
 import ChatControllerInteraction
 import FeaturedStickersScreen
 import ChatEntityKeyboardInputNode
+import StorageUsageScreen
 
 #if DEBUG
 import os.signpost
@@ -11704,6 +11705,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.beginClearHistory(type: type)
                 }
                 
+                let context = self.context
                 let _ = (self.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.CanDeleteHistory(id: peerId)
@@ -11890,9 +11892,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 default:
                                     text = strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser
                                 }
-                                items.append(ActionSheetButtonItem(title: text, color: .destructive, action: { [weak actionSheet] in
+                                items.append(ActionSheetButtonItem(title: text, color: .destructive, action: { [weak self, weak actionSheet] in
                                     actionSheet?.dismissAnimated()
-                                    beginClear(.forLocalPeer)
+                                    if mainPeer.id == context.account.peerId, let strongSelf = self {
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
+                                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                            }),
+                                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                                beginClear(.forLocalPeer)
+                                            })
+                                        ], parseMarkdown: true), in: .window(.root))
+                                    } else {
+                                        beginClear(.forLocalPeer)
+                                    }
                                 }))
                             }
                         }
@@ -12160,7 +12172,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                                 
                                 if let strongSelf = self {
-                                    let controller = storageUsageController(context: strongSelf.context, isModal: true)
+                                    let context = strongSelf.context
+                                    let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                                        return storageUsageExceptionsScreen(context: context, category: category)
+                                    })
                                     strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 }
                             }))
@@ -16974,7 +16989,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
            actionSheet?.dismissAnimated()
             if let strongSelf = self, !presented {
                 presented = true
-                strongSelf.push(storageUsageController(context: strongSelf.context, isModal: true))
+                let context = strongSelf.context
+                strongSelf.push(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                    return storageUsageExceptionsScreen(context: context, category: category)
+                }))
            }
         }))
     

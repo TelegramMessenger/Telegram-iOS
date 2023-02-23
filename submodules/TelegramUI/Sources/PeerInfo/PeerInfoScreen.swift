@@ -4564,7 +4564,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         canSetupAutoremoveTimeout = true
                     }
                 } else if let user = chatPeer as? TelegramUser {
-                    if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
+                    if user.id != strongSelf.context.account.peerId {
                         canSetupAutoremoveTimeout = true
                     }
                 } else if let channel = chatPeer as? TelegramChannel {

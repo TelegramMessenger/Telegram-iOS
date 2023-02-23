@@ -15,6 +15,7 @@ import PresentationDataUtils
 import UrlHandling
 import AccountUtils
 import PremiumUI
+import StorageUsageScreen
 
 private struct LogoutOptionsItemArguments {
     let addAccount: () -> Void
@@ -181,7 +182,9 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         })
         dismissImpl?()
     }, clearCache: {
-        pushControllerImpl?(storageUsageController(context: context))
+        pushControllerImpl?(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        }))
         dismissImpl?()
     }, changePhoneNumber: {
         let introController = PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
