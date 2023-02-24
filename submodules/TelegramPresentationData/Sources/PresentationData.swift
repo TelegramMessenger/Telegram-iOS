@@ -244,6 +244,8 @@ public final class InitialPresentationDataAndSettings {
 
 public func currentPresentationDataAndSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<InitialPresentationDataAndSettings, NoError> {
     struct InternalData {
+        var ptgSettings: PreferencesEntry?
+        var ptgSecretPasscodes: PreferencesEntry?
         var localizationSettings: PreferencesEntry?
         var presentationThemeSettings: PreferencesEntry?
         var automaticMediaDownloadSettings: PreferencesEntry?
@@ -255,6 +257,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         var contactSynchronizationSettings: PreferencesEntry?
         
         init(
+            ptgSettings: PreferencesEntry?,
+            ptgSecretPasscodes: PreferencesEntry?,
             localizationSettings: PreferencesEntry?,
             presentationThemeSettings: PreferencesEntry?,
             automaticMediaDownloadSettings: PreferencesEntry?,
@@ -265,6 +269,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             experimentalUISettings: PreferencesEntry?,
             contactSynchronizationSettings: PreferencesEntry?
         ) {
+            self.ptgSettings = ptgSettings
+            self.ptgSecretPasscodes = ptgSecretPasscodes
             self.localizationSettings = localizationSettings
             self.presentationThemeSettings = presentationThemeSettings
             self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
@@ -278,6 +284,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
     }
     
     return accountManager.transaction { transaction -> InternalData in
+        let ptgSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.ptgSettings)
+        let ptgSecretPasscodes = transaction.getSharedData(ApplicationSpecificSharedDataKeys.ptgSecretPasscodes)
         let localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)
         let presentationThemeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)
         let automaticMediaDownloadSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings)
@@ -289,6 +297,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         let contactSynchronizationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)
         
         return InternalData(
+            ptgSettings: ptgSettings,
+            ptgSecretPasscodes: ptgSecretPasscodes,
             localizationSettings: localizationSettings,
             presentationThemeSettings: presentationThemeSettings,
             automaticMediaDownloadSettings: automaticMediaDownloadSettings,
@@ -396,7 +406,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
         
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings, ptgSettings: PtgSettings(transaction), ptgSecretPasscodes: PtgSecretPasscodes(transaction))
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings, ptgSettings: PtgSettings(internalData.ptgSettings), ptgSecretPasscodes: PtgSecretPasscodes(internalData.ptgSecretPasscodes))
     }
 }
 
