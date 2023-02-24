@@ -105,9 +105,17 @@ final class AutomaticCacheEvictionContext {
                 |> mapToSignal { channelCategoryMapping -> Signal<Never, NoError> in
                     var signals: Signal<Never, NoError> = .complete()
                     
-                    var matchingPeers = 0
+                    let listSignal = Signal<PeerId, NoError> { subscriber in
+                        for peerId in peerIds {
+                            subscriber.putNext(peerId)
+                        }
+                        
+                        subscriber.putCompletion()
+                        
+                        return EmptyDisposable
+                    }
                     
-                    for peerId in peerIds {
+                    signals = listSignal |> mapToQueue { peerId -> Signal<Never, NoError> in
                         let timeout: Int32
                         if let value = settings.exceptions.first(where: { $0.key == peerId }) {
                             timeout = value.value
@@ -127,15 +135,13 @@ final class AutomaticCacheEvictionContext {
                         }
                         
                         if timeout == Int32.max {
-                            continue
+                            return .complete()
                         }
-                        
-                        matchingPeers += 1
                         
                         let minPeerTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) - timeout
                         //let minPeerTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                         
-                        signals = signals |> then(mediaBox.storageBox.all(peerId: peerId)
+                        return mediaBox.storageBox.all(peerId: peerId)
                         |> mapToSignal { peerResourceIds -> Signal<Never, NoError> in
                             return Signal { subscriber in
                                 var isCancelled = false
@@ -178,10 +184,8 @@ final class AutomaticCacheEvictionContext {
                                     isCancelled = true
                                 }
                             }
-                        })
+                        }
                     }
-                    
-                    Logger.shared.log("AutomaticCacheEviction", "have \(matchingPeers) peers with data")
                     
                     return signals
                 }
