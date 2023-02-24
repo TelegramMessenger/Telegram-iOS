@@ -234,10 +234,13 @@ private class AdMessagesHistoryContextImpl {
             }
             
             messagePeers[author.id] = author
+            
+            let messageHash = (self.text.hashValue &+ 31 &* peerId.hashValue) &* 31 &+ author.id.hashValue
+            let messageStableVersion = UInt32(bitPattern: Int32(truncatingIfNeeded: messageHash))
 
             return Message(
                 stableId: 0,
-                stableVersion: 0,
+                stableVersion: messageStableVersion,
                 id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
                 globallyUniqueId: nil,
                 groupingKey: nil,

@@ -839,7 +839,7 @@ public final class PostboxDecoder {
             memcpy(&valueLength, bytes + offset, 4)
             offset += 4
             var i: Int32 = 0
-            while i < length {
+            while i < valueLength {
                 if offset + 4 > length {
                     offset = 0
                     return false
