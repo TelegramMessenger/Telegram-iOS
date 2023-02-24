@@ -610,10 +610,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         },
                         yesterdayFormatString: { value in
                             //TODO:localize
-                            return PresentationStrings.FormattedString(string: "yesterday", ranges: [])
+                            return PresentationStrings.FormattedString(string: "yesterday at \(value)", ranges: [])
                         }
                     )).string
-                    text = "read \(dateText)"
+                    text = dateText
                 }
                 self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
                 let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth - 18.0, height: 100.0))
@@ -765,8 +765,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.requestUpdateApparentHeight = requestUpdateApparentHeight
             self.openPeer = openPeer
             
-            self.listContext = context.engine.messages.messageReactionList(message: message, reaction: reaction)
-            self.state = ItemsState(listState: EngineMessageReactionListContext.State(message: message, reaction: reaction), readStats: readStats)
+            self.listContext = context.engine.messages.messageReactionList(message: message, readStats: readStats, reaction: reaction)
+            self.state = ItemsState(listState: EngineMessageReactionListContext.State(message: message, readStats: readStats, reaction: reaction), readStats: readStats)
             
             self.scrollNode = ASScrollNode()
             self.scrollNode.canCancelAllTouchesInViews = true
