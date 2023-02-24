@@ -17,6 +17,7 @@ import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextFormat
 import EmojiStatusComponent
+import TelegramStringFormatting
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
@@ -349,6 +350,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
     }
     
+    private static let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: .white)?.withRenderingMode(.alwaysTemplate)
+    
     private final class ReactionsTabNode: ASDisplayNode, UIScrollViewDelegate {
         private final class ItemNode: HighlightTrackingButtonNode {
             let context: AccountContext
@@ -358,6 +361,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             let highlightBackgroundNode: ASDisplayNode
             let avatarNode: AvatarNode
             let titleLabelNode: ImmediateTextNode
+            let textLabelNode: ImmediateTextNode
+            let readIconView: UIImageView
             var credibilityIconView: ComponentView<Empty>?
             let separatorNode: ASDisplayNode
             
@@ -389,6 +394,13 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.titleLabelNode.maximumNumberOfLines = 1
                 self.titleLabelNode.isUserInteractionEnabled = false
                 
+                self.textLabelNode = ImmediateTextNode()
+                self.textLabelNode.isAccessibilityElement = false
+                self.textLabelNode.maximumNumberOfLines = 1
+                self.textLabelNode.isUserInteractionEnabled = false
+                
+                self.readIconView = UIImageView(image: readIconImage)
+                
                 self.separatorNode = ASDisplayNode()
                 self.separatorNode.isAccessibilityElement = false
                 
@@ -400,6 +412,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.addSubnode(self.highlightBackgroundNode)
                 self.addSubnode(self.avatarNode)
                 self.addSubnode(self.titleLabelNode)
+                self.addSubnode(self.textLabelNode)
+                self.view.addSubview(self.readIconView)
                 
                 self.highligthedChanged = { [weak self] highlighted in
                     guard let strongSelf = self else {
@@ -577,8 +591,48 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     maxTextWidth -= 32.0
                 }
                 let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 100.0))
-                let titleFrame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+                
+                //TODO:localize
+                var text = "read"
+                if let timestamp = item.timestamp {
+                    let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: false, allowYesterday: true, format: HumanReadableStringFormat(
+                        dateFormatString: { value in
+                            //TODO:localize
+                            return PresentationStrings.FormattedString(string: "\(value)", ranges: [])
+                        },
+                        tomorrowFormatString: { value in
+                            //TODO:localize
+                            return PresentationStrings.FormattedString(string: "at \(value)", ranges: [])
+                        },
+                        todayFormatString: { value in
+                            //TODO:localize
+                            return PresentationStrings.FormattedString(string: "at \(value)", ranges: [])
+                        },
+                        yesterdayFormatString: { value in
+                            //TODO:localize
+                            return PresentationStrings.FormattedString(string: "yesterday", ranges: [])
+                        }
+                    )).string
+                    text = "read \(dateText)"
+                }
+                self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
+                let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth - 18.0, height: 100.0))
+                
+                let textSpacing: CGFloat = 2.0
+                let contentHeight = titleSize.height + textSpacing + textSize.height
+                let contentY = floor((size.height - contentHeight) / 2.0)
+                
+                let titleFrame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: contentY), size: titleSize)
                 self.titleLabelNode.frame = titleFrame
+                
+                let textFrame = CGRect(origin: CGPoint(x: titleFrame.minX + 18.0, y: titleFrame.maxY + textSpacing), size: textSize)
+                self.textLabelNode.frame = textFrame
+                if let readImage = self.readIconView.image {
+                    self.readIconView.tintColor = presentationData.theme.contextMenu.secondaryColor
+                    let fraction: CGFloat = 0.7
+                    let iconSize = CGSize(width: floor(readImage.size.width * fraction), height: floor(readImage.size.height * fraction))
+                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + 2.0), size: iconSize)
+                }
                 
                 if let credibilityIconView = self.credibilityIconView, let credibilityIconSize = credibilityIconSize {
                     if let credibilityIconComponentView = credibilityIconView.view {
@@ -623,7 +677,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     for peer in readStats.peers {
                         if !existingPeers.contains(peer.id) {
                             existingPeers.insert(peer.id)
-                            mergedItems.append(EngineMessageReactionListContext.Item(peer: peer, reaction: nil))
+                            mergedItems.append(EngineMessageReactionListContext.Item(peer: peer, reaction: nil, timestamp: readStats.readTimestamps[peer.id]))
                         }
                     }
                 }
@@ -763,7 +817,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             if let size = self.currentSize {
                 var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
-                apparentHeight = max(apparentHeight, 44.0)
+                apparentHeight = max(apparentHeight, 56.0)
                 apparentHeight = min(apparentHeight, size.height + 100.0)
                 if self.apparentHeight != apparentHeight {
                     self.apparentHeight = apparentHeight
@@ -780,7 +834,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             guard let presentationData = self.presentationData else {
                 return
             }
-            let itemHeight: CGFloat = 44.0
+            let itemHeight: CGFloat = 56.0
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -180.0)
             
             var validIds = Set<Int>()
@@ -876,7 +930,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         func update(presentationData: PresentationData, constrainedSize: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
-            let itemHeight: CGFloat = 44.0
+            let itemHeight: CGFloat = 56.0
             
             if self.presentationData?.theme !== presentationData.theme {
                 let sideInset: CGFloat = 40.0

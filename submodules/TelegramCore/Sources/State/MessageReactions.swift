@@ -338,7 +338,7 @@ public extension EngineMessageReactionListContext.State {
             for recentPeer in reactionsAttribute.recentPeers {
                 if let peer = message.peers[recentPeer.peerId] {
                     if reaction == nil || recentPeer.value == reaction {
-                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value))
+                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value, timestamp: nil))
                     }
                 }
             }
@@ -359,13 +359,16 @@ public final class EngineMessageReactionListContext {
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let reaction: MessageReaction.Reaction?
+        public let timestamp: Int32?
         
         public init(
             peer: EnginePeer,
-            reaction: MessageReaction.Reaction?
+            reaction: MessageReaction.Reaction?,
+            timestamp: Int32?
         ) {
             self.peer = peer
             self.reaction = reaction
+            self.timestamp = timestamp
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -373,6 +376,9 @@ public final class EngineMessageReactionListContext {
                 return false
             }
             if lhs.reaction != rhs.reaction {
+                return false
+            }
+            if lhs.timestamp != rhs.timestamp {
                 return false
             }
             return true
@@ -503,7 +509,7 @@ public final class EngineMessageReactionListContext {
                                 switch reaction {
                                 case let .messagePeerReaction(_, peer, reaction):
                                     if let peer = transaction.getPeer(peer.peerId), let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction))
+                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: nil))
                                     }
                                 }
                             }

@@ -152,9 +152,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return self._automaticMediaDownloadSettings.get()
     }
     
-    public var energyUsageSettings: EnergyUsageSettings {
-        return self.currentAutomaticMediaDownloadSettings.energyUsageSettings
-    }
+    public private(set) var energyUsageSettings: EnergyUsageSettings
     
     public let currentAutodownloadSettings: Atomic<AutodownloadSettings>
     private let _autodownloadSettings = Promise<AutodownloadSettings>()
@@ -182,6 +180,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private weak var appDelegate: AppDelegate?
     
     private var invalidatedApsToken: Data?
+    
+    private let energyUsageAutomaticDisposable = MetaDisposable()
     
     init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?) {
         assert(Queue.mainQueue().isCurrent())
@@ -238,6 +238,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.currentAutodownloadSettings = Atomic(value: initialPresentationDataAndSettings.autodownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
+        
+        if automaticEnergyUsageShouldBeOnNow(settings: self.currentAutomaticMediaDownloadSettings) {
+            self.energyUsageSettings = self.currentAutomaticMediaDownloadSettings.energyUsageSettings
+        } else {
+            self.energyUsageSettings = EnergyUsageSettings.default
+        }
         
         let presentationData: Signal<PresentationData, NoError> = .single(initialPresentationDataAndSettings.presentationData)
         |> then(
@@ -368,6 +374,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.automaticMediaDownloadSettingsDisposable.set(self._automaticMediaDownloadSettings.get().start(next: { [weak self] next in
             if let strongSelf = self {
                 strongSelf.currentAutomaticMediaDownloadSettings = next
+                
+                if automaticEnergyUsageShouldBeOnNow(settings: next) {
+                    strongSelf.energyUsageSettings = next.energyUsageSettings
+                } else {
+                    strongSelf.energyUsageSettings = EnergyUsageSettings.default
+                }
+                strongSelf.energyUsageAutomaticDisposable.set((automaticEnergyUsageShouldBeOn(settings: next)
+                |> deliverOnMainQueue).start(next: { value in
+                    if let strongSelf = self {
+                        if value {
+                            strongSelf.energyUsageSettings = next.energyUsageSettings
+                        } else {
+                            strongSelf.energyUsageSettings = EnergyUsageSettings.default
+                        }
+                    }
+                }))
             }
         }))
         

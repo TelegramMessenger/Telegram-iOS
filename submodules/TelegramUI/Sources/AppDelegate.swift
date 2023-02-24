@@ -1009,6 +1009,21 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
             
+            Queue.mainQueue().async {
+                var previousValue: Bool?
+                let _ = (sharedApplicationContext.sharedContext.automaticMediaDownloadSettings
+                |> mapToSignal { settings -> Signal<Bool, NoError> in
+                    return automaticEnergyUsageShouldBeOn(settings: settings)
+                }
+                |> distinctUntilChanged).start(next: { isPowerSavingEnabled in
+                    let previousValueValue = previousValue
+                    previousValue = isPowerSavingEnabled
+                    if isPowerSavingEnabled != previousValueValue && previousValueValue != nil {
+                        
+                    }
+                })
+            }
+            
             return .single(sharedApplicationContext)
         })
         

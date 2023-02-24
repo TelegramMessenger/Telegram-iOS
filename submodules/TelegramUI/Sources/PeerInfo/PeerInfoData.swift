@@ -197,6 +197,7 @@ final class PeerInfoScreenData {
     let requestsContext: PeerInvitationImportersContext?
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
+    let isPowerSavingEnabled: Bool?
     
     init(
         peer: Peer?,
@@ -216,7 +217,8 @@ final class PeerInfoScreenData {
         requests: PeerInvitationImportersState?,
         requestsContext: PeerInvitationImportersContext?,
         threadData: MessageHistoryThreadData?,
-        appConfiguration: AppConfiguration?
+        appConfiguration: AppConfiguration?,
+        isPowerSavingEnabled: Bool?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -236,6 +238,7 @@ final class PeerInfoScreenData {
         self.requestsContext = requestsContext
         self.threadData = threadData
         self.appConfiguration = appConfiguration
+        self.isPowerSavingEnabled = isPowerSavingEnabled
     }
 }
 
@@ -450,9 +453,14 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
         ),
-        hasPassword
+        hasPassword,
+        context.sharedContext.automaticMediaDownloadSettings
+        |> mapToSignal { settings -> Signal<Bool, NoError> in
+            return automaticEnergyUsageShouldBeOn(settings: settings)
+        }
+        |> distinctUntilChanged
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -514,7 +522,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             requests: nil,
             requestsContext: nil,
             threadData: nil,
-            appConfiguration: appConfiguration
+            appConfiguration: appConfiguration,
+            isPowerSavingEnabled: isPowerSavingEnabled
         )
     }
 }
@@ -542,7 +551,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requests: nil,
                 requestsContext: nil,
                 threadData: nil,
-                appConfiguration: nil
+                appConfiguration: nil,
+                isPowerSavingEnabled: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -674,7 +684,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requests: nil,
                     requestsContext: nil,
                     threadData: nil,
-                    appConfiguration: nil
+                    appConfiguration: nil,
+                    isPowerSavingEnabled: nil
                 )
             }
         case .channel:
@@ -751,7 +762,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requests: requests,
                     requestsContext: currentRequestsContext,
                     threadData: nil,
-                    appConfiguration: nil
+                    appConfiguration: nil,
+                    isPowerSavingEnabled: nil
                 )
             }
         case let .group(groupId):
@@ -951,7 +963,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requests: requests,
                     requestsContext: currentRequestsContext,
                     threadData: threadData,
-                    appConfiguration: appConfiguration
+                    appConfiguration: appConfiguration,
+                    isPowerSavingEnabled: nil
                 )
             }
         }

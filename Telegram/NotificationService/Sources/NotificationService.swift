@@ -740,7 +740,7 @@ private final class NotificationServiceHandler {
             } else {
                 automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
             }
-            let shouldSynchronizeState = automaticMediaDownloadSettings.energyUsageSettings.synchronizeInBackground
+            let shouldSynchronizeState = true//automaticMediaDownloadSettings.energyUsageSettings.synchronizeInBackground
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {

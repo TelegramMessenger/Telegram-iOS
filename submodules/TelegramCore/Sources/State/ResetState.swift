@@ -33,6 +33,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                             }
                         }
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, _ in nil })
+                        transaction.setPeerThreadCombinedState(peerId: peerId, state: nil)
                     }
                 }
                 
