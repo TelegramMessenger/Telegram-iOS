@@ -36,6 +36,11 @@ public final class CallKitIntegration {
     var audioSessionActive: Signal<Bool, NoError> {
         return self.audioSessionActivePromise.get()
     }
+    
+    private let hasActiveCallsValue = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var hasActiveCalls: Signal<Bool, NoError> {
+        return self.hasActiveCallsValue.get()
+    }
 
     private static let sharedInstance: CallKitIntegration? = CallKitIntegration()
     public static var shared: CallKitIntegration? {
@@ -50,7 +55,7 @@ public final class CallKitIntegration {
         audioSessionActivationChanged: @escaping (Bool) -> Void
     ) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged, hasActiveCallsValue: hasActiveCallsValue)
         }
     }
     
@@ -130,6 +135,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private var endCall: ((UUID) -> Signal<Bool, NoError>)?
     private var setCallMuted: ((UUID, Bool) -> Void)?
     private var audioSessionActivationChanged: ((Bool) -> Void)?
+    private var hasActiveCallsValue: ValuePromise<Bool>?
     
     private var isAudioSessionActive: Bool = false
     private var pendingVoiceChatOutputMode: AudioSessionOutputMode?
@@ -137,6 +143,12 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private let disposableSet = DisposableSet()
     
     fileprivate var audioSessionActivePromise: ValuePromise<Bool>?
+    
+    private var activeCalls = Set<UUID>() {
+        didSet {
+            self.hasActiveCallsValue?.set(!self.activeCalls.isEmpty)
+        }
+    }
     
     override init() {
         self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration())
@@ -146,13 +158,14 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.provider.setDelegate(self, queue: nil)
     }
     
-    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (AccountContext, UUID, EnginePeer.Id?, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (AccountContext, UUID, EnginePeer.Id?, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void, hasActiveCallsValue: ValuePromise<Bool>) {
         self.audioSessionActivePromise = audioSessionActivePromise
         self.startCall = startCall
         self.answerCall = answerCall
         self.endCall = endCall
         self.setCallMuted = setCallMuted
         self.audioSessionActivationChanged = audioSessionActivationChanged
+        self.hasActiveCallsValue = hasActiveCallsValue
     }
     
     private static func providerConfiguration() -> CXProviderConfiguration {
@@ -185,12 +198,16 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         let endCallAction = CXEndCallAction(call: uuid)
         let transaction = CXTransaction(action: endCallAction)
         self.requestTransaction(transaction)
+        
+        self.activeCalls.remove(uuid)
     }
     
     func dropCall(uuid: UUID) {
         Logger.shared.log("CallKitIntegration", "report call ended \(uuid)")
         
         self.provider.reportCall(with: uuid, endedAt: nil, reason: CXCallEndedReason.remoteEnded)
+        
+        self.activeCalls.remove(uuid)
     }
     
     func answerCall(uuid: UUID) {
@@ -231,6 +248,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
             update.supportsDTMF = false
             
             self.provider.reportCall(with: uuid, updated: update)
+            
+            self.activeCalls.insert(uuid)
         })
     }
     
@@ -261,6 +280,10 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         OngoingCallContext.setupAudioSession()
         
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in
+            if error == nil {
+                self.activeCalls.insert(uuid)
+            }
+            
             completion?(error as NSError?)
         })
     }
@@ -279,6 +302,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     
     func providerDidReset(_ provider: CXProvider) {
         Logger.shared.log("CallKitIntegration", "providerDidReset")
+        
+        self.activeCalls.removeAll()
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {

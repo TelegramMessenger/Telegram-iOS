@@ -571,7 +571,20 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         self.window?.makeKeyAndVisible()
         
-        self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
+        var hasActiveCalls: Signal<Bool, NoError> = .single(false)
+        if CallKitIntegration.isAvailable, let callKitIntegration = CallKitIntegration.shared {
+            hasActiveCalls = callKitIntegration.hasActiveCalls
+        }
+        self.hasActiveAudioSession.set(
+            combineLatest(queue: .mainQueue(),
+                hasActiveCalls,
+                MediaManagerImpl.globalAudioSession.isActive()
+            )
+            |> map { hasActiveCalls, isActive -> Bool in
+                return hasActiveCalls || isActive
+            }
+            |> distinctUntilChanged
+        )
         
         let applicationBindings = TelegramApplicationBindings(isMainApp: true, appBundleId: baseAppBundleId, appBuildType: buildConfig.isAppStoreBuild ? .public : .internal, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
