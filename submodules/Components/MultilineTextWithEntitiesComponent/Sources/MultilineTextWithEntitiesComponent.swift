@@ -172,7 +172,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
             self.textNode.longTapAttributeAction = component.longTapAction
                         
             if case let .curve(duration, _) = transition.animation, let previousText = previousText, previousText != attributedString.string {
-                if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
+                if let snapshotView = self.snapshotContentTree() {
                     snapshotView.center = self.center
                     self.superview?.addSubview(snapshotView)
                     
