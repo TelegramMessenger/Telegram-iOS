@@ -193,7 +193,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             self.inputFieldBackgroundNode.alpha = fieldBackgroundAlpha
             self.inputFieldBackgroundNode.layer.animateAlpha(from: previousAlpha, to: fieldBackgroundAlpha, duration: 0.25)
             self.subtitleNode.isHidden = true
-        default:
+        case .entry:
             break
         }
     }

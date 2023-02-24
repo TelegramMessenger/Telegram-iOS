@@ -85,17 +85,20 @@ public struct PtgSecretPasscodes: Codable, Equatable {
     }
     
     public func inactiveSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
-        var result = Set<PeerId>()
+        var active = Set<PeerId>()
+        var inactive = Set<PeerId>()
         for secretPasscode in self.secretPasscodes {
-            if !secretPasscode.active {
-                for secretChat in secretPasscode.secretChats {
-                    if secretChat.accountRecordId == accountId {
-                        result.insert(secretChat.peerId)
+            for secretChat in secretPasscode.secretChats {
+                if secretChat.accountRecordId == accountId {
+                    if secretPasscode.active {
+                        active.insert(secretChat.peerId)
+                    } else {
+                        inactive.insert(secretChat.peerId)
                     }
                 }
             }
         }
-        return result
+        return inactive.subtracting(active)
     }
     
     public func allSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {

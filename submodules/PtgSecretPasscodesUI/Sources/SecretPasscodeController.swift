@@ -553,15 +553,18 @@ extension PtgSecretPasscodes {
     }
     
     public func inactiveSecretChatPeerIdsForAllAccounts() -> Set<PeerId> {
-        var result = Set<PeerId>()
+        var active = Set<PeerId>()
+        var inactive = Set<PeerId>()
         for secretPasscode in self.secretPasscodes {
-            if !secretPasscode.active {
-                for secretChat in secretPasscode.secretChats {
-                    result.insert(secretChat.peerId)
+            for secretChat in secretPasscode.secretChats {
+                if secretPasscode.active {
+                    active.insert(secretChat.peerId)
+                } else {
+                    inactive.insert(secretChat.peerId)
                 }
             }
         }
-        return result
+        return inactive.subtracting(active)
     }
     
     public func allSecretChatPeerIdsForAllAccounts() -> Set<PeerId> {
