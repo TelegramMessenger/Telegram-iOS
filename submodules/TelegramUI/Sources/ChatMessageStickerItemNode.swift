@@ -505,7 +505,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
                 
                 if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
-                    needsShareButton = false
+                    if hasCommentButton(item: item) {
+                    } else {
+                        needsShareButton = false
+                    }
                 }
             }
             

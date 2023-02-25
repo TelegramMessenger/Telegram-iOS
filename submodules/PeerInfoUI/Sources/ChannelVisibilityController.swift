@@ -1904,19 +1904,23 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                             
                         }
                         
-                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                            if showAlert {
-                                let text: String
-                                if case .broadcast = peer.info {
-                                    text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                        if !updatedAddressNameValue.isEmpty {
+                            _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                                if showAlert {
+                                    let text: String
+                                    if case .broadcast = peer.info {
+                                        text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                                    } else {
+                                        text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                                 } else {
-                                    text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                    invokeAction()
                                 }
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
-                            } else {
-                                invokeAction()
-                            }
-                        })
+                            })
+                        } else {
+                            invokeAction()
+                        }
                     } else {
                         switch mode {
                             case .initialSetup:

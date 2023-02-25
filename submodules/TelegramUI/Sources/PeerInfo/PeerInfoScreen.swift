@@ -1105,7 +1105,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }))
             }
             
-            if user.botInfo != nil, !user.isVerified {
+            if user.botInfo != nil {
                 items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
                     interaction.openReport(.default)
                 }))

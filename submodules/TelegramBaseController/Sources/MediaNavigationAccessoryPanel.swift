@@ -10,8 +10,14 @@ import TelegramPresentationData
 public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public let containerNode: MediaNavigationAccessoryContainerNode
     
+    public enum ChangeType {
+        case preset
+        case sliderChange
+        case sliderCommit(CGFloat, CGFloat)
+    }
+    
     public var close: (() -> Void)?
-    public var setRate: ((AudioPlaybackRate, Bool) -> Void)?
+    public var setRate: ((AudioPlaybackRate, ChangeType) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var tapAction: (() -> Void)?
     public var playPrevious: (() -> Void)?
@@ -34,8 +40,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
                 close()
             }
         }
-        self.containerNode.headerNode.setRate = { [weak self] rate, fromMenu in
-            self?.setRate?(rate, fromMenu)
+        self.containerNode.headerNode.setRate = { [weak self] rate, type in
+            self?.setRate?(rate, type)
         }
         self.containerNode.headerNode.togglePlayPause = { [weak self] in
             if let strongSelf = self, let togglePlayPause = strongSelf.togglePlayPause {

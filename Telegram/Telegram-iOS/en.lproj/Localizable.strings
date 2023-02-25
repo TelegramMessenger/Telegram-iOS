@@ -8911,8 +8911,9 @@ Sorry for the inconvenience.";
 
 "ChatList.EmptyChatListWithArchive" = "All of your chats are archived.";
 
-"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5X speed.";
+"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5x speed.";
 "Conversation.AudioRateOptionsTooltip" = "Long tap for more speed values.";
+"Conversation.AudioRateTooltipCustom" = "Audio will play at %@x speed.";
 
 "ImportStickerPack.EmojiCount_1" = "%@ Emoji";
 "ImportStickerPack.EmojiCount_any" = "%@ Emojis";
@@ -8936,3 +8937,5 @@ Sorry for the inconvenience.";
 "ChatList.ReadAll" = "Read All";
 
 "ChatList.ClearSavedMessagesConfirmation" = "Are you sure you want to delete all your saved messages?";
+
+"Conversation.Translation.Settings" = "Settings";

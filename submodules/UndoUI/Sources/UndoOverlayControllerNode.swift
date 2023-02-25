@@ -546,7 +546,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
             
                 let animationName: String
-                if rate == 1.5 {
+                if rate == .infinity {
+                    animationName = "anim_voicefast"
+                } else if rate == -.infinity {
+                    animationName = "anim_voiceslow"
+                } else if rate == 1.5 {
                     animationName = "anim_voice1_5x"
                 } else if rate == 2.0 {
                     animationName = "anim_voice2x"

@@ -23,6 +23,14 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     
+    var hasExpandedAudioTranscription: Bool {
+        if case .expanded = self.audioTranscriptionState {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             var wasVisible = false

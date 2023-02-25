@@ -1074,9 +1074,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || (resourceAvailable && isImage) || diceEmoji != nil {
-            let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
-
             if !isExpired {
                 if !isPoll {
                     if !isCopyProtected {
@@ -1183,34 +1182,34 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     })))
                 }
             }
-            
-            if resourceAvailable, !message.containsSecretMedia, !chatPresentationInterfaceState.copyProtectionEnabled, !message.isCopyProtected() {
-                var mediaReference: AnyMediaReference?
-                var isVideo = false
-                for media in message.media {
-                    if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-                        mediaReference = ImageMediaReference.standalone(media: image).abstract
-                        break
-                    } else if let file = media as? TelegramMediaFile, file.isVideo {
-                        mediaReference = FileMediaReference.standalone(media: file).abstract
-                        isVideo = true
-                        break
-                    }
+        }
+        
+        if resourceAvailable, !message.containsSecretMedia && !isCopyProtected {
+            var mediaReference: AnyMediaReference?
+            var isVideo = false
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+                    mediaReference = ImageMediaReference.standalone(media: image).abstract
+                    break
+                } else if let file = media as? TelegramMediaFile, file.isVideo {
+                    mediaReference = FileMediaReference.standalone(media: file).abstract
+                    isVideo = true
+                    break
                 }
-                if let mediaReference = mediaReference {
-                    actions.append(.action(ContextMenuActionItem(text: isVideo ? chatPresentationInterfaceState.strings.Gallery_SaveVideo : chatPresentationInterfaceState.strings.Gallery_SaveImage, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
-                        |> deliverOnMainQueue).start(completed: {
-                            Queue.mainQueue().after(0.2) {
-                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
-                            }
-                        })
-                        f(.default)
-                    })))
-                }
+            }
+            if let mediaReference = mediaReference {
+                actions.append(.action(ContextMenuActionItem(text: isVideo ? chatPresentationInterfaceState.strings.Gallery_SaveVideo : chatPresentationInterfaceState.strings.Gallery_SaveImage, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
+                    |> deliverOnMainQueue).start(completed: {
+                        Queue.mainQueue().after(0.2) {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+                        }
+                    })
+                    f(.default)
+                })))
             }
         }
         

@@ -53,7 +53,7 @@ private final class ChatMessageBubbleClippingNode: ASDisplayNode {
     }
 }
 
-private func hasCommentButton(item: ChatMessageItem) -> Bool {
+func hasCommentButton(item: ChatMessageItem) -> Bool {
     let firstMessage = item.content.firstMessage
     
     var hasDiscussion = false
@@ -4541,6 +4541,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
                 return contentNode.interactiveFileNode.hasExpandedAudioTranscription
+            } else if let contentNode = contentNode as? ChatMessageInstantVideoBubbleContentNode {
+                return contentNode.hasExpandedAudioTranscription
             }
         }
         return false
