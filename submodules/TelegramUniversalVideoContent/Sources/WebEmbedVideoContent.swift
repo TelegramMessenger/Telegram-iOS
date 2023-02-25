@@ -14,7 +14,7 @@ import RangeSet
 
 public final class WebEmbedVideoContent: UniversalVideoContent {
     public let id: AnyHashable
-    let userLocation: MediaResourceUserLocation
+    public let userLocation: MediaResourceUserLocation
     let webPage: TelegramMediaWebpage
     public let webpageContent: TelegramMediaWebpageLoadedContent
     public let dimensions: CGSize

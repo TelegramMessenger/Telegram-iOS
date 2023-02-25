@@ -455,7 +455,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    private func transcribe() {
+    private func transcribe(audioDuration: Int32) {
         guard let arguments = self.arguments, let context = self.context, let message = self.message, let presentationData = self.presentationData else {
             return
         }
@@ -510,7 +510,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
                 
-                if context.sharedContext.immediateExperimentalUISettings.localTranscription {
+                if context.sharedContext.immediateExperimentalUISettings.localTranscription && (!arguments.associatedData.isPremium || arguments.context.sharedContext.currentPtgSettings.with { $0.preferAppleVoiceToText }) {
                     let appLocale = presentationData.strings.baseLanguageCode
                     
                     let signal: Signal<LocallyTranscribedAudio?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
@@ -548,13 +548,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else {
                             locale = appLocale
                         }
-                        return transcribeAudio(path: result, locale: locale)
+                        return transcribeAudio(path: result, locale: locale, audioDuration: audioDuration)
                         |> `catch` { [weak self] error in
                             let error = error as NSError
                             if error.domain == "kLSRErrorDomain" && error.code == 201 {
                                 // Siri and Dictation are disabled
                                 self?.arguments?.controllerInteraction.presentController(textAlertController(context: context, title: nil, text: presentationData.strings.SiriAndDictationAreDisabledAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }
+                            self?.transcribeDisposable = nil
                             return .single(nil)
                         }
                     }
@@ -807,22 +808,19 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var displayTranscribe: Bool
                 var displayingTranscribeDueToLocalTranscription = false
                 if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
-                    if arguments.associatedData.isPremium {
+                    if arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription && (!arguments.associatedData.isPremium || arguments.context.sharedContext.currentPtgSettings.with { $0.preferAppleVoiceToText }) {
+                        displayTranscribe = true
+                        displayingTranscribeDueToLocalTranscription = true
+                    } else if arguments.associatedData.isPremium {
                         displayTranscribe = true
                     } else if arguments.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
                         if audioDuration >= 60 {
                             displayTranscribe = true
                         } else if arguments.incoming && isConsumed == false && arguments.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
                             displayTranscribe = true
-                        } else if arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription {
-                            displayTranscribe = true
-                            displayingTranscribeDueToLocalTranscription = true
                         } else {
                             displayTranscribe = false
                         }
-                    } else if arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription {
-                        displayTranscribe = true
-                        displayingTranscribeDueToLocalTranscription = true
                     } else {
                         displayTranscribe = false
                     }
@@ -1372,7 +1370,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.transcribe()
+                                                strongSelf.transcribe(audioDuration: audioDuration)
                                             }
                                         )),
                                         environment: {},

@@ -13,4 +13,11 @@ public extension Bundle {
     var ptgVersion: String {
         return (infoDictionary?["PTelegramVersion"] as? String) ?? "unknown"
     }
+    
+    #if targetEnvironment(simulator)
+    static let isTestFlightOrDevelopment: Bool = true
+    #else
+    // also will be true for builds installed locally on device during development
+    static let isTestFlightOrDevelopment: Bool = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    #endif
 }

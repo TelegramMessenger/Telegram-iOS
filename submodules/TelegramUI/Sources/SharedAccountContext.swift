@@ -1,5 +1,13 @@
 import PtgSettings
 import PtgSecretPasscodes
+import GalleryUI
+import ContextUI
+import LegacyComponents
+import ShareController
+import TelegramUniversalVideoContent
+import StorageUsageScreen
+import ItemListUI
+import TelegramBaseController
 
 import Foundation
 import UIKit
@@ -175,6 +183,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     public let currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes>
     private var ptgSecretPasscodesDisposable: Disposable?
+    private var applicationInForegroundDisposable: Disposable?
     
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
@@ -238,6 +247,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         ))
         
         self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground, presentationData: presentationData)
+        
+        (self.mediaManager as! MediaManagerImpl).animationsTemporarilyDisabledForCoverUp = { [weak self] in
+            return self?.animationsTemporarilyDisabledForCoverUp == true
+        }
         
         self.mediaManager.overlayMediaManager.updatePossibleEmbeddingItem = { [weak self] item in
             guard let strongSelf = self else {
@@ -372,18 +385,48 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let _ = strongSelf.currentPtgSettings.swap(next)
             }
         })
+        
+        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isOriginallyInstalledViaTestFlightOrForDevelopment == nil {
+            let _ = accountManager.transaction({ transaction in
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.ptgSettings, { entry in
+                    return PreferencesEntry(PtgSettings(entry).withUpdated(isOriginallyInstalledViaTestFlightOrForDevelopment: Bundle.isTestFlightOrDevelopment))
+                })
+            }).start()
+        }
 
-        self._ptgSecretPasscodes.set(.single(initialPresentationDataAndSettings.ptgSecretPasscodes)
-        |> then(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
-            |> map { sharedData in
-                return PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+        var ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError> = .single(initialPresentationDataAndSettings.ptgSecretPasscodes)
+        if applicationBindings.isMainApp {
+            ptgSecretPasscodesSignal = ptgSecretPasscodesSignal
+            |> then(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+                |> map { sharedData in
+                    return PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+                }
+            )
+        }
+        self._ptgSecretPasscodes.set(ptgSecretPasscodesSignal)
+        self.ptgSecretPasscodesDisposable = (self._ptgSecretPasscodes.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            guard let strongSelf = self else {
+                return
             }
-        ))
-        self.ptgSecretPasscodesDisposable = self._ptgSecretPasscodes.get().start(next: { [weak self] next in
-            if let strongSelf = self {
-                let _ = strongSelf.currentPtgSecretPasscodes.swap(next)
+            
+            let newlyHiddenPeerIds = next.inactiveSecretChatPeerIdsForAllAccounts().subtracting(strongSelf.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIdsForAllAccounts() })
+            
+            let _ = strongSelf.currentPtgSecretPasscodes.swap(next)
+            
+            if !newlyHiddenPeerIds.isEmpty && applicationBindings.isMainApp {
+                strongSelf.hideUIOfInactiveSecretChats(peerIds: newlyHiddenPeerIds)
             }
         })
+        
+        if applicationBindings.isMainApp {
+            // pause all media in hidable secret chats when app enters background
+            self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
+            |> filter { !$0 }
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                self?.pauseMediaInHidableChats()
+            })
+        }
 
         let startTime = CFAbsoluteTimeGetCurrent()
         
@@ -454,7 +497,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
                 if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods, initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: id) }))
                     |> mapToSignal { result -> Signal<AddedAccountResult, NoError> in
                         switch result {
                             case let .authorized(account):
@@ -476,7 +519,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: telegramAccountAuxiliaryMethods, initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: authRecord.0) }))
                 |> mapToSignal { result -> Signal<UnauthorizedAccount?, NoError> in
                     switch result {
                         case let .unauthorized(account):
@@ -554,7 +597,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 assertionFailure()
                             }
 
-                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue, initialInactiveSecretChatPeerIds: initialPresentationDataAndSettings.ptgSecretPasscodes.inactiveSecretChatPeerIds(for: account))
+                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue, initialInactiveSecretChatPeerIds: initialPresentationDataAndSettings.ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: account.id))
 
                             self.activeAccountsValue!.accounts.append((account.id, context, accountRecord.2))
                             
@@ -873,6 +916,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.hasOngoingCallDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.ptgSecretPasscodesDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
+    }
+    
+    public func updatePtgSecretPasscodesPromise(_ ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError>) {
+        assert(!self.applicationBindings.isMainApp)
+        self._ptgSecretPasscodes.set(ptgSecretPasscodesSignal)
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
@@ -1562,6 +1611,217 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController {
         return installedStickerPacksController(context: context, mode: mode)
+    }
+    
+    private func hideUIOfInactiveSecretChats(peerIds: Set<PeerId>) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        UIView.performWithoutAnimation {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            CATransaction.setAnimationDuration(0.0)
+            
+            var insideInactiveSecretChat = false
+            var dismissesIfInsideInactiveSecretChat: [() -> Void] = []
+            
+            self.mainWindow?.forEachViewController({ controller in
+                if let controller = controller as? ActionSheetController {
+                    controller.dismiss(animated: false)
+                }
+                
+                if let controller = controller as? ContextController {
+                    controller.dismissNow()
+                }
+                
+                if let controller = controller as? AlertController {
+                    dismissesIfInsideInactiveSecretChat.append { [weak controller] in
+                        controller?.dismiss()
+                    }
+                }
+                
+                if let controller = controller as? ChatControllerImpl {
+                    if let peerId = controller.chatLocation.peerId {
+                        if peerIds.contains(peerId) {
+                            insideInactiveSecretChat = true
+                            controller.hideChat()
+                        }
+                    }
+                }
+                
+                if let controller = controller as? PeerInfoScreenImpl {
+                    if let peerId = controller.chatLocation.peerId {
+                        if peerIds.contains(peerId) {
+                            insideInactiveSecretChat = true
+                            controller.hideChat()
+                        }
+                    }
+                }
+                
+                if let controller = controller as? OverlayAudioPlayerControllerImpl {
+                    if let peerId = controller.chatLocation.peerId {
+                        if peerIds.contains(peerId) {
+                            controller.dismiss(animated: false)
+                        }
+                    }
+                }
+                
+                if let controller = controller as? TelegramBaseController {
+                    if let (mediaAccessoryPanel, _) = controller.mediaAccessoryPanel, let (state, _, _, _, _, _) = controller.playlistStateAndType, let id = state.id as? PeerMessagesMediaPlaylistItemId {
+                        if peerIds.contains(id.messageId.peerId) {
+                            mediaAccessoryPanel.close?()
+                        }
+                    }
+                }
+                
+                if let controller = controller as? TabBarController {
+                    for case let node as ChatListSearchListPaneNode in ASDisplayNodeFindAllSubnodesOfClass(controller.displayNode, ChatListSearchListPaneNode.self) {
+                        if let (mediaAccessoryPanel, _) = node.mediaAccessoryPanel, let (state, _, _, _, _, _) = node.playlistStateAndType, let id = state.id as? PeerMessagesMediaPlaylistItemId {
+                            if peerIds.contains(id.messageId.peerId) {
+                                mediaAccessoryPanel.close?()
+                            }
+                        }
+                    }
+                    
+                    for controller in controller.controllers {
+                        if let controller = controller as? ChatListControllerImpl {
+                            controller.doneEditing()
+                            controller.deactivateSearch(animated: false)
+                        }
+                        
+                        if let controller = controller as? TelegramBaseController {
+                            if let (mediaAccessoryPanel, _) = controller.mediaAccessoryPanel, let (state, _, _, _, _, _) = controller.playlistStateAndType, let id = state.id as? PeerMessagesMediaPlaylistItemId {
+                                if peerIds.contains(id.messageId.peerId) {
+                                    mediaAccessoryPanel.close?()
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if let controller = controller as? GalleryController {
+                    let peerId: PeerId
+                    switch controller.source {
+                    case let .peerMessagesAtId(messageId, chatLocation, _):
+                        if case let .peer(id) = chatLocation {
+                            peerId = id
+                        } else {
+                            peerId = messageId.peerId
+                        }
+                    case let .standaloneMessage(message):
+                        peerId = message.id.peerId
+                    case let .custom(_, messageId, _):
+                        peerId = messageId.peerId
+                    }
+                    if peerIds.contains(peerId) {
+                        (controller.displayNode as! GalleryControllerNode).dismiss?()
+                    }
+                }
+                
+                if let controller = controller as? SecretMediaPreviewController {
+                    if peerIds.contains(controller.messageId.peerId) {
+                        (controller.displayNode as! GalleryControllerNode).dismiss?()
+                    }
+                }
+                
+                if let controller = controller as? LegacyController {
+                    if let controller = controller.legacyController as? TGModernGalleryController {
+                        dismissesIfInsideInactiveSecretChat.append { [weak controller] in
+                            controller?.model.dismiss(false, true)
+                        }
+                    }
+                }
+                
+                if let controller = controller as? ShareController {
+                    if !insideInactiveSecretChat {
+                        controller.updatePeers()
+                    }
+                    dismissesIfInsideInactiveSecretChat.append { [weak controller] in
+                        controller?.presentingViewController?.dismiss(animated: false, completion: nil)
+                    }
+                }
+                
+                if let controller = controller as? OverlayMediaControllerImpl {
+                    for case let node as OverlayUniversalVideoNode in ASDisplayNodeFindAllSubnodesOfClass(controller.displayNode, OverlayUniversalVideoNode.self) {
+                        if case let .peer(peerId) = node.content.userLocation {
+                            if peerIds.contains(peerId) {
+                                node.closeVideo()
+                            }
+                        }
+                    }
+                }
+                
+                if let controller = controller as? NotificationContainerController {
+                    controller.removeItems { item in
+                        if let item = item as? ChatMessageNotificationItem {
+                            for message in item.messages {
+                                if peerIds.contains(message.id.peerId) {
+                                    return true
+                                }
+                            }
+                        }
+                        return false
+                    }
+                }
+                
+                if let controller = controller as? StorageUsageScreen {
+                    // close all, because otherwise we need to call reloadStats(), which may take some time, but we can't wait here for too long
+                    (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
+                }
+                
+                if let controller = controller as? ItemListController {
+                    var isOldStorageUsage = false
+                    controller.forEachItemNode { itemNode in
+                        if "\(type(of: itemNode))".contains("StorageUsageItemNode") {
+                            isOldStorageUsage = true
+                        }
+                    }
+                    if isOldStorageUsage {
+                        (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
+                    }
+                }
+                
+                return true
+            }, includeAllOverlayControllers: true)
+            
+            if insideInactiveSecretChat {
+                for dismiss in dismissesIfInsideInactiveSecretChat {
+                    dismiss()
+                }
+                
+                (self.appLockContext as! AppLockContextImpl).dismissPresentedViewController()
+            }
+            
+            CATransaction.commit()
+        }
+    }
+    
+    private func pauseMediaInHidableChats() {
+        assert(Queue.mainQueue().isCurrent())
+        
+        // pause voice messages and instant videos
+        // it seems regular videos are already paused by some other code
+        
+        let _ = (self.mediaManager.globalMediaPlayerState
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            if let (_, stateOrLoading, _) = next, case let .state(state) = stateOrLoading {
+                switch state.status.status {
+                case .playing, .buffering(_, true, _, _):
+                    if let item = state.item as? MessageMediaPlaylistItem, let strongSelf = self {
+                        let peerIds = strongSelf.currentPtgSecretPasscodes.with { $0.allSecretChatPeerIdsForAllAccounts() }
+                        if peerIds.contains(item.message.id.peerId) {
+                            strongSelf.mediaManager.playlistControl(.playback(.pause), type: nil)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        })
+    }
+    
+    public var animationsTemporarilyDisabledForCoverUp: Bool {
+        return (self.appLockContext as! AppLockContextImpl).animationsTemporarilyDisabledForCoverUp
     }
 }
 

@@ -1200,6 +1200,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        // exporting logs is not secure, may reveal deleted/hidden data
+        #if DEBUG
         var downloadableMediaResourceInfos: [String] = []
         for media in message.media {
             if let file = media as? TelegramMediaFile {
@@ -1225,6 +1227,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 f(.default)
             })))
         }
+        #endif
         
         var threadId: Int64?
         var threadMessageCount: Int = 0

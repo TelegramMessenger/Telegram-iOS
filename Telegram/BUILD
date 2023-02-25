@@ -491,16 +491,11 @@ aps_fragment = "" if telegram_aps_environment == "" else """
 <string>{telegram_aps_environment}</string>
 """.format(telegram_aps_environment=telegram_aps_environment)
 
-app_groups_fragment = "" if telegram_is_non_dev_account else """
+app_groups_fragment = """
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.{telegram_bundle_id}</string>
     </array>
-""".format(
-    telegram_bundle_id=telegram_bundle_id
-)
-
-app_id_fragment = """
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
 """.format(
@@ -532,7 +527,6 @@ plist_fragment(
     template = "".join([
         aps_fragment,
         app_groups_fragment,
-        app_id_fragment,
         siri_fragment,
         associated_domains_fragment,
         icloud_fragment,
@@ -1446,6 +1440,8 @@ swift_library(
         ":WidgetAssets",
     ],
     deps = [
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
+        
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems_iOS14",
         "//submodules/WidgetItemsUtils:WidgetItemsUtils",
@@ -1586,6 +1582,8 @@ swift_library(
         ":IntentsAssets"
     ],
     deps = [
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
+        
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramApi:TelegramApi",

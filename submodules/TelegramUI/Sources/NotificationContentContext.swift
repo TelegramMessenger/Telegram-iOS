@@ -94,18 +94,22 @@ public final class NotificationViewControllerImpl {
         
         accountsPath = rootPath
         
-        if sharedAccountContext == nil {
-            initializeAccountManagement()
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
-            
-            var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
-            let semaphore = DispatchSemaphore(value: 0)
-            let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light).start(next: { value in
-                initialPresentationDataAndSettings = value
-                semaphore.signal()
-            })
-            semaphore.wait()
-            
+        initializeAccountManagement()
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
+        
+        var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+        let semaphore = DispatchSemaphore(value: 0)
+        let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light).start(next: { value in
+            initialPresentationDataAndSettings = value
+            semaphore.signal()
+        })
+        semaphore.wait()
+        
+        initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
+        
+        if let sharedAccountContext = sharedAccountContext {
+            (sharedAccountContext as! SharedAccountContextImpl).updatePtgSecretPasscodesPromise(.single(initialPresentationDataAndSettings!.ptgSecretPasscodes))
+        } else {
             let applicationBindings = TelegramApplicationBindings(isMainApp: false, appBundleId: self.initializationData.appBundleId, appBuildType: self.initializationData.appBuildType, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tgapp", openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
@@ -118,6 +122,7 @@ public final class NotificationViewControllerImpl {
                 
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, clearAllNotifications: {
+            }, clearPeerNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
             }, openSettings: {}, openAppStorePage: {}, openSubscriptions: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {

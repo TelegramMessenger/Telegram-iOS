@@ -193,6 +193,7 @@ public class ShareRootControllerImpl {
                 
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, clearAllNotifications: {
+            }, clearPeerNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
             }, openSettings: {
@@ -215,24 +216,27 @@ public class ShareRootControllerImpl {
             
             let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
             
+            initializeAccountManagement()
+            var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+            let semaphore = DispatchSemaphore(value: 0)
+            let systemUserInterfaceStyle: WindowUserInterfaceStyle
+            if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+                systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
+            } else {
+                systemUserInterfaceStyle = .light
+            }
+            let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle).start(next: { value in
+                initialPresentationDataAndSettings = value
+                semaphore.signal()
+            })
+            semaphore.wait()
+            
+            initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
+                internalContext.sharedContext.updatePtgSecretPasscodesPromise(.single(initialPresentationDataAndSettings!.ptgSecretPasscodes))
             } else {
-                initializeAccountManagement()
-                var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
-                let semaphore = DispatchSemaphore(value: 0)
-                let systemUserInterfaceStyle: WindowUserInterfaceStyle
-                if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
-                    systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
-                } else {
-                    systemUserInterfaceStyle = .light
-                }
-                let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle).start(next: { value in
-                    initialPresentationDataAndSettings = value
-                    semaphore.signal()
-                })
-                semaphore.wait()
-                
                 let presentationDataPromise = Promise<PresentationData>()
                 
                 let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {

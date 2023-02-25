@@ -474,14 +474,7 @@ private final class AnimationSupportContext {
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
         let appGroupName = "group.\(baseAppBundleId)"
-#if !DEBUG
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-#else
-        var maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-        if maybeAppGroupUrl == nil, BuildConfig.isNonDevAccount() {
-            maybeAppGroupUrl = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        }
-#endif
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         self.buildConfig = buildConfig
@@ -677,6 +670,8 @@ private final class AnimationSupportContext {
             }
         }, clearAllNotifications: {
             self.clearNotificationsManager?.clearAll()
+        }, clearPeerNotifications: { peerIds in
+            self.clearNotificationsManager?.clearPeers(peerIds: peerIds)
         }, pushIdleTimerExtension: {
             let disposable = MetaDisposable()
             Queue.mainQueue().async {
@@ -2439,6 +2434,8 @@ private final class AnimationSupportContext {
     }
     
     @objc func debugPressed() {
+        // exporting logs is not secure, may reveal deleted/hidden data
+        #if DEBUG
         let _ = (Logger.shared.collectShortLogFiles()
         |> deliverOnMainQueue).start(next: { logs in
             var activityItems: [Any] = []
@@ -2450,6 +2447,7 @@ private final class AnimationSupportContext {
             
             self.window?.rootViewController?.present(activityController, animated: true, completion: nil)
         })
+        #endif
     }
     
     private func resetIntentsIfNeeded(context: AccountContextImpl) {

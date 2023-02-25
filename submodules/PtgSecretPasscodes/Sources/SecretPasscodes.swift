@@ -3,6 +3,8 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import SwiftSignalKit
+import AppLockState
+import MonotonicTime
 
 public struct PtgSecretChatId: Codable, Hashable {
     public let accountRecordId: AccountRecordId
@@ -27,13 +29,6 @@ public struct PtgSecretPasscode: Codable, Equatable {
         self.secretChats = secretChats
     }
     
-    public init(passcode: String) {
-        self.passcode = passcode
-        self.active = false
-        self.timeout = 5 * 60
-        self.secretChats = []
-    }
-    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         
@@ -52,20 +47,8 @@ public struct PtgSecretPasscode: Codable, Equatable {
         try container.encodeIfPresent(self.secretChats, forKey: "sc")
     }
     
-    public func withUpdated(passcode: String) -> PtgSecretPasscode {
-        return PtgSecretPasscode(passcode: passcode, active: self.active, timeout: self.timeout, secretChats: self.secretChats)
-    }
-    
     public func withUpdated(active: Bool) -> PtgSecretPasscode {
         return PtgSecretPasscode(passcode: self.passcode, active: active, timeout: self.timeout, secretChats: self.secretChats)
-    }
-    
-    public func withUpdated(timeout: Int32?) -> PtgSecretPasscode {
-        return PtgSecretPasscode(passcode: self.passcode, active: self.active, timeout: timeout, secretChats: self.secretChats)
-    }
-    
-    public func withUpdated(secretChats: Set<PtgSecretChatId>) -> PtgSecretPasscode {
-        return PtgSecretPasscode(passcode: self.passcode, active: self.active, timeout: self.timeout, secretChats: secretChats)
     }
 }
 
@@ -101,18 +84,43 @@ public struct PtgSecretPasscodes: Codable, Equatable {
         self.init(entry)
     }
     
-    public func inactiveSecretChatPeerIds(for account: Account) -> Set<PeerId> {
+    public func inactiveSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
         var result = Set<PeerId>()
         for secretPasscode in self.secretPasscodes {
             if !secretPasscode.active {
                 for secretChat in secretPasscode.secretChats {
-                    if secretChat.accountRecordId == account.id {
+                    if secretChat.accountRecordId == accountId {
                         result.insert(secretChat.peerId)
                     }
                 }
             }
         }
         return result
+    }
+    
+    public func allSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
+        var result = Set<PeerId>()
+        for secretPasscode in self.secretPasscodes {
+            for secretChat in secretPasscode.secretChats {
+                if secretChat.accountRecordId == accountId {
+                    result.insert(secretChat.peerId)
+                }
+            }
+        }
+        return result
+    }
+    
+    // used by app extensions to apply timeouts to handle cases when main app wasn't running for some time
+    // changes are not saved to storage, only main app does that to avoid conflicts
+    public func withCheckedTimeoutUsingLockStateFile(rootPath: String) -> PtgSecretPasscodes {
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
+            return PtgSecretPasscodes(secretPasscodes: self.secretPasscodes.map { sp in
+                return sp.withUpdated(active: sp.active && (sp.timeout == nil || !isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)))
+            })
+        } else {
+            assertionFailure()
+            return self
+        }
     }
 }
 
@@ -122,5 +130,23 @@ public func updatePtgSecretPasscodes(_ accountManager: AccountManager<TelegramAc
             let updated = f(PtgSecretPasscodes(current))
             return PreferencesEntry(updated)
         })
+    }
+}
+
+public func isSecretPasscodeTimedout(timeout: Int32, state: LockState) -> Bool {
+    if let applicationActivityTimestamp = state.applicationActivityTimestamp {
+        var bootTimestamp: Int32 = 0
+        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+        
+        if bootTimestamp != applicationActivityTimestamp.bootTimestamp {
+            return true
+        }
+        if uptime >= applicationActivityTimestamp.uptime + timeout {
+            return true
+        }
+        
+        return false
+    } else {
+        return true
     }
 }

@@ -733,36 +733,10 @@ public final class FetchManagerImpl: FetchManager {
     private let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
     private var inactiveSecretChatPeerIdsDisposable: Disposable?
     
-    public init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>, shouldClearCachedMediaResourcesOfInactiveSecretChats: Bool, engine: TelegramEngine, initialInactiveSecretChatPeerIds: Set<PeerId>? = nil) {
+    public init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) {
         self.postbox = postbox
         self.storeManager = storeManager
         self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
-        
-        if shouldClearCachedMediaResourcesOfInactiveSecretChats {
-            var previousInactiveSecretChatPeerIds = initialInactiveSecretChatPeerIds!
-            
-            self.inactiveSecretChatPeerIdsDisposable = (self.inactiveSecretChatPeerIds
-            |> deliverOn(self.queue)).start(next: { [weak self] inactiveSecretChatPeerIds in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                // cancel downloads for hidden secret chats
-                for (_, categoryContext) in strongSelf.categoryContexts {
-                    for resourceReference in categoryContext.getResources(peerIds: inactiveSecretChatPeerIds) {
-                        strongSelf.cancelInteractiveFetches(resourceId: resourceReference.resource.id.stringRepresentation)
-                    }
-                }
-                
-                let newlyHiddenPeerIds = inactiveSecretChatPeerIds.subtracting(previousInactiveSecretChatPeerIds)
-                
-                if !newlyHiddenPeerIds.isEmpty {
-                    let _ = engine.resources.clearStorage(peerIds: newlyHiddenPeerIds).start()
-                }
-                
-                previousInactiveSecretChatPeerIds = inactiveSecretChatPeerIds
-            })
-        }
     }
     
     deinit {
@@ -937,6 +911,16 @@ public final class FetchManagerImpl: FetchManager {
             }
             
             self.postbox.mediaBox.cancelInteractiveResourceFetch(resourceId: MediaResourceId(resourceId))
+        }
+    }
+    
+    public func cancelInteractiveFetches(peerIds: Set<PeerId>) {
+        self.queue.async {
+            for (_, categoryContext) in self.categoryContexts {
+                for resourceReference in categoryContext.getResources(peerIds: peerIds) {
+                    self.cancelInteractiveFetches(resourceId: resourceReference.resource.id.stringRepresentation)
+                }
+            }
         }
     }
     

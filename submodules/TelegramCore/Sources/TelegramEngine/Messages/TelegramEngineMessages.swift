@@ -431,28 +431,40 @@ public extension TelegramEngine {
             }
         }
         
-        public func unreadChatListPeerIds(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?) -> Signal<[EnginePeer.Id], NoError> {
-            return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
-                return transaction.getUnreadChatListPeerIds(groupId: groupId._asGroup(), filterPredicate: filterPredicate)
-            }
-        }
-        
-        public func markAllChatsAsReadInteractively(items: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)]) -> Signal<Never, NoError> {
-            let account = self.account
-            return self.account.postbox.transaction { transaction -> Void in
-                for (groupId, filterPredicate) in items {
-                    _internal_markAllChatsAsReadInteractively(transaction: transaction, network: self.account.network, viewTracker: account.viewTracker, groupId: groupId._asGroup(), filterPredicate: filterPredicate)
+        public func unreadChatListPeerIds(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<[EnginePeer.Id], NoError> {
+            return inactiveSecretChatPeerIds
+            |> take(1)
+            |> mapToSignal { inactiveSecretChatPeerIds in
+                return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
+                    return transaction.getUnreadChatListPeerIds(groupId: groupId._asGroup(), filterPredicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
                 }
             }
-            |> ignoreValues
         }
         
-        public func getRelativeUnreadChatListIndex(filtered: Bool, position: EngineChatList.RelativePosition, groupId: EngineChatList.Group) -> Signal<EngineChatList.Item.Index?, NoError> {
+        public func markAllChatsAsReadInteractively(items: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)], inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<Never, NoError> {
+            let account = self.account
+            return inactiveSecretChatPeerIds
+            |> take(1)
+            |> mapToSignal { inactiveSecretChatPeerIds in
+                return self.account.postbox.transaction { transaction -> Void in
+                    for (groupId, filterPredicate) in items {
+                        _internal_markAllChatsAsReadInteractively(transaction: transaction, network: account.network, viewTracker: account.viewTracker, groupId: groupId._asGroup(), filterPredicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+                    }
+                }
+                |> ignoreValues
+            }
+        }
+        
+        public func getRelativeUnreadChatListIndex(filtered: Bool, position: EngineChatList.RelativePosition, groupId: EngineChatList.Group, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<EngineChatList.Item.Index?, NoError> {
             guard let position = position._asPosition() else {
                 return .single(nil)
             }
-            return self.account.postbox.transaction { transaction -> EngineChatList.Item.Index? in
-                return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position, groupId: groupId._asGroup()).flatMap(EngineChatList.Item.Index.chatList)
+            return inactiveSecretChatPeerIds
+            |> take(1)
+            |> mapToSignal { inactiveSecretChatPeerIds in
+                return self.account.postbox.transaction { transaction -> EngineChatList.Item.Index? in
+                    return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position, groupId: groupId._asGroup(), inactiveSecretChatPeerIds: inactiveSecretChatPeerIds).flatMap(EngineChatList.Item.Index.chatList)
+                }
             }
         }
         

@@ -249,7 +249,8 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         }
         
         let size = validLayout.size
-        if let background = self.background, background.size == size {
+        // added fix to prevent transparent passcode lock screen when rotating device
+        if let background = self.background, background.size == size || background.makeBackgroundNode() is GradientBackgroundNode {
             return
         }
         
@@ -421,7 +422,9 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func animateOut(down: Bool = false, completion: @escaping () -> Void = {}) {
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: down ? self.bounds.size.height : -self.bounds.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+        // this animation better matches our covering view, especially when unlocking with TouchID/FaceID
+        self.layer.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
             completion()
         })
     }

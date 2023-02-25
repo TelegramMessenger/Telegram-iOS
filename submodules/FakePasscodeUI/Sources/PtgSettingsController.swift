@@ -7,6 +7,7 @@ import AccountContext
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountUtils
 import PtgSettings
 
 private final class PtgSettingsControllerArguments {
@@ -14,12 +15,14 @@ private final class PtgSettingsControllerArguments {
     let switchSuppressForeignAgentNotice: (Bool) -> Void
     let switchEnableForeignAgentNoticeSearchFiltering: (Bool) -> Void
     let switchEnableLiveText: (Bool) -> Void
+    let switchPreferAppleVoiceToText: (Bool) -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void) {
+    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void) {
         self.switchShowPeerId = switchShowPeerId
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
         self.switchEnableForeignAgentNoticeSearchFiltering = switchEnableForeignAgentNoticeSearchFiltering
         self.switchEnableLiveText = switchEnableLiveText
+        self.switchPreferAppleVoiceToText = switchPreferAppleVoiceToText
     }
 }
 
@@ -27,6 +30,7 @@ private enum PtgSettingsSection: Int32 {
     case showPeerId
     case foreignAgentNotice
     case liveText
+    case preferAppleVoiceToText
 }
 
 private enum PtgSettingsEntry: ItemListNodeEntry {
@@ -40,6 +44,9 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
 
     case enableLiveText(String, Bool)
     case enableLiveTextInfo(String)
+    
+    case preferAppleVoiceToText(String, Bool, Bool)
+    case preferAppleVoiceToTextInfo(String)
 
     var section: ItemListSectionId {
         switch self {
@@ -49,6 +56,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return PtgSettingsSection.foreignAgentNotice.rawValue
         case .enableLiveText, .enableLiveTextInfo:
             return PtgSettingsSection.liveText.rawValue
+        case .preferAppleVoiceToText, .preferAppleVoiceToTextInfo:
+            return PtgSettingsSection.preferAppleVoiceToText.rawValue
         }
     }
     
@@ -70,6 +79,10 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 6
         case .enableLiveTextInfo:
             return 7
+        case .preferAppleVoiceToText:
+            return 8
+        case .preferAppleVoiceToTextInfo:
+            return 9
         }
     }
     
@@ -98,8 +111,12 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchEnableLiveText(updatedValue)
             })
-        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text), let .preferAppleVoiceToTextInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+        case let .preferAppleVoiceToText(title, value, enabled):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                arguments.switchPreferAppleVoiceToText(updatedValue)
+            })
         }
     }
 }
@@ -112,7 +129,7 @@ private struct PtgSettingsState: Equatable {
     }
 }
 
-private func ptgSettingsControllerEntries(presentationData: PresentationData, settings: PtgSettings) -> [PtgSettingsEntry] {
+private func ptgSettingsControllerEntries(presentationData: PresentationData, settings: PtgSettings, experimentalSettings: ExperimentalUISettings, hasPremiumAccounts: Bool) -> [PtgSettingsEntry] {
     var entries: [PtgSettingsEntry] = []
     
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
@@ -123,11 +140,14 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.enableForeignAgentNoticeSearchFiltering(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFiltering, settings.enableForeignAgentNoticeSearchFiltering, settings.suppressForeignAgentNotice))
     entries.append(.enableForeignAgentNoticeSearchFilteringInfo(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFilteringHelp))
 
-    if #available(iOS 11.0, *) {
-        entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, settings.enableLiveText))
-        entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
-    }
+    entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, settings.enableLiveText))
+    entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
 
+    if experimentalSettings.localTranscription {
+        entries.append(.preferAppleVoiceToText(presentationData.strings.PtgSettings_PreferAppleVoiceToText, settings.preferAppleVoiceToText || !hasPremiumAccounts, hasPremiumAccounts))
+        entries.append(.preferAppleVoiceToTextInfo(presentationData.strings.PtgSettings_PreferAppleVoiceToTextHelp))
+    }
+    
     return entries
 }
 
@@ -153,13 +173,32 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
         updateSettings(context, statePromise) { settings in
             return settings.withUpdated(enableLiveText: value)
         }
+    }, switchPreferAppleVoiceToText: { value in
+        updateSettings(context, statePromise) { settings in
+            return settings.withUpdated(preferAppleVoiceToText: value)
+        }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    let hasPremiumAccounts = combineLatest(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)), activeAccountsAndPeers(context: context))
+    |> map { accountPeer, accountsAndPeers -> Bool in
+        if accountPeer?.isPremium == true && !context.account.testingEnvironment {
+            return true
+        }
+        for (accountContext, peer, _) in accountsAndPeers.1 {
+            if peer.isPremium && !accountContext.account.testingEnvironment {
+                return true
+            }
+        }
+        return false
+    }
+    
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings]), hasPremiumAccounts)
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, sharedData, hasPremiumAccounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PtgSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ptgSettingsControllerEntries(presentationData: presentationData, settings: state.settings), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: ptgSettingsControllerEntries(presentationData: presentationData, settings: state.settings, experimentalSettings: experimentalSettings, hasPremiumAccounts: hasPremiumAccounts), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -180,4 +219,30 @@ private func updateSettings(_ context: AccountContext, _ statePromise: Promise<P
             })
         }).start()
     })
+}
+
+extension PtgSettings {
+    public func withUpdated(showPeerId: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(suppressForeignAgentNotice: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(enableForeignAgentNoticeSearchFiltering: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(enableLiveText: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(preferAppleVoiceToText: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
+    
+    public func withUpdated(isOriginallyInstalledViaTestFlightOrForDevelopment: Bool?) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, enableLiveText: self.enableLiveText, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: isOriginallyInstalledViaTestFlightOrForDevelopment)
+    }
 }

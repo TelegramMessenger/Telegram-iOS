@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "При переключении приложения";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Сразу";
 
 "PasscodeSettings.FakePasscodes" = "Ложные код-пароли";
 "PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";
@@ -85,6 +85,8 @@
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Отфильтровывать из результатов поиска сообщения, которые были включены только из-за текста маркировки иноагентов.";
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
+"PtgSettings.PreferAppleVoiceToText" = "Перевод голоса в текст от Apple";
+"PtgSettings.PreferAppleVoiceToTextHelp" = "**Этот параметр влияет только на Premium-аккаунты.** Он определяет, какие сервисы используются для преобразования голоса в текст. Если отключен (по умолчанию), используются серверы Telegram. Если включен, используются сервисы Apple. Для не Premium-аккаунтов всегда используются сервисы Apple.";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопирован.";
@@ -99,7 +101,7 @@
 "SecretPasscodeSettings.AutoHide" = "Авто-скрытие";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код-пароль";
 "Settings.EnterSecretPasscode" = "Ввести секретный код-пароль";
-"Settings.ManageSecretPasscodes" = "Управлять секрет. кодами-паролями";
+"Settings.ManageSecretPasscodes" = "Управлять секретными код-паролями";
 "SecretPasscodeMenu.Add" = "Добавить секретный код-пароль";
 "SecretPasscodeMenu.Edit" = "Изменить секретный код-пароль";
 "SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";

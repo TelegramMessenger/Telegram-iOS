@@ -1160,7 +1160,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if !strongSelf.didAppear {
                 return
             }
-            navigationController.filterController(strongSelf, animated: true)
+            navigationController.filterController(strongSelf, animated: !strongSelf.context.sharedContext.animationsTemporarilyDisabledForCoverUp)
         }
         
         self.chatListDisplayNode.contentOffsetChanged = { [weak self] offset in
@@ -2063,7 +2063,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         //self.tabContainerNode.isUserInteractionEnabled = self.chatListDisplayNode.inlineStackContainerNode == nil
         
         transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight - self.additionalNavigationBarHeight - 46.0 + tabContainerOffset), size: CGSize(width: layout.size.width, height: 46.0)))
-        self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.mainContainerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing, canReorderAllChats: self.isPremium, filtersLimit: self.tabContainerData?.2, transitionFraction: self.chatListDisplayNode.effectiveContainerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.mainContainerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing, canReorderAllChats: self.isPremium, filtersLimit: self.tabContainerData?.2, transitionFraction: self.chatListDisplayNode.effectiveContainerNode.transitionFraction, presentationData: self.presentationData, transition: transition.isAnimated ? .animated(duration: 0.4, curve: .spring) : .immediate)
         
         self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, visualNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: self.cleanNavigationHeight, transition: transition)
     }
@@ -2110,11 +2110,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    @objc fileprivate func donePressed() {
+    @objc fileprivate func donePressed(animated: Bool = true) {
         self.reorderingDonePressed()
         
-        (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(nil, transition: .animated(duration: 0.4, curve: .spring))
-        self.searchContentNode?.setIsEnabled(true, animated: true)
+        (self.navigationController as? NavigationController)?.updateMasterDetailsBlackout(nil, transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
+        self.searchContentNode?.setIsEnabled(true, animated: animated)
         self.chatListDisplayNode.didBeginSelectingChatsWhileEditing = false
         self.chatListDisplayNode.effectiveContainerNode.updateState { state in
             var state = state
@@ -2126,7 +2126,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         self.chatListDisplayNode.isEditing = false
         if let layout = self.validLayout {
-            self.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.updateLayout(layout: layout, transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
         }
     }
     
@@ -2753,7 +2753,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             completion?()
             
-            (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
+            (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
             
             self.isSearchActive = false
             if let navigationController = self.navigationController as? NavigationController {
@@ -2912,7 +2912,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         markItems.append((EngineChatList.Group(additionalGroupId), filterPredicate))
                     }
                 }
-                signal = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems)
+                signal = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems, inactiveSecretChatPeerIds: self.context.inactiveSecretChatPeerIds)
             } else {
                 signal = .complete()
             }
@@ -3929,6 +3929,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     override public func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
+        let transition = self.context.sharedContext.animationsTemporarilyDisabledForCoverUp ? .immediate : transition
         if case .chatList(.root) = self.chatListDisplayNode.mainContainerNode.location {
             super.setToolbar(toolbar, transition: transition)
         } else {
@@ -4078,6 +4079,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatListTabBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
             strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
         })
+    }
+    
+    public func doneEditing() {
+        if self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing {
+            self.donePressed(animated: false)
+        }
     }
     
     private var playedSignUpCompletedAnimation = false

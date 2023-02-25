@@ -2,7 +2,9 @@ import Foundation
 import SwiftSignalKit
 import Speech
 
-public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTranscribedAudio?, Error> {
+private weak var previousTask: SFSpeechRecognitionTask?
+
+public func transcribeAudio(path: String, locale: String, audioDuration: Int32) -> Signal<LocallyTranscribedAudio?, Error> {
     return Signal { subscriber in
         let disposable = MetaDisposable()
         
@@ -20,6 +22,9 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         subscriber.putNext(nil)
                         subscriber.putCompletion()
                     case .authorized:
+                        // only one simultaneous task allowed
+                        previousTask?.cancel()
+                        
                         guard let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: locale)), speechRecognizer.isAvailable else {
                             subscriber.putNext(nil)
                             subscriber.putCompletion()
@@ -36,11 +41,36 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         if #available(iOS 16.0, *) {
                             request.addsPunctuation = true
                         }
+                        if #available(iOS 13.0, *) {
+                            // on-device recognition allows full recognition of audio > 1 min
+                            request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
+                        }
                         request.shouldReportPartialResults = true
+                        
+                        // during on-device recognition the result text is delivered in multiple parts
+                        var accumulatedString = ""
+                        var lastResultString = ""
+                        var lastEndingTimestamp = 0.0
                         
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
                             if let result = result {
-                                subscriber.putNext(LocallyTranscribedAudio(text: result.bestTranscription.formattedString, isFinal: result.isFinal))
+                                if let lastSegment = result.bestTranscription.segments.last {
+                                    if lastSegment.timestamp + lastSegment.duration < lastEndingTimestamp {
+                                        accumulatedString += lastResultString + " "
+                                    }
+                                    lastEndingTimestamp = lastSegment.timestamp + lastSegment.duration
+                                }
+                                lastResultString = result.bestTranscription.formattedString
+                                
+                                var maybeCutMark = ""
+                                if result.isFinal {
+                                    if #available(iOS 13.0, *), request.requiresOnDeviceRecognition {
+                                    } else if lastEndingTimestamp <= 60.0 && audioDuration > 60 {
+                                        maybeCutMark = " ✂"
+                                    }
+                                }
+                                
+                                subscriber.putNext(LocallyTranscribedAudio(text: accumulatedString + result.bestTranscription.formattedString + maybeCutMark, isFinal: result.isFinal))
                                 
                                 if result.isFinal {
                                     subscriber.putCompletion()
@@ -59,6 +89,8 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         disposable.set(ActionDisposable {
                             task.cancel()
                         })
+                        
+                        previousTask = task
                     @unknown default:
                         subscriber.putNext(nil)
                         subscriber.putCompletion()

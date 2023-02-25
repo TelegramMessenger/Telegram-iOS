@@ -411,20 +411,21 @@ private final class MediaPlayerContext {
         
         if let audioRenderer = self.audioRenderer?.renderer {
             let queue = self.queue
-            audioRenderer.flushBuffers(at: seekResult.timestamp, completion: { [weak self] in
-                queue.async { [weak self] in
-                    if let strongSelf = self {
-                        switch action {
-                            case .play:
-                                strongSelf.state = .playing(loadedState)
-                                strongSelf.audioRenderer?.renderer.start()
-                            case .pause:
-                                strongSelf.state = .paused(loadedState)
-                        }
-                        
-                        strongSelf.lastStatusUpdateTimestamp = nil
-                        strongSelf.tick()
+            // not using [weak self] here to prevent destruction of MediaPlayerContext on wrong thread
+            // (asserts triggered in FFMpegMediaFrameSource.removeEventSink and/or MediaPlayerContext.deinit)
+            // it does not create strong reference cycle here
+            audioRenderer.flushBuffers(at: seekResult.timestamp, completion: {
+                queue.async {
+                    switch action {
+                        case .play:
+                            self.state = .playing(loadedState)
+                            self.audioRenderer?.renderer.start()
+                        case .pause:
+                            self.state = .paused(loadedState)
                     }
+                    
+                    self.lastStatusUpdateTimestamp = nil
+                    self.tick()
                 }
             })
         } else {

@@ -1,6 +1,7 @@
 #if arch(arm64) || arch(x86_64)
 
 import PtgForeignAgentNoticeRemoval
+import PtgSecretPasscodes
 
 import UIKit
 import NotificationCenter
@@ -99,6 +100,19 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     setupSharedLogger(rootPath: logsPath, path: logsPath)
     
     initializeAccountManagement()
+    let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
+    
+    var ptgSecretPasscodes: PtgSecretPasscodes?
+    
+    let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
+    let _ = accountManager.transaction({ transaction in
+        return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+    }).start(next: { result in
+        ptgSecretPasscodes = result
+        semaphore.signal()
+    })
+    
+    semaphore.wait()
     
     let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
     let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
@@ -129,7 +143,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
     for (accountId, items) in itemsByAccount {
-        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [ParsedPeer] in
+        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, initialPeerIdsExcludedFromUnreadCounters: ptgSecretPasscodes!.inactiveSecretChatPeerIds(accountId: AccountRecordId(rawValue: accountId)), transaction: { postbox, transaction -> [ParsedPeer] in
             guard let state = transaction.getState() as? AuthorizedAccountState else {
                 return []
             }

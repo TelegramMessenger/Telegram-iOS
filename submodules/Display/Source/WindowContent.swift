@@ -916,7 +916,7 @@ public class Window1 {
                     if let controller = self.topPresentationContext.controllers.first {
                         self.hostView.containerView.insertSubview(coveringView, belowSubview: controller.0.displayNode.view)
                     } else {
-                        self.hostView.containerView.insertSubview(coveringView, belowSubview: self.badgeView)
+                        self.hostView.containerView.addSubview(coveringView)
                     }
                     if !self.windowLayout.size.width.isZero {
                         coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
@@ -1136,6 +1136,8 @@ public class Window1 {
                     coveringView.updateLayout(self.windowLayout.size)
                 }
                 
+                self.secondaryCoveringViewLayoutSizeUpdate?(self.windowLayout.size)
+                
                 if let image = self.badgeView.image {
                     self.updateBadgeVisibility()
                     self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 5.0), size: image.size)
@@ -1143,6 +1145,8 @@ public class Window1 {
             }
         }
     }
+    
+    public var secondaryCoveringViewLayoutSizeUpdate: ((CGSize) -> Void)?
     
     public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         if level.rawValue <= 3, let controller = controller as? ViewController {
@@ -1315,15 +1319,26 @@ public class Window1 {
         return hidden
     }
     
-    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false) {
+    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false, includeAllOverlayControllers: Bool = false) {
         if let navigationController = self._rootController as? NavigationController {
             if !excludeNavigationSubControllers {
                 for case let controller as ContainableController in navigationController.viewControllers {
                     let _ = f(controller)
                 }
             }
+            weak var handledTopOverlayController = navigationController.topOverlayController
             if let controller = navigationController.topOverlayController {
                 let _ = f(controller)
+            }
+            if includeAllOverlayControllers {
+                for controller in navigationController.overlayControllers {
+                    if controller !== handledTopOverlayController {
+                        let _ = f(controller)
+                    }
+                }
+                for controller in navigationController.globalOverlayControllers {
+                    let _ = f(controller)
+                }
             }
         }
         for (controller, _) in self.presentationContext.controllers {

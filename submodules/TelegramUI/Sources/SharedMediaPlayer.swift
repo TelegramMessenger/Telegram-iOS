@@ -179,6 +179,8 @@ final class SharedMediaPlayer {
     
     let type: MediaManagerPlayerType
     
+    var disableAnimationsOnDisposal: Bool = false
+    
     init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool, type: MediaManagerPlayerType) {
         self.mediaManager = mediaManager
         self.account = account
@@ -395,7 +397,7 @@ final class SharedMediaPlayer {
                     playbackItem.pause()
                 case let .instantVideo(node):
                     node.setSoundEnabled(false)
-                    self.overlayMediaManager.controller?.removeNode(node, customTransition: false)
+                    self.overlayMediaManager.controller?.removeNode(node, customTransition: disableAnimationsOnDisposal)
             }
         }
     }

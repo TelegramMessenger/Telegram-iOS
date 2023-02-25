@@ -1,3 +1,5 @@
+import PtgSecretPasscodes
+
 import Foundation
 import Intents
 import TelegramCore
@@ -82,6 +84,8 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     private var accountManager: AccountManager<TelegramAccountManagerTypes>?
     private var encryptionParameters: ValueBoxEncryptionParameters?
     private var appGroupUrl: URL?
+    
+    private let ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
     
     override init() {
         super.init()
@@ -172,7 +176,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         if let accountCache = accountCache {
             account = .single(accountCache)
         } else {
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters, initialPeerIdsExcludedFromUnreadCounters: [])
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
@@ -199,6 +203,10 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             |> take(1)
         }
         self.accountPromise.set(account)
+        
+        self.ptgSecretPasscodes.set(accountManager.transaction { transaction in
+            return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        })
     }
     
     deinit {
@@ -514,6 +522,8 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
         }
         
+        let ptgSecretPasscodes = self.ptgSecretPasscodes.get()
+        
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
         |> castError(IntentHandlingError.self)
@@ -538,7 +548,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 if let identifiers = intent.identifiers, !identifiers.isEmpty {
                     messages = getMessages(account: account, ids: identifiers.compactMap(MessageId.init(string:)))
                 } else {
-                    messages = unreadMessages(account: account)
+                    messages = unreadMessages(account: account, inactiveSecretChatPeerIds: ptgSecretPasscodes |> map { $0.inactiveSecretChatPeerIds(accountId: account.id) })
                 }
                 return messages
                 |> castError(IntentHandlingError.self)
@@ -780,14 +790,14 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             return
         }
         
-        self.searchDisposable.set((self.allAccounts.get()
+        self.searchDisposable.set((combineLatest(self.allAccounts.get(), self.ptgSecretPasscodes.get())
         |> castError(Error.self)
         |> take(1)
-        |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
+        |> mapToSignal { accounts, ptgSecretPasscodes -> Signal<INObjectCollection<Friend>, Error> in
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
             for (accountId, accountPeerId, _) in accounts {
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, initialPeerIdsExcludedFromUnreadCounters: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId), transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
                         if let username = peer.addressName, !username.isEmpty {
@@ -801,7 +811,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                     
                     if let searchTerm = searchTerm {
                         if !searchTerm.isEmpty {
-                            for renderedPeer in transaction.searchPeers(query: searchTerm, inactiveSecretChatPeerIds: []) {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm, inactiveSecretChatPeerIds: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId)) {
                                 if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                     peers.append(peer)
                                 }
@@ -812,7 +822,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                             }
                         }
                     } else {
-                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50, inactiveSecretChatPeerIds: []) {
+                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50, inactiveSecretChatPeerIds: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId)) {
                             if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                 peers.append(peer)
                             }
@@ -857,6 +867,8 @@ private final class WidgetIntentHandler {
     private var encryptionParameters: ValueBoxEncryptionParameters?
     private var appGroupUrl: URL?
     
+    private let ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
+    
     init() {
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
@@ -886,6 +898,7 @@ private final class WidgetIntentHandler {
         setupSharedLogger(rootPath: rootPath, path: logsPath)
         
         initializeAccountManagement()
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
@@ -928,6 +941,10 @@ private final class WidgetIntentHandler {
         self.allAccounts.set(.single(result.map { record -> (AccountRecordId, PeerId, Bool) in
             return (record.0, record.2, record.3)
         }))
+        
+        self.ptgSecretPasscodes.set(accountManager.transaction { transaction in
+            return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        })
     }
     
     deinit {
@@ -953,14 +970,14 @@ private final class WidgetIntentHandler {
             return
         }
         
-        self.searchDisposable.set((self.allAccounts.get()
+        self.searchDisposable.set((combineLatest(self.allAccounts.get(), self.ptgSecretPasscodes.get())
         |> castError(Error.self)
         |> take(1)
-        |> mapToSignal { accounts -> Signal<INObjectCollection<Friend>, Error> in
+        |> mapToSignal { accounts, ptgSecretPasscodes -> Signal<INObjectCollection<Friend>, Error> in
             var accountResults: [Signal<INObjectSection<Friend>, Error>] = []
             
             for (accountId, accountPeerId, _) in accounts {
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, initialPeerIdsExcludedFromUnreadCounters: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId), transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
                         if let username = peer.addressName, !username.isEmpty {
@@ -974,7 +991,7 @@ private final class WidgetIntentHandler {
                     
                     if let searchTerm = searchTerm {
                         if !searchTerm.isEmpty {
-                            for renderedPeer in transaction.searchPeers(query: searchTerm, inactiveSecretChatPeerIds: []) {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm, inactiveSecretChatPeerIds: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId)) {
                                 if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                     peers.append(peer)
                                 }
@@ -985,7 +1002,7 @@ private final class WidgetIntentHandler {
                             }
                         }
                     } else {
-                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50, inactiveSecretChatPeerIds: []) {
+                        for renderedPeer in transaction.getTopChatListEntries(groupId: .root, count: 50, inactiveSecretChatPeerIds: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId)) {
                             if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                 peers.append(peer)
                             }
@@ -1033,17 +1050,17 @@ private final class WidgetIntentHandler {
         var resultItems: [Friend] = []
         
         let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
-        let _ = ((self.allAccounts.get()
+        let _ = ((combineLatest(self.allAccounts.get(), self.ptgSecretPasscodes.get())
         |> castError(Error.self)
         |> take(1)
-        |> mapToSignal { accounts -> Signal<[Friend], Error> in
+        |> mapToSignal { accounts, ptgSecretPasscodes -> Signal<[Friend], Error> in
             var accountResults: [Signal<[Friend], Error>] = []
             
             for (accountId, accountPeerId, isActive) in accounts {
                 if !isActive {
                     continue
                 }
-                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> [Friend] in
+                accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, initialPeerIdsExcludedFromUnreadCounters: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: accountId), transaction: { postbox, transaction -> [Friend] in
                     var peers: [Peer] = []
                     
                     for id in _internal_getRecentPeers(transaction: transaction) {

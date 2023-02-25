@@ -1641,6 +1641,13 @@ public final class ChatListNode: ListView {
             }
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
+            |> map {
+                if context.sharedContext.animationsTemporarilyDisabledForCoverUp {
+                    return ChatListNodeViewTransition(chatListView: $0.chatListView, deleteItems: $0.deleteItems, insertEntries: $0.insertEntries, updateEntries: $0.updateEntries, options: [.LowLatency, .Synchronous], scrollToItem: $0.scrollToItem, stationaryItemRange: $0.stationaryItemRange, adjustScrollToFirstItem: $0.adjustScrollToFirstItem, animateCrossfade: false)
+                } else {
+                    return $0
+                }
+            }
             |> map({ mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, location: location, filterData: filterData, mode: mode, isPeerEnabled: isPeerEnabled, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
@@ -2598,6 +2605,7 @@ public final class ChatListNode: ListView {
         }
         
         let engine = self.context.engine
+        let inactiveSecretChatPeerIds = self.inactiveSecretChatPeerIds
         return self.context.sharedContext.accountManager.transaction { transaction -> Signal<EngineChatList.Item.Index?, NoError> in
             var filter = true
             if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
@@ -2606,7 +2614,7 @@ public final class ChatListNode: ListView {
                         filter = true
                 }
             }
-            return engine.messages.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId)
+            return engine.messages.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         }
         |> switchToLatest
     }

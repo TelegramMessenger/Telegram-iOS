@@ -195,7 +195,7 @@ public final class AccountContextImpl: AccountContext {
         
         self.inactiveSecretChatPeerIds = sharedContext.ptgSecretPasscodes
         |> map { secretPasscodes in
-            return secretPasscodes.inactiveSecretChatPeerIds(for: account)
+            return secretPasscodes.inactiveSecretChatPeerIds(accountId: account.id)
         }
         |> distinctUntilChanged
         
@@ -204,7 +204,7 @@ public final class AccountContextImpl: AccountContext {
         } else {
             self.liveLocationManager = nil
         }
-        self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager, inactiveSecretChatPeerIds: self.inactiveSecretChatPeerIds, shouldClearCachedMediaResourcesOfInactiveSecretChats: sharedContext.applicationBindings.isMainApp && !temp, engine: self.engine, initialInactiveSecretChatPeerIds: initialInactiveSecretChatPeerIds)
+        self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager, inactiveSecretChatPeerIds: self.inactiveSecretChatPeerIds)
         if sharedContext.applicationBindings.isMainApp && !temp {
             self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
@@ -292,9 +292,30 @@ public final class AccountContextImpl: AccountContext {
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
         
-        self.currentInactiveSecretChatPeerIds = Atomic(value: sharedContext.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIds(for: account) })
-        self.inactiveSecretChatPeerIdsDisposable = self.inactiveSecretChatPeerIds.start(next: { [weak self] next in
-            let _ = self?.currentInactiveSecretChatPeerIds.swap(next)
+        self.currentInactiveSecretChatPeerIds = Atomic(value: initialInactiveSecretChatPeerIds ?? sharedContext.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIds(accountId: account.id) })
+        
+        self.inactiveSecretChatPeerIdsDisposable = (self.inactiveSecretChatPeerIds
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let newlyHiddenPeerIds = next.subtracting(strongSelf.currentInactiveSecretChatPeerIds.with { $0 })
+            
+            let _ = strongSelf.currentInactiveSecretChatPeerIds.swap(next)
+            
+            let _ = (strongSelf.account.postbox.transaction { transaction in
+                transaction.updatePeerIdsExcludedFromUnreadCounters(next)
+            }).start()
+            
+            if !newlyHiddenPeerIds.isEmpty && sharedContext.applicationBindings.isMainApp && !temp {
+                (strongSelf.fetchManager as! FetchManagerImpl).cancelInteractiveFetches(peerIds: newlyHiddenPeerIds)
+                
+                // delay to allow dismissed UI release used media in hiding secret chats
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.0, execute: {
+                    let _ = strongSelf.engine.resources.clearStorage(peerIds: newlyHiddenPeerIds).start()
+                })
+            }
         })
         
         self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)

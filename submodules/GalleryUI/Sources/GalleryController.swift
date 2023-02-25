@@ -344,7 +344,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
     
     private let context: AccountContext
     private var presentationData: PresentationData
-    private let source: GalleryControllerItemSource
+    public let source: GalleryControllerItemSource
     private let invertItemOrder: Bool
     
     private let streamVideos: Bool

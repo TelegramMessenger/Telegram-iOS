@@ -83,7 +83,7 @@ public final class Logger {
     private var file: (ManagedFile, Int)?
     private var shortFile: (ManagedFile, Int)?
     
-    public var logToFile: Bool = true {
+    public var logToFile: Bool = false {
         didSet {
             let oldEnabled = self.logToConsole || oldValue
             let newEnabled = self.logToConsole || self.logToFile
@@ -92,7 +92,7 @@ public final class Logger {
             }
         }
     }
-    public var logToConsole: Bool = true {
+    public var logToConsole: Bool = false {
         didSet {
             let oldEnabled = self.logToFile || oldValue
             let newEnabled = self.logToFile || self.logToConsole

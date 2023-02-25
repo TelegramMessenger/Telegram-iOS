@@ -1,4 +1,5 @@
 import PtgSecretPasscodes
+import QuickLook
 
 import Foundation
 import UIKit
@@ -37,24 +38,6 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
     return false
 }
 
-private func isSecretPasscodeTimedout(timeout: Int32, state: LockState) -> Bool {
-    if let applicationActivityTimestamp = state.applicationActivityTimestamp {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        
-        if bootTimestamp != applicationActivityTimestamp.bootTimestamp {
-            return true
-        }
-        if uptime >= applicationActivityTimestamp.uptime + timeout {
-            return true
-        }
-        
-        return false
-    } else {
-        return true
-    }
-}
-
 public final class AppLockContextImpl: AppLockContext {
     private let rootPath: String
     private let syncQueue = Queue()
@@ -83,12 +66,15 @@ public final class AppLockContextImpl: AppLockContext {
         |> distinctUntilChanged
     }
     
-    private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
     public weak var sharedAccountContext: SharedAccountContext?
     
     private var savedNativeViewController: UIViewController?
+    private let syncingWait = ValuePromise<Bool>(false, ignoreRepeated: true)
+    
+    public private(set) var animationsTemporarilyDisabledForCoverUp: Bool = false
+    private var temporarilyDisableAnimationsTimer: SwiftSignalKit.Timer?
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -116,9 +102,13 @@ public final class AppLockContextImpl: AppLockContext {
             presentationDataSignal,
             applicationBindings.applicationIsActive,
             applicationBindings.applicationInForeground,
-            self.currentState.get()
+            self.currentState.get(),
+            self.syncingWait.get()
         )
-        |> deliverOnMainQueue).start(next: { [weak self] accessChallengeData, sharedData, presentationData, appInForeground, appInForegroundReal, state in
+        |> filter { _, _, _, _, _, _, syncingWait in
+            return !syncingWait
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] accessChallengeData, sharedData, presentationData, appInForeground, appInForegroundReal, state, _ in
             guard let strongSelf = self else {
                 return
             }
@@ -132,44 +122,55 @@ public final class AppLockContextImpl: AppLockContext {
                 }
                 
                 if (!lastIsActive && appInForeground) || (!lastInForeground && appInForegroundReal) {
-                    let _ = strongSelf.secretPasscodesTimeoutCheck(state: strongSelf.currentStateValue).start()
-                }
-                
-                if !lastInForeground && appInForegroundReal {
-                    // timeout = 10 has special meaning: it fires immediately if app goes to background.
-                    // Actually firing when app comes FROM background so that user using Share extension has a chance to complete sharing in this case.
+                    let becameActive = !lastIsActive && appInForeground
+                    let becameForeground = !lastInForeground && appInForegroundReal
                     
-                    let _ = strongSelf.secretPasscodesDeactivateOnCondition({ $0.timeout == 10 }).start()
+                    strongSelf.temporarilyDisableAnimations()
                     
-                    if accessChallengeData.data.isLockable && passcodeSettings.autolockTimeout == 10 && !state.isManuallyLocked {
-                        strongSelf.updateLockState { state in
-                            var state = state
-                            state.isManuallyLocked = true
-                            return state
+                    if becameActive {
+                        strongSelf.syncingWait.set(true)
+                    }
+                    let state = strongSelf.currentStateValue
+                    let _ = strongSelf.secretPasscodesDeactivateOnCondition({ sp in
+                        if becameForeground && sp.timeout == 10 {
+                            return true
                         }
+                        return sp.timeout != nil && isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)
+                    }).start(completed: {
+                        if becameActive {
+                            Queue.mainQueue().justDispatch {
+                                strongSelf.syncingWait.set(false)
+                            }
+                        }
+                    })
+                    
+                    if becameForeground {
+                        // timeout = 10 has special meaning: it fires immediately if app goes to background.
+                        // Actually firing when app comes FROM background so that user using Share extension has a chance to complete sharing in this case.
+                        
+                        if accessChallengeData.data.isLockable && passcodeSettings.autolockTimeout == 10 && !state.isManuallyLocked {
+                            strongSelf.updateLockState { state in
+                                var state = state
+                                state.isManuallyLocked = true
+                                return state
+                            }
+                            return
+                        }
+                    }
+                    
+                    if becameActive {
                         return
                     }
                 }
             }
             
-            let timestamp = CFAbsoluteTimeGetCurrent()
             var becameActiveRecently = false
             if appInForeground {
                 if !strongSelf.lastActiveValue {
                     strongSelf.lastActiveValue = true
-                    strongSelf.lastActiveTimestamp = timestamp
-                    
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: strongSelf.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
-                        strongSelf.currentStateValue = current
-                    }
+                    becameActiveRecently = true
                 }
-                
-                if let lastActiveTimestamp = strongSelf.lastActiveTimestamp {
-                    if lastActiveTimestamp + 0.5 > timestamp {
-                        becameActiveRecently = true
-                    }
-                }
-            } else {
+            } else if !appInForegroundReal {
                 strongSelf.lastActiveValue = false
             }
             
@@ -234,15 +235,23 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.presentedOverCoveringView = true
                         passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
-                        var viewControllerToDismiss: UIViewController?
+                        var nonFullscreenVCToDismiss: UIViewController?
                         if let rootViewController = strongSelf.rootController {
-                            if let _ = rootViewController.presentedViewController as? UIActivityViewController {
-                            } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
+                            if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                             } else {
-                                if let controller = rootViewController.presentedViewController {
+                                var vc = rootViewController
+                                while let presentedVC = vc.presentedViewController, !presentedVC.isBeingDismissed {
+                                    if presentedVC.view.bounds != window.hostView.eventView.bounds {
+                                        // can't reliably cover saved non-fullscreen views, just dismiss them
+                                        nonFullscreenVCToDismiss = presentedVC
+                                        break
+                                    }
+                                    vc = presentedVC
+                                }
+                                
+                                if let controller = rootViewController.presentedViewController, !controller.isBeingDismissed, controller !== nonFullscreenVCToDismiss {
                                     strongSelf.savedNativeViewController = controller
                                 }
-                                viewControllerToDismiss = rootViewController
                             }
                         }
                         UIView.performWithoutAnimation {
@@ -251,9 +260,50 @@ public final class AppLockContextImpl: AppLockContext {
                         if let controller = strongSelf.savedNativeViewController, window.keyboardHeight > 0.0 {
                             _hideSafariKeyboard(controller)
                         }
-                        window.present(passcodeController, on: .passcode, completion: {
-                            viewControllerToDismiss?.dismiss(animated: false, completion: nil)
-                        })
+                        
+                        var pendingTasks = (strongSelf.savedNativeViewController != nil || nonFullscreenVCToDismiss != nil) ? 2 : 1
+                        
+                        let completed = {
+                            pendingTasks -= 1
+                            if pendingTasks == 0 {
+                                if strongSelf.coveringView !== window.coveringView {
+                                    strongSelf.coveringView?.removeFromSuperview()
+                                }
+                                Queue.mainQueue().justDispatch {
+                                    strongSelf.syncingWait.set(false)
+                                }
+                            }
+                        }
+                        
+                        // if CompactDocumentPreviewController quickly presented after being dismissed, the app crashes (reproduced on iOS 16.3 when using Face ID); reloadData() seems to fix it.
+                        var documentPreviewWorkaround: (() -> Void)?
+                        if let controller = strongSelf.savedNativeViewController as? QLPreviewController {
+                            documentPreviewWorkaround = { [weak controller] in
+                                controller?.reloadData()
+                            }
+                        }
+                        
+                        strongSelf.syncingWait.set(true)
+                        
+                        if let nonFullscreenVCToDismiss {
+                            nonFullscreenVCToDismiss.dismiss(animated: false, completion: {
+                                if let _ = strongSelf.savedNativeViewController {
+                                    strongSelf.rootController!.dismiss(animated: false, completion: {
+                                        documentPreviewWorkaround?()
+                                        completed()
+                                    })
+                                } else {
+                                    completed()
+                                }
+                            })
+                        } else if let _ = strongSelf.savedNativeViewController {
+                            strongSelf.rootController!.dismiss(animated: false, completion: {
+                                documentPreviewWorkaround?()
+                                completed()
+                            })
+                        }
+                        
+                        window.present(passcodeController, on: .passcode, completion: completed)
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
                     strongSelf.passcodeController = nil
@@ -268,34 +318,60 @@ public final class AppLockContextImpl: AppLockContext {
             strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && !isCurrentlyLocked)
             strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
             
+            func topPresentedVC(_ startFromVC: UIViewController) -> UIViewController {
+                var topViewController = startFromVC
+                while let presentedVC = topViewController.presentedViewController, !presentedVC.isBeingDismissed {
+                    topViewController = presentedVC
+                }
+                return topViewController
+            }
+            
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
                     if strongSelf.passcodeController == nil {
                         UIView.performWithoutAnimation {
                             strongSelf.rootController?.view.endEditing(true)
                         }
-                        if let controller = strongSelf.rootController?.presentedViewController, window.keyboardHeight > 0.0 {
+                        if let controller = strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed, window.keyboardHeight > 0.0 {
                             _hideSafariKeyboard(controller)
                         }
                     }
                     
                     let coveringView = LockedWindowCoveringView(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, accountManager: strongSelf.accountManager)
-                    if let controller = strongSelf.rootController?.presentedViewController ?? strongSelf.savedNativeViewController {
+                    
+                    if let controller = strongSelf.savedNativeViewController ?? strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed {
                         coveringView.layer.allowsGroupOpacity = false
-                        controller.view.addSubview(coveringView)
-                        coveringView.frame = controller.view.bounds
-                        coveringView.updateLayout(controller.view.bounds.size)
                         coveringView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                        window.hostView.eventView.addSubview(coveringView)
+                        coveringView.frame = window.hostView.eventView.bounds
+                        coveringView.updateLayout(coveringView.frame.size)
+                        
+                        // if screen manually turned off while safari/pdf is open, cover view is not visible first moment when screen turned back on; flush() seems to fix it.
+                        CATransaction.flush()
                     } else {
                         window.coveringView = coveringView
                     }
+                    
                     strongSelf.coveringView = coveringView
                 }
                 
                 if strongSelf.passcodeController == nil, let controller = strongSelf.savedNativeViewController {
+                    let coveringView = strongSelf.coveringView
+                    
+                    // need tempDupCoveringView bc saved controller presented over existing coveringView
+                    let tempDupCoveringView = coveringView?.duplicate()
+                    if let tempDupCoveringView {
+                        topPresentedVC(controller).view.addSubview(tempDupCoveringView)
+                    }
+                    
                     strongSelf.rootController?.present(controller, animated: false, completion: {
+                        if let coveringView {
+                            self?.window?.hostView.eventView.addSubview(coveringView)
+                            tempDupCoveringView?.removeFromSuperview()
+                        }
                         passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss(animated: false)
                     })
+                    
                     strongSelf.savedNativeViewController = nil
                 }
             } else if strongSelf.passcodeController == nil {
@@ -315,9 +391,18 @@ public final class AppLockContextImpl: AppLockContext {
                 }
                 
                 if let controller = strongSelf.savedNativeViewController {
-                    strongSelf.rootController?.present(controller, animated: false, completion: { [weak self] in
-                        if let strongSelf = self, let coveringView = strongSelf.coveringView {
-                            strongSelf.coveringView = nil
+                    let coveringView = strongSelf.coveringView
+                    strongSelf.coveringView = nil
+                    
+                    let tempDupCoveringView = coveringView?.duplicate()
+                    if let tempDupCoveringView {
+                        topPresentedVC(controller).view.addSubview(tempDupCoveringView)
+                    }
+                    
+                    strongSelf.rootController?.present(controller, animated: false, completion: {
+                        if let coveringView {
+                            self?.window?.hostView.eventView.addSubview(coveringView)
+                            tempDupCoveringView?.removeFromSuperview()
                             removeFromSuperviewAnimated(coveringView)
                         }
                         passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss(animated: false)
@@ -325,7 +410,7 @@ public final class AppLockContextImpl: AppLockContext {
                     strongSelf.savedNativeViewController = nil
                 } else if let coveringView = strongSelf.coveringView {
                     strongSelf.coveringView = nil
-                    if let _ = strongSelf.rootController?.presentedViewController {
+                    if let controller = strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed {
                         removeFromSuperviewAnimated(coveringView)
                     } else {
                         strongSelf.window?.coveringView = nil
@@ -333,6 +418,13 @@ public final class AppLockContextImpl: AppLockContext {
                 }
             }
         })
+        
+        self.window?.secondaryCoveringViewLayoutSizeUpdate = { [weak self] layoutSize in
+            if let strongSelf = self, let coveringView = strongSelf.coveringView, coveringView !== strongSelf.window?.coveringView {
+                coveringView.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                coveringView.updateLayout(layoutSize)
+            }
+        }
         
         self.currentState.set(.single(self.currentStateValue))
         
@@ -346,14 +438,63 @@ public final class AppLockContextImpl: AppLockContext {
                 }
             })
             
+            self.temporarilyDisableAnimations()
+            
             let _ = self.secretPasscodesTimeoutCheck(state: self.currentStateValue).start()
         }
+    }
+    
+    public func dismissPresentedViewController() {
+        let _ = (self.syncingWait.get()
+        |> filter { !$0 }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { _ in
+            var presentedVC: UIViewController?
+            
+            if let _ = self.savedNativeViewController {
+            } else if let controller = self.rootController?.presentedViewController, !controller.isBeingDismissed {
+                presentedVC = controller
+            }
+            
+            let oldCoveringView = self.coveringView
+            
+            if self.savedNativeViewController != nil || presentedVC != nil {
+                if let window = self.window, self.coveringView != nil {
+                    assert(window.coveringView == nil)
+                    let coveringView = self.coveringView!.duplicate()
+                    window.coveringView = coveringView
+                    self.coveringView = coveringView
+                }
+            }
+            
+            if let _ = self.savedNativeViewController {
+                self.savedNativeViewController = nil
+                oldCoveringView?.removeFromSuperview()
+            } else if let _ = presentedVC {
+                // hide child view controllers, e.g. Share inside pdf viewer, otherwise its dismissal is visible
+                var vc = self.rootController!.presentedViewController
+                while let pvc = vc?.presentedViewController {
+                    pvc.view.isHidden = true
+                    vc = pvc
+                }
+                
+                self.syncingWait.set(true)
+                self.rootController!.dismiss(animated: false, completion: {
+                    oldCoveringView?.removeFromSuperview()
+                    Queue.mainQueue().justDispatch {
+                        self.syncingWait.set(false)
+                    }
+                })
+            }
+        })
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
         if shouldRun {
             if self.timestampRenewTimer == nil {
-                self.updateApplicationActivityTimestamp()
+                Queue.mainQueue().justDispatch {
+                    self.updateApplicationActivityTimestamp()
+                }
                 let timestampRenewTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -372,7 +513,9 @@ public final class AppLockContextImpl: AppLockContext {
             if let timestampRenewTimer = self.timestampRenewTimer {
                 self.timestampRenewTimer = nil
                 timestampRenewTimer.invalidate()
-                self.updateApplicationActivityTimestamp()
+                Queue.mainQueue().justDispatch {
+                    self.updateApplicationActivityTimestamp()
+                }
             }
             
             if self.secretPasscodesTimeoutCheckTimer == nil && self.applicationBindings.isMainApp {
@@ -452,22 +595,26 @@ public final class AppLockContextImpl: AppLockContext {
     
     public func unlock() {
         assert(Queue.mainQueue().isCurrent())
-        let _ = self.secretPasscodesTimeoutCheck(state: self.currentStateValue).start()
+        assert(self.applicationBindings.isMainApp)
         
-        self.updateLockState { state in
-            var state = state
-            
-            state.unlockAttempts = nil
-            
-            state.isManuallyLocked = false
-            
-            var bootTimestamp: Int32 = 0
-            let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-            let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
-            state.applicationActivityTimestamp = timestamp
-            
-            return state
-        }
+        self.temporarilyDisableAnimations()
+        
+        let _ = self.secretPasscodesTimeoutCheck(state: self.currentStateValue).start(completed: {
+            self.updateLockState { state in
+                var state = state
+                
+                state.unlockAttempts = nil
+                
+                state.isManuallyLocked = false
+                
+                var bootTimestamp: Int32 = 0
+                let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+                let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+                state.applicationActivityTimestamp = timestamp
+                
+                return state
+            }
+        })
     }
     
     public func failedUnlockAttempt() {
@@ -493,7 +640,7 @@ public final class AppLockContextImpl: AppLockContext {
         }
         |> mapToSignal { [weak self] ptgSecretPasscodes -> Signal<Void, NoError> in
             guard let strongSelf = self else {
-                return .never()
+                return .complete()
             }
             
             if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.active && f($0) }) {
@@ -513,6 +660,19 @@ public final class AppLockContextImpl: AppLockContext {
         return self.secretPasscodesDeactivateOnCondition { sp in
             return sp.timeout != nil && isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)
         }
+    }
+    
+    private func temporarilyDisableAnimations() {
+        assert(Queue.mainQueue().isCurrent())
+        assert(self.applicationBindings.isMainApp)
+        
+        self.temporarilyDisableAnimationsTimer?.invalidate()
+        self.animationsTemporarilyDisabledForCoverUp = true
+        self.temporarilyDisableAnimationsTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            self?.animationsTemporarilyDisabledForCoverUp = false
+            self?.temporarilyDisableAnimationsTimer = nil
+        }, queue: .mainQueue())
+        self.temporarilyDisableAnimationsTimer?.start()
     }
 }
 

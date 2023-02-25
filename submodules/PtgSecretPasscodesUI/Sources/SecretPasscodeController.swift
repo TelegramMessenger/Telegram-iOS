@@ -217,10 +217,11 @@ private func getSecretChatEntries(currentContext: AccountContext, secretChats: S
                 guard let peer = peer else {
                     return nil
                 }
-                guard case let .chatList(index) = index else {
-                    return nil
+                var chatListIndex: ChatListIndex?
+                if case let .chatList(index) = index {
+                    chatListIndex = index
                 }
-                return (secretChatId, peer, index)
+                return (secretChatId, peer, chatListIndex)
             }
             .sorted {
                 return ($1.2 ?? .absoluteLowerBound) < ($0.2 ?? .absoluteLowerBound)
@@ -410,6 +411,11 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                         return state.withUpdated(settings: state.settings.withUpdated(secretChats: secretChats))
                     }
 
+                    let addedPeerIds = Set(secretChats.filter({ $0.accountRecordId == context.account.id }).map({ $0.peerId })).subtracting(selectedChats)
+                    if !addedPeerIds.isEmpty {
+                        context.sharedContext.applicationBindings.clearPeerNotifications(addedPeerIds)
+                    }
+                    
                     if let _ = pushToController {
                         popToControllerImpl?()
                     } else {
@@ -487,6 +493,24 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
     return controller
 }
 
+extension PtgSecretPasscode {
+    public init(passcode: String) {
+        self.init(passcode: passcode, active: false, timeout: 5 * 60, secretChats: [])
+    }
+    
+    public func withUpdated(passcode: String) -> PtgSecretPasscode {
+        return PtgSecretPasscode(passcode: passcode, active: self.active, timeout: self.timeout, secretChats: self.secretChats)
+    }
+    
+    public func withUpdated(timeout: Int32?) -> PtgSecretPasscode {
+        return PtgSecretPasscode(passcode: self.passcode, active: self.active, timeout: timeout, secretChats: self.secretChats)
+    }
+    
+    public func withUpdated(secretChats: Set<PtgSecretChatId>) -> PtgSecretPasscode {
+        return PtgSecretPasscode(passcode: self.passcode, active: self.active, timeout: self.timeout, secretChats: secretChats)
+    }
+}
+
 extension PtgSecretPasscodes {
     public func withUpdatedItem(passcode: String, _ f: (PtgSecretPasscode) -> PtgSecretPasscode) -> PtgSecretPasscodes {
         if let ind = self.secretPasscodes.firstIndex(where: { $0.passcode == passcode }) {
@@ -495,5 +519,41 @@ extension PtgSecretPasscodes {
             return PtgSecretPasscodes(secretPasscodes: updated)
         }
         return self
+    }
+    
+    public func activeSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
+        var result = Set<PeerId>()
+        for secretPasscode in self.secretPasscodes {
+            if secretPasscode.active {
+                for secretChat in secretPasscode.secretChats {
+                    if secretChat.accountRecordId == accountId {
+                        result.insert(secretChat.peerId)
+                    }
+                }
+            }
+        }
+        return result
+    }
+    
+    public func inactiveSecretChatPeerIdsForAllAccounts() -> Set<PeerId> {
+        var result = Set<PeerId>()
+        for secretPasscode in self.secretPasscodes {
+            if !secretPasscode.active {
+                for secretChat in secretPasscode.secretChats {
+                    result.insert(secretChat.peerId)
+                }
+            }
+        }
+        return result
+    }
+    
+    public func allSecretChatPeerIdsForAllAccounts() -> Set<PeerId> {
+        var result = Set<PeerId>()
+        for secretPasscode in self.secretPasscodes {
+            for secretChat in secretPasscode.secretChats {
+                result.insert(secretChat.peerId)
+            }
+        }
+        return result
     }
 }

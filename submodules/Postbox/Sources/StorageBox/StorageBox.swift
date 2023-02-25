@@ -864,9 +864,9 @@ public final class StorageBox {
         })
     }
     
-    public func add(reference: Reference, to id: Data, contentType: UInt8) {
+    public func add(reference: Reference, to id: Data, contentType: UInt8, size: Int64? = nil) {
         self.impl.with { impl in
-            impl.add(reference: reference, to: id, contentType: contentType, size: nil)
+            impl.add(reference: reference, to: id, contentType: contentType, size: size)
         }
     }
     

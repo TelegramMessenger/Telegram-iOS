@@ -162,7 +162,7 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public func accountWithId(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true, initialPeerIdsExcludedFromUnreadCounters: Set<PeerId>) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
     let postbox = openPostbox(
@@ -174,7 +174,8 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
         isReadOnly: false,
         useCopy: false,
         useCaches: !supplementary,
-        removeDatabaseOnError: !supplementary
+        removeDatabaseOnError: !supplementary,
+        initialPeerIdsExcludedFromUnreadCounters: initialPeerIdsExcludedFromUnreadCounters
     )
     
     return postbox
@@ -1385,7 +1386,8 @@ public func standaloneStateManager(
     id: AccountRecordId,
     encryptionParameters: ValueBoxEncryptionParameters,
     rootPath: String,
-    auxiliaryMethods: AccountAuxiliaryMethods
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    initialPeerIdsExcludedFromUnreadCounters: Set<PeerId>
 ) -> Signal<AccountStateManager?, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
 
@@ -1398,7 +1400,8 @@ public func standaloneStateManager(
         isReadOnly: false,
         useCopy: false,
         useCaches: false,
-        removeDatabaseOnError: false
+        removeDatabaseOnError: false,
+        initialPeerIdsExcludedFromUnreadCounters: initialPeerIdsExcludedFromUnreadCounters
     )
     
     Logger.shared.log("StandaloneStateManager", "Prepare request postbox")

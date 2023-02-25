@@ -129,9 +129,55 @@ final class AuthorizedApplicationContext {
     }
     
     var applicationBadge: Signal<Int32, NoError> {
-        return renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine)
+        // badge on app icon should not include unread messages from secret chats from secret passcodes
+        // regardless whether they are active or not
+        // inactive are already excluded, here we subtract unread messages of active secret chats
+        
+        let accountId = self.context.account.id
+        let activeSecretChatData = self.context.sharedContext.ptgSecretPasscodes
+        |> map { ptgSecretPasscodes in
+            return ptgSecretPasscodes.activeSecretChatPeerIds(accountId: accountId)
+        }
+        |> distinctUntilChanged
+        |> mapToSignal { [weak self] activeSecretChatPeerIds -> Signal<([Int], [EnginePeer.NotificationSettings]), NoError> in
+            guard let strongSelf = self else {
+                return .complete()
+            }
+            return strongSelf.context.engine.data.subscribe(EngineDataList(
+                activeSecretChatPeerIds.map(TelegramEngine.EngineData.Item.Messages.PeerUnreadCount.init)
+            ), EngineDataList(
+                activeSecretChatPeerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init)
+            ))
+        }
+        
+        let totalUnreadCountDisplayCategory = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        |> map { sharedData in
+            let inAppSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? .defaultSettings
+            return inAppSettings.totalUnreadCountDisplayCategory
+        }
+        |> distinctUntilChanged
+        
+        let activeSecretChatUnreadCount = combineLatest(activeSecretChatData, totalUnreadCountDisplayCategory)
+        |> map { activeSecretChatData, totalUnreadCountDisplayCategory -> Int32 in
+            let (peerUnreadCount, peerNotificationSettings) = activeSecretChatData
+            assert(peerUnreadCount.count == peerNotificationSettings.count)
+            var activeUnreadCount = 0
+            for (unreadCount, notificationSettings) in zip(peerUnreadCount, peerNotificationSettings) {
+                if unreadCount > 0 && !notificationSettings._asNotificationSettings().isRemovedFromTotalUnreadCount(default: false) {
+                    if case .messages = totalUnreadCountDisplayCategory {
+                        activeUnreadCount += unreadCount
+                    } else {
+                        activeUnreadCount += 1
+                    }
+                }
+            }
+            return Int32(activeUnreadCount)
+        }
+        |> distinctUntilChanged
+        
+        return combineLatest(renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine), activeSecretChatUnreadCount)
         |> map {
-            $0.0
+            max($0.0 - $1, 0)
         }
     }
     
@@ -350,10 +396,15 @@ final class AuthorizedApplicationContext {
                     }
                     
                     if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
-                        let _ = (appLockContext.isCurrentlyLocked
+                        let _ = (combineLatest(appLockContext.isCurrentlyLocked, strongSelf.context.inactiveSecretChatPeerIds)
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { locked in
+                        |> deliverOnMainQueue).start(next: { locked, inactiveSecretChatPeerIds in
                             guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            // suppress in-app notifications for inactive secret chats
+                            if inactiveSecretChatPeerIds.contains(firstMessage.id.peerId) {
                                 return
                             }
                             
