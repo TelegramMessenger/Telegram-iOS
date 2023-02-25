@@ -353,7 +353,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             let textFixedFont = Font.regular(fontSize)
             let textBlockQuoteFont = Font.regular(fontSize)
             
-            let incoming = message.effectivelyIncoming(context.account.peerId)
+            var incoming = message.effectivelyIncoming(context.account.peerId)
+            if case .forwardedMessages = associatedData.subject {
+                incoming = false
+            }
             
             var horizontalInsets = UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0)
             if displayLine {
@@ -517,7 +520,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
 
                     if !skipStandardStatus {
-                        if message.effectivelyIncoming(context.account.peerId) {
+                        if incoming {
                             if isImage {
                                 imageStatusType = .ImageIncoming
                             } else {
@@ -609,7 +612,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
                         
                         let statusType: ChatMessageDateAndStatusType
-                        if message.effectivelyIncoming(context.account.peerId) {
+                        if incoming {
                             statusType = .BubbleIncoming
                         } else {
                             if message.flags.contains(.Failed) {
@@ -633,7 +636,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             forcedIsEdited: false,
                             file: file,
                             automaticDownload: automaticDownload,
-                            incoming: message.effectivelyIncoming(context.account.peerId),
+                            incoming: incoming,
                             isRecentActions: false,
                             forcedResourceStatus: associatedData.forcedResourceStatus,
                             dateAndStatusType: statusType,
