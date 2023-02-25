@@ -567,9 +567,7 @@ public class Window1 {
                 if strongSelf.hostView.containerView is ChildWindowHostView, !isTablet {
                     keyboardHeight += 27.0
                 }
-                
-                print("keyboardHeight: \(keyboardHeight) (raw: \(keyboardFrame))")
-            
+                            
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5

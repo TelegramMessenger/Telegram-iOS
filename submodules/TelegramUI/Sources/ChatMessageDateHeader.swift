@@ -586,50 +586,10 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     }
                     strongSelf.updateVideoVisibility()
                 } else {
-                    let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                    if let photo = peer.largeProfileImage, photo.hasVideo {
+                        let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                    }
                 }
-                
-                
-                
-                
-//                let cachedPeerData = peerView.cachedData
-//                if let cachedPeerData = cachedPeerData as? CachedUserData, case let .known(maybePhoto) = cachedPeerData.photo {
-//                    if let photo = maybePhoto, let video = photo.videoRepresentations.last, let peerReference = PeerReference(peer) {
-//                        let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
-//                        let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-//                        let videoContent = NativeVideoContent(id: .profileVideo(videoId, "\(Int32.random(in: 0 ..< Int32.max))"), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
-//                        if videoContent.id != strongSelf.videoContent?.id {
-//                            strongSelf.videoNode?.removeFromSupernode()
-//                            strongSelf.videoContent = videoContent
-//                        }
-//
-//                        if strongSelf.hierarchyTrackingLayer == nil {
-//                            let hierarchyTrackingLayer = HierarchyTrackingLayer()
-//                            hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
-//                                guard let strongSelf = self else {
-//                                    return
-//                                }
-//                                strongSelf.trackingIsInHierarchy = true
-//                            }
-//
-//                            hierarchyTrackingLayer.didExitHierarchy = { [weak self] in
-//                                guard let strongSelf = self else {
-//                                    return
-//                                }
-//                                strongSelf.trackingIsInHierarchy = false
-//                            }
-//                            strongSelf.hierarchyTrackingLayer = hierarchyTrackingLayer
-//                            strongSelf.layer.addSublayer(hierarchyTrackingLayer)
-//                        }
-//                    } else {
-//                        strongSelf.videoContent = nil
-//
-//                        strongSelf.hierarchyTrackingLayer?.removeFromSuperlayer()
-//                        strongSelf.hierarchyTrackingLayer = nil
-//                    }
-//
-//                    strongSelf.updateVideoVisibility()
-//                } else {
             }))
         } else {            
             self.cachedDataDisposable.set(nil)

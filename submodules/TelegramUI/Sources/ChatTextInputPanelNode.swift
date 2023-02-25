@@ -33,6 +33,7 @@ import ChatControllerInteraction
 import UndoUI
 import PremiumUI
 import StickerPeekUI
+import LottieComponent
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -184,11 +185,11 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
             
             if let animationView = self.animationView {
                 let width = AccessoryItemIconButtonNode.calculateWidth(item: item, image: image, text: "", strings: self.strings)
-                let iconSize = CGSize(width: width, height: width)
+                //let iconSize = CGSize(width: width, height: width)
                 
                 let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - width) / 2.0), y: floor((size.height - width) / 2.0) - bottomInset), size: CGSize(width: width, height: width))
                 
-                let colorKeys: [String] = ["__allcolors__"]
+                //let colorKeys: [String] = ["__allcolors__"]
                 let animationName: String
                 var animationMode: LottieAnimationComponent.AnimationItem.Mode = .still(position: .end)
                 
@@ -286,30 +287,30 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     }
                 }
                 
-                var colors: [String: UIColor] = [:]
+                /*var colors: [String: UIColor] = [:]
                 for colorKey in colorKeys {
                     colors[colorKey] = self.theme.chat.inputPanel.inputControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
-                }
+                }*/
                 
                 let animationSize = animationView.update(
                     transition: .immediate,
-                    component: AnyComponent(LottieAnimationComponent(
-                        animation: LottieAnimationComponent.AnimationItem(
-                            name: animationName,
-                            mode: animationMode
-                        ),
-                        colors: colors,
-                        size: iconSize
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: animationName),
+                        color: self.theme.chat.inputPanel.inputControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
                     )),
                     environment: {},
                     containerSize: animationFrame.size
                 )
-                if let view = animationView.view {
+                if let view = animationView.view as? LottieComponent.View {
                     view.isUserInteractionEnabled = false
                     if view.superview == nil {
                         self.view.addSubview(view)
                     }
                     view.frame = CGRect(origin: CGPoint(x: animationFrame.minX + floor((animationFrame.width - animationSize.width) / 2.0), y: animationFrame.minY + floor((animationFrame.height - animationSize.height) / 2.0)), size: animationSize)
+                    
+                    if case .animating = animationMode {
+                        view.playOnce()
+                    }
                 }
             }
         }

@@ -243,59 +243,127 @@ public final class InitialPresentationDataAndSettings {
 }
 
 public func currentPresentationDataAndSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<InitialPresentationDataAndSettings, NoError> {
-    return accountManager.transaction { transaction -> InitialPresentationDataAndSettings in
+    struct InternalData {
+        var ptgSettings: PreferencesEntry?
+        var ptgSecretPasscodes: PreferencesEntry?
+        var localizationSettings: PreferencesEntry?
+        var presentationThemeSettings: PreferencesEntry?
+        var automaticMediaDownloadSettings: PreferencesEntry?
+        var autodownloadSettings: PreferencesEntry?
+        var callListSettings: PreferencesEntry?
+        var inAppNotificationSettings: PreferencesEntry?
+        var mediaInputSettings: PreferencesEntry?
+        var experimentalUISettings: PreferencesEntry?
+        var contactSynchronizationSettings: PreferencesEntry?
+        
+        init(
+            ptgSettings: PreferencesEntry?,
+            ptgSecretPasscodes: PreferencesEntry?,
+            localizationSettings: PreferencesEntry?,
+            presentationThemeSettings: PreferencesEntry?,
+            automaticMediaDownloadSettings: PreferencesEntry?,
+            autodownloadSettings: PreferencesEntry?,
+            callListSettings: PreferencesEntry?,
+            inAppNotificationSettings: PreferencesEntry?,
+            mediaInputSettings: PreferencesEntry?,
+            experimentalUISettings: PreferencesEntry?,
+            contactSynchronizationSettings: PreferencesEntry?
+        ) {
+            self.ptgSettings = ptgSettings
+            self.ptgSecretPasscodes = ptgSecretPasscodes
+            self.localizationSettings = localizationSettings
+            self.presentationThemeSettings = presentationThemeSettings
+            self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
+            self.autodownloadSettings = autodownloadSettings
+            self.callListSettings = callListSettings
+            self.inAppNotificationSettings = inAppNotificationSettings
+            self.mediaInputSettings = mediaInputSettings
+            self.experimentalUISettings = experimentalUISettings
+            self.contactSynchronizationSettings = contactSynchronizationSettings
+        }
+    }
+    
+    return accountManager.transaction { transaction -> InternalData in
+        let ptgSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.ptgSettings)
+        let ptgSecretPasscodes = transaction.getSharedData(ApplicationSpecificSharedDataKeys.ptgSecretPasscodes)
+        let localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)
+        let presentationThemeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)
+        let automaticMediaDownloadSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings)
+        let autodownloadSettings = transaction.getSharedData(SharedDataKeys.autodownloadSettings)
+        let callListSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)
+        let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)
+        let mediaInputSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings)
+        let experimentalUISettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings)
+        let contactSynchronizationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)
+        
+        return InternalData(
+            ptgSettings: ptgSettings,
+            ptgSecretPasscodes: ptgSecretPasscodes,
+            localizationSettings: localizationSettings,
+            presentationThemeSettings: presentationThemeSettings,
+            automaticMediaDownloadSettings: automaticMediaDownloadSettings,
+            autodownloadSettings: autodownloadSettings,
+            callListSettings: callListSettings,
+            inAppNotificationSettings: inAppNotificationSettings,
+            mediaInputSettings: mediaInputSettings,
+            experimentalUISettings: experimentalUISettings,
+            contactSynchronizationSettings: contactSynchronizationSettings
+        )
+    }
+    |> deliverOn(Queue(name: "PresentationData-Load", qos: .userInteractive))
+    |> map { internalData -> InitialPresentationDataAndSettings in
         let localizationSettings: LocalizationSettings?
-        if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
+        if let current = internalData.localizationSettings?.get(LocalizationSettings.self) {
             localizationSettings = current
         } else {
             localizationSettings = nil
         }
         
         let themeSettings: PresentationThemeSettings
-        if let current = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)?.get(PresentationThemeSettings.self) {
+        if let current = internalData.presentationThemeSettings?.get(PresentationThemeSettings.self) {
             themeSettings = current
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
         }
         
         let automaticMediaDownloadSettings: MediaAutoDownloadSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings)?.get(MediaAutoDownloadSettings.self) {
+        if let value = internalData.automaticMediaDownloadSettings?.get(MediaAutoDownloadSettings.self) {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
         }
         
         let autodownloadSettings: AutodownloadSettings
-        if let value = transaction.getSharedData(SharedDataKeys.autodownloadSettings)?.get(AutodownloadSettings.self) {
+        if let value = internalData.autodownloadSettings?.get(AutodownloadSettings.self) {
             autodownloadSettings = value
         } else {
             autodownloadSettings = .defaultSettings
         }
         
         let callListSettings: CallListSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self) {
+        if let value = internalData.callListSettings?.get(CallListSettings.self) {
             callListSettings = value
         } else {
             callListSettings = CallListSettings.defaultSettings
         }
         
         let inAppNotificationSettings: InAppNotificationSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
+        if let value = internalData.inAppNotificationSettings?.get(InAppNotificationSettings.self) {
             inAppNotificationSettings = value
         } else {
             inAppNotificationSettings = InAppNotificationSettings.defaultSettings
         }
         
         let mediaInputSettings: MediaInputSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings)?.get(MediaInputSettings.self) {
+        if let value = internalData.mediaInputSettings?.get(MediaInputSettings.self) {
             mediaInputSettings = value
         } else {
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
-        let experimentalUISettings: ExperimentalUISettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings)?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+        let experimentalUISettings: ExperimentalUISettings = internalData.experimentalUISettings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
-        let contactSettings: ContactSynchronizationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
+        let contactSettings: ContactSynchronizationSettings = internalData.contactSynchronizationSettings?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
         
         let effectiveTheme: PresentationThemeReference
         var preferredBaseTheme: TelegramBaseTheme?
@@ -338,7 +406,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
         
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings, ptgSettings: PtgSettings(transaction), ptgSecretPasscodes: PtgSecretPasscodes(transaction))
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings, ptgSettings: PtgSettings(internalData.ptgSettings), ptgSecretPasscodes: PtgSecretPasscodes(internalData.ptgSecretPasscodes))
     }
 }
 

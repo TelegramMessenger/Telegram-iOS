@@ -392,26 +392,27 @@ public extension Api {
 }
 public extension Api {
     enum InputStickerSetItem: TypeConstructorDescription {
-        case inputStickerSetItem(flags: Int32, document: Api.InputDocument, emoji: String, maskCoords: Api.MaskCoords?)
+        case inputStickerSetItem(flags: Int32, document: Api.InputDocument, emoji: String, maskCoords: Api.MaskCoords?, keywords: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords):
+                case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords, let keywords):
                     if boxed {
-                        buffer.appendInt32(-6249322)
+                        buffer.appendInt32(853188252)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     document.serialize(buffer, true)
                     serializeString(emoji, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(keywords!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords):
-                return ("inputStickerSetItem", [("flags", flags as Any), ("document", document as Any), ("emoji", emoji as Any), ("maskCoords", maskCoords as Any)])
+                case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords, let keywords):
+                return ("inputStickerSetItem", [("flags", flags as Any), ("document", document as Any), ("emoji", emoji as Any), ("maskCoords", maskCoords as Any), ("keywords", keywords as Any)])
     }
     }
     
@@ -428,12 +429,15 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.MaskCoords
             } }
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputStickerSetItem.inputStickerSetItem(flags: _1!, document: _2!, emoji: _3!, maskCoords: _4)
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputStickerSetItem.inputStickerSetItem(flags: _1!, document: _2!, emoji: _3!, maskCoords: _4, keywords: _5)
             }
             else {
                 return nil

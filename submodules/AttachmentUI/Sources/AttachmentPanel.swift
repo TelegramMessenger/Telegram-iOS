@@ -371,12 +371,12 @@ private final class LoadingProgressNode: ASDisplayNode {
 }
 
 public struct AttachmentMainButtonState {
-    let text: String?
-    let backgroundColor: UIColor
-    let textColor: UIColor
-    let isVisible: Bool
-    let isLoading: Bool
-    let isEnabled: Bool
+    public let text: String?
+    public let backgroundColor: UIColor
+    public let textColor: UIColor
+    public let isVisible: Bool
+    public let isLoading: Bool
+    public let isEnabled: Bool
     
     public init(
         text: String?,

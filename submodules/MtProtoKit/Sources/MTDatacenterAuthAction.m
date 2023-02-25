@@ -106,7 +106,7 @@
     
     switch (_authKeyInfoSelector) {
         case MTDatacenterAuthInfoSelectorPersistent: {
-            MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
+            MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:INT32_MAX saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
             
             MTContext *context = _context;
             [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
@@ -119,7 +119,7 @@
             MTContext *mainContext = _context;
             if (mainContext != nil) {
                 if (_skipBind) {
-                    MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
+                    MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:authKey.validUntilTimestamp saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
                     
                     [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
                     
@@ -132,6 +132,7 @@
                         _bindMtProto.useUnauthorizedMode = false;
                         _bindMtProto.useTempAuthKeys = true;
                         _bindMtProto.useExplicitAuthKey = authKey;
+                        _bindMtProto.tempConnectionForReuse = [_authMtProto takeConnectionForReusing];
                         
                         switch (_authKeyInfoSelector) {
                             case MTDatacenterAuthInfoSelectorEphemeralMain:
@@ -146,7 +147,7 @@
                         }
                         
                         __weak MTDatacenterAuthAction *weakSelf = self;
-                        [_bindMtProto addMessageService:[[MTBindKeyMessageService alloc] initWithPersistentKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:persistentAuthInfo.authKey authKeyId:persistentAuthInfo.authKeyId notBound:false] ephemeralKey:authKey completion:^(bool success) {
+                        [_bindMtProto addMessageService:[[MTBindKeyMessageService alloc] initWithPersistentKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:persistentAuthInfo.authKey authKeyId:persistentAuthInfo.authKeyId validUntilTimestamp:persistentAuthInfo.validUntilTimestamp notBound:false] ephemeralKey:authKey completion:^(bool success) {
                             __strong MTDatacenterAuthAction *strongSelf = weakSelf;
                             if (strongSelf == nil) {
                                 return;
@@ -154,7 +155,7 @@
                             [strongSelf->_bindMtProto stop];
                             
                             if (success) {
-                                MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
+                                MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:authKey.validUntilTimestamp saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
                                 
                                 [strongSelf->_context updateAuthInfoForDatacenterWithId:strongSelf->_datacenterId authInfo:authInfo selector:strongSelf->_authKeyInfoSelector];
                                 

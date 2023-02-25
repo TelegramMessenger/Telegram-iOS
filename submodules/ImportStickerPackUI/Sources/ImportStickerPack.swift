@@ -11,18 +11,39 @@ enum StickerVerificationStatus {
 
 public class ImportStickerPack {
     public enum StickerPackType {
-        case image
-        case animation
-        case video
-        
-        var importType: CreateStickerSetType {
-            switch self {
+        public enum ContentType {
+            case image
+            case animation
+            case video
+            
+            var importType: CreateStickerSetType.ContentType {
+                switch self {
                 case .image:
                     return .image
                 case .animation:
                     return .animation
                 case .video:
                     return .video
+                }
+            }
+        }
+        
+        case stickers(content: ContentType)
+        case emoji(content: ContentType, textColored: Bool)
+        
+        var contentType: StickerPackType.ContentType {
+            switch self {
+            case let .stickers(content), let .emoji(content, _):
+                return content
+            }
+        }
+        
+        var importType: CreateStickerSetType {
+            switch self {
+            case let .stickers(content):
+                return .stickers(content: content.importType)
+            case let .emoji(content, textColored):
+                return .emoji(content: content.importType, textColored: textColored)
             }
         }
     }
@@ -51,12 +72,14 @@ public class ImportStickerPack {
         
         let content: Content
         let emojis: [String]
+        let keywords: String
         let uuid: UUID
         var resource: MediaResource?
         
-        init(content: Content, emojis: [String], uuid: UUID = UUID()) {
+        init(content: Content, emojis: [String], keywords: String, uuid: UUID = UUID()) {
             self.content = content
             self.emojis = emojis
+            self.keywords = keywords
             self.uuid = uuid
         }
         
@@ -88,13 +111,25 @@ public class ImportStickerPack {
         self.software = json["software"] as? String ?? ""
         let isAnimated = json["isAnimated"] as? Bool ?? false
         let isVideo = json["isVideo"] as? Bool ?? false
+        let isEmoji = json["isEmoji"] as? Bool ?? false
+        let isTextColored = json["isTextColored"] as? Bool ?? false
         let type: StickerPackType
-        if isAnimated {
-            type = .animation
-        } else if isVideo {
-            type = .video
+        if isEmoji {
+            if isAnimated {
+                type = .emoji(content: .animation, textColored: isTextColored)
+            } else if isVideo {
+                type = .emoji(content: .video, textColored: isTextColored)
+            } else {
+                type = .emoji(content: .image, textColored: isTextColored)
+            }
         } else {
-            type = .image
+            if isAnimated {
+                type = .stickers(content: .animation)
+            } else if isVideo {
+                type = .stickers(content: .video)
+            } else {
+                type = .stickers(content: .image)
+            }
         }
         self.type = type
         
@@ -102,23 +137,23 @@ public class ImportStickerPack {
             if let dataString = sticker["data"] as? String, let mimeType = sticker["mimeType"] as? String, let data = Data(base64Encoded: dataString) {
                 var content: Sticker.Content?
                 switch mimeType.lowercased() {
-                    case "image/png":
-                        if case .image = type {
-                            content = .image(data)
-                        }
-                    case "application/x-tgsticker":
-                        if case .animation = type {
-                            content = .animation(data)
-                        }
-                    case "video/webm", "image/webp", "image/gif":
-                        if case .video = type {
-                            content = .video(data, mimeType)
-                        }
-                    default:
-                        break
+                case "image/png":
+                    if case .image = type.contentType {
+                        content = .image(data)
+                    }
+                case "application/x-tgsticker":
+                    if case .animation = type.contentType {
+                        content = .animation(data)
+                    }
+                case "video/webm", "image/webp", "image/gif":
+                    if case .video = type.contentType {
+                        content = .video(data, mimeType)
+                    }
+                default:
+                    break
                 }
                 if let content = content {
-                    return Sticker(content: content, emojis: sticker["emojis"] as? [String] ?? [])
+                    return Sticker(content: content, emojis: sticker["emojis"] as? [String] ?? [], keywords: sticker["keywords"] as? String ?? "")
                 }
             }
             return nil

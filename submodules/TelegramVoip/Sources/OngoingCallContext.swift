@@ -1124,7 +1124,8 @@ public final class OngoingCallContext {
         }
         let tempStatsLogPath = self.tempStatsLogFile.path
         
-        self.withContextThenDeallocate { context in
+        let queue = self.queue
+        self.withContext { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 let delta = NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
@@ -1154,6 +1155,10 @@ public final class OngoingCallContext {
                             break
                         }
                     })
+                }
+                
+                queue.async {
+                    let _ = context.nativeGetDerivedState()
                 }
             }
         }

@@ -419,8 +419,26 @@ public final class ShareController: ViewController {
                 if case .saveToCameraRoll = preferredAction, canSave {
                     self.actionIsMediaSaving = true
                     self.defaultAction = ShareControllerAction(title: isVideo ? self.presentationData.strings.Gallery_SaveVideo : self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
-                        self?.saveToCameraRoll(mediaReference: mediaReference)
-                        self?.actionCompleted?()
+                        if let strongSelf = self {
+                            if case let .message(message, media) = mediaReference, let messageId = message.id, let file = media as? TelegramMediaFile {
+                                let _ = (messageMediaFileStatus(context: currentContext, messageId: messageId, file: file)
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak self] fetchStatus in
+                                    if let strongSelf = self {
+                                        if case .Local = fetchStatus {
+                                            strongSelf.saveToCameraRoll(mediaReference: mediaReference, completion: nil)
+                                            strongSelf.actionCompleted?()
+                                        } else {
+                                            strongSelf.saveToCameraRoll(mediaReference: mediaReference, completion: {
+                                            })
+                                        }
+                                    }
+                                })
+                            } else {
+                                strongSelf.saveToCameraRoll(mediaReference: mediaReference, completion: nil)
+                                strongSelf.actionCompleted?()
+                            }
+                        }
                     })
                 }
             case let .messages(messages):
@@ -1488,14 +1506,14 @@ public final class ShareController: ViewController {
         self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .standalone(media: media)) |> map(Optional.init), dismissImmediately: true, completion: {})
     }
     
-    private func saveToCameraRoll(mediaReference: AnyMediaReference) {
+    private func saveToCameraRoll(mediaReference: AnyMediaReference, completion: (() -> Void)?) {
         let context: AccountContext
         if self.currentContext.account.id == self.currentAccount.id {
             context = self.currentContext
         } else {
             context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
         }
-        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true, completion: {})
+        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: completion == nil, completion: completion ?? {})
     }
     
     public func updatePeers() {

@@ -1705,10 +1705,10 @@ public final class MediaBox {
     public func removeCachedResources(_ ids: [MediaResourceId], force: Bool = false, notify: Bool = false) -> Signal<Float, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
-                let uniqueIds = Set(ids.map { $0.stringRepresentation })
-                var pathsToDelete: [String] = []
+                //let uniqueIds = Set(ids.map { $0.stringRepresentation })
+                let pathsToDelete: [String] = []
                 
-                for cacheType in ["cache", "short-cache"] {
+                /*for cacheType in ["cache", "short-cache"] {
                     if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: "\(self.basePath)/\(cacheType)"), includingPropertiesForKeys: [], options: [.skipsSubdirectoryDescendants], errorHandler: nil) {
                         while let item = enumerator.nextObject() {
                             guard let url = item as? NSURL, let path = url.path, let fileName = url.lastPathComponent else {
@@ -1723,7 +1723,7 @@ public final class MediaBox {
                             }
                         }
                     }
-                }
+                }*/
                 
                 var count: Int = 0
                 let totalCount = ids.count * 3 + pathsToDelete.count

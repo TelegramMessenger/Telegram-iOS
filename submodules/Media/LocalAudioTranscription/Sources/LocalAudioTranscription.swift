@@ -32,7 +32,7 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                             return
                         }
                         
-                        speechRecognizer.defaultTaskHint = .unspecified
+                        speechRecognizer.defaultTaskHint = .dictation
                         
                         let tempFilePath = NSTemporaryDirectory() + "\(UInt64.random(in: 0 ... UInt64.max)).m4a"
                         let _ = try? FileManager.default.copyItem(atPath: path, toPath: tempFilePath)

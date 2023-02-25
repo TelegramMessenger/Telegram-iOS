@@ -145,6 +145,9 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 if let iconImage = self.iconImage {
                     context.saveGState()
                     let iconRect = CGRect(origin: CGPoint(), size: iconImage.size)
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     context.clip(to: iconRect, mask: iconImage.cgImage!)
                     context.fill(iconRect)
                     context.restoreGState()
@@ -180,6 +183,9 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 if let iconImage = self.iconImage {
                     context.saveGState()
                     let iconRect = CGRect(origin: CGPoint(), size: iconImage.size)
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     context.clip(to: iconRect, mask: iconImage.cgImage!)
                     context.fill(iconRect)
                     context.restoreGState()

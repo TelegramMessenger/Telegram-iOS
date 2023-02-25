@@ -15,9 +15,6 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                 return .never()
             }
             return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
-                transaction.removeAllChatListEntries(groupId: .root, exceptPeerNamespace: Namespaces.Peer.SecretChat)
-                transaction.removeAllChatListEntries(groupId: .group(1), exceptPeerNamespace: Namespaces.Peer.SecretChat)
-                
                 for peerId in transaction.chatListGetAllPeerIds() {
                     if peerId.namespace != Namespaces.Peer.SecretChat {
                         transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
@@ -26,7 +23,21 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                     if peerId.namespace != Namespaces.Peer.SecretChat {
                         transaction.addHole(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                     }
+                    
+                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        if let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                            transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                            for threadId in transaction.setMessageHistoryThreads(peerId: peerId) {
+                                transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: nil)
+                                transaction.addHole(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
+                            }
+                        }
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, _ in nil })
+                    }
                 }
+                
+                transaction.removeAllChatListEntries(groupId: .root, exceptPeerNamespace: Namespaces.Peer.SecretChat)
+                transaction.removeAllChatListEntries(groupId: .group(1), exceptPeerNamespace: Namespaces.Peer.SecretChat)
                 
                 updatePeers(transaction: transaction, peers: fetchedChats.peers + additionalPeers, update: { _, updated -> Peer in
                     return updated

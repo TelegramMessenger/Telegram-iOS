@@ -1,4 +1,62 @@
 public extension Api.messages {
+    enum AllStickers: TypeConstructorDescription {
+        case allStickers(hash: Int64, sets: [Api.StickerSet])
+        case allStickersNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .allStickers(let hash, let sets):
+                    if boxed {
+                        buffer.appendInt32(-843329861)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sets.count))
+                    for item in sets {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .allStickersNotModified:
+                    if boxed {
+                        buffer.appendInt32(-395967805)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .allStickers(let hash, let sets):
+                return ("allStickers", [("hash", hash as Any), ("sets", sets as Any)])
+                case .allStickersNotModified:
+                return ("allStickersNotModified", [])
+    }
+    }
+    
+        public static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.StickerSet]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSet.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.AllStickers.allStickers(hash: _1!, sets: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
+            return Api.messages.AllStickers.allStickersNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum ArchivedStickers: TypeConstructorDescription {
         case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
     
@@ -1338,82 +1396,6 @@ public extension Api.messages {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.messages.HighScores.highScores(scores: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum HistoryImport: TypeConstructorDescription {
-        case historyImport(id: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .historyImport(let id):
-                    if boxed {
-                        buffer.appendInt32(375566091)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .historyImport(let id):
-                return ("historyImport", [("id", id as Any)])
-    }
-    }
-    
-        public static func parse_historyImport(_ reader: BufferReader) -> HistoryImport? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.HistoryImport.historyImport(id: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum HistoryImportParsed: TypeConstructorDescription {
-        case historyImportParsed(flags: Int32, title: String?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .historyImportParsed(let flags, let title):
-                    if boxed {
-                        buffer.appendInt32(1578088377)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .historyImportParsed(let flags, let title):
-                return ("historyImportParsed", [("flags", flags as Any), ("title", title as Any)])
-    }
-    }
-    
-        public static func parse_historyImportParsed(_ reader: BufferReader) -> HistoryImportParsed? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_2 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.HistoryImportParsed.historyImportParsed(flags: _1!, title: _2)
             }
             else {
                 return nil

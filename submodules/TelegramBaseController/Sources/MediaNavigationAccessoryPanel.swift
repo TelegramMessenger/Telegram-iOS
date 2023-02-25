@@ -11,7 +11,7 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public let containerNode: MediaNavigationAccessoryContainerNode
     
     public var close: (() -> Void)?
-    public var setRate: ((AudioPlaybackRate) -> Void)?
+    public var setRate: ((AudioPlaybackRate, Bool) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var tapAction: (() -> Void)?
     public var playPrevious: (() -> Void)?
@@ -32,8 +32,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
                 close()
             }
         }
-        self.containerNode.headerNode.setRate = { [weak self] rate in
-            self?.setRate?(rate)
+        self.containerNode.headerNode.setRate = { [weak self] rate, fromMenu in
+            self?.setRate?(rate, fromMenu)
         }
         self.containerNode.headerNode.togglePlayPause = { [weak self] in
             if let strongSelf = self, let togglePlayPause = strongSelf.togglePlayPause {

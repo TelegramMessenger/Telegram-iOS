@@ -5,22 +5,35 @@ import TelegramApi
 import MtProtoKit
 
 func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return network.request(Api.functions.help.getAppConfig())
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.JSONValue?, NoError> in
-        return .single(nil)
+    return postbox.transaction { transaction -> Int32 in
+        return currentAppConfiguration(transaction: transaction).hash
     }
-    |> mapToSignal { result -> Signal<Void, NoError> in
-        guard let result = result else {
-            return .complete()
+    |> mapToSignal { hash -> Signal<Void, NoError> in
+        return network.request(Api.functions.help.getAppConfig(hash: hash))
+        |> map { result -> (data: Api.JSONValue, hash: Int32)? in
+            switch result {
+            case let .appConfig(updatedHash, config):
+                return (config, updatedHash)
+            case .appConfigNotModified:
+                return nil
+            }
         }
-        return postbox.transaction { transaction -> Void in
-            if let data = JSON(apiJson: result) {
-                updateAppConfiguration(transaction: transaction, { configuration -> AppConfiguration in
-                    var configuration = configuration
-                    configuration.data = data
-                    return configuration
-                })
+        |> `catch` { _ -> Signal<(data: Api.JSONValue, hash: Int32)?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            guard let result = result else {
+                return .complete()
+            }
+            return postbox.transaction { transaction -> Void in
+                if let data = JSON(apiJson: result.data) {
+                    updateAppConfiguration(transaction: transaction, { configuration -> AppConfiguration in
+                        var configuration = configuration
+                        configuration.data = data
+                        configuration.hash = result.hash
+                        return configuration
+                    })
+                }
             }
         }
     }

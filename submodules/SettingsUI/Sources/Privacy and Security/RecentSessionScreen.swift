@@ -327,8 +327,6 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                     let animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
                     self.animationNode = animationNode
                     
-                    animationNode.animationView()?.logHierarchyKeypaths()
-                    
                     let animationBackgroundNode = ASDisplayNode()
                     animationBackgroundNode.cornerRadius = 20.0
                     animationBackgroundNode.backgroundColor = backgroundColor

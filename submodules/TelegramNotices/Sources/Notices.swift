@@ -167,6 +167,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case audioTranscriptionSuggestion = 33
     case clearStorageDismissedTipSize = 34
     case dismissedTrendingEmojiPacks = 35
+    case audioRateOptionsTip = 36
+    case translationSuggestion = 37
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -358,6 +360,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedTrendingEmojiPacks() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedTrendingEmojiPacks.key)
+    }
+    
+    static func translationSuggestionNotice() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.translationSuggestion.key)
+    }
+    
+    static func audioRateOptionsTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.audioRateOptionsTip.key)
     }
 }
 
@@ -1207,22 +1217,84 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    public static func incrementAudioTranscriptionSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
-        return accountManager.transaction { transaction -> Int in
+    public static func incrementAudioTranscriptionSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
             var currentValue: Int32 = 0
             if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.audioTranscriptionSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
                 currentValue = value.value
             }
             let previousValue = currentValue
-            currentValue += Int32(count)
+            currentValue += count
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.audioTranscriptionSuggestion(), entry)
             }
             
-            return Int(previousValue)
+            return previousValue
         }
     }
+        
+    public static func translationSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.translationSuggestionNotice())
+        |> map { view -> (Int32, Int32) in
+            if let value = view.value?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
+                return (value.counter, value.timestamp)
+            } else {
+                return (0, 0)
+            }
+        }
+    }
+    
+    public static func incrementTranslationSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1, timestamp: Int32) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            var currentValue: Int32 = 0
+            var currentTimestamp: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.translationSuggestionNotice())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
+                currentValue = value.counter
+                currentTimestamp = value.timestamp
+            }
+            
+            if currentTimestamp > timestamp {
+                return Int32(currentValue)
+            } else {
+                let previousValue = currentValue
+                currentValue = max(0, Int32(currentValue + count))
+                
+                if let entry = CodableEntry(ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp)) {
+                    transaction.setNotice(ApplicationSpecificNoticeKeys.translationSuggestionNotice(), entry)
+                }
+                
+                return Int32(previousValue)
+            }
+        }
+    }
+    
+    public static func getAudioRateOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.audioRateOptionsTip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementAudioRateOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.audioRateOptionsTip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.audioRateOptionsTip(), entry)
+            }
+            return previousValue
+        }
+    }
+    
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
         }
