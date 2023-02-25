@@ -458,7 +458,7 @@ private final class BrowserScreenNode: ViewControllerTracingNode {
                         strongSelf.interaction?.updateForceSerif(false)
                         action(.default)
                     }
-                })), .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(Font.with(size: 17.0, design: .serif, traits: [])), icon: forceSerif ? checkIcon : emptyIcon, action: { [weak self] (controller, action) in
+                })), .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.InstantPage_FontNewYork, textFont: .custom(font: Font.with(size: 17.0, design: .serif, traits: []), height: nil, verticalOffset: nil), icon: forceSerif ? checkIcon : emptyIcon, action: { [weak self] (controller, action) in
                     if let strongSelf = self {
                         strongSelf.interaction?.updateForceSerif(true)
                         action(.default)

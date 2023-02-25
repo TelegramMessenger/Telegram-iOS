@@ -351,7 +351,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         }
                         for attribute in item.file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, alt, _):
+                            case let .CustomEmoji(_, _, alt, _):
                                 if alt == query {
                                     if !item.file.isPremiumEmoji || hasPremium {
                                         result.append((alt, item.file, alt))
@@ -415,7 +415,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                             }
                             for attribute in item.file.attributes {
                                 switch attribute {
-                                case let .CustomEmoji(_, alt, _):
+                                case let .CustomEmoji(_, _, alt, _):
                                     if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                         if !item.file.isPremiumEmoji || hasPremium {
                                             result.append((alt, item.file, keyword))

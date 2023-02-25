@@ -8,6 +8,7 @@ import Postbox
 import TelegramCore
 import AccountContext
 import ContextUI
+import ChatControllerInteraction
 
 protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }

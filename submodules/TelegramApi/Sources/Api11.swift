@@ -133,35 +133,35 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputKeyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let bot):
-                return ("inputKeyboardButtonUrlAuth", [("flags", String(describing: flags)), ("text", String(describing: text)), ("fwdText", String(describing: fwdText)), ("url", String(describing: url)), ("bot", String(describing: bot))])
+                return ("inputKeyboardButtonUrlAuth", [("flags", flags as Any), ("text", text as Any), ("fwdText", fwdText as Any), ("url", url as Any), ("bot", bot as Any)])
                 case .inputKeyboardButtonUserProfile(let text, let userId):
-                return ("inputKeyboardButtonUserProfile", [("text", String(describing: text)), ("userId", String(describing: userId))])
+                return ("inputKeyboardButtonUserProfile", [("text", text as Any), ("userId", userId as Any)])
                 case .keyboardButton(let text):
-                return ("keyboardButton", [("text", String(describing: text))])
+                return ("keyboardButton", [("text", text as Any)])
                 case .keyboardButtonBuy(let text):
-                return ("keyboardButtonBuy", [("text", String(describing: text))])
+                return ("keyboardButtonBuy", [("text", text as Any)])
                 case .keyboardButtonCallback(let flags, let text, let data):
-                return ("keyboardButtonCallback", [("flags", String(describing: flags)), ("text", String(describing: text)), ("data", String(describing: data))])
+                return ("keyboardButtonCallback", [("flags", flags as Any), ("text", text as Any), ("data", data as Any)])
                 case .keyboardButtonGame(let text):
-                return ("keyboardButtonGame", [("text", String(describing: text))])
+                return ("keyboardButtonGame", [("text", text as Any)])
                 case .keyboardButtonRequestGeoLocation(let text):
-                return ("keyboardButtonRequestGeoLocation", [("text", String(describing: text))])
+                return ("keyboardButtonRequestGeoLocation", [("text", text as Any)])
                 case .keyboardButtonRequestPhone(let text):
-                return ("keyboardButtonRequestPhone", [("text", String(describing: text))])
+                return ("keyboardButtonRequestPhone", [("text", text as Any)])
                 case .keyboardButtonRequestPoll(let flags, let quiz, let text):
-                return ("keyboardButtonRequestPoll", [("flags", String(describing: flags)), ("quiz", String(describing: quiz)), ("text", String(describing: text))])
+                return ("keyboardButtonRequestPoll", [("flags", flags as Any), ("quiz", quiz as Any), ("text", text as Any)])
                 case .keyboardButtonSimpleWebView(let text, let url):
-                return ("keyboardButtonSimpleWebView", [("text", String(describing: text)), ("url", String(describing: url))])
+                return ("keyboardButtonSimpleWebView", [("text", text as Any), ("url", url as Any)])
                 case .keyboardButtonSwitchInline(let flags, let text, let query):
-                return ("keyboardButtonSwitchInline", [("flags", String(describing: flags)), ("text", String(describing: text)), ("query", String(describing: query))])
+                return ("keyboardButtonSwitchInline", [("flags", flags as Any), ("text", text as Any), ("query", query as Any)])
                 case .keyboardButtonUrl(let text, let url):
-                return ("keyboardButtonUrl", [("text", String(describing: text)), ("url", String(describing: url))])
+                return ("keyboardButtonUrl", [("text", text as Any), ("url", url as Any)])
                 case .keyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let buttonId):
-                return ("keyboardButtonUrlAuth", [("flags", String(describing: flags)), ("text", String(describing: text)), ("fwdText", String(describing: fwdText)), ("url", String(describing: url)), ("buttonId", String(describing: buttonId))])
+                return ("keyboardButtonUrlAuth", [("flags", flags as Any), ("text", text as Any), ("fwdText", fwdText as Any), ("url", url as Any), ("buttonId", buttonId as Any)])
                 case .keyboardButtonUserProfile(let text, let userId):
-                return ("keyboardButtonUserProfile", [("text", String(describing: text)), ("userId", String(describing: userId))])
+                return ("keyboardButtonUserProfile", [("text", text as Any), ("userId", userId as Any)])
                 case .keyboardButtonWebView(let text, let url):
-                return ("keyboardButtonWebView", [("text", String(describing: text)), ("url", String(describing: url))])
+                return ("keyboardButtonWebView", [("text", text as Any), ("url", url as Any)])
     }
     }
     
@@ -418,7 +418,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .keyboardButtonRow(let buttons):
-                return ("keyboardButtonRow", [("buttons", String(describing: buttons))])
+                return ("keyboardButtonRow", [("buttons", buttons as Any)])
     }
     }
     
@@ -457,7 +457,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .labeledPrice(let label, let amount):
-                return ("labeledPrice", [("label", String(describing: label)), ("amount", String(describing: amount))])
+                return ("labeledPrice", [("label", label as Any), ("amount", amount as Any)])
     }
     }
     
@@ -503,7 +503,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .langPackDifference(let langCode, let fromVersion, let version, let strings):
-                return ("langPackDifference", [("langCode", String(describing: langCode)), ("fromVersion", String(describing: fromVersion)), ("version", String(describing: version)), ("strings", String(describing: strings))])
+                return ("langPackDifference", [("langCode", langCode as Any), ("fromVersion", fromVersion as Any), ("version", version as Any), ("strings", strings as Any)])
     }
     }
     
@@ -558,7 +558,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
-                return ("langPackLanguage", [("flags", String(describing: flags)), ("name", String(describing: name)), ("nativeName", String(describing: nativeName)), ("langCode", String(describing: langCode)), ("baseLangCode", String(describing: baseLangCode)), ("pluralCode", String(describing: pluralCode)), ("stringsCount", String(describing: stringsCount)), ("translatedCount", String(describing: translatedCount)), ("translationsUrl", String(describing: translationsUrl))])
+                return ("langPackLanguage", [("flags", flags as Any), ("name", name as Any), ("nativeName", nativeName as Any), ("langCode", langCode as Any), ("baseLangCode", baseLangCode as Any), ("pluralCode", pluralCode as Any), ("stringsCount", stringsCount as Any), ("translatedCount", translatedCount as Any), ("translationsUrl", translationsUrl as Any)])
     }
     }
     
@@ -640,11 +640,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .langPackString(let key, let value):
-                return ("langPackString", [("key", String(describing: key)), ("value", String(describing: value))])
+                return ("langPackString", [("key", key as Any), ("value", value as Any)])
                 case .langPackStringDeleted(let key):
-                return ("langPackStringDeleted", [("key", String(describing: key))])
+                return ("langPackStringDeleted", [("key", key as Any)])
                 case .langPackStringPluralized(let flags, let key, let zeroValue, let oneValue, let twoValue, let fewValue, let manyValue, let otherValue):
-                return ("langPackStringPluralized", [("flags", String(describing: flags)), ("key", String(describing: key)), ("zeroValue", String(describing: zeroValue)), ("oneValue", String(describing: oneValue)), ("twoValue", String(describing: twoValue)), ("fewValue", String(describing: fewValue)), ("manyValue", String(describing: manyValue)), ("otherValue", String(describing: otherValue))])
+                return ("langPackStringPluralized", [("flags", flags as Any), ("key", key as Any), ("zeroValue", zeroValue as Any), ("oneValue", oneValue as Any), ("twoValue", twoValue as Any), ("fewValue", fewValue as Any), ("manyValue", manyValue as Any), ("otherValue", otherValue as Any)])
     }
     }
     
@@ -729,7 +729,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .maskCoords(let n, let x, let y, let zoom):
-                return ("maskCoords", [("n", String(describing: n)), ("x", String(describing: x)), ("y", String(describing: y)), ("zoom", String(describing: zoom))])
+                return ("maskCoords", [("n", n as Any), ("x", x as Any), ("y", y as Any), ("zoom", zoom as Any)])
     }
     }
     
@@ -825,11 +825,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .message(let flags, let id, let fromId, let peerId, let fwdFrom, let viaBotId, let replyTo, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let reactions, let restrictionReason, let ttlPeriod):
-                return ("message", [("flags", String(describing: flags)), ("id", String(describing: id)), ("fromId", String(describing: fromId)), ("peerId", String(describing: peerId)), ("fwdFrom", String(describing: fwdFrom)), ("viaBotId", String(describing: viaBotId)), ("replyTo", String(describing: replyTo)), ("date", String(describing: date)), ("message", String(describing: message)), ("media", String(describing: media)), ("replyMarkup", String(describing: replyMarkup)), ("entities", String(describing: entities)), ("views", String(describing: views)), ("forwards", String(describing: forwards)), ("replies", String(describing: replies)), ("editDate", String(describing: editDate)), ("postAuthor", String(describing: postAuthor)), ("groupedId", String(describing: groupedId)), ("reactions", String(describing: reactions)), ("restrictionReason", String(describing: restrictionReason)), ("ttlPeriod", String(describing: ttlPeriod))])
+                return ("message", [("flags", flags as Any), ("id", id as Any), ("fromId", fromId as Any), ("peerId", peerId as Any), ("fwdFrom", fwdFrom as Any), ("viaBotId", viaBotId as Any), ("replyTo", replyTo as Any), ("date", date as Any), ("message", message as Any), ("media", media as Any), ("replyMarkup", replyMarkup as Any), ("entities", entities as Any), ("views", views as Any), ("forwards", forwards as Any), ("replies", replies as Any), ("editDate", editDate as Any), ("postAuthor", postAuthor as Any), ("groupedId", groupedId as Any), ("reactions", reactions as Any), ("restrictionReason", restrictionReason as Any), ("ttlPeriod", ttlPeriod as Any)])
                 case .messageEmpty(let flags, let id, let peerId):
-                return ("messageEmpty", [("flags", String(describing: flags)), ("id", String(describing: id)), ("peerId", String(describing: peerId))])
+                return ("messageEmpty", [("flags", flags as Any), ("id", id as Any), ("peerId", peerId as Any)])
                 case .messageService(let flags, let id, let fromId, let peerId, let replyTo, let date, let action, let ttlPeriod):
-                return ("messageService", [("flags", String(describing: flags)), ("id", String(describing: id)), ("fromId", String(describing: fromId)), ("peerId", String(describing: peerId)), ("replyTo", String(describing: replyTo)), ("date", String(describing: date)), ("action", String(describing: action)), ("ttlPeriod", String(describing: ttlPeriod))])
+                return ("messageService", [("flags", flags as Any), ("id", id as Any), ("fromId", fromId as Any), ("peerId", peerId as Any), ("replyTo", replyTo as Any), ("date", date as Any), ("action", action as Any), ("ttlPeriod", ttlPeriod as Any)])
     }
     }
     
@@ -988,6 +988,7 @@ public extension Api {
 }
 public extension Api {
     enum MessageAction: TypeConstructorDescription {
+        case messageActionAttachMenuBotAllowed
         case messageActionBotAllowed(domain: String)
         case messageActionChannelCreate(title: String)
         case messageActionChannelMigrateFrom(title: String, chatId: Int64)
@@ -1019,6 +1020,7 @@ public extension Api {
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
+        case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
         case messageActionWebViewDataSent(text: String)
@@ -1026,6 +1028,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .messageActionAttachMenuBotAllowed:
+                    if boxed {
+                        buffer.appendInt32(-404267113)
+                    }
+                    
+                    break
                 case .messageActionBotAllowed(let domain):
                     if boxed {
                         buffer.appendInt32(-1410748418)
@@ -1258,6 +1266,12 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
                     break
+                case .messageActionSuggestProfilePhoto(let photo):
+                    if boxed {
+                        buffer.appendInt32(1474192222)
+                    }
+                    photo.serialize(buffer, true)
+                    break
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                     if boxed {
                         buffer.appendInt32(228168278)
@@ -1295,79 +1309,86 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .messageActionAttachMenuBotAllowed:
+                return ("messageActionAttachMenuBotAllowed", [])
                 case .messageActionBotAllowed(let domain):
-                return ("messageActionBotAllowed", [("domain", String(describing: domain))])
+                return ("messageActionBotAllowed", [("domain", domain as Any)])
                 case .messageActionChannelCreate(let title):
-                return ("messageActionChannelCreate", [("title", String(describing: title))])
+                return ("messageActionChannelCreate", [("title", title as Any)])
                 case .messageActionChannelMigrateFrom(let title, let chatId):
-                return ("messageActionChannelMigrateFrom", [("title", String(describing: title)), ("chatId", String(describing: chatId))])
+                return ("messageActionChannelMigrateFrom", [("title", title as Any), ("chatId", chatId as Any)])
                 case .messageActionChatAddUser(let users):
-                return ("messageActionChatAddUser", [("users", String(describing: users))])
+                return ("messageActionChatAddUser", [("users", users as Any)])
                 case .messageActionChatCreate(let title, let users):
-                return ("messageActionChatCreate", [("title", String(describing: title)), ("users", String(describing: users))])
+                return ("messageActionChatCreate", [("title", title as Any), ("users", users as Any)])
                 case .messageActionChatDeletePhoto:
                 return ("messageActionChatDeletePhoto", [])
                 case .messageActionChatDeleteUser(let userId):
-                return ("messageActionChatDeleteUser", [("userId", String(describing: userId))])
+                return ("messageActionChatDeleteUser", [("userId", userId as Any)])
                 case .messageActionChatEditPhoto(let photo):
-                return ("messageActionChatEditPhoto", [("photo", String(describing: photo))])
+                return ("messageActionChatEditPhoto", [("photo", photo as Any)])
                 case .messageActionChatEditTitle(let title):
-                return ("messageActionChatEditTitle", [("title", String(describing: title))])
+                return ("messageActionChatEditTitle", [("title", title as Any)])
                 case .messageActionChatJoinedByLink(let inviterId):
-                return ("messageActionChatJoinedByLink", [("inviterId", String(describing: inviterId))])
+                return ("messageActionChatJoinedByLink", [("inviterId", inviterId as Any)])
                 case .messageActionChatJoinedByRequest:
                 return ("messageActionChatJoinedByRequest", [])
                 case .messageActionChatMigrateTo(let channelId):
-                return ("messageActionChatMigrateTo", [("channelId", String(describing: channelId))])
+                return ("messageActionChatMigrateTo", [("channelId", channelId as Any)])
                 case .messageActionContactSignUp:
                 return ("messageActionContactSignUp", [])
                 case .messageActionCustomAction(let message):
-                return ("messageActionCustomAction", [("message", String(describing: message))])
+                return ("messageActionCustomAction", [("message", message as Any)])
                 case .messageActionEmpty:
                 return ("messageActionEmpty", [])
                 case .messageActionGameScore(let gameId, let score):
-                return ("messageActionGameScore", [("gameId", String(describing: gameId)), ("score", String(describing: score))])
+                return ("messageActionGameScore", [("gameId", gameId as Any), ("score", score as Any)])
                 case .messageActionGeoProximityReached(let fromId, let toId, let distance):
-                return ("messageActionGeoProximityReached", [("fromId", String(describing: fromId)), ("toId", String(describing: toId)), ("distance", String(describing: distance))])
+                return ("messageActionGeoProximityReached", [("fromId", fromId as Any), ("toId", toId as Any), ("distance", distance as Any)])
                 case .messageActionGiftPremium(let currency, let amount, let months):
-                return ("messageActionGiftPremium", [("currency", String(describing: currency)), ("amount", String(describing: amount)), ("months", String(describing: months))])
+                return ("messageActionGiftPremium", [("currency", currency as Any), ("amount", amount as Any), ("months", months as Any)])
                 case .messageActionGroupCall(let flags, let call, let duration):
-                return ("messageActionGroupCall", [("flags", String(describing: flags)), ("call", String(describing: call)), ("duration", String(describing: duration))])
+                return ("messageActionGroupCall", [("flags", flags as Any), ("call", call as Any), ("duration", duration as Any)])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
-                return ("messageActionGroupCallScheduled", [("call", String(describing: call)), ("scheduleDate", String(describing: scheduleDate))])
+                return ("messageActionGroupCallScheduled", [("call", call as Any), ("scheduleDate", scheduleDate as Any)])
                 case .messageActionHistoryClear:
                 return ("messageActionHistoryClear", [])
                 case .messageActionInviteToGroupCall(let call, let users):
-                return ("messageActionInviteToGroupCall", [("call", String(describing: call)), ("users", String(describing: users))])
+                return ("messageActionInviteToGroupCall", [("call", call as Any), ("users", users as Any)])
                 case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
-                return ("messageActionPaymentSent", [("flags", String(describing: flags)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("invoiceSlug", String(describing: invoiceSlug))])
+                return ("messageActionPaymentSent", [("flags", flags as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("invoiceSlug", invoiceSlug as Any)])
                 case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
-                return ("messageActionPaymentSentMe", [("flags", String(describing: flags)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("payload", String(describing: payload)), ("info", String(describing: info)), ("shippingOptionId", String(describing: shippingOptionId)), ("charge", String(describing: charge))])
+                return ("messageActionPaymentSentMe", [("flags", flags as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("payload", payload as Any), ("info", info as Any), ("shippingOptionId", shippingOptionId as Any), ("charge", charge as Any)])
                 case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
-                return ("messageActionPhoneCall", [("flags", String(describing: flags)), ("callId", String(describing: callId)), ("reason", String(describing: reason)), ("duration", String(describing: duration))])
+                return ("messageActionPhoneCall", [("flags", flags as Any), ("callId", callId as Any), ("reason", reason as Any), ("duration", duration as Any)])
                 case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
                 case .messageActionScreenshotTaken:
                 return ("messageActionScreenshotTaken", [])
                 case .messageActionSecureValuesSent(let types):
-                return ("messageActionSecureValuesSent", [("types", String(describing: types))])
+                return ("messageActionSecureValuesSent", [("types", types as Any)])
                 case .messageActionSecureValuesSentMe(let values, let credentials):
-                return ("messageActionSecureValuesSentMe", [("values", String(describing: values)), ("credentials", String(describing: credentials))])
+                return ("messageActionSecureValuesSentMe", [("values", values as Any), ("credentials", credentials as Any)])
                 case .messageActionSetChatTheme(let emoticon):
-                return ("messageActionSetChatTheme", [("emoticon", String(describing: emoticon))])
+                return ("messageActionSetChatTheme", [("emoticon", emoticon as Any)])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
-                return ("messageActionSetMessagesTTL", [("flags", String(describing: flags)), ("period", String(describing: period)), ("autoSettingFrom", String(describing: autoSettingFrom))])
+                return ("messageActionSetMessagesTTL", [("flags", flags as Any), ("period", period as Any), ("autoSettingFrom", autoSettingFrom as Any)])
+                case .messageActionSuggestProfilePhoto(let photo):
+                return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
-                return ("messageActionTopicCreate", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId))])
+                return ("messageActionTopicCreate", [("flags", flags as Any), ("title", title as Any), ("iconColor", iconColor as Any), ("iconEmojiId", iconEmojiId as Any)])
                 case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed, let hidden):
-                return ("messageActionTopicEdit", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId)), ("closed", String(describing: closed)), ("hidden", String(describing: hidden))])
+                return ("messageActionTopicEdit", [("flags", flags as Any), ("title", title as Any), ("iconEmojiId", iconEmojiId as Any), ("closed", closed as Any), ("hidden", hidden as Any)])
                 case .messageActionWebViewDataSent(let text):
-                return ("messageActionWebViewDataSent", [("text", String(describing: text))])
+                return ("messageActionWebViewDataSent", [("text", text as Any)])
                 case .messageActionWebViewDataSentMe(let text, let data):
-                return ("messageActionWebViewDataSentMe", [("text", String(describing: text)), ("data", String(describing: data))])
+                return ("messageActionWebViewDataSentMe", [("text", text as Any), ("data", data as Any)])
     }
     }
     
+        public static func parse_messageActionAttachMenuBotAllowed(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionAttachMenuBotAllowed
+        }
         public static func parse_messageActionBotAllowed(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
@@ -1756,6 +1777,19 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSuggestProfilePhoto(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.Photo?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Photo
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSuggestProfilePhoto(photo: _1!)
             }
             else {
                 return nil

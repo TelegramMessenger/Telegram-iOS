@@ -151,7 +151,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public weak var webSearchController: WebSearchController?
     
     public var openCamera: ((TGAttachmentCameraView?) -> Void)?
-    public var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
     public var presentSchedulePicker: (Bool, @escaping (Int32) -> Void) -> Void = { _, _ in }
     public var presentTimerPicker: (@escaping (Int32) -> Void) -> Void = { _ in }
     public var presentWebSearch: (MediaGroupsScreen) -> Void = { _ in }
@@ -599,8 +598,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             }
                         }
                         if let node = node {
-                            return (node.view, { [weak node] animateCheckNode in
-                                node?.animateFadeIn(animateCheckNode: animateCheckNode)
+                            return (node.view, node.spoilerNode?.dustNode, { [weak node] animateCheckNode in
+                                node?.animateFadeIn(animateCheckNode: animateCheckNode, animateSpoilerNode: false)
                             })
                         } else {
                             return nil
@@ -681,7 +680,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if let strongSelf = self {
                     strongSelf.controller?.interaction?.sendSelected(result, silently, scheduleTime, false, completion)
                 }
-            }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
+            }, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
@@ -717,7 +716,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if let strongSelf = self {
                     strongSelf.controller?.interaction?.sendSelected(result, silently, scheduleTime, false, completion)
                 }
-            }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
+            }, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
@@ -1355,13 +1354,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             if let undoOverlayController = strongSelf.undoOverlayController {
-                undoOverlayController.content = .image(image: image ?? UIImage(), title: nil, text: text, undo: true)
+                undoOverlayController.content = .image(image: image ?? UIImage(), title: nil, text: text, round: false, undo: true)
             } else {
                 var elevatedLayout = true
                 if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                     elevatedLayout = false
                 }
-                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), title: nil, text: text, undo: true), elevatedLayout: elevatedLayout, action: { [weak self] action in
+                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), title: nil, text: text, round: false, undo: true), elevatedLayout: elevatedLayout, action: { [weak self] action in
                     guard let strongSelf = self else {
                         return true
                     }
@@ -1498,7 +1497,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     if let strongSelf = self {
                         let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, subject: .assets(collection), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
                         
-                        mediaPicker.presentStickers = strongSelf.presentStickers
                         mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
                         mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
                         mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
@@ -1516,21 +1514,40 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount
             
+                var isSpoilerAvailable = true
+                if let peer = self.peer, case .secretChat = peer {
+                    isSpoilerAvailable = false
+                }
+            
+                var hasSpoilers = false
+                var hasGeneric = false
+                if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
+                    for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                        if editingContext.spoiler(for: item) {
+                            hasSpoilers = true
+                        } else {
+                            hasGeneric = true
+                        }
+                    }
+                }
+                        
                 let items: Signal<ContextController.Items, NoError>  = self.groupedPromise.get()
                 |> deliverOnMainQueue
                 |> map { [weak self] grouped -> ContextController.Items in
                     var items: [ContextMenuItem] = []
-                    items.append(.action(ContextMenuActionItem(text: selectionCount > 1 ? strings.Attachment_SendAsFiles : strings.Attachment_SendAsFile, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-
-                        self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, completion: {})
-                    })))
-                
+                    if !hasSpoilers {
+                        items.append(.action(ContextMenuActionItem(text: selectionCount > 1 ? strings.Attachment_SendAsFiles : strings.Attachment_SendAsFile, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, completion: {})
+                        })))
+                    }
                     if selectionCount > 1 {
-                        items.append(.separator)
-                        
+                        if !items.isEmpty {
+                            items.append(.separator)
+                        }
                         items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
                             if !grouped {
                                 return nil
@@ -1552,7 +1569,23 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             self?.groupedValue = false
                         })))
                     }
-                    
+                    if isSpoilerAvailable {
+                        if !items.isEmpty {
+                            items.append(.separator)
+                        }
+                        items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
+                            f(.default)
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                                    editingContext.setSpoiler(hasGeneric, for: item)
+                                }
+                            }
+                        })))
+                    }
                     return ContextController.Items(content: .list(items))
                 }
             

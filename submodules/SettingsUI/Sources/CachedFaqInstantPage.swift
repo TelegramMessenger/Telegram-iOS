@@ -47,7 +47,7 @@ func faqSearchableItems(context: AccountContext, resolvedUrl: Signal<ResolvedUrl
                                                 nextIndex += 1
                                             }
                                             let item = SettingsSearchableItem(id: .faq(index), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ, currentSection], present: { context, _, present in
-                                                present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
+                                                present(.push, InstantPageController(context: context, webPage: webPage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .channel), anchor: anchor))
                                             })
                                             if index == 1 {
                                                 results.insert(item, at: 0)

@@ -6,6 +6,7 @@ import Display
 import TelegramPresentationData
 import MergeLists
 import AccountContext
+import ChatPresentationInterfaceState
 
 enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
     case savedStickers = 2

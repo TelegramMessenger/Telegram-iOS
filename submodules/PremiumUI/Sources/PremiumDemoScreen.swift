@@ -1117,7 +1117,7 @@ private final class DemoSheetComponent: CombinedComponent {
                             })
                         }
                     )),
-                    backgroundColor: environment.theme.actionSheet.opaqueItemBackgroundColor,
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: animateOut
                 ),
                 environment: {
@@ -1125,6 +1125,8 @@ private final class DemoSheetComponent: CombinedComponent {
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
                         isCentered: environment.metrics.widthClass == .regular,
+                        hasInputHeight: !environment.inputHeight.isZero,
+                        regularMetricsSize: nil,
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

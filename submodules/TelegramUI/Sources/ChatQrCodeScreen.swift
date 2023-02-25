@@ -513,7 +513,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         animatedStickerNode.autoplay = true
                         animatedStickerNode.visibility = strongSelf.visibilityStatus
                         
-                        strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+                        strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
                         
                         let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, imageSize: thumbnailDimensions.cgSize)
@@ -1122,7 +1122,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                             let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                                 let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
                                 
-                                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
+                                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file), reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
                                 let fetchedFullSizeDisposable = fetchedFullSize.start()
                                 let fullSizeDisposable = accountResource.start(next: { next in
                                     subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
@@ -2150,7 +2150,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
             guard let image = image, let videoFrame = videoFrame else {
                 return
             }
-            renderVideo(context: context, backgroundImage: image, media: media, videoFrame: videoFrame, completion: { url in
+            renderVideo(context: context, backgroundImage: image, userLocation: .peer(message.id.peerId), media: media, videoFrame: videoFrame, completion: { url in
                 if let url = url {
                     completion(url)
                 }
@@ -2238,7 +2238,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                     mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
                     
                     if !wasInitialized {
-                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true, highQuality: true))
+                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true, highQuality: true))
                         let imageLayout = self.imageNode.asyncLayout()
                         
                         let arguments = TransformImageArguments(corners: ImageCorners(radius: 0.0), imageSize: mediaSize, boundingSize: mediaSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .black, custom: nil)
@@ -2261,7 +2261,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                                 videoSnapshotView.frame = mediaFrame
                             }
                         } else {
-                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false)
+                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false)
                             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
                             
                             self.videoStatusDisposable.set((videoNode.status
@@ -2394,8 +2394,8 @@ private enum RenderVideoResult {
     case error
 }
 
-private func renderVideo(context: AccountContext, backgroundImage: UIImage, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
-    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: AnyMediaReference.standalone(media: media))
+private func renderVideo(context: AccountContext, backgroundImage: UIImage, userLocation: MediaResourceUserLocation, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
+    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: userLocation, mediaReference: AnyMediaReference.standalone(media: media))
     |> deliverOnMainQueue).start(next: { value, isImage in
         guard case let .data(data) = value, data.complete else {
             return

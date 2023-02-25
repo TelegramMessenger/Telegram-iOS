@@ -115,7 +115,9 @@ public:
         if (!_audioDeviceModule->Playing()) {
             _audioDeviceModule->InitPlayout();
             //_audioDeviceModule->InitRecording();
-            _audioDeviceModule->InternalStartPlayout();
+            if (_audioDeviceModule->PlayoutIsInitialized()) {
+                _audioDeviceModule->InternalStartPlayout();
+            }
             //_audioDeviceModule->InternalStartRecording();
         }
     }
@@ -850,6 +852,9 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     bool _useManualAudioSessionControl;
     SharedCallAudioDevice *_audioDevice;
     
+    int _nextSinkId;
+    NSMutableDictionary<NSNumber *, GroupCallVideoSink *> *_sinks;
+    
     rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> _currentAudioDeviceModule;
     rtc::Thread *_currentAudioDeviceModuleThread;
     
@@ -1029,6 +1034,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         assert([[OngoingCallThreadLocalContextWebrtc versionsWithIncludeReference:true] containsObject:version]);
         
         _audioDevice = audioDevice;
+        
+        _sinks = [[NSMutableDictionary alloc] init];
         
         _useManualAudioSessionControl = true;
         [RTCAudioSession sharedInstance].useManualAudio = true;
@@ -1467,6 +1474,33 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             _tgVoip->setNetworkType(callControllerNetworkTypeForType(networkType));
         }
     }
+}
+
+- (GroupCallDisposable * _Nonnull)addVideoOutputWithIsIncoming:(bool)isIncoming sink:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink {
+    int sinkId = _nextSinkId;
+    _nextSinkId += 1;
+    
+    GroupCallVideoSink *storedSink = [[GroupCallVideoSink alloc] initWithSink:sink];
+    _sinks[@(sinkId)] = storedSink;
+
+    if (_tgVoip) {
+        if (isIncoming) {
+            _tgVoip->setIncomingVideoOutput([storedSink sink]);
+        }
+    }
+
+    __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
+    id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
+    return [[GroupCallDisposable alloc] initWithBlock:^{
+        [queue dispatch:^{
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+
+            [strongSelf->_sinks removeObjectForKey:@(sinkId)];
+        }];
+    }];
 }
 
 - (void)makeIncomingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {

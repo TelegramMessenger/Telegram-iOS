@@ -586,7 +586,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         
         let textRightInset: CGFloat
         if let _ = self.iconNode.image {
-            textRightInset = iconSize.width - 8.0
+            textRightInset = iconSize.width - 2.0
         } else {
             textRightInset = 0.0
         }

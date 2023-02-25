@@ -8,6 +8,7 @@ import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
 import ChatMessageBackground
+import ChatControllerInteraction
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never

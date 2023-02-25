@@ -9,6 +9,8 @@ import TelegramPresentationData
 import AccountContext
 import ChatPresentationInterfaceState
 import WallpaperBackgroundNode
+import ChatControllerInteraction
+import ChatInputNode
 
 private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNode {
     var button: ReplyMarkupButton? {

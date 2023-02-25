@@ -16,7 +16,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .accountDaysTTL(let days):
-                return ("accountDaysTTL", [("days", String(describing: days))])
+                return ("accountDaysTTL", [("days", days as Any)])
     }
     }
     
@@ -64,7 +64,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .attachMenuBot(let flags, let botId, let shortName, let peerTypes, let icons):
-                return ("attachMenuBot", [("flags", String(describing: flags)), ("botId", String(describing: botId)), ("shortName", String(describing: shortName)), ("peerTypes", String(describing: peerTypes)), ("icons", String(describing: icons))])
+                return ("attachMenuBot", [("flags", flags as Any), ("botId", botId as Any), ("shortName", shortName as Any), ("peerTypes", peerTypes as Any), ("icons", icons as Any)])
     }
     }
     
@@ -123,7 +123,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .attachMenuBotIcon(let flags, let name, let icon, let colors):
-                return ("attachMenuBotIcon", [("flags", String(describing: flags)), ("name", String(describing: name)), ("icon", String(describing: icon)), ("colors", String(describing: colors))])
+                return ("attachMenuBotIcon", [("flags", flags as Any), ("name", name as Any), ("icon", icon as Any), ("colors", colors as Any)])
     }
     }
     
@@ -173,7 +173,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .attachMenuBotIconColor(let name, let color):
-                return ("attachMenuBotIconColor", [("name", String(describing: name)), ("color", String(describing: color))])
+                return ("attachMenuBotIconColor", [("name", name as Any), ("color", color as Any)])
     }
     }
     
@@ -229,7 +229,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .attachMenuBots(let hash, let bots, let users):
-                return ("attachMenuBots", [("hash", String(describing: hash)), ("bots", String(describing: bots)), ("users", String(describing: users))])
+                return ("attachMenuBots", [("hash", hash as Any), ("bots", bots as Any), ("users", users as Any)])
                 case .attachMenuBotsNotModified:
                 return ("attachMenuBotsNotModified", [])
     }
@@ -285,7 +285,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .attachMenuBotsBot(let bot, let users):
-                return ("attachMenuBotsBot", [("bot", String(describing: bot)), ("users", String(describing: users))])
+                return ("attachMenuBotsBot", [("bot", bot as Any), ("users", users as Any)])
     }
     }
     
@@ -416,7 +416,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .authorization(let flags, let hash, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let dateCreated, let dateActive, let ip, let country, let region):
-                return ("authorization", [("flags", String(describing: flags)), ("hash", String(describing: hash)), ("deviceModel", String(describing: deviceModel)), ("platform", String(describing: platform)), ("systemVersion", String(describing: systemVersion)), ("apiId", String(describing: apiId)), ("appName", String(describing: appName)), ("appVersion", String(describing: appVersion)), ("dateCreated", String(describing: dateCreated)), ("dateActive", String(describing: dateActive)), ("ip", String(describing: ip)), ("country", String(describing: country)), ("region", String(describing: region))])
+                return ("authorization", [("flags", flags as Any), ("hash", hash as Any), ("deviceModel", deviceModel as Any), ("platform", platform as Any), ("systemVersion", systemVersion as Any), ("apiId", apiId as Any), ("appName", appName as Any), ("appVersion", appVersion as Any), ("dateCreated", dateCreated as Any), ("dateActive", dateActive as Any), ("ip", ip as Any), ("country", country as Any), ("region", region as Any)])
     }
     }
     
@@ -492,7 +492,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax, let videoUploadMaxbitrate):
-                return ("autoDownloadSettings", [("flags", String(describing: flags)), ("photoSizeMax", String(describing: photoSizeMax)), ("videoSizeMax", String(describing: videoSizeMax)), ("fileSizeMax", String(describing: fileSizeMax)), ("videoUploadMaxbitrate", String(describing: videoUploadMaxbitrate))])
+                return ("autoDownloadSettings", [("flags", flags as Any), ("photoSizeMax", photoSizeMax as Any), ("videoSizeMax", videoSizeMax as Any), ("fileSizeMax", fileSizeMax as Any), ("videoUploadMaxbitrate", videoUploadMaxbitrate as Any)])
     }
     }
     
@@ -549,7 +549,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation, let aroundAnimation, let centerIcon):
-                return ("availableReaction", [("flags", String(describing: flags)), ("reaction", String(describing: reaction)), ("title", String(describing: title)), ("staticIcon", String(describing: staticIcon)), ("appearAnimation", String(describing: appearAnimation)), ("selectAnimation", String(describing: selectAnimation)), ("activateAnimation", String(describing: activateAnimation)), ("effectAnimation", String(describing: effectAnimation)), ("aroundAnimation", String(describing: aroundAnimation)), ("centerIcon", String(describing: centerIcon))])
+                return ("availableReaction", [("flags", flags as Any), ("reaction", reaction as Any), ("title", title as Any), ("staticIcon", staticIcon as Any), ("appearAnimation", appearAnimation as Any), ("selectAnimation", selectAnimation as Any), ("activateAnimation", activateAnimation as Any), ("effectAnimation", effectAnimation as Any), ("aroundAnimation", aroundAnimation as Any), ("centerIcon", centerIcon as Any)])
     }
     }
     
@@ -627,7 +627,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .bankCardOpenUrl(let url, let name):
-                return ("bankCardOpenUrl", [("url", String(describing: url)), ("name", String(describing: name))])
+                return ("bankCardOpenUrl", [("url", url as Any), ("name", name as Any)])
     }
     }
     
@@ -783,7 +783,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .botCommand(let command, let description):
-                return ("botCommand", [("command", String(describing: command)), ("description", String(describing: description))])
+                return ("botCommand", [("command", command as Any), ("description", description as Any)])
     }
     }
     
@@ -871,11 +871,11 @@ public extension Api {
                 case .botCommandScopeDefault:
                 return ("botCommandScopeDefault", [])
                 case .botCommandScopePeer(let peer):
-                return ("botCommandScopePeer", [("peer", String(describing: peer))])
+                return ("botCommandScopePeer", [("peer", peer as Any)])
                 case .botCommandScopePeerAdmins(let peer):
-                return ("botCommandScopePeerAdmins", [("peer", String(describing: peer))])
+                return ("botCommandScopePeerAdmins", [("peer", peer as Any)])
                 case .botCommandScopePeerUser(let peer, let userId):
-                return ("botCommandScopePeerUser", [("peer", String(describing: peer)), ("userId", String(describing: userId))])
+                return ("botCommandScopePeerUser", [("peer", peer as Any), ("userId", userId as Any)])
                 case .botCommandScopeUsers:
                 return ("botCommandScopeUsers", [])
     }
@@ -968,7 +968,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton):
-                return ("botInfo", [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("description", String(describing: description)), ("descriptionPhoto", String(describing: descriptionPhoto)), ("descriptionDocument", String(describing: descriptionDocument)), ("commands", String(describing: commands)), ("menuButton", String(describing: menuButton))])
+                return ("botInfo", [("flags", flags as Any), ("userId", userId as Any), ("description", description as Any), ("descriptionPhoto", descriptionPhoto as Any), ("descriptionDocument", descriptionDocument as Any), ("commands", commands as Any), ("menuButton", menuButton as Any)])
     }
     }
     

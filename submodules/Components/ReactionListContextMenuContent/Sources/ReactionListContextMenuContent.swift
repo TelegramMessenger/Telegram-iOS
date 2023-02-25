@@ -195,6 +195,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 let reactionLayer = InlineStickerItemLayer(
                     context: context,
+                    userLocation: .other,
                     attemptSynchronousLoad: false,
                     emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file),
                     file: file,
@@ -437,6 +438,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 let reactionLayer = InlineStickerItemLayer(
                     context: context,
+                    userLocation: .other,
                     attemptSynchronousLoad: false,
                     emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file),
                     file: file,

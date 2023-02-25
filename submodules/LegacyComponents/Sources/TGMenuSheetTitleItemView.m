@@ -73,7 +73,7 @@
 
 - (CGFloat)preferredHeightForWidth:(CGFloat)width screenHeight:(CGFloat)__unused screenHeight
 {
-    CGFloat height = 17.0f;
+    CGFloat height = 16.0f;
     
     if (_titleLabel.text.length > 0)
     {
@@ -91,19 +91,19 @@
         height += _subtitleLabel.frame.size.height;
     }
     
-    height += 15.0f;
+    height += 8.0f;
     
     return height;
 }
 
 - (bool)requiresDivider
 {
-    return true;
+    return false;
 }
 
 - (void)layoutSubviews
 {
-    CGFloat topOffset = 17.0f;
+    CGFloat topOffset = 16.0f;
     
     if (_titleLabel.text.length > 0)
     {

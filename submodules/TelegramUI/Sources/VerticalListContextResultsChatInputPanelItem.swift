@@ -248,11 +248,11 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             if updatedIconImageResource {
                 if let imageResource = imageResource {
                     if let stickerFile = stickerFile {
-                        updateIconImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false, fetched: true)
+                        updateIconImageSignal = chatMessageSticker(account: item.account, userLocation: .other, file: stickerFile, small: false, fetched: true)
                     } else {
-                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 55, height: 55), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
+                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 55, height: 55), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                        updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: .standalone(media: tmpImage))
+                        updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, userLocation: .other, photoReference: .standalone(media: tmpImage))
                     }
                 } else {
                     updateIconImageSignal = .complete()

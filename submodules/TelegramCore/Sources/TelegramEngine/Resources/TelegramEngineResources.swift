@@ -6,6 +6,26 @@ import TelegramApi
 public typealias EngineTempBox = TempBox
 public typealias EngineTempBoxFile = TempBoxFile
 
+public extension MediaResourceUserContentType {
+    init(file: TelegramMediaFile) {
+        if file.isMusic || file.isVoice {
+            self = .audio
+        } else if file.isSticker || file.isAnimatedSticker {
+            self = .sticker
+        } else if file.isCustomEmoji {
+            self = .sticker
+        } else if file.isVideo {
+            if file.isAnimated {
+                self = .other
+            } else {
+                self = .video
+            }
+        } else {
+            self = .file
+        }
+    }
+}
+
 func bufferedFetch(_ signal: Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error>) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
     return Signal { subscriber in
         final class State {
@@ -202,9 +222,40 @@ public extension TelegramEngine {
         public func collectCacheUsageStats(peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
             return _internal_collectCacheUsageStats(account: self.account, peerId: peerId, additionalCachePaths: additionalCachePaths, logFilesPath: logFilesPath)
         }
+        
+        public func collectStorageUsageStats() -> Signal<AllStorageUsageStats, NoError> {
+            return _internal_collectStorageUsageStats(account: self.account)
+        }
+
+        public func renderStorageUsageStatsMessages(stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
+            return _internal_renderStorageUsageStatsMessages(account: self.account, stats: stats, categories: categories, existingMessages: existingMessages)
+        }
+        
+        public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
+            return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories)
+        }
+        
+        public func clearStorage(peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
+            _internal_clearStorage(account: self.account, peerIds: peerIds)
+        }
+        
+        public func clearStorage(messages: [Message]) -> Signal<Never, NoError> {
+            _internal_clearStorage(account: self.account, messages: messages)
+        }
 
         public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
             return _internal_clearCachedMediaResources(account: self.account, mediaResourceIds: mediaResourceIds)
+        }
+        
+        public func reindexCacheInBackground(lowImpact: Bool) -> Signal<Never, NoError> {
+            let mediaBox = self.account.postbox.mediaBox
+            
+            return _internal_reindexCacheInBackground(account: self.account, lowImpact: lowImpact)
+            |> then(Signal { subscriber in
+                return mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                    subscriber.putCompletion()
+                })
+            })
         }
 
         public func data(id: EngineMediaResource.Id, attemptSynchronously: Bool = false) -> Signal<EngineMediaResource.ResourceData, NoError> {
@@ -293,6 +344,8 @@ public extension TelegramEngine {
                         preferBackgroundReferenceRevalidation: false,
                         continueInBackground: false
                     ),
+                    location: nil,
+                    contentType: .image,
                     isRandomAccessAllowed: true
                 ))
                 |> map { result -> EngineMediaResource.Fetch.Result in

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import DirectionalPanGesture
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
 
 final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
     let ready = Promise<Bool>()

@@ -471,7 +471,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                     switch titleContent {
                         case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _, customMessageCount):
                             if let customMessageCount = customMessageCount, customMessageCount != 0 {
-                                let string = NSAttributedString(string: self.strings.Conversation_ForwardOptions_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                let string = NSAttributedString(string: self.strings.Conversation_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                 state = .info(string, .generic)
                             } else if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)

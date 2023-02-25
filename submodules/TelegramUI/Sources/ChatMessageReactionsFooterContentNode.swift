@@ -12,6 +12,7 @@ import AnimatedAvatarSetNode
 import ReactionButtonListComponent
 import AccountContext
 import WallpaperBackgroundNode
+import ChatControllerInteraction
 
 func canViewMessageReactionList(message: Message) -> Bool {
     var found = false

@@ -52,10 +52,12 @@ enum ChatMediaGalleryThumbnail: Equatable {
 
 final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
     private let account: Account
+    private let userLocation: MediaResourceUserLocation
     private let thumbnail: ChatMediaGalleryThumbnail
     
-    init?(account: Account, mediaReference: AnyMediaReference) {
+    init?(account: Account, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference) {
         self.account = account
+        self.userLocation = userLocation
         if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
             self.thumbnail = .image(imageReference)
         } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
@@ -81,19 +83,19 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
         switch self.thumbnail {
             case let .image(imageReference):
                 if let representation = largestImageRepresentation(imageReference.media.representations) {
-                    return (mediaGridMessagePhoto(account: self.account, photoReference: imageReference), representation.dimensions.cgSize)
+                    return (mediaGridMessagePhoto(account: self.account, userLocation: self.userLocation, photoReference: imageReference), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
             case let .video(fileReference):
                 if let representation = largestImageRepresentation(fileReference.media.previewRepresentations) {
-                    return (mediaGridMessageVideo(postbox: self.account.postbox, videoReference: fileReference), representation.dimensions.cgSize)
+                    return (mediaGridMessageVideo(postbox: self.account.postbox, userLocation: self.userLocation, videoReference: fileReference), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
             case let .file(fileReference):
                 if let representation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                    return (chatWebpageSnippetFile(account: self.account, mediaReference: fileReference.abstract, representation: representation), representation.dimensions.cgSize)
+                    return (chatWebpageSnippetFile(account: self.account, userLocation: self.userLocation, mediaReference: fileReference.abstract, representation: representation), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
@@ -132,19 +134,19 @@ class ChatImageGalleryItem: GalleryItem {
         node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         for media in self.message.media {
             if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia, let image = fullMedia as? TelegramMediaImage {
-                node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
+                node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
             } else if let image = media as? TelegramMediaImage {
-                node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
+                node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
                 break
             } else if let file = media as? TelegramMediaFile, file.mimeType.hasPrefix("image/") {
-                node.setFile(context: self.context, fileReference: .message(message: MessageReference(self.message), media: file))
+                node.setFile(context: self.context, userLocation: .peer(self.message.id.peerId), fileReference: .message(message: MessageReference(self.message), media: file))
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let image = content.image {
-                    node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
+                    node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
                     break
                 } else if let file = content.file, file.mimeType.hasPrefix("image/") {
-                    node.setFile(context: self.context, fileReference: .message(message: MessageReference(self.message), media: file))
+                    node.setFile(context: self.context, userLocation: .peer(self.message.id.peerId), fileReference: .message(message: MessageReference(self.message), media: file))
                     break
                 }
             }
@@ -183,7 +185,7 @@ class ChatImageGalleryItem: GalleryItem {
                 }
             }
             if let mediaReference = mediaReference {
-                if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: mediaReference) {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(self.message.id.peerId), mediaReference: mediaReference) {
                     return (Int64(id), item)
                 }
             }
@@ -323,12 +325,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setMessage(message, displayInfo: displayInfo)
     }
     
-    fileprivate func setImage(imageReference: ImageMediaReference) {
+    fileprivate func setImage(userLocation: MediaResourceUserLocation, imageReference: ImageMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: imageReference.media) {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError> = chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: self.context.account.postbox, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: false), synchronousLoad: false)
+                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError> = chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: self.context.account.postbox, userLocation: userLocation, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: false), synchronousLoad: false)
                 |> map { [weak self] _, quality, generate -> (TransformImageArguments) -> DrawingContext? in
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
@@ -422,7 +424,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
                 
-                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: imageReference.resourceReference(largestSize.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: imageReference.resourceReference(largestSize.resource)).start())
                 self.setupStatus(resource: largestSize.resource)
             } else {
                 self._ready.set(.single(Void()))
@@ -647,7 +649,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
     }
     
-    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+    func setFile(context: AccountContext, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if var largestSize = fileReference.media.dimensions {
                 var displaySize = largestSize.cgSize.dividedByScreenScale()
@@ -673,7 +675,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.updateImageFromFile(path: data.path)
                     }))
                 } else {*/
-                    self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
+                    self.imageNode.setSignal(chatMessageImageFile(account: context.account, userLocation: userLocation, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
                 //}
                 
                 self.zoomableContent = (largestSize.cgSize, self.imageNode)
@@ -936,7 +938,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Fetching:
                         self.context.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource.resource)
                     case .Remote:
-                        self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .image, reference: resource, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

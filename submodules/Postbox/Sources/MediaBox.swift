@@ -42,9 +42,9 @@ public enum FetchResourceError {
     case generic
 }
 
-private struct ResourceStorePaths {
-    let partial: String
-    let complete: String
+public struct ResourceStorePaths {
+    public let partial: String
+    public let complete: String
 }
 
 public struct MediaResourceData {
@@ -144,6 +144,8 @@ public final class MediaBox {
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
     
+    public let storageBox: StorageBox
+    
     private let didRemoveResourcesPipe = ValuePipe<Void>()
     public var didRemoveResources: Signal<Void, NoError> {
         return .single(Void()) |> then(self.didRemoveResourcesPipe.signal())
@@ -187,21 +189,36 @@ public final class MediaBox {
     public init(basePath: String) {
         self.basePath = basePath
         
-        self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
-            self.basePath,
+        self.storageBox = StorageBox(logger: StorageBox.Logger(impl: { string in
+            postboxLog(string)
+        }), basePath: basePath + "/storage")
+        
+        self.timeBasedCleanup = TimeBasedCleanup(storageBox: self.storageBox, generalPaths: [
             self.basePath + "/cache",
             self.basePath + "/animation-cache"
-        ], shortLivedPaths: [
+        ], totalSizeBasedPath: self.basePath, shortLivedPaths: [
             self.basePath + "/short-cache"
         ])
         
         self.dataFileManager = MediaBoxFileManager(queue: self.dataQueue)
         
         let _ = self.ensureDirectoryCreated
+        
+        //self.updateResourceIndex()
     }
     
     public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
         self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
+    }
+    
+    public static func idForFileName(name: String) -> String {
+        if name.hasSuffix("_partial.meta") {
+            return String(name[name.startIndex ..< name.index(name.endIndex, offsetBy: -13)])
+        } else if name.hasSuffix("_partial") {
+            return String(name[name.startIndex ..< name.index(name.endIndex, offsetBy: -8)])
+        } else {
+            return name
+        }
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
@@ -216,8 +233,19 @@ public final class MediaBox {
         return "\(self.basePath)/\(fileNameForId(id))"
     }
     
-    private func storePathsForId(_ id: MediaResourceId) -> ResourceStorePaths {
+    public func storePathsForId(_ id: MediaResourceId) -> ResourceStorePaths {
         return ResourceStorePaths(partial: "\(self.basePath)/\(fileNameForId(id))_partial", complete: "\(self.basePath)/\(fileNameForId(id))")
+    }
+    
+    public func fileSizeForId(_ id: MediaResourceId) -> Int64 {
+        let paths = self.storePathsForId(id)
+        if let size = fileSize(paths.complete, useTotalFileAllocatedSize: false) {
+            return size
+        } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
+            return size
+        } else {
+            return 0
+        }
     }
     
     private func fileNamesForId(_ id: MediaResourceId) -> ResourceStorePaths {
@@ -544,7 +572,7 @@ public final class MediaBox {
                 paths.partial,
                 paths.partial + ".meta"
             ])
-            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
@@ -579,6 +607,19 @@ public final class MediaBox {
                 if let _ = fileSize(paths.complete) {
                     subscriber.putCompletion()
                     return
+                }
+                
+                if let parameters = parameters, let location = parameters.location {
+                    var messageNamespace: Int32 = 0
+                    var messageIdValue: Int32 = 0
+                    if let messageId = location.messageId {
+                        messageNamespace = messageId.namespace
+                        messageIdValue = messageId.id
+                    }
+                    
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: messageNamespace), messageId: messageIdValue), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters.contentType.rawValue)
+                } else {
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: 0, messageNamespace: 0, messageId: 0), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters?.contentType.rawValue ?? 0)
                 }
                 
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource.id) else {
@@ -742,6 +783,19 @@ public final class MediaBox {
             
             self.dataQueue.async {
                 let paths = self.storePathsForId(resource.id)
+                
+                if let parameters = parameters, let location = parameters.location {
+                    var messageNamespace: Int32 = 0
+                    var messageIdValue: Int32 = 0
+                    if let messageId = location.messageId {
+                        messageNamespace = messageId.namespace
+                        messageIdValue = messageId.id
+                    }
+                    
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: messageNamespace), messageId: messageIdValue), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters.contentType.rawValue)
+                } else {
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: 0, messageNamespace: 0, messageId: 0), to: resource.id.stringRepresentation.data(using: .utf8)!, contentType: parameters?.contentType.rawValue ?? 0)
+                }
                 
                 if let _ = fileSize(paths.complete) {
                     if implNext {
@@ -1175,6 +1229,35 @@ public final class MediaBox {
         }
     }
     
+    public func resourceUsage(id: MediaResourceId) -> Int64 {
+        let paths = self.storePathsForId(id)
+        if let size = fileSize(paths.complete) {
+            return Int64(size)
+        } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
+            return Int64(size)
+        } else {
+            return 0
+        }
+    }
+    
+    public func resourceUsageWithInfo(id: MediaResourceId) -> Int32 {
+        let paths = self.storePathsForId(id)
+        
+        var value = stat()
+        
+        if stat(paths.complete, &value) == 0 {
+            return Int32(value.st_mtimespec.tv_sec)
+        }
+        
+        value = stat()
+        
+        if stat(paths.partial, &value) == 0 {
+            return Int32(value.st_mtimespec.tv_sec)
+        }
+        
+        return 0
+    }
+    
     public func collectResourceCacheUsage(_ ids: [MediaResourceId]) -> Signal<[MediaResourceId: Int64], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
@@ -1189,6 +1272,192 @@ public final class MediaBox {
                     }
                     // size of .meta file is not considered?
                 }
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func updateResourceIndex(lowImpact: Bool, completion: @escaping () -> Void) -> Disposable {
+        let basePath = self.basePath
+        let storageBox = self.storageBox
+        
+        var isCancelled: Bool = false
+        
+        let processQueue = Queue(name: "UpdateResourceIndex", qos: .background)
+        processQueue.async {
+            if isCancelled {
+                return
+            }
+            
+            let scanContext = ScanFilesContext(path: basePath)
+            
+            func processStale(nextId: Data?) {
+                let _ = (storageBox.enumerateItems(startingWith: nextId, limit: 1000)
+                |> deliverOn(processQueue)).start(next: { ids, realNextId in
+                    var staleIds: [Data] = []
+                    
+                    for id in ids {
+                        if let name = String(data: id, encoding: .utf8) {
+                            if self.resourceUsage(id: MediaResourceId(name)) == 0 {
+                                staleIds.append(id)
+                            }
+                        } else {
+                            staleIds.append(id)
+                        }
+                    }
+                    
+                    if !staleIds.isEmpty {
+                        storageBox.remove(ids: staleIds)
+                    }
+                    
+                    if realNextId == nil {
+                        completion()
+                    } else {
+                        if lowImpact {
+                            processQueue.after(0.4, {
+                                processStale(nextId: realNextId)
+                            })
+                        } else {
+                            processStale(nextId: realNextId)
+                        }
+                    }
+                })
+            }
+            
+            func processNext() {
+                processQueue.async {
+                    if isCancelled {
+                        return
+                    }
+                    
+                    let results = scanContext.nextBatch(count: 32000)
+                    if results.isEmpty {
+                        processStale(nextId: nil)
+                        return
+                    }
+                    
+                    storageBox.addEmptyReferencesIfNotReferenced(ids: results.map { name -> (id: Data, size: Int64) in
+                        let resourceId = MediaBox.idForFileName(name: name)
+                        let paths = self.storePathsForId(MediaResourceId(resourceId))
+                        var size: Int64 = 0
+                        if let value = fileSize(paths.complete) {
+                            size = value
+                        } else if let value = fileSize(paths.partial) {
+                            size = value
+                        }
+                        return (resourceId.data(using: .utf8)!, size)
+                    }, contentType: MediaResourceUserContentType.other.rawValue, completion: { addedCount in
+                        if addedCount != 0 {
+                            postboxLog("UpdateResourceIndex: added \(addedCount) unreferenced ids")
+                        }
+                        
+                        if lowImpact {
+                            processQueue.after(0.4, {
+                                processNext()
+                            })
+                        } else {
+                            processNext()
+                        }
+                    })
+                }
+            }
+            
+            processNext()
+        }
+        
+        return ActionDisposable {
+            isCancelled = true
+        }
+    }
+    
+    public func collectAllResourceUsage() -> Signal<[(id: String?, path: String, size: Int64)], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var result: [(id: String?, path: String, size: Int64)] = []
+                
+                var fileIds = Set<Data>()
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
+                                if fileIds.contains(fileId) {
+                                    //paths.append(url.lastPathComponent)
+                                    continue loop
+                                }
+                            
+                                if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                    fileIds.insert(fileId)
+                                    result.append((id: MediaBox.idForFileName(name: url.lastPathComponent), path: url.lastPathComponent, size: Int64(value)))
+                                    //paths.append(url.lastPathComponent)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                /*var cacheResult: Int64 = 0
+                
+                var excludePrefixes = Set<String>()
+                for id in excludeIds {
+                    let cachedRepresentationPrefix = self.fileNameForId(id)
+                    
+                    excludePrefixes.insert(cachedRepresentationPrefix)
+                }
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                continue loop
+                            }
+                            
+                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                paths.append("cache/" + url.lastPathComponent)
+                                cacheResult += Int64(value)
+                            }
+                        }
+                    }
+                }
+                
+                func processRecursive(directoryPath: String, subdirectoryPath: String) {
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: directoryPath), includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                        loop: for url in enumerator {
+                            if let url = url as? URL {
+                                if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                    continue loop
+                                }
+                                
+                                if let isDirectory = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectory {
+                                    processRecursive(directoryPath: url.path, subdirectoryPath: subdirectoryPath + "/\(url.lastPathComponent)")
+                                } else if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                    paths.append("\(subdirectoryPath)/" + url.lastPathComponent)
+                                    cacheResult += Int64(value)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                processRecursive(directoryPath: self.basePath + "/animation-cache", subdirectoryPath: "animation-cache")
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/short-cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                continue loop
+                            }
+                            
+                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                paths.append("short-cache/" + url.lastPathComponent)
+                                cacheResult += Int64(value)
+                            }
+                        }
+                    }
+                }*/
+                
                 subscriber.putNext(result)
                 subscriber.putCompletion()
             }
@@ -1348,7 +1617,7 @@ public final class MediaBox {
         }
     }
     
-    public func removeCachedResources(_ ids: Set<MediaResourceId>, force: Bool = false, notify: Bool = false) -> Signal<Float, NoError> {
+    public func removeCachedResources(_ ids: [MediaResourceId], force: Bool = false, notify: Bool = false) -> Signal<Float, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 let uniqueIds = Set(ids.map { $0.stringRepresentation })
@@ -1460,3 +1729,120 @@ public final class MediaBox {
     }
 
 }
+
+private final class ScanFilesContext {
+    private let path: String
+    private var dirHandle: UnsafeMutablePointer<DIR>?
+    private let pathBuffer: UnsafeMutablePointer<Int8>
+    
+    init(path: String) {
+        self.path = path
+        self.dirHandle = opendir(path)
+        self.pathBuffer = malloc(2048).assumingMemoryBound(to: Int8.self)
+    }
+    
+    deinit {
+        if let dirHandle = self.dirHandle {
+            closedir(dirHandle)
+        }
+        free(self.pathBuffer)
+    }
+    
+    func nextBatch(count: Int) -> [String] {
+        guard let dirHandle = self.dirHandle else {
+            return []
+        }
+        
+        var result: [String] = []
+        
+        while true {
+            guard let dirp = readdir(dirHandle) else {
+                closedir(dirHandle)
+                self.dirHandle = nil
+                break
+            }
+            
+            if dirp.pointee.d_type != DT_REG {
+                continue
+            }
+            
+            if strncmp(&dirp.pointee.d_name.0, ".", 1024) == 0 {
+                continue
+            }
+            if strncmp(&dirp.pointee.d_name.0, "..", 1024) == 0 {
+                continue
+            }
+            
+            strncpy(self.pathBuffer, self.path, 1024)
+            strncat(self.pathBuffer, "/", 1024)
+            strncat(self.pathBuffer, &dirp.pointee.d_name.0, 1024)
+            
+            //puts(pathBuffer)
+            //puts("\n")
+            
+            var value = stat()
+            if stat(self.pathBuffer, &value) == 0 {
+                if let itemPath = String(data: Data(bytes: &dirp.pointee.d_name.0, count: Int(dirp.pointee.d_namlen)), encoding: .utf8) {
+                    result.append(itemPath)
+                }
+                
+                /*result.totalSize += UInt64(value.st_size)
+                inodes.append(InodeInfo(
+                    inode: value.st_ino,
+                    timestamp: Int32(clamping: value.st_mtimespec.tv_sec),
+                    size: UInt32(clamping: value.st_size)
+                ))*/
+            }
+        }
+        
+        return result
+    }
+}
+
+/*private func scanFiles(at path: String, inodes: inout [InodeInfo]) -> ScanFilesResult {
+    var result = ScanFilesResult()
+    
+    if let dp = opendir(path) {
+        let pathBuffer = malloc(2048).assumingMemoryBound(to: Int8.self)
+        defer {
+            free(pathBuffer)
+        }
+        
+        while true {
+            guard let dirp = readdir(dp) else {
+                break
+            }
+            
+            if strncmp(&dirp.pointee.d_name.0, ".", 1024) == 0 {
+                continue
+            }
+            if strncmp(&dirp.pointee.d_name.0, "..", 1024) == 0 {
+                continue
+            }
+            strncpy(pathBuffer, path, 1024)
+            strncat(pathBuffer, "/", 1024)
+            strncat(pathBuffer, &dirp.pointee.d_name.0, 1024)
+            
+            //puts(pathBuffer)
+            //puts("\n")
+            
+            var value = stat()
+            if stat(pathBuffer, &value) == 0 {
+                if value.st_mtimespec.tv_sec < minTimestamp {
+                    unlink(pathBuffer)
+                    result.unlinkedCount += 1
+                } else {
+                    result.totalSize += UInt64(value.st_size)
+                    inodes.append(InodeInfo(
+                        inode: value.st_ino,
+                        timestamp: Int32(clamping: value.st_mtimespec.tv_sec),
+                        size: UInt32(clamping: value.st_size)
+                    ))
+                }
+            }
+        }
+        closedir(dp)
+    }
+    
+    return result
+}*/

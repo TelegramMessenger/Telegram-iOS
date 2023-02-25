@@ -20,8 +20,7 @@
 
 #import "TGMediaPickerGalleryPhotoItem.h"
 
-#import "TGPhotoEntitiesContainerView.h"
-#import "TGPhotoPaintController.h"
+#import "TGPhotoDrawingController.h"
 
 #import <LegacyComponents/TGMenuView.h>
 
@@ -42,7 +41,7 @@
     
     UIView *_contentView;
     UIView *_contentWrapperView;
-    TGPhotoEntitiesContainerView *_entitiesContainerView;
+    UIView<TGPhotoDrawingEntitiesView> *_entitiesView;
     
     SMetaDisposable *_adjustmentsDisposable;
     SMetaDisposable *_attributesDisposable;
@@ -90,11 +89,7 @@
         
         _contentWrapperView = [[UIView alloc] init];
         [_contentView addSubview:_contentWrapperView];
-        
-        _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
-        _entitiesContainerView.userInteractionEnabled = false;
-        [_contentWrapperView addSubview:_entitiesContainerView];
-        
+
         _fileInfoLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 200, 20)];
         _fileInfoLabel.backgroundColor = [UIColor clearColor];
         _fileInfoLabel.font = TGSystemFontOfSize(13);
@@ -143,7 +138,11 @@
     
     [super setItem:item synchronously:synchronously];
     
-    _entitiesContainerView.stickersContext = item.stickersContext;
+    if (_entitiesView == nil) {
+        _entitiesView = [item.stickersContext drawingEntitiesViewWithSize:item.asset.originalSize];
+        _entitiesView.userInteractionEnabled = false;
+        [_contentWrapperView addSubview:_entitiesView];
+    }
     
     _imageSize = item.asset.originalSize;
     [self reset];
@@ -223,7 +222,7 @@
                     return;
                 
                 [strongSelf layoutEntities];
-                [strongSelf->_entitiesContainerView setupWithPaintingData:next.paintingData];
+                [strongSelf->_entitiesView setupWithEntitiesData:next.paintingData.entitiesData];
             }]];
         }
         
@@ -486,27 +485,27 @@
     _contentView.transform = rotationTransform;
     _contentView.frame = previewFrame;
     
-    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
-    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
+    CGSize fittedContentSize = [TGPhotoDrawingController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
+    CGRect fittedCropRect = [TGPhotoDrawingController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
     
     CGFloat contentScale = _contentView.bounds.size.width / fittedCropRect.size.width;
     _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
     
-    CGRect rect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
-    _entitiesContainerView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
-    _entitiesContainerView.transform = CGAffineTransformMakeRotation(rotation);
+    CGRect rect = [TGPhotoDrawingController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
+    _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    _entitiesView.transform = CGAffineTransformMakeRotation(rotation);
     
-    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoDrawingController maximumPaintingSize]);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, rotation);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
     
     CGFloat scale = fittedOriginalSize.width / originalSize.width;
-    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
+    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoDrawingController fittedCropRect:cropRect centerScale:scale]);
     
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
-    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
+    _entitiesView.center = TGPaintAddPoints(boundsCenter, offset);
 }
 
 @end

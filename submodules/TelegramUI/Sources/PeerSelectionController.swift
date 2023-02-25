@@ -22,6 +22,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     public var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     private let filter: ChatListNodePeersFilter
     private let forumPeerId: EnginePeer.Id?
+    private let selectForumThreads: Bool
     
     private let attemptSelection: ((Peer, Int64?) -> Void)?
     private let createNewGroup: (() -> Void)?
@@ -91,6 +92,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.pretendPresentedInModal = params.pretendPresentedInModal
         self.forwardedMessageIds = params.forwardedMessageIds
         self.hasTypeHeaders = params.hasTypeHeaders
+        self.selectForumThreads = params.selectForumThreads
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -181,7 +183,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeer = { [weak self] peer, threadId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum), threadId == nil {
+                if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
                     let controller = PeerSelectionControllerImpl(
                         PeerSelectionControllerParams(
                             context: strongSelf.context,
@@ -197,7 +199,9 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                             pretendPresentedInModal: false,
                             multipleSelection: false,
                             forwardedMessageIds: [],
-                            hasTypeHeaders: false)
+                            hasTypeHeaders: false,
+                            selectForumThreads: false
+                        )
                     )
                     controller.peerSelected = strongSelf.peerSelected
                     strongSelf.push(controller)

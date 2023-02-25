@@ -126,13 +126,13 @@ public class UniversalVideoGalleryItem: GalleryItem {
                     }
                 }
                 if let mediaReference = mediaReference {
-                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: mediaReference) {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(message.id.peerId), mediaReference: mediaReference) {
                         return (Int64(id), item)
                     }
                 }
             }
         } else if case let .webPage(webPage, media, _) = contentInfo, let file = media as? TelegramMediaFile  {
-            if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
+            if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .other, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
                 return (0, item)
             }
         }
@@ -1013,43 +1013,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
-        if self.item?.content.id != item.content.id {
-            func parseChapters(_ string: NSAttributedString) -> [MediaPlayerScrubbingChapter] {
-                var existingTimecodes = Set<Double>()
-                var timecodeRanges: [(NSRange, TelegramTimecode)] = []
-                var lineRanges: [NSRange] = []
-                string.enumerateAttributes(in: NSMakeRange(0, string.length), options: [], using: { attributes, range, _ in
-                    if let timecode = attributes[NSAttributedString.Key(TelegramTextAttributes.Timecode)] as? TelegramTimecode {
-                        if !existingTimecodes.contains(timecode.time) {
-                            timecodeRanges.append((range, timecode))
-                            existingTimecodes.insert(timecode.time)
-                        }
-                    }
-                })
-                (string.string as NSString).enumerateSubstrings(in: NSMakeRange(0, string.length), options: .byLines, using: { _, range, _, _ in
-                    lineRanges.append(range)
-                })
-                
-                var chapters: [MediaPlayerScrubbingChapter] = []
-                for (timecodeRange, timecode) in timecodeRanges {
-                    inner: for lineRange in lineRanges {
-                        if lineRange.contains(timecodeRange.location) {
-                            if lineRange.length > timecodeRange.length && timecodeRange.location < lineRange.location + 4 {
-                                var title = ((string.string as NSString).substring(with: lineRange) as NSString).replacingCharacters(in: NSMakeRange(timecodeRange.location - lineRange.location, timecodeRange.length), with: "")
-                                title = title.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
-                                chapters.append(MediaPlayerScrubbingChapter(title: title, start: timecode.time))
-                            }
-                            break inner
-                        }
-                    }
-                }
-                
-                return chapters
-            }
-            
-            var chapters = parseChapters(item.caption)
+        if self.item?.content.id != item.content.id {            
+            var chapters = parseMediaPlayerChapters(item.caption)
             if chapters.isEmpty, let description = item.description {
-                chapters = parseChapters(description)
+                chapters = parseMediaPlayerChapters(description)
             }
             let scrubberView = ChatVideoGalleryItemScrubberView(chapters: chapters)
             self.scrubberView = scrubberView
@@ -1103,7 +1070,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var isEnhancedWebPlayer = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
-                self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
+                self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, userLocation: content.userLocation, userContentType: .video, fileReference: content.fileReference)
             } else if let _ = item.content as? SystemVideoContent {
                 self._title.set(.single(item.presentationData.strings.Message_Video))
             } else if let content = item.content as? WebEmbedVideoContent {
@@ -2566,7 +2533,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self {
                         switch strongSelf.fetchStatus {
                         case .Local:
-                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
+                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file))
                             |> deliverOnMainQueue).start(completed: {
                                 guard let strongSelf = self else {
                                     return
@@ -2711,7 +2678,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             let baseNavigationController = strongSelf.baseNavigationController()
             baseNavigationController?.view.endEditing(true)
-            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: Array(packs.prefix(1)), sendSticker: nil, actionPerformed: { actions in
+            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, actionPerformed: { actions in
                 if let (info, items, action) = actions.first {
                     let animateInAsReplacement = false
                     switch action {

@@ -212,11 +212,13 @@ public final class TextNodeLayout: NSObject {
         public let range: NSRange
         public let rect: CGRect
         public let value: AnyHashable
+        public let textColor: UIColor
         
-        public init(range: NSRange, rect: CGRect, value: AnyHashable) {
+        public init(range: NSRange, rect: CGRect, value: AnyHashable, textColor: UIColor) {
             self.range = range
             self.rect = rect
             self.value = value
+            self.textColor = textColor
         }
         
         public static func ==(lhs: EmbeddedItem, rhs: EmbeddedItem) -> Bool {
@@ -227,6 +229,9 @@ public final class TextNodeLayout: NSObject {
                 return false
             }
             if lhs.value != rhs.value {
+                return false
+            }
+            if lhs.textColor != rhs.textColor {
                 return false
             }
             return true
@@ -301,7 +306,18 @@ public final class TextNodeLayout: NSObject {
             spoilers.append(contentsOf: line.spoilers.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
             spoilerWords.append(contentsOf: line.spoilerWords.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
             for embeddedItem in line.embeddedItems {
-                embeddedItems.append(TextNodeLayout.EmbeddedItem(range: embeddedItem.range, rect: embeddedItem.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY), value: embeddedItem.item))
+                var textColor: UIColor?
+                if let attributedString = attributedString, embeddedItem.range.location < attributedString.length {
+                    if let color = attributedString.attribute(.foregroundColor, at: embeddedItem.range.location, effectiveRange: nil) as? UIColor {
+                        textColor = color
+                    }
+                    if textColor == nil {
+                        if let color = attributedString.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? UIColor {
+                            textColor = color
+                        }
+                    }
+                }
+                embeddedItems.append(TextNodeLayout.EmbeddedItem(range: embeddedItem.range, rect: embeddedItem.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY), value: embeddedItem.item, textColor: textColor ?? .black))
             }
         }
         self.hasRTL = hasRTL

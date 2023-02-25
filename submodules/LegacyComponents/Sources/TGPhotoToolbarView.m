@@ -25,6 +25,8 @@
     UILongPressGestureRecognizer *_longPressGestureRecognizer;
     
     bool _transitionedOut;
+    
+    bool _animatingCancelDoneButtons;
 }
 @end
 
@@ -71,6 +73,9 @@
 - (void)setBackButtonType:(TGPhotoEditorBackButton)backButtonType {
     _backButtonType = backButtonType;
     
+    if (_animatingCancelDoneButtons)
+        return;
+    
     UIImage *cancelImage = nil;
     switch (backButtonType)
     {
@@ -87,6 +92,9 @@
 
 - (void)setDoneButtonType:(TGPhotoEditorDoneButton)doneButtonType {
     _doneButtonType = doneButtonType;
+    
+    if (_animatingCancelDoneButtons)
+        return;
     
     TGMediaAssetsPallete *pallete = nil;
     if ([_context respondsToSelector:@selector(mediaAssetsPallete)])
@@ -525,6 +533,74 @@
         _buttonsWrapperView.hidden = hidden;
         _cancelButton.hidden = hidden;
         _doneButton.hidden = hidden;
+    }
+}
+
+- (void)setCancelDoneButtonsHidden:(bool)hidden animated:(bool)animated {
+    CGFloat targetAlpha = hidden ? 0.0f : 1.0f;
+    
+    if (animated)
+    {
+        _animatingCancelDoneButtons = hidden;
+        if (hidden) {
+            _cancelButton.modernHighlight = false;
+            _doneButton.modernHighlight = false;
+        }
+        _cancelButton.hidden = false;
+        _doneButton.hidden = false;
+                
+        [UIView animateWithDuration:0.2f
+                         animations:^
+        {
+            _cancelButton.alpha = targetAlpha;
+            _doneButton.alpha = targetAlpha;
+        } completion:^(__unused BOOL finished)
+        {
+            _animatingCancelDoneButtons = false;
+            _cancelButton.hidden = hidden;
+            _doneButton.hidden = hidden;
+            
+            if (hidden) {
+                _cancelButton.modernHighlight = true;
+                _doneButton.modernHighlight = true;
+            }
+            
+            if (hidden) {
+                [self setBackButtonType:_backButtonType];
+                [self setDoneButtonType:_doneButtonType];
+            }
+        }];
+    }
+    else
+    {
+        _cancelButton.alpha = targetAlpha;
+        _doneButton.alpha = targetAlpha;
+        _cancelButton.hidden = hidden;
+        _doneButton.hidden = hidden;
+    }
+}
+
+- (void)setCenterButtonsHidden:(bool)hidden animated:(bool)animated
+{
+    CGFloat targetAlpha = hidden ? 0.0f : 1.0f;
+    
+    if (animated)
+    {
+        _buttonsWrapperView.hidden = false;
+        
+        [UIView animateWithDuration:0.2f
+                         animations:^
+        {
+            _buttonsWrapperView.alpha = targetAlpha;
+        } completion:^(__unused BOOL finished)
+        {
+            _buttonsWrapperView.hidden = hidden;
+        }];
+    }
+    else
+    {
+        _buttonsWrapperView.alpha = targetAlpha;
+        _buttonsWrapperView.hidden = hidden;
     }
 }
 

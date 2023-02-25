@@ -98,7 +98,6 @@ NSString *const PGPhotoFilterMainShaderString = PGShaderString
     
     GLubyte *imageData = NULL;
     CFDataRef dataFromImageDataProvider = NULL;
-    GLenum format = GL_BGRA;
     
     if (!redrawNeeded)
     {
@@ -136,10 +135,6 @@ NSString *const PGPhotoFilterMainShaderString = PGShaderString
                         alphaInfo != kCGImageAlphaNoneSkipLast)
                     {
                         redrawNeeded = true;
-                    } else
-                    {
-                        /* Can access directly using GL_RGBA pixel format */
-                        format = GL_RGBA;
                     }
                 }
             }

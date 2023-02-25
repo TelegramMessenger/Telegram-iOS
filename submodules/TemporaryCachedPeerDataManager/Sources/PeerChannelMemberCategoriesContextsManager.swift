@@ -147,6 +147,12 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
         }
     }
     
+    func reset(peerId: PeerId, control: PeerChannelMemberCategoryControl) {
+        if let context = self.contexts[peerId] {
+            context.reset(control.key)
+        }
+    }
+    
     func profileData(postbox: Postbox, network: Network, peerId: PeerId, customData: Signal<Never, NoError>?) -> Disposable {
         let context: ProfileDataPreloadContext
         if let current = self.profileDataPreloadContexts[peerId] {
@@ -282,6 +288,12 @@ public final class PeerChannelMemberCategoriesContextsManager {
             self.impl.with { impl in
                 impl.loadMore(peerId: peerId, control: control)
             }
+        }
+    }
+    
+    public func reset(peerId: PeerId, control: PeerChannelMemberCategoryControl) {
+        self.impl.with { impl in
+            impl.reset(peerId: peerId, control: control)
         }
     }
     

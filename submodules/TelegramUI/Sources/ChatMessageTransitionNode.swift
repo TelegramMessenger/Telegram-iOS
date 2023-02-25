@@ -9,6 +9,8 @@ import ContextUI
 import Postbox
 import TelegramCore
 import ReactionSelectionNode
+import ChatControllerInteraction
+import FeaturedStickersScreen
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {
@@ -93,7 +95,7 @@ private final class OverlayTransitionContainerController: ViewController, Standa
     }
 }
 
-public final class ChatMessageTransitionNode: ASDisplayNode {
+public final class ChatMessageTransitionNode: ASDisplayNode, ChatMessageTransitionProtocol {
     static let animationDuration: Double = 0.3
 
     static let verticalAnimationControlPoints: (Float, Float, Float, Float) = (0.19919472913616398, 0.010644531250000006, 0.27920937042459737, 0.91025390625)

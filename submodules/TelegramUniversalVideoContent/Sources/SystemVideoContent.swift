@@ -14,21 +14,23 @@ import RangeSet
 
 public final class SystemVideoContent: UniversalVideoContent {
     public let id: AnyHashable
+    let userLocation: MediaResourceUserLocation
     let url: String
     let imageReference: ImageMediaReference
     public let dimensions: CGSize
     public let duration: Int32
     
-    public init(url: String, imageReference: ImageMediaReference, dimensions: CGSize, duration: Int32) {
+    public init(userLocation: MediaResourceUserLocation, url: String, imageReference: ImageMediaReference, dimensions: CGSize, duration: Int32) {
         self.id = AnyHashable(url)
         self.url = url
+        self.userLocation = userLocation
         self.imageReference = imageReference
         self.dimensions = dimensions
         self.duration = duration
     }
     
     public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return SystemVideoContentNode(postbox: postbox, audioSessionManager: audioSession, url: self.url, imageReference: self.imageReference, intrinsicDimensions: self.dimensions, approximateDuration: self.duration)
+        return SystemVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, url: self.url, imageReference: self.imageReference, intrinsicDimensions: self.dimensions, approximateDuration: self.duration)
     }
 }
 
@@ -81,7 +83,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var seekId: Int = 0
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, url: String, imageReference: ImageMediaReference, intrinsicDimensions: CGSize, approximateDuration: Int32) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, url: String, imageReference: ImageMediaReference, intrinsicDimensions: CGSize, approximateDuration: Int32) {
         self.audioSessionManager = audioSessionManager
         
         self.url = url
@@ -104,7 +106,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         super.init()
         
-        self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: imageReference))
+        self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, userLocation: userLocation, photoReference: imageReference))
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)

@@ -765,6 +765,14 @@ public final class SolidRoundedButtonView: UIView {
         }
     }
     
+    public var label: String? {
+        didSet {
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
     public var subtitle: String? {
         didSet {
             if let width = self.validLayout {
@@ -776,6 +784,14 @@ public final class SolidRoundedButtonView: UIView {
     public var icon: UIImage? {
         didSet {
             self.iconNode.image = generateTintedImage(image: self.icon, color: self.theme.foregroundColor)
+        }
+    }
+    
+    public var isEnabled: Bool = true {
+        didSet {
+            if self.isEnabled != oldValue {
+                self.titleNode.alpha = self.isEnabled ? 1.0 : 0.6
+            }
         }
     }
     
@@ -854,13 +870,14 @@ public final class SolidRoundedButtonView: UIView {
     
     public var progressType: SolidRoundedButtonProgressType = .fullSize
     
-    public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
+    public init(title: String? = nil, label: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
         self.fontSize = fontSize
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
         self.title = title
+        self.label = label
         self.gloss = gloss
         
         self.buttonBackgroundNode = UIImageView()
@@ -1174,7 +1191,13 @@ public final class SolidRoundedButtonView: UIView {
             self.buttonBackgroundAnimationView?.image = nil
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
+        let titleText = NSMutableAttributedString()
+        titleText.append(NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor))
+        if let label = self.label {
+            titleText.append(NSAttributedString(string: " " + label, font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor.withAlphaComponent(0.6)))
+        }
+        
+        self.titleNode.attributedText = titleText
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
         self.iconNode.image = generateTintedImage(image: self.iconNode.image, color: theme.foregroundColor)
@@ -1219,9 +1242,13 @@ public final class SolidRoundedButtonView: UIView {
 
         transition.updateFrame(view: self.buttonNode, frame: buttonFrame)
         
-        if self.title != self.titleNode.attributedText?.string {
-            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.theme.foregroundColor)
+        let titleText = NSMutableAttributedString()
+        titleText.append(NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor))
+        if let label = self.label {
+            titleText.append(NSAttributedString(string: " " + label, font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor.withAlphaComponent(0.6)))
         }
+        
+        self.titleNode.attributedText = titleText
         
         let iconSize: CGSize
         if let _ = self.animationNode {

@@ -76,33 +76,8 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     }
     if (dictionary[@"originalSize"])
         adjustments->_originalSize = [dictionary[@"originalSize"] CGSizeValue];
-    if (dictionary[@"entities"]) {
-        NSMutableArray *entities = [[NSMutableArray alloc] init];
-        
-        for (NSDictionary *dict in dictionary[@"entities"]) {
-            if ([dict[@"type"] isEqualToString:@"sticker"]) {
-                TGPhotoPaintStickerEntity *entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:dict[@"data"] baseSize:[dict[@"baseSize"] CGSizeValue] animated:[dict[@"animated"] boolValue]];
-                entity.uuid = [dict[@"uuid"] integerValue];
-                entity.position = [dict[@"position"] CGPointValue];
-                entity.scale = [dict[@"scale"] floatValue];
-                entity.angle = [dict[@"angle"] floatValue];
-                entity.mirrored = [dict[@"mirrored"] boolValue];
-                [entities addObject:entity];
-            } else if ([dict[@"type"] isEqualToString:@"text"]) {
-                UIImage *renderImage = [[UIImage alloc] initWithData:dict[@"data"]];
-                if (renderImage != nil) {
-                    TGPhotoPaintTextEntity *entity = [[TGPhotoPaintTextEntity alloc] initWithText:nil font:nil swatch:nil baseFontSize:0.0 maxWidth:0.0 style:TGPhotoPaintTextEntityStyleRegular];
-                    entity.uuid = [dict[@"uuid"] integerValue];
-                    entity.position = [dict[@"position"] CGPointValue];
-                    entity.scale = [dict[@"scale"] floatValue];
-                    entity.angle = [dict[@"angle"] floatValue];
-                    entity.renderImage = renderImage;
-                    [entities addObject:entity];
-                }
-            }
-        }
-       
-        adjustments->_paintingData = [TGPaintingData dataWithPaintingImagePath:dictionary[@"paintingImagePath"] entities:entities];
+    if (dictionary[@"entitiesData"]) {
+        adjustments->_paintingData = [TGPaintingData dataWithPaintingImagePath:dictionary[@"paintingImagePath"] entitiesData:dictionary[@"entitiesData"] hasAnimation:[dictionary[@"hasAnimation"] boolValue] stickers:dictionary[@"stickersData"]];
     } else if (dictionary[@"paintingImagePath"]) {
         adjustments->_paintingData = [TGPaintingData dataWithPaintingImagePath:dictionary[@"paintingImagePath"]];
     }
@@ -240,42 +215,9 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
         if (self.paintingData.imagePath != nil) {
                dict[@"paintingImagePath"] = self.paintingData.imagePath;
         }
-        
-        NSMutableArray *entities = [[NSMutableArray alloc] init];
-        
-        if (self.paintingData.entities != nil) {
-            for (TGPhotoPaintEntity *entity in self.paintingData.entities) {
-                if ([entity isKindOfClass:[TGPhotoPaintStickerEntity class]]) {
-                    TGPhotoPaintStickerEntity *stickerEntity = (TGPhotoPaintStickerEntity *)entity;
-                    NSMutableDictionary *sticker = [[NSMutableDictionary alloc] init];
-                    sticker[@"type"] = @"sticker";
-                    sticker[@"baseSize"] = [NSValue valueWithCGSize:stickerEntity.baseSize];
-                    sticker[@"uuid"] = @(stickerEntity.uuid);
-                    sticker[@"data"] = stickerEntity.document;
-                    sticker[@"position"] = [NSValue valueWithCGPoint:stickerEntity.position];
-                    sticker[@"scale"] = @(stickerEntity.scale);
-                    sticker[@"angle"] = @(stickerEntity.angle);
-                    sticker[@"mirrored"] = @(stickerEntity.mirrored);
-                    sticker[@"animated"] = @(stickerEntity.animated);
-                    [entities addObject:sticker];
-                } else if ([entity isKindOfClass:[TGPhotoPaintTextEntity class]]) {
-                    TGPhotoPaintTextEntity *textEntity = (TGPhotoPaintTextEntity *)entity;
-                    NSMutableDictionary *text = [[NSMutableDictionary alloc] init];
-                    if (textEntity.renderImage != nil) {
-                        text[@"type"] = @"text";
-                        text[@"uuid"] = @(textEntity.uuid);
-                        text[@"data"] = UIImagePNGRepresentation(textEntity.renderImage);
-                        text[@"position"] = [NSValue valueWithCGPoint:textEntity.position];
-                        text[@"scale"] = @(textEntity.scale);
-                        text[@"angle"] = @(textEntity.angle);
-                        [entities addObject:text];
-                    }
-                }
-            }
-        }
-        
-        if (entities.count > 0) {
-            dict[@"entities"] = entities;
+        if (self.paintingData.entitiesData != nil) {
+            dict[@"entitiesData"] = self.paintingData.entitiesData;
+            dict[@"hasAnimation"] = @(self.paintingData.hasAnimation);
         }
     }
     

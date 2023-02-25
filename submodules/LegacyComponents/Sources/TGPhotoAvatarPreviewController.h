@@ -3,7 +3,6 @@
 @class PGPhotoEditor;
 @class PGPhotoTool;
 @class TGPhotoEditorPreviewView;
-@class TGPhotoEntitiesContainerView;
 @class PGPhotoEditorView;
 @class TGMediaPickerGalleryVideoScrubber;
 
@@ -13,6 +12,9 @@
 @property (nonatomic, assign) bool skipTransitionIn;
 @property (nonatomic, assign) bool fromCamera;
 
+@property (nonatomic, copy) void (^cancelPressed)(void);
+@property (nonatomic, copy) void (^donePressed)(void);
+
 @property (nonatomic, copy) void (^croppingChanged)(void);
 @property (nonatomic, copy) void (^togglePlayback)(void);
 
@@ -20,10 +22,12 @@
 @property (nonatomic, weak) UIView *dotMarkerView;
 @property (nonatomic, weak) PGPhotoEditorView *fullPreviewView;
 @property (nonatomic, weak) UIImageView *fullPaintingView;
-@property (nonatomic, weak) TGPhotoEntitiesContainerView *fullEntitiesView;
+@property (nonatomic, weak) UIView<TGPhotoDrawingEntitiesView> *fullEntitiesView;
 @property (nonatomic, weak) TGMediaPickerGalleryVideoScrubber *scrubberView;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
+
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion isSuggesting:(bool)isSuggesting senderName:(NSString *)senderName;
 
 - (void)setImage:(UIImage *)image;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;

@@ -15,15 +15,21 @@ public enum FetchMediaDataState {
     case data(MediaResourceData)
 }
 
-public func fetchMediaData(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(FetchMediaDataState, Bool), NoError> {
+public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference, forceVideo: Bool = false) -> Signal<(FetchMediaDataState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
+    var userContentType: MediaResourceUserContentType = .other
     if let image = mediaReference.media as? TelegramMediaImage {
-        if let representation = largestImageRepresentation(image.representations) {
+        userContentType = .image
+        if let video = image.videoRepresentations.first, forceVideo {
+            resource = video.resource
+            isImage = false
+        } else if let representation = largestImageRepresentation(image.representations) {
             resource = representation.resource
         }
     } else if let file = mediaReference.media as? TelegramMediaFile {
+        userContentType = MediaResourceUserContentType(file: file)
         resource = file.resource
         if file.isVideo || file.mimeType.hasPrefix("video/") {
             isImage = false
@@ -47,7 +53,7 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefer
     
     if let resource = resource {
         let fetchedData: Signal<FetchMediaDataState, NoError> = Signal { subscriber in
-            let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: mediaReference.resourceReference(resource)).start()
+            let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: userContentType, reference: mediaReference.resourceReference(resource)).start()
             let status = postbox.mediaBox.resourceStatus(resource).start(next: { status in
                 switch status {
                     case .Local:
@@ -80,8 +86,8 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefer
     }
 }
 
-public func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
-    return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
+public func saveToCameraRoll(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
+    return fetchMediaData(context: context, postbox: postbox, userLocation: userLocation, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Float, NoError> in
         switch state {
             case let .progress(value):
@@ -134,8 +140,8 @@ public func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaRef
     }
 }
 
-public func copyToPasteboard(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
-    return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
+public func copyToPasteboard(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
+    return fetchMediaData(context: context, postbox: postbox, userLocation: userLocation, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Void, NoError> in
         if case let .data(data) = state, data.complete {
             return Signal<Void, NoError> { subscriber in

@@ -435,6 +435,14 @@
             intent = TGPhotoEditorControllerSignupAvatarIntent;
         }
         
+        if (self.forum) {
+            intent |= TGPhotoEditorControllerForumAvatarIntent;
+        }
+        
+        if (self.isSuggesting) {
+            intent |= TGPhotoEditorControllerSuggestingAvatarIntent;
+        }
+        
         id<TGMediaEditableItem> editableItem = asset;
         if (asset.type == TGMediaAssetGifType) {
             editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
@@ -451,7 +459,7 @@
             
             [[strongSelf->_assetsLibrary saveAssetWithImage:resultImage] startWithNext:nil];
         };
-        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges)
+        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges, void(^commit)(void))
         {
             if (!hasChanges)
                 return;
@@ -483,12 +491,12 @@
                         previewImage = thumbnailImage;
                     }
                 }
-                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:[NSURL fileURLWithPath:filePath] adjustments:videoAdjustments image:previewImage];
+                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:[NSURL fileURLWithPath:filePath] adjustments:videoAdjustments image:previewImage commit:commit];
             } else {
-                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
+                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage commit:commit];
             }
         };
-        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
             if (!hasChanges)
                 return;
             
@@ -496,7 +504,7 @@
             if (strongSelf == nil)
                 return;
             
-            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:asset adjustments:adjustments image:resultImage];
+            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:asset adjustments:adjustments image:resultImage commit:commit];
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {

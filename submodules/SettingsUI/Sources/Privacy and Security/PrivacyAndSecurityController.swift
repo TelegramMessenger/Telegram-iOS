@@ -614,7 +614,22 @@ class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationContr
     }
 }
 
-public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil, loginEmailPattern: Signal<String?, NoError>? = nil, updatedTwoStepAuthData: (() -> Void)? = nil) -> ViewController {
+public func privacyAndSecurityController(
+    context: AccountContext,
+    initialSettings: AccountPrivacySettings? = nil,
+    updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil,
+    updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil,
+    updatedHasTwoStepAuth: ((Bool) -> Void)? = nil,
+    focusOnItemTag: PrivacyAndSecurityEntryTag? = nil,
+    activeSessionsContext: ActiveSessionsContext? = nil,
+    webSessionsContext: WebSessionsContext? = nil,
+    blockedPeersContext: BlockedPeersContext? = nil,
+    hasTwoStepAuth: Bool? = nil,
+    loginEmailPattern: Signal<String?, NoError>? = nil,
+    updatedTwoStepAuthData: (() -> Void)? = nil,
+    requestPublicPhotoSetup: ((@escaping (UIImage?) -> Void) -> Void)? = nil,
+    requestPublicPhotoRemove: ((@escaping () -> Void) -> Void)? = nil
+) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -804,7 +819,11 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .profilePhoto, current: info.profilePhoto, updated: { updated, _, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .profilePhoto, current: info.profilePhoto, requestPublicPhotoSetup: { completion in
+                    requestPublicPhotoSetup?(completion)
+                }, requestPublicPhotoRemove: { completion in
+                    requestPublicPhotoRemove?(completion)
+                }, updated: { updated, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }

@@ -277,7 +277,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 return .single(nil)
             }
             return Signal { subscriber in
-                let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+                let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file)).start()
                 let dataDisposable = (context.account.postbox.mediaBox.resourceData(file.resource)
                 |> filter(\.complete)
                 |> take(1)).start(next: { data in
@@ -425,7 +425,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     for item in featuredEmojiPack.topItems {
                         for attribute in item.file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, alt, _):
+                            case let .CustomEmoji(_, _, alt, _):
                                 if filterList.contains(alt) {
                                     filteredFiles.append(item.file)
                                 }
@@ -1395,7 +1395,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 }
                                 for attribute in item.file.attributes {
                                     switch attribute {
-                                    case let .CustomEmoji(_, alt, _):
+                                    case let .CustomEmoji(_, _, alt, _):
                                         if !item.file.isPremiumEmoji || hasPremium {
                                             if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                                 result.append((alt, item.file, keyword))
@@ -1424,7 +1424,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                         content: .animation(animationData),
                                         itemFile: itemFile, subgroupId: nil,
                                         icon: .none,
-                                        accentTint: false
+                                        tintMode: animationData.isTemplate ? .primary : .none
                                     )
                                     items.append(item)
                                 }
@@ -1458,6 +1458,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     }))
                 }
             },
+            updateScrollingToItemGroup: {
+            },
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: emojiContentLayout,
@@ -1465,7 +1467,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
             ),
             externalExpansionView: self.view,
-            useOpaqueTheme: false
+            useOpaqueTheme: false,
+            hideBackground: false
         )
     }
     
@@ -1742,7 +1745,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             if additionalAnimation == nil && itemNode.item.isCustom {
                 outer: for attribute in itemNode.item.stillAnimation.attributes {
-                    if case let .CustomEmoji(_, alt, _) = attribute {
+                    if case let .CustomEmoji(_, _, alt, _) = attribute {
                         if let availableReactions = self.availableReactions {
                             for availableReaction in availableReactions.reactions {
                                 if availableReaction.value == .builtin(alt) {
@@ -1807,6 +1810,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     for animationLayer in allLayers {
                         let baseItemLayer = InlineStickerItemLayer(
                             context: itemNode.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: false,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
                             file: itemNode.item.listAnimation,
@@ -2418,6 +2422,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     for animationLayer in allLayers {
                         let baseItemLayer = InlineStickerItemLayer(
                             context: itemNode.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: false,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
                             file: itemNode.item.listAnimation,

@@ -232,8 +232,8 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
             if fileUpdated {
                 if let file = file {
-                    updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(file.resource))
+                    updatedImageSignal = chatMessageSticker(account: item.account, userLocation: .other, file: file, small: false)
+                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: stickerPackFileReference(file).resourceReference(file.resource))
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()

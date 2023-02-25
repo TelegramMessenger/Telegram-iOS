@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
+public func findTaggedComponentViewImpl(view: UIView, tag: Any) -> UIView? {
     if let view = view as? ComponentTaggedView {
         if view.matches(tag: tag) {
             return view
@@ -9,7 +9,7 @@ private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
     }
     
     for subview in view.subviews {
-        if let result = findTaggedViewImpl(view: subview, tag: tag) {
+        if let result = findTaggedComponentViewImpl(view: subview, tag: tag) {
             return result
         }
     }
@@ -131,7 +131,7 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             return nil
         }
         
-        return findTaggedViewImpl(view: componentView, tag: tag)
+        return findTaggedComponentViewImpl(view: componentView, tag: tag)
     }
 }
 
@@ -141,6 +141,7 @@ public final class ComponentView<EnvironmentType> {
     private var currentSize: CGSize?
     public private(set) var view: UIView?
     private(set) var isUpdating: Bool = false
+    public weak var parentState: ComponentState?
     
     public init() {
     }
@@ -151,6 +152,15 @@ public final class ComponentView<EnvironmentType> {
     
     public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
         let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: forceUpdate, containerSize: containerSize)
+        self.currentSize = size
+        return size
+    }
+    
+    public func updateEnvironment(transition: Transition, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>) -> CGSize? {
+        guard let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize else {
+            return nil
+        }
+        let size = self._update(transition: transition, component: currentComponent, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: false, containerSize: currentContainerSize)
         self.currentSize = size
         return size
     }
@@ -181,10 +191,15 @@ public final class ComponentView<EnvironmentType> {
             context.erasedEnvironment = environmentResult
         }
         
-        let isEnvironmentUpdated = context.erasedEnvironment.calculateIsUpdated()
-
+        var isStateUpdated = false
+        if componentState.isUpdated {
+            isStateUpdated = true
+            componentState.isUpdated = false
+        }
         
-        if !forceUpdate, !isEnvironmentUpdated, let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
+        let isEnvironmentUpdated = context.erasedEnvironment.calculateIsUpdated()
+        
+        if !forceUpdate, !isEnvironmentUpdated, !isStateUpdated, let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
             if currentContainerSize == containerSize && currentComponent == component {
                 self.isUpdating = false
                 return currentSize
@@ -197,15 +212,22 @@ public final class ComponentView<EnvironmentType> {
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf._update(transition: transition, component: component, maybeEnvironment: {
-                preconditionFailure()
-            } as () -> Environment<EnvironmentType>, updateEnvironment: false, forceUpdate: true, containerSize: containerSize)
+            if let parentState = strongSelf.parentState {
+                parentState.updated(transition: transition)
+            } else {
+                let _ = strongSelf._update(transition: transition, component: component, maybeEnvironment: {
+                    preconditionFailure()
+                } as () -> Environment<EnvironmentType>, updateEnvironment: false, forceUpdate: true, containerSize: containerSize)
+            }
         }
 
         let updatedSize = component._update(view: componentView, availableSize: containerSize, environment: context.erasedEnvironment, transition: transition)
 
         if isEnvironmentUpdated {
             context.erasedEnvironment._isUpdated = false
+        }
+        if isStateUpdated {
+            context.erasedState.isUpdated = false
         }
         
         self.isUpdating = false
@@ -217,7 +239,7 @@ public final class ComponentView<EnvironmentType> {
         guard let view = self.view else {
             return nil
         }
-        return findTaggedViewImpl(view: view, tag: tag)
+        return findTaggedComponentViewImpl(view: view, tag: tag)
     }
 }
 

@@ -4,6 +4,12 @@
 
 @protocol TGMediaEditAdjustments;
 
+@protocol TGPhotoEditorTabProtocol 
+    
+
+
+@end
+
 @interface TGPhotoEditorTabController : TGViewController
 {
     bool _dismissing;

@@ -8,6 +8,16 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
+public struct InstantPageSourceLocation {
+    public var userLocation: MediaResourceUserLocation
+    public var peerType: MediaAutoDownloadPeerType
+    
+    public init(userLocation: MediaResourceUserLocation, peerType: MediaAutoDownloadPeerType) {
+        self.userLocation = userLocation
+        self.peerType = peerType
+    }
+}
+
 public func instantPageAndAnchor(message: Message) -> (TelegramMediaWebpage, String?)? {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -61,7 +71,7 @@ public func instantPageAndAnchor(message: Message) -> (TelegramMediaWebpage, Str
 public final class InstantPageController: ViewController {
     private let context: AccountContext
     private var webPage: TelegramMediaWebpage
-    private let sourcePeerType: MediaAutoDownloadPeerType
+    private let sourceLocation: InstantPageSourceLocation
     private let anchor: String?
     
     private var presentationData: PresentationData
@@ -82,13 +92,13 @@ public final class InstantPageController: ViewController {
     private var settingsDisposable: Disposable?
     private var themeSettings: PresentationThemeSettings?
     
-    public init(context: AccountContext, webPage: TelegramMediaWebpage, sourcePeerType: MediaAutoDownloadPeerType, anchor: String? = nil) {
+    public init(context: AccountContext, webPage: TelegramMediaWebpage, sourceLocation: InstantPageSourceLocation, anchor: String? = nil) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.webPage = webPage
         self.anchor = anchor
-        self.sourcePeerType = sourcePeerType
+        self.sourceLocation = sourceLocation
         
         super.init(navigationBarPresentationData: nil)
         
@@ -145,7 +155,7 @@ public final class InstantPageController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageControllerNode(controller: self, context: self.context, settings: self.settings, themeSettings: self.themeSettings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, autoNightModeTriggered: self.presentationData.autoNightModeTriggered, statusBar: self.statusBar, sourcePeerType: self.sourcePeerType, getNavigationController: { [weak self] in
+        self.displayNode = InstantPageControllerNode(controller: self, context: self.context, settings: self.settings, themeSettings: self.themeSettings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, autoNightModeTriggered: self.presentationData.autoNightModeTriggered, statusBar: self.statusBar, sourceLocation: self.sourceLocation, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a, blockInteraction: true)

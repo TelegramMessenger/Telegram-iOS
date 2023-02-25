@@ -88,17 +88,17 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .botInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
-                return ("botInlineMessageMediaAuto", [("flags", String(describing: flags)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("botInlineMessageMediaAuto", [("flags", flags as Any), ("message", message as Any), ("entities", entities as Any), ("replyMarkup", replyMarkup as Any)])
                 case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
-                return ("botInlineMessageMediaContact", [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("vcard", String(describing: vcard)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("botInlineMessageMediaContact", [("flags", flags as Any), ("phoneNumber", phoneNumber as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("vcard", vcard as Any), ("replyMarkup", replyMarkup as Any)])
                 case .botInlineMessageMediaGeo(let flags, let geo, let heading, let period, let proximityNotificationRadius, let replyMarkup):
-                return ("botInlineMessageMediaGeo", [("flags", String(describing: flags)), ("geo", String(describing: geo)), ("heading", String(describing: heading)), ("period", String(describing: period)), ("proximityNotificationRadius", String(describing: proximityNotificationRadius)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("botInlineMessageMediaGeo", [("flags", flags as Any), ("geo", geo as Any), ("heading", heading as Any), ("period", period as Any), ("proximityNotificationRadius", proximityNotificationRadius as Any), ("replyMarkup", replyMarkup as Any)])
                 case .botInlineMessageMediaInvoice(let flags, let title, let description, let photo, let currency, let totalAmount, let replyMarkup):
-                return ("botInlineMessageMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("botInlineMessageMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("replyMarkup", replyMarkup as Any)])
                 case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
-                return ("botInlineMessageMediaVenue", [("flags", String(describing: flags)), ("geo", String(describing: geo)), ("title", String(describing: title)), ("address", String(describing: address)), ("provider", String(describing: provider)), ("venueId", String(describing: venueId)), ("venueType", String(describing: venueType)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("botInlineMessageMediaVenue", [("flags", flags as Any), ("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any), ("replyMarkup", replyMarkup as Any)])
                 case .botInlineMessageText(let flags, let message, let entities, let replyMarkup):
-                return ("botInlineMessageText", [("flags", String(describing: flags)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("replyMarkup", String(describing: replyMarkup))])
+                return ("botInlineMessageText", [("flags", flags as Any), ("message", message as Any), ("entities", entities as Any), ("replyMarkup", replyMarkup as Any)])
     }
     }
     
@@ -320,9 +320,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .botInlineMediaResult(let flags, let id, let type, let photo, let document, let title, let description, let sendMessage):
-                return ("botInlineMediaResult", [("flags", String(describing: flags)), ("id", String(describing: id)), ("type", String(describing: type)), ("photo", String(describing: photo)), ("document", String(describing: document)), ("title", String(describing: title)), ("description", String(describing: description)), ("sendMessage", String(describing: sendMessage))])
+                return ("botInlineMediaResult", [("flags", flags as Any), ("id", id as Any), ("type", type as Any), ("photo", photo as Any), ("document", document as Any), ("title", title as Any), ("description", description as Any), ("sendMessage", sendMessage as Any)])
                 case .botInlineResult(let flags, let id, let type, let title, let description, let url, let thumb, let content, let sendMessage):
-                return ("botInlineResult", [("flags", String(describing: flags)), ("id", String(describing: id)), ("type", String(describing: type)), ("title", String(describing: title)), ("description", String(describing: description)), ("url", String(describing: url)), ("thumb", String(describing: thumb)), ("content", String(describing: content)), ("sendMessage", String(describing: sendMessage))])
+                return ("botInlineResult", [("flags", flags as Any), ("id", id as Any), ("type", type as Any), ("title", title as Any), ("description", description as Any), ("url", url as Any), ("thumb", thumb as Any), ("content", content as Any), ("sendMessage", sendMessage as Any)])
     }
     }
     
@@ -441,7 +441,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .botMenuButton(let text, let url):
-                return ("botMenuButton", [("text", String(describing: text)), ("url", String(describing: url))])
+                return ("botMenuButton", [("text", text as Any), ("url", url as Any)])
                 case .botMenuButtonCommands:
                 return ("botMenuButtonCommands", [])
                 case .botMenuButtonDefault:
@@ -494,7 +494,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .cdnConfig(let publicKeys):
-                return ("cdnConfig", [("publicKeys", String(describing: publicKeys))])
+                return ("cdnConfig", [("publicKeys", publicKeys as Any)])
     }
     }
     
@@ -533,7 +533,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .cdnPublicKey(let dcId, let publicKey):
-                return ("cdnPublicKey", [("dcId", String(describing: dcId)), ("publicKey", String(describing: publicKey))])
+                return ("cdnPublicKey", [("dcId", dcId as Any), ("publicKey", publicKey as Any)])
     }
     }
     
@@ -575,7 +575,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .channelAdminLogEvent(let id, let date, let userId, let action):
-                return ("channelAdminLogEvent", [("id", String(describing: id)), ("date", String(describing: date)), ("userId", String(describing: userId)), ("action", String(describing: action))])
+                return ("channelAdminLogEvent", [("id", id as Any), ("date", date as Any), ("userId", userId as Any), ("action", action as Any)])
     }
     }
     
@@ -640,6 +640,7 @@ public extension Api {
         case channelAdminLogEventActionSendMessage(message: Api.Message)
         case channelAdminLogEventActionStartGroupCall(call: Api.InputGroupCall)
         case channelAdminLogEventActionStopPoll(message: Api.Message)
+        case channelAdminLogEventActionToggleAntiSpam(newValue: Api.Bool)
         case channelAdminLogEventActionToggleForum(newValue: Api.Bool)
         case channelAdminLogEventActionToggleGroupCallSetting(joinMuted: Api.Bool)
         case channelAdminLogEventActionToggleInvites(newValue: Api.Bool)
@@ -882,6 +883,12 @@ public extension Api {
                     }
                     message.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionToggleAntiSpam(let newValue):
+                    if boxed {
+                        buffer.appendInt32(1693675004)
+                    }
+                    newValue.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionToggleForum(let newValue):
                     if boxed {
                         buffer.appendInt32(46949251)
@@ -937,89 +944,91 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .channelAdminLogEventActionChangeAbout(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeAbout", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeAbout", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeLinkedChat(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeLinkedChat", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeLinkedChat", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeLocation(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeLocation", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeLocation", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
-                return ("channelAdminLogEventActionChangePhoto", [("prevPhoto", String(describing: prevPhoto)), ("newPhoto", String(describing: newPhoto))])
+                return ("channelAdminLogEventActionChangePhoto", [("prevPhoto", prevPhoto as Any), ("newPhoto", newPhoto as Any)])
                 case .channelAdminLogEventActionChangeStickerSet(let prevStickerset, let newStickerset):
-                return ("channelAdminLogEventActionChangeStickerSet", [("prevStickerset", String(describing: prevStickerset)), ("newStickerset", String(describing: newStickerset))])
+                return ("channelAdminLogEventActionChangeStickerSet", [("prevStickerset", prevStickerset as Any), ("newStickerset", newStickerset as Any)])
                 case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeTitle", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeTitle", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeUsername", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeUsername", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeUsernames(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeUsernames", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionChangeUsernames", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionCreateTopic(let topic):
-                return ("channelAdminLogEventActionCreateTopic", [("topic", String(describing: topic))])
+                return ("channelAdminLogEventActionCreateTopic", [("topic", topic as Any)])
                 case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
-                return ("channelAdminLogEventActionDefaultBannedRights", [("prevBannedRights", String(describing: prevBannedRights)), ("newBannedRights", String(describing: newBannedRights))])
+                return ("channelAdminLogEventActionDefaultBannedRights", [("prevBannedRights", prevBannedRights as Any), ("newBannedRights", newBannedRights as Any)])
                 case .channelAdminLogEventActionDeleteMessage(let message):
-                return ("channelAdminLogEventActionDeleteMessage", [("message", String(describing: message))])
+                return ("channelAdminLogEventActionDeleteMessage", [("message", message as Any)])
                 case .channelAdminLogEventActionDeleteTopic(let topic):
-                return ("channelAdminLogEventActionDeleteTopic", [("topic", String(describing: topic))])
+                return ("channelAdminLogEventActionDeleteTopic", [("topic", topic as Any)])
                 case .channelAdminLogEventActionDiscardGroupCall(let call):
-                return ("channelAdminLogEventActionDiscardGroupCall", [("call", String(describing: call))])
+                return ("channelAdminLogEventActionDiscardGroupCall", [("call", call as Any)])
                 case .channelAdminLogEventActionEditMessage(let prevMessage, let newMessage):
-                return ("channelAdminLogEventActionEditMessage", [("prevMessage", String(describing: prevMessage)), ("newMessage", String(describing: newMessage))])
+                return ("channelAdminLogEventActionEditMessage", [("prevMessage", prevMessage as Any), ("newMessage", newMessage as Any)])
                 case .channelAdminLogEventActionEditTopic(let prevTopic, let newTopic):
-                return ("channelAdminLogEventActionEditTopic", [("prevTopic", String(describing: prevTopic)), ("newTopic", String(describing: newTopic))])
+                return ("channelAdminLogEventActionEditTopic", [("prevTopic", prevTopic as Any), ("newTopic", newTopic as Any)])
                 case .channelAdminLogEventActionExportedInviteDelete(let invite):
-                return ("channelAdminLogEventActionExportedInviteDelete", [("invite", String(describing: invite))])
+                return ("channelAdminLogEventActionExportedInviteDelete", [("invite", invite as Any)])
                 case .channelAdminLogEventActionExportedInviteEdit(let prevInvite, let newInvite):
-                return ("channelAdminLogEventActionExportedInviteEdit", [("prevInvite", String(describing: prevInvite)), ("newInvite", String(describing: newInvite))])
+                return ("channelAdminLogEventActionExportedInviteEdit", [("prevInvite", prevInvite as Any), ("newInvite", newInvite as Any)])
                 case .channelAdminLogEventActionExportedInviteRevoke(let invite):
-                return ("channelAdminLogEventActionExportedInviteRevoke", [("invite", String(describing: invite))])
+                return ("channelAdminLogEventActionExportedInviteRevoke", [("invite", invite as Any)])
                 case .channelAdminLogEventActionParticipantInvite(let participant):
-                return ("channelAdminLogEventActionParticipantInvite", [("participant", String(describing: participant))])
+                return ("channelAdminLogEventActionParticipantInvite", [("participant", participant as Any)])
                 case .channelAdminLogEventActionParticipantJoin:
                 return ("channelAdminLogEventActionParticipantJoin", [])
                 case .channelAdminLogEventActionParticipantJoinByInvite(let invite):
-                return ("channelAdminLogEventActionParticipantJoinByInvite", [("invite", String(describing: invite))])
+                return ("channelAdminLogEventActionParticipantJoinByInvite", [("invite", invite as Any)])
                 case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
-                return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", String(describing: invite)), ("approvedBy", String(describing: approvedBy))])
+                return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", invite as Any), ("approvedBy", approvedBy as Any)])
                 case .channelAdminLogEventActionParticipantLeave:
                 return ("channelAdminLogEventActionParticipantLeave", [])
                 case .channelAdminLogEventActionParticipantMute(let participant):
-                return ("channelAdminLogEventActionParticipantMute", [("participant", String(describing: participant))])
+                return ("channelAdminLogEventActionParticipantMute", [("participant", participant as Any)])
                 case .channelAdminLogEventActionParticipantToggleAdmin(let prevParticipant, let newParticipant):
-                return ("channelAdminLogEventActionParticipantToggleAdmin", [("prevParticipant", String(describing: prevParticipant)), ("newParticipant", String(describing: newParticipant))])
+                return ("channelAdminLogEventActionParticipantToggleAdmin", [("prevParticipant", prevParticipant as Any), ("newParticipant", newParticipant as Any)])
                 case .channelAdminLogEventActionParticipantToggleBan(let prevParticipant, let newParticipant):
-                return ("channelAdminLogEventActionParticipantToggleBan", [("prevParticipant", String(describing: prevParticipant)), ("newParticipant", String(describing: newParticipant))])
+                return ("channelAdminLogEventActionParticipantToggleBan", [("prevParticipant", prevParticipant as Any), ("newParticipant", newParticipant as Any)])
                 case .channelAdminLogEventActionParticipantUnmute(let participant):
-                return ("channelAdminLogEventActionParticipantUnmute", [("participant", String(describing: participant))])
+                return ("channelAdminLogEventActionParticipantUnmute", [("participant", participant as Any)])
                 case .channelAdminLogEventActionParticipantVolume(let participant):
-                return ("channelAdminLogEventActionParticipantVolume", [("participant", String(describing: participant))])
+                return ("channelAdminLogEventActionParticipantVolume", [("participant", participant as Any)])
                 case .channelAdminLogEventActionPinTopic(let flags, let prevTopic, let newTopic):
-                return ("channelAdminLogEventActionPinTopic", [("flags", String(describing: flags)), ("prevTopic", String(describing: prevTopic)), ("newTopic", String(describing: newTopic))])
+                return ("channelAdminLogEventActionPinTopic", [("flags", flags as Any), ("prevTopic", prevTopic as Any), ("newTopic", newTopic as Any)])
                 case .channelAdminLogEventActionSendMessage(let message):
-                return ("channelAdminLogEventActionSendMessage", [("message", String(describing: message))])
+                return ("channelAdminLogEventActionSendMessage", [("message", message as Any)])
                 case .channelAdminLogEventActionStartGroupCall(let call):
-                return ("channelAdminLogEventActionStartGroupCall", [("call", String(describing: call))])
+                return ("channelAdminLogEventActionStartGroupCall", [("call", call as Any)])
                 case .channelAdminLogEventActionStopPoll(let message):
-                return ("channelAdminLogEventActionStopPoll", [("message", String(describing: message))])
+                return ("channelAdminLogEventActionStopPoll", [("message", message as Any)])
+                case .channelAdminLogEventActionToggleAntiSpam(let newValue):
+                return ("channelAdminLogEventActionToggleAntiSpam", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleForum(let newValue):
-                return ("channelAdminLogEventActionToggleForum", [("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionToggleForum", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleGroupCallSetting(let joinMuted):
-                return ("channelAdminLogEventActionToggleGroupCallSetting", [("joinMuted", String(describing: joinMuted))])
+                return ("channelAdminLogEventActionToggleGroupCallSetting", [("joinMuted", joinMuted as Any)])
                 case .channelAdminLogEventActionToggleInvites(let newValue):
-                return ("channelAdminLogEventActionToggleInvites", [("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionToggleInvites", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleNoForwards(let newValue):
-                return ("channelAdminLogEventActionToggleNoForwards", [("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionToggleNoForwards", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionTogglePreHistoryHidden(let newValue):
-                return ("channelAdminLogEventActionTogglePreHistoryHidden", [("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionTogglePreHistoryHidden", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleSignatures(let newValue):
-                return ("channelAdminLogEventActionToggleSignatures", [("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionToggleSignatures", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleSlowMode(let prevValue, let newValue):
-                return ("channelAdminLogEventActionToggleSlowMode", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                return ("channelAdminLogEventActionToggleSlowMode", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionUpdatePinned(let message):
-                return ("channelAdminLogEventActionUpdatePinned", [("message", String(describing: message))])
+                return ("channelAdminLogEventActionUpdatePinned", [("message", message as Any)])
     }
     }
     
@@ -1511,6 +1520,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStopPoll(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionToggleAntiSpam(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAntiSpam(newValue: _1!)
             }
             else {
                 return nil
