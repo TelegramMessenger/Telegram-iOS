@@ -135,6 +135,7 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
                         } else {
                             emojiView = EmojiTextAttachmentView(
                                 context: item.context,
+                                userLocation: .other,
                                 emoji: ChatTextInputTextCustomEmojiAttribute(
                                     interactivelySelectedFromPackId: nil,
                                     fileId: file.fileId.id,

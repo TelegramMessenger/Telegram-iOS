@@ -20,7 +20,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatInviteImporter(let flags, let userId, let date, let about, let approvedBy):
-                return ("chatInviteImporter", [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("date", String(describing: date)), ("about", String(describing: about)), ("approvedBy", String(describing: approvedBy))])
+                return ("chatInviteImporter", [("flags", flags as Any), ("userId", userId as Any), ("date", date as Any), ("about", about as Any), ("approvedBy", approvedBy as Any)])
     }
     }
     
@@ -68,7 +68,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatOnlines(let onlines):
-                return ("chatOnlines", [("onlines", String(describing: onlines))])
+                return ("chatOnlines", [("onlines", onlines as Any)])
     }
     }
     
@@ -122,11 +122,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatParticipant(let userId, let inviterId, let date):
-                return ("chatParticipant", [("userId", String(describing: userId)), ("inviterId", String(describing: inviterId)), ("date", String(describing: date))])
+                return ("chatParticipant", [("userId", userId as Any), ("inviterId", inviterId as Any), ("date", date as Any)])
                 case .chatParticipantAdmin(let userId, let inviterId, let date):
-                return ("chatParticipantAdmin", [("userId", String(describing: userId)), ("inviterId", String(describing: inviterId)), ("date", String(describing: date))])
+                return ("chatParticipantAdmin", [("userId", userId as Any), ("inviterId", inviterId as Any), ("date", date as Any)])
                 case .chatParticipantCreator(let userId):
-                return ("chatParticipantCreator", [("userId", String(describing: userId))])
+                return ("chatParticipantCreator", [("userId", userId as Any)])
     }
     }
     
@@ -211,9 +211,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatParticipants(let chatId, let participants, let version):
-                return ("chatParticipants", [("chatId", String(describing: chatId)), ("participants", String(describing: participants)), ("version", String(describing: version))])
+                return ("chatParticipants", [("chatId", chatId as Any), ("participants", participants as Any), ("version", version as Any)])
                 case .chatParticipantsForbidden(let flags, let chatId, let selfParticipant):
-                return ("chatParticipantsForbidden", [("flags", String(describing: flags)), ("chatId", String(describing: chatId)), ("selfParticipant", String(describing: selfParticipant))])
+                return ("chatParticipantsForbidden", [("flags", flags as Any), ("chatId", chatId as Any), ("selfParticipant", selfParticipant as Any)])
     }
     }
     
@@ -286,7 +286,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatPhoto(let flags, let photoId, let strippedThumb, let dcId):
-                return ("chatPhoto", [("flags", String(describing: flags)), ("photoId", String(describing: photoId)), ("strippedThumb", String(describing: strippedThumb)), ("dcId", String(describing: dcId))])
+                return ("chatPhoto", [("flags", flags as Any), ("photoId", photoId as Any), ("strippedThumb", strippedThumb as Any), ("dcId", dcId as Any)])
                 case .chatPhotoEmpty:
                 return ("chatPhotoEmpty", [])
     }
@@ -354,11 +354,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatReactionsAll(let flags):
-                return ("chatReactionsAll", [("flags", String(describing: flags))])
+                return ("chatReactionsAll", [("flags", flags as Any)])
                 case .chatReactionsNone:
                 return ("chatReactionsNone", [])
                 case .chatReactionsSome(let reactions):
-                return ("chatReactionsSome", [("reactions", String(describing: reactions))])
+                return ("chatReactionsSome", [("reactions", reactions as Any)])
     }
     }
     
@@ -415,7 +415,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .codeSettings(let flags, let logoutTokens):
-                return ("codeSettings", [("flags", String(describing: flags)), ("logoutTokens", String(describing: logoutTokens))])
+                return ("codeSettings", [("flags", flags as Any), ("logoutTokens", logoutTokens as Any)])
     }
     }
     
@@ -505,7 +505,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion, let reactionsDefault):
-                return ("config", [("flags", String(describing: flags)), ("date", String(describing: date)), ("expires", String(describing: expires)), ("testMode", String(describing: testMode)), ("thisDc", String(describing: thisDc)), ("dcOptions", String(describing: dcOptions)), ("dcTxtDomainName", String(describing: dcTxtDomainName)), ("chatSizeMax", String(describing: chatSizeMax)), ("megagroupSizeMax", String(describing: megagroupSizeMax)), ("forwardedCountMax", String(describing: forwardedCountMax)), ("onlineUpdatePeriodMs", String(describing: onlineUpdatePeriodMs)), ("offlineBlurTimeoutMs", String(describing: offlineBlurTimeoutMs)), ("offlineIdleTimeoutMs", String(describing: offlineIdleTimeoutMs)), ("onlineCloudTimeoutMs", String(describing: onlineCloudTimeoutMs)), ("notifyCloudDelayMs", String(describing: notifyCloudDelayMs)), ("notifyDefaultDelayMs", String(describing: notifyDefaultDelayMs)), ("pushChatPeriodMs", String(describing: pushChatPeriodMs)), ("pushChatLimit", String(describing: pushChatLimit)), ("savedGifsLimit", String(describing: savedGifsLimit)), ("editTimeLimit", String(describing: editTimeLimit)), ("revokeTimeLimit", String(describing: revokeTimeLimit)), ("revokePmTimeLimit", String(describing: revokePmTimeLimit)), ("ratingEDecay", String(describing: ratingEDecay)), ("stickersRecentLimit", String(describing: stickersRecentLimit)), ("stickersFavedLimit", String(describing: stickersFavedLimit)), ("channelsReadMediaPeriod", String(describing: channelsReadMediaPeriod)), ("tmpSessions", String(describing: tmpSessions)), ("pinnedDialogsCountMax", String(describing: pinnedDialogsCountMax)), ("pinnedInfolderCountMax", String(describing: pinnedInfolderCountMax)), ("callReceiveTimeoutMs", String(describing: callReceiveTimeoutMs)), ("callRingTimeoutMs", String(describing: callRingTimeoutMs)), ("callConnectTimeoutMs", String(describing: callConnectTimeoutMs)), ("callPacketTimeoutMs", String(describing: callPacketTimeoutMs)), ("meUrlPrefix", String(describing: meUrlPrefix)), ("autoupdateUrlPrefix", String(describing: autoupdateUrlPrefix)), ("gifSearchUsername", String(describing: gifSearchUsername)), ("venueSearchUsername", String(describing: venueSearchUsername)), ("imgSearchUsername", String(describing: imgSearchUsername)), ("staticMapsProvider", String(describing: staticMapsProvider)), ("captionLengthMax", String(describing: captionLengthMax)), ("messageLengthMax", String(describing: messageLengthMax)), ("webfileDcId", String(describing: webfileDcId)), ("suggestedLangCode", String(describing: suggestedLangCode)), ("langPackVersion", String(describing: langPackVersion)), ("baseLangPackVersion", String(describing: baseLangPackVersion)), ("reactionsDefault", String(describing: reactionsDefault))])
+                return ("config", [("flags", flags as Any), ("date", date as Any), ("expires", expires as Any), ("testMode", testMode as Any), ("thisDc", thisDc as Any), ("dcOptions", dcOptions as Any), ("dcTxtDomainName", dcTxtDomainName as Any), ("chatSizeMax", chatSizeMax as Any), ("megagroupSizeMax", megagroupSizeMax as Any), ("forwardedCountMax", forwardedCountMax as Any), ("onlineUpdatePeriodMs", onlineUpdatePeriodMs as Any), ("offlineBlurTimeoutMs", offlineBlurTimeoutMs as Any), ("offlineIdleTimeoutMs", offlineIdleTimeoutMs as Any), ("onlineCloudTimeoutMs", onlineCloudTimeoutMs as Any), ("notifyCloudDelayMs", notifyCloudDelayMs as Any), ("notifyDefaultDelayMs", notifyDefaultDelayMs as Any), ("pushChatPeriodMs", pushChatPeriodMs as Any), ("pushChatLimit", pushChatLimit as Any), ("savedGifsLimit", savedGifsLimit as Any), ("editTimeLimit", editTimeLimit as Any), ("revokeTimeLimit", revokeTimeLimit as Any), ("revokePmTimeLimit", revokePmTimeLimit as Any), ("ratingEDecay", ratingEDecay as Any), ("stickersRecentLimit", stickersRecentLimit as Any), ("stickersFavedLimit", stickersFavedLimit as Any), ("channelsReadMediaPeriod", channelsReadMediaPeriod as Any), ("tmpSessions", tmpSessions as Any), ("pinnedDialogsCountMax", pinnedDialogsCountMax as Any), ("pinnedInfolderCountMax", pinnedInfolderCountMax as Any), ("callReceiveTimeoutMs", callReceiveTimeoutMs as Any), ("callRingTimeoutMs", callRingTimeoutMs as Any), ("callConnectTimeoutMs", callConnectTimeoutMs as Any), ("callPacketTimeoutMs", callPacketTimeoutMs as Any), ("meUrlPrefix", meUrlPrefix as Any), ("autoupdateUrlPrefix", autoupdateUrlPrefix as Any), ("gifSearchUsername", gifSearchUsername as Any), ("venueSearchUsername", venueSearchUsername as Any), ("imgSearchUsername", imgSearchUsername as Any), ("staticMapsProvider", staticMapsProvider as Any), ("captionLengthMax", captionLengthMax as Any), ("messageLengthMax", messageLengthMax as Any), ("webfileDcId", webfileDcId as Any), ("suggestedLangCode", suggestedLangCode as Any), ("langPackVersion", langPackVersion as Any), ("baseLangPackVersion", baseLangPackVersion as Any), ("reactionsDefault", reactionsDefault as Any)])
     }
     }
     
@@ -683,7 +683,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .contact(let userId, let mutual):
-                return ("contact", [("userId", String(describing: userId)), ("mutual", String(describing: mutual))])
+                return ("contact", [("userId", userId as Any), ("mutual", mutual as Any)])
     }
     }
     
@@ -725,7 +725,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .contactStatus(let userId, let status):
-                return ("contactStatus", [("userId", String(describing: userId)), ("status", String(describing: status))])
+                return ("contactStatus", [("userId", userId as Any), ("status", status as Any)])
     }
     }
     
@@ -766,7 +766,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .dataJSON(let data):
-                return ("dataJSON", [("data", String(describing: data))])
+                return ("dataJSON", [("data", data as Any)])
     }
     }
     
@@ -806,7 +806,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .dcOption(let flags, let id, let ipAddress, let port, let secret):
-                return ("dcOption", [("flags", String(describing: flags)), ("id", String(describing: id)), ("ipAddress", String(describing: ipAddress)), ("port", String(describing: port)), ("secret", String(describing: secret))])
+                return ("dcOption", [("flags", flags as Any), ("id", id as Any), ("ipAddress", ipAddress as Any), ("port", port as Any), ("secret", secret as Any)])
     }
     }
     
@@ -854,7 +854,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .defaultHistoryTTL(let period):
-                return ("defaultHistoryTTL", [("period", String(describing: period))])
+                return ("defaultHistoryTTL", [("period", period as Any)])
     }
     }
     
@@ -916,9 +916,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId, let ttlPeriod):
-                return ("dialog", [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("notifySettings", String(describing: notifySettings)), ("pts", String(describing: pts)), ("draft", String(describing: draft)), ("folderId", String(describing: folderId)), ("ttlPeriod", String(describing: ttlPeriod))])
+                return ("dialog", [("flags", flags as Any), ("peer", peer as Any), ("topMessage", topMessage as Any), ("readInboxMaxId", readInboxMaxId as Any), ("readOutboxMaxId", readOutboxMaxId as Any), ("unreadCount", unreadCount as Any), ("unreadMentionsCount", unreadMentionsCount as Any), ("unreadReactionsCount", unreadReactionsCount as Any), ("notifySettings", notifySettings as Any), ("pts", pts as Any), ("draft", draft as Any), ("folderId", folderId as Any), ("ttlPeriod", ttlPeriod as Any)])
                 case .dialogFolder(let flags, let folder, let peer, let topMessage, let unreadMutedPeersCount, let unreadUnmutedPeersCount, let unreadMutedMessagesCount, let unreadUnmutedMessagesCount):
-                return ("dialogFolder", [("flags", String(describing: flags)), ("folder", String(describing: folder)), ("peer", String(describing: peer)), ("topMessage", String(describing: topMessage)), ("unreadMutedPeersCount", String(describing: unreadMutedPeersCount)), ("unreadUnmutedPeersCount", String(describing: unreadUnmutedPeersCount)), ("unreadMutedMessagesCount", String(describing: unreadMutedMessagesCount)), ("unreadUnmutedMessagesCount", String(describing: unreadUnmutedMessagesCount))])
+                return ("dialogFolder", [("flags", flags as Any), ("folder", folder as Any), ("peer", peer as Any), ("topMessage", topMessage as Any), ("unreadMutedPeersCount", unreadMutedPeersCount as Any), ("unreadUnmutedPeersCount", unreadUnmutedPeersCount as Any), ("unreadMutedMessagesCount", unreadMutedMessagesCount as Any), ("unreadUnmutedMessagesCount", unreadUnmutedMessagesCount as Any)])
     }
     }
     
@@ -1057,7 +1057,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
-                return ("dialogFilter", [("flags", String(describing: flags)), ("id", String(describing: id)), ("title", String(describing: title)), ("emoticon", String(describing: emoticon)), ("pinnedPeers", String(describing: pinnedPeers)), ("includePeers", String(describing: includePeers)), ("excludePeers", String(describing: excludePeers))])
+                return ("dialogFilter", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("pinnedPeers", pinnedPeers as Any), ("includePeers", includePeers as Any), ("excludePeers", excludePeers as Any)])
                 case .dialogFilterDefault:
                 return ("dialogFilterDefault", [])
     }
@@ -1123,7 +1123,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .dialogFilterSuggested(let filter, let description):
-                return ("dialogFilterSuggested", [("filter", String(describing: filter)), ("description", String(describing: description))])
+                return ("dialogFilterSuggested", [("filter", filter as Any), ("description", description as Any)])
     }
     }
     
@@ -1171,9 +1171,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .dialogPeer(let peer):
-                return ("dialogPeer", [("peer", String(describing: peer))])
+                return ("dialogPeer", [("peer", peer as Any)])
                 case .dialogPeerFolder(let folderId):
-                return ("dialogPeerFolder", [("folderId", String(describing: folderId))])
+                return ("dialogPeerFolder", [("folderId", folderId as Any)])
     }
     }
     
@@ -1251,9 +1251,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let videoThumbs, let dcId, let attributes):
-                return ("document", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference)), ("date", String(describing: date)), ("mimeType", String(describing: mimeType)), ("size", String(describing: size)), ("thumbs", String(describing: thumbs)), ("videoThumbs", String(describing: videoThumbs)), ("dcId", String(describing: dcId)), ("attributes", String(describing: attributes))])
+                return ("document", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any), ("date", date as Any), ("mimeType", mimeType as Any), ("size", size as Any), ("thumbs", thumbs as Any), ("videoThumbs", videoThumbs as Any), ("dcId", dcId as Any), ("attributes", attributes as Any)])
                 case .documentEmpty(let id):
-                return ("documentEmpty", [("id", String(describing: id))])
+                return ("documentEmpty", [("id", id as Any)])
     }
     }
     
@@ -1400,19 +1400,19 @@ public extension Api {
                 case .documentAttributeAnimated:
                 return ("documentAttributeAnimated", [])
                 case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
-                return ("documentAttributeAudio", [("flags", String(describing: flags)), ("duration", String(describing: duration)), ("title", String(describing: title)), ("performer", String(describing: performer)), ("waveform", String(describing: waveform))])
+                return ("documentAttributeAudio", [("flags", flags as Any), ("duration", duration as Any), ("title", title as Any), ("performer", performer as Any), ("waveform", waveform as Any)])
                 case .documentAttributeCustomEmoji(let flags, let alt, let stickerset):
-                return ("documentAttributeCustomEmoji", [("flags", String(describing: flags)), ("alt", String(describing: alt)), ("stickerset", String(describing: stickerset))])
+                return ("documentAttributeCustomEmoji", [("flags", flags as Any), ("alt", alt as Any), ("stickerset", stickerset as Any)])
                 case .documentAttributeFilename(let fileName):
-                return ("documentAttributeFilename", [("fileName", String(describing: fileName))])
+                return ("documentAttributeFilename", [("fileName", fileName as Any)])
                 case .documentAttributeHasStickers:
                 return ("documentAttributeHasStickers", [])
                 case .documentAttributeImageSize(let w, let h):
-                return ("documentAttributeImageSize", [("w", String(describing: w)), ("h", String(describing: h))])
+                return ("documentAttributeImageSize", [("w", w as Any), ("h", h as Any)])
                 case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
-                return ("documentAttributeSticker", [("flags", String(describing: flags)), ("alt", String(describing: alt)), ("stickerset", String(describing: stickerset)), ("maskCoords", String(describing: maskCoords))])
+                return ("documentAttributeSticker", [("flags", flags as Any), ("alt", alt as Any), ("stickerset", stickerset as Any), ("maskCoords", maskCoords as Any)])
                 case .documentAttributeVideo(let flags, let duration, let w, let h):
-                return ("documentAttributeVideo", [("flags", String(describing: flags)), ("duration", String(describing: duration)), ("w", String(describing: w)), ("h", String(describing: h))])
+                return ("documentAttributeVideo", [("flags", flags as Any), ("duration", duration as Any), ("w", w as Any), ("h", h as Any)])
     }
     }
     

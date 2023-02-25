@@ -116,7 +116,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                         itemFile: nil,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: component.item.isTemplate ? .primary : .none
                     ),
                     context: component.context,
                     attemptSynchronousLoad: false,
@@ -157,6 +157,15 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                     badge = .featured
                 }
                 itemLayer.update(transition: transition, size: iconFrame.size, badge: badge, blurredBadgeColor: UIColor(white: 0.0, alpha: 0.1), blurredBadgeBackgroundColor: component.theme.list.plainBackgroundColor)
+                
+                switch itemLayer.item.tintMode {
+                case .none:
+                    break
+                case .primary:
+                    itemLayer.layerTintColor = component.theme.list.itemPrimaryTextColor.cgColor
+                case .accent:
+                    itemLayer.layerTintColor = component.theme.list.itemAccentColor.cgColor
+                }
                 
                 itemLayer.isVisibleForAnimations = true
             }

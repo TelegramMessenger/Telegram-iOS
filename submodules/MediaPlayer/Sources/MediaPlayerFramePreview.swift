@@ -25,9 +25,9 @@ private final class FramePreviewContext {
     }
 }
 
-private func initializedPreviewContext(queue: Queue, postbox: Postbox, fileReference: FileMediaReference) -> Signal<QueueLocalObject<FramePreviewContext>, NoError> {
+private func initializedPreviewContext(queue: Queue, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, fileReference: FileMediaReference) -> Signal<QueueLocalObject<FramePreviewContext>, NoError> {
     return Signal { subscriber in
-        let source = UniversalSoftwareVideoSource(mediaBox: postbox.mediaBox, fileReference: fileReference)
+        let source = UniversalSoftwareVideoSource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: userContentType, fileReference: fileReference)
         let readyDisposable = (source.ready
         |> filter { $0 }).start(next: { _ in
             subscriber.putNext(QueueLocalObject(queue: queue, generate: {
@@ -49,10 +49,10 @@ private final class MediaPlayerFramePreviewImpl {
     private var nextFrameTimestamp: Double?
     fileprivate let framePipe = ValuePipe<FramePreviewResult>()
     
-    init(queue: Queue, postbox: Postbox, fileReference: FileMediaReference) {
+    init(queue: Queue, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, fileReference: FileMediaReference) {
         self.queue = queue
         self.context = Promise()
-        self.context.set(initializedPreviewContext(queue: queue, postbox: postbox, fileReference: fileReference))
+        self.context.set(initializedPreviewContext(queue: queue, postbox: postbox, userLocation: userLocation, userContentType: userContentType, fileReference: fileReference))
     }
     
     deinit {
@@ -131,11 +131,11 @@ public final class MediaPlayerFramePreview: FramePreview {
         }
     }
     
-    public init(postbox: Postbox, fileReference: FileMediaReference) {
+    public init(postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, fileReference: FileMediaReference) {
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return MediaPlayerFramePreviewImpl(queue: queue, postbox: postbox, fileReference: fileReference)
+            return MediaPlayerFramePreviewImpl(queue: queue, postbox: postbox, userLocation: userLocation, userContentType: userContentType, fileReference: fileReference)
         })
     }
     

@@ -260,6 +260,8 @@
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
         pickerController.hasSchedule = strongController.hasSchedule;
         pickerController.reminder = strongController.reminder;
+        pickerController.forum = strongController.forum;
+        pickerController.isSuggesting = strongController.isSuggesting;
         pickerController.presentScheduleController = strongController.presentScheduleController;
         pickerController.presentTimerController = strongController.presentTimerController;
         [strongController pushViewController:pickerController animated:true];
@@ -361,6 +363,16 @@
 {
     _reminder = reminder;
     self.pickerController.reminder = reminder;
+}
+
+- (void)setForum:(bool)forum {
+    _forum = forum;
+    self.pickerController.forum = forum;
+}
+
+- (void)setIsSuggesting:(bool)isSuggesting {
+    _isSuggesting = isSuggesting;
+    self.pickerController.isSuggesting = isSuggesting;
 }
 
 - (void)setPresentScheduleController:(void (^)(bool, void (^)(int32_t)))presentScheduleController {
@@ -804,16 +816,16 @@
 
 #pragma mark -
 
-- (void)completeWithAvatarImage:(UIImage *)image
+- (void)completeWithAvatarImage:(UIImage *)image commit:(void(^)(void))commit
 {
     if (self.avatarCompletionBlock != nil)
-        self.avatarCompletionBlock(image);
+        self.avatarCompletionBlock(image, commit);
 }
 
-- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
+- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image commit:(void(^)(void))commit
 {
     if (self.avatarVideoCompletionBlock != nil)
-        self.avatarVideoCompletionBlock(image, asset, adjustments);
+        self.avatarVideoCompletionBlock(image, asset, adjustments, commit);
 }
 
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime
@@ -929,10 +941,8 @@
                     grouping = false;
                 }
             }
-            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
-                if (entity.animated) {
-                    grouping = true;
-                }
+            if (adjustments.paintingData.hasAnimation) {
+                grouping = false;
             }
         }
     }
@@ -956,6 +966,8 @@
                 caption = nil;
             }
         }
+        
+        bool spoiler = [editingContext spoilerForItem:item];
         
         switch (asset.type)
         {
@@ -1028,6 +1040,10 @@
                             dict[@"timer"] = timer;
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (spoiler) {
+                            dict[@"spoiler"] = @true;
+                        }
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1105,6 +1121,10 @@
                                 else if (groupedId != nil && !hasAnyTimers)
                                     dict[@"groupedId"] = groupedId;
                                 
+                                if (spoiler) {
+                                    dict[@"spoiler"] = @true;
+                                }
+                                
                                 id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                                 return generatedItem;
                             }];
@@ -1149,14 +1169,7 @@
                             if (adjustments.paintingData.stickers.count > 0)
                                 dict[@"stickers"] = adjustments.paintingData.stickers;
                             
-                            bool animated = false;
-                            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
-                                if (entity.animated) {
-                                    animated = true;
-                                    break;
-                                }
-                            }
-                              
+                            bool animated = adjustments.paintingData.hasAnimation;
                             if (animated) {
                                 dict[@"isAnimation"] = @true;
                                 if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
@@ -1187,6 +1200,10 @@
                                 dict[@"timer"] = timer;
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
+                            
+                            if (spoiler) {
+                                dict[@"spoiler"] = @true;
+                            }
                             
                             id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                             return generatedItem;
@@ -1227,6 +1244,10 @@
                         
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (spoiler) {
+                            dict[@"spoiler"] = @true;
+                        }
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1296,6 +1317,10 @@
                             dict[@"timer"] = timer;
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (spoiler) {
+                            dict[@"spoiler"] = @true;
+                        }
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1374,6 +1399,10 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
+                    
                     id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                     return generatedItem;
                 }]];
@@ -1387,8 +1416,7 @@
                 break;
         }
         
-        if (groupedId != nil && i == 10)
-        {
+        if (groupedId != nil && i == 10) {
             i = 0;
             groupedId = @([self generateGroupedId]);
         }
@@ -1423,10 +1451,8 @@
                     grouping = false;
                 }
             }
-            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
-                if (entity.animated) {
-                    grouping = true;
-                }
+            if (adjustments.paintingData.hasAnimation) {
+                grouping = false;
             }
         }
     }

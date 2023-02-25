@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import SwitchNode
+import AppBundle
 
 public enum ItemListSwitchItemNodeType {
     case regular
@@ -19,6 +20,7 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let type: ItemListSwitchItemNodeType
     let enableInteractiveChanges: Bool
     let enabled: Bool
+    let displayLocked: Bool
     let disableLeadingInset: Bool
     let maximumNumberOfLines: Int
     let noCorners: Bool
@@ -28,7 +30,7 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let activatedWhileDisabled: () -> Void
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, disableLeadingInset: Bool = false, maximumNumberOfLines: Int = 1, noCorners: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, displayLocked: Bool = false, disableLeadingInset: Bool = false, maximumNumberOfLines: Int = 1, noCorners: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
@@ -36,6 +38,7 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
         self.type = type
         self.enableInteractiveChanges = enableInteractiveChanges
         self.enabled = enabled
+        self.displayLocked = displayLocked
         self.disableLeadingInset = disableLeadingInset
         self.maximumNumberOfLines = maximumNumberOfLines
         self.noCorners = noCorners
@@ -127,6 +130,8 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
     private let switchGestureNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
+    
+    private var lockedIconNode: ASImageNode?
     
     private let activateArea: AccessibilityAreaNode
     
@@ -245,7 +250,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 insets.bottom = 0.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: item.maximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 80.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: item.maximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 64.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             contentSize.height = max(contentSize.height, titleLayout.size.height + 22.0)
             
@@ -404,6 +409,36 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         switchView.isUserInteractionEnabled = item.enableInteractiveChanges
                     }
                     strongSelf.switchGestureNode.isHidden = item.enableInteractiveChanges && item.enabled
+                    
+                    if item.displayLocked {
+                        var updateLockedIconImage = false
+                        if let _ = updatedTheme {
+                            updateLockedIconImage = true
+                        }
+                        
+                        let lockedIconNode: ASImageNode
+                        if let current = strongSelf.lockedIconNode {
+                            lockedIconNode = current
+                        } else {
+                            updateLockedIconImage = true
+                            lockedIconNode = ASImageNode()
+                            strongSelf.lockedIconNode = lockedIconNode
+                            strongSelf.insertSubnode(lockedIconNode, aboveSubnode: strongSelf.switchNode)
+                        }
+                        
+                        if updateLockedIconImage, let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: item.presentationData.theme.list.itemSecondaryTextColor) {
+                            lockedIconNode.image = image
+                        }
+                        
+                        let switchFrame = strongSelf.switchNode.frame
+                        
+                        if let icon = lockedIconNode.image {
+                            lockedIconNode.frame = CGRect(origin: CGPoint(x: switchFrame.minX + 10.0 + UIScreenPixel, y: switchFrame.minY + 9.0), size: icon.size)
+                        }
+                    } else if let lockedIconNode = strongSelf.lockedIconNode {
+                        strongSelf.lockedIconNode = nil
+                        lockedIconNode.removeFromSupernode()
+                    }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }

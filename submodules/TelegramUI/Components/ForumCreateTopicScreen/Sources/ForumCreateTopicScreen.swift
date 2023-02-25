@@ -401,11 +401,14 @@ private final class TopicIconSelectionComponent: Component {
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.emojiContent,
                     stickerContent: nil,
+                    maskContent: nil,
                     gifContent: nil,
                     hasRecentGifs: false,
                     availableGifSearchEmojies: [],
                     defaultToEmojiTab: true,
                     externalTopPanelContainer: self.panelHostView,
+                    externalBottomPanelContainer: nil,
+                    displayTopPanelBackground: true,
                     topPanelExtensionUpdated: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
                     hideTopPanelUpdated: { _, _ in },
@@ -417,7 +420,8 @@ private final class TopicIconSelectionComponent: Component {
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,
                     displayBottomPanel: false,
-                    isExpanded: true
+                    isExpanded: true,
+                    clipContentToTopPanel: false
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -960,12 +964,15 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         },
                         updateSearchQuery: { _, _ in
                         },
+                        updateScrollingToItemGroup: {
+                        },
                         chatPeerId: nil,
                         peekBehavior: nil,
                         customLayout: nil,
                         externalBackground: nil,
                         externalExpansionView: nil,
-                        useOpaqueTheme: true
+                        useOpaqueTheme: true,
+                        hideBackground: false
                     )
                 }
             }

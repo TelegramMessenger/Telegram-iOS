@@ -76,6 +76,9 @@ extension ReplyMarkupMessageAttribute {
                 if (markupFlags & (1 << 2)) != 0 {
                     flags.insert(.personal)
                 }
+                if (markupFlags & (1 << 4)) != 0 {
+                    flags.insert(.persistent)
+                }
                 placeholder = apiPlaceholder
             case let .replyInlineMarkup(apiRows):
                 rows = apiRows.map { ReplyMarkupRow(apiRow: $0) }

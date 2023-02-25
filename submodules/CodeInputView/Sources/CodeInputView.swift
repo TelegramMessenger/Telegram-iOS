@@ -118,6 +118,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     private var itemViews: [ItemView] = []
     
     public var updated: (() -> Void)?
+    public var longPressed: (() -> Void)?
     
     private var theme: Theme?
     private var count: Int?
@@ -166,6 +167,18 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.textField.becomeFirstResponder()
+        }
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:))))
+    }
+    
+    @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if case .ended = gestureRecognizer.state {
+            self.longPressed?()
         }
     }
     

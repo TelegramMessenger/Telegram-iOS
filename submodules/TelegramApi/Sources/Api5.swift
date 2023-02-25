@@ -32,9 +32,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
-                return ("draftMessage", [("flags", String(describing: flags)), ("replyToMsgId", String(describing: replyToMsgId)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("date", String(describing: date))])
+                return ("draftMessage", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("message", message as Any), ("entities", entities as Any), ("date", date as Any)])
                 case .draftMessageEmpty(let flags, let date):
-                return ("draftMessageEmpty", [("flags", String(describing: flags)), ("date", String(describing: date))])
+                return ("draftMessageEmpty", [("flags", flags as Any), ("date", date as Any)])
     }
     }
     
@@ -112,11 +112,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emailVerificationApple(let token):
-                return ("emailVerificationApple", [("token", String(describing: token))])
+                return ("emailVerificationApple", [("token", token as Any)])
                 case .emailVerificationCode(let code):
-                return ("emailVerificationCode", [("code", String(describing: code))])
+                return ("emailVerificationCode", [("code", code as Any)])
                 case .emailVerificationGoogle(let token):
-                return ("emailVerificationGoogle", [("token", String(describing: token))])
+                return ("emailVerificationGoogle", [("token", token as Any)])
     }
     }
     
@@ -191,7 +191,7 @@ public extension Api {
                 case .emailVerifyPurposeLoginChange:
                 return ("emailVerifyPurposeLoginChange", [])
                 case .emailVerifyPurposeLoginSetup(let phoneNumber, let phoneCodeHash):
-                return ("emailVerifyPurposeLoginSetup", [("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash))])
+                return ("emailVerifyPurposeLoginSetup", [("phoneNumber", phoneNumber as Any), ("phoneCodeHash", phoneCodeHash as Any)])
                 case .emailVerifyPurposePassport:
                 return ("emailVerifyPurposePassport", [])
     }
@@ -255,9 +255,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emojiKeyword(let keyword, let emoticons):
-                return ("emojiKeyword", [("keyword", String(describing: keyword)), ("emoticons", String(describing: emoticons))])
+                return ("emojiKeyword", [("keyword", keyword as Any), ("emoticons", emoticons as Any)])
                 case .emojiKeywordDeleted(let keyword, let emoticons):
-                return ("emojiKeywordDeleted", [("keyword", String(describing: keyword)), ("emoticons", String(describing: emoticons))])
+                return ("emojiKeywordDeleted", [("keyword", keyword as Any), ("emoticons", emoticons as Any)])
     }
     }
     
@@ -321,7 +321,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emojiKeywordsDifference(let langCode, let fromVersion, let version, let keywords):
-                return ("emojiKeywordsDifference", [("langCode", String(describing: langCode)), ("fromVersion", String(describing: fromVersion)), ("version", String(describing: version)), ("keywords", String(describing: keywords))])
+                return ("emojiKeywordsDifference", [("langCode", langCode as Any), ("fromVersion", fromVersion as Any), ("version", version as Any), ("keywords", keywords as Any)])
     }
     }
     
@@ -368,7 +368,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emojiLanguage(let langCode):
-                return ("emojiLanguage", [("langCode", String(describing: langCode))])
+                return ("emojiLanguage", [("langCode", langCode as Any)])
     }
     }
     
@@ -419,11 +419,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emojiStatus(let documentId):
-                return ("emojiStatus", [("documentId", String(describing: documentId))])
+                return ("emojiStatus", [("documentId", documentId as Any)])
                 case .emojiStatusEmpty:
                 return ("emojiStatusEmpty", [])
                 case .emojiStatusUntil(let documentId, let until):
-                return ("emojiStatusUntil", [("documentId", String(describing: documentId)), ("until", String(describing: until))])
+                return ("emojiStatusUntil", [("documentId", documentId as Any), ("until", until as Any)])
     }
     }
     
@@ -476,7 +476,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emojiURL(let url):
-                return ("emojiURL", [("url", String(describing: url))])
+                return ("emojiURL", [("url", url as Any)])
     }
     }
     
@@ -558,15 +558,15 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .encryptedChat(let id, let accessHash, let date, let adminId, let participantId, let gAOrB, let keyFingerprint):
-                return ("encryptedChat", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId)), ("gAOrB", String(describing: gAOrB)), ("keyFingerprint", String(describing: keyFingerprint))])
+                return ("encryptedChat", [("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any), ("gAOrB", gAOrB as Any), ("keyFingerprint", keyFingerprint as Any)])
                 case .encryptedChatDiscarded(let flags, let id):
-                return ("encryptedChatDiscarded", [("flags", String(describing: flags)), ("id", String(describing: id))])
+                return ("encryptedChatDiscarded", [("flags", flags as Any), ("id", id as Any)])
                 case .encryptedChatEmpty(let id):
-                return ("encryptedChatEmpty", [("id", String(describing: id))])
+                return ("encryptedChatEmpty", [("id", id as Any)])
                 case .encryptedChatRequested(let flags, let folderId, let id, let accessHash, let date, let adminId, let participantId, let gA):
-                return ("encryptedChatRequested", [("flags", String(describing: flags)), ("folderId", String(describing: folderId)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId)), ("gA", String(describing: gA))])
+                return ("encryptedChatRequested", [("flags", flags as Any), ("folderId", folderId as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any), ("gA", gA as Any)])
                 case .encryptedChatWaiting(let id, let accessHash, let date, let adminId, let participantId):
-                return ("encryptedChatWaiting", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("date", String(describing: date)), ("adminId", String(describing: adminId)), ("participantId", String(describing: participantId))])
+                return ("encryptedChatWaiting", [("id", id as Any), ("accessHash", accessHash as Any), ("date", date as Any), ("adminId", adminId as Any), ("participantId", participantId as Any)])
     }
     }
     
@@ -711,7 +711,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
-                return ("encryptedFile", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("size", String(describing: size)), ("dcId", String(describing: dcId)), ("keyFingerprint", String(describing: keyFingerprint))])
+                return ("encryptedFile", [("id", id as Any), ("accessHash", accessHash as Any), ("size", size as Any), ("dcId", dcId as Any), ("keyFingerprint", keyFingerprint as Any)])
                 case .encryptedFileEmpty:
                 return ("encryptedFileEmpty", [])
     }
@@ -778,9 +778,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
-                return ("encryptedMessage", [("randomId", String(describing: randomId)), ("chatId", String(describing: chatId)), ("date", String(describing: date)), ("bytes", String(describing: bytes)), ("file", String(describing: file))])
+                return ("encryptedMessage", [("randomId", randomId as Any), ("chatId", chatId as Any), ("date", date as Any), ("bytes", bytes as Any), ("file", file as Any)])
                 case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
-                return ("encryptedMessageService", [("randomId", String(describing: randomId)), ("chatId", String(describing: chatId)), ("date", String(describing: date)), ("bytes", String(describing: bytes))])
+                return ("encryptedMessageService", [("randomId", randomId as Any), ("chatId", chatId as Any), ("date", date as Any), ("bytes", bytes as Any)])
     }
     }
     
@@ -866,7 +866,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let title):
-                return ("chatInviteExported", [("flags", String(describing: flags)), ("link", String(describing: link)), ("adminId", String(describing: adminId)), ("date", String(describing: date)), ("startDate", String(describing: startDate)), ("expireDate", String(describing: expireDate)), ("usageLimit", String(describing: usageLimit)), ("usage", String(describing: usage)), ("requested", String(describing: requested)), ("title", String(describing: title))])
+                return ("chatInviteExported", [("flags", flags as Any), ("link", link as Any), ("adminId", adminId as Any), ("date", date as Any), ("startDate", startDate as Any), ("expireDate", expireDate as Any), ("usageLimit", usageLimit as Any), ("usage", usage as Any), ("requested", requested as Any), ("title", title as Any)])
                 case .chatInvitePublicJoinRequests:
                 return ("chatInvitePublicJoinRequests", [])
     }
@@ -935,7 +935,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .exportedContactToken(let url, let expires):
-                return ("exportedContactToken", [("url", String(describing: url)), ("expires", String(describing: expires))])
+                return ("exportedContactToken", [("url", url as Any), ("expires", expires as Any)])
     }
     }
     
@@ -975,7 +975,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .exportedMessageLink(let link, let html):
-                return ("exportedMessageLink", [("link", String(describing: link)), ("html", String(describing: html))])
+                return ("exportedMessageLink", [("link", link as Any), ("html", html as Any)])
     }
     }
     
@@ -1016,7 +1016,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .fileHash(let offset, let limit, let hash):
-                return ("fileHash", [("offset", String(describing: offset)), ("limit", String(describing: limit)), ("hash", String(describing: hash))])
+                return ("fileHash", [("offset", offset as Any), ("limit", limit as Any), ("hash", hash as Any)])
     }
     }
     
@@ -1061,7 +1061,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .folder(let flags, let id, let title, let photo):
-                return ("folder", [("flags", String(describing: flags)), ("id", String(describing: id)), ("title", String(describing: title)), ("photo", String(describing: photo))])
+                return ("folder", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("photo", photo as Any)])
     }
     }
     
@@ -1109,7 +1109,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .folderPeer(let peer, let folderId):
-                return ("folderPeer", [("peer", String(describing: peer)), ("folderId", String(describing: folderId))])
+                return ("folderPeer", [("peer", peer as Any), ("folderId", folderId as Any)])
     }
     }
     

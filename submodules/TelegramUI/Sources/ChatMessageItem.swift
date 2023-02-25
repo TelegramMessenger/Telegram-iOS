@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import Emoji
 import PersistentStringHash
+import ChatControllerInteraction
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes, location: MessageHistoryEntryLocation?)

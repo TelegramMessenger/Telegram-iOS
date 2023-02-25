@@ -13,6 +13,7 @@ import ChatPresentationInterfaceState
 import AnimationCache
 import MultiAnimationRenderer
 import TextFormat
+import ChatControllerInteraction
 
 private enum EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     case symbol(String)
@@ -206,7 +207,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                     if let file = file {
                         loop: for attribute in file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, displayText, _):
+                            case let .CustomEmoji(_, _, displayText, _):
                                 text = displayText
                                 emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                                 break loop

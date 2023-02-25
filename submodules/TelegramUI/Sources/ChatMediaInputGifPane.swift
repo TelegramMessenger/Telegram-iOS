@@ -9,6 +9,10 @@ import TelegramPresentationData
 import ContextUI
 import AccountContext
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
+import MultiplexedVideoNode
+import FeaturedStickersScreen
+import ChatEntityKeyboardInputNode
 
 private func fixListScrolling(_ multiplexedNode: MultiplexedVideoNode) {
     let searchBarHeight: CGFloat = 56.0
@@ -22,16 +26,6 @@ private func fixListScrolling(_ multiplexedNode: MultiplexedVideoNode) {
         } else {
             transition.updateBounds(layer: multiplexedNode.scrollNode.layer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 60.0), size: multiplexedNode.bounds.size))
         }
-    }
-}
-
-final class ChatMediaInputGifPaneTrendingState {
-    let files: [MultiplexedVideoNodeFile]
-    let nextOffset: String?
-    
-    init(files: [MultiplexedVideoNodeFile], nextOffset: String?) {
-        self.files = files
-        self.nextOffset = nextOffset
     }
 }
 

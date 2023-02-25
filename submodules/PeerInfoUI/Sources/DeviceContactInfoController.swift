@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -21,6 +22,8 @@ import ItemListAddressItem
 import LocalizedPeerData
 import PhoneNumberFormat
 import UndoUI
+import GalleryUI
+import PeerAvatarGalleryUI
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -45,8 +48,9 @@ private final class DeviceContactInfoControllerArguments {
     let openAddress: (DeviceContactAddressData) -> Void
     let displayCopyContextMenu: (DeviceContactInfoEntryTag, String) -> Void
     let updateShareViaException: (Bool) -> Void
+    let openAvatar: (Peer) -> Void
     
-    init(context: AccountContext, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void) {
+    init(context: AccountContext, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void, openAvatar: @escaping (Peer) -> Void) {
         self.context = context
         self.isPlain = isPlain
         self.updateEditingName = updateEditingName
@@ -62,6 +66,7 @@ private final class DeviceContactInfoControllerArguments {
         self.openAddress = openAddress
         self.displayCopyContextMenu = displayCopyContextMenu
         self.updateShareViaException = updateShareViaException
+        self.openAvatar = openAvatar
     }
 }
 
@@ -122,7 +127,7 @@ private enum DeviceContactInfoEntryId: Hashable {
 }
 
 private enum DeviceContactInfoEntry: ItemListNodeEntry {
-    case info(Int, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer, state: ItemListAvatarAndNameInfoItemState, job: String?, isPlain: Bool)
+    case info(Int, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer, state: ItemListAvatarAndNameInfoItemState, job: String?, isPlain: Bool, hiddenAvatar: TelegramMediaImageRepresentation?)
     
     case invite(Int, PresentationTheme, String)
     case sendMessage(Int, PresentationTheme, String)
@@ -204,8 +209,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     static func ==(lhs: DeviceContactInfoEntry, rhs: DeviceContactInfoEntry) -> Bool {
         switch lhs {
-            case let .info(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsState, lhsJobSummary, lhsIsPlain):
-                if case let .info(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsState, rhsJobSummary, rhsIsPlain) = rhs {
+            case let .info(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsState, lhsJobSummary, lhsIsPlain, lhsHiddenAvatar):
+                if case let .info(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsState, rhsJobSummary, rhsIsPlain, rhsHiddenAvatar) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -228,6 +233,9 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsIsPlain != rhsIsPlain {
+                        return false
+                    }
+                    if lhsHiddenAvatar != rhsHiddenAvatar {
                         return false
                     }
                     return true
@@ -347,7 +355,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     
     private var sortIndex: Int {
         switch self {
-            case let .info(index, _, _, _, _, _, _, _):
+            case let .info(index, _, _, _, _, _, _, _, _):
                 return index
             case let .sendMessage(index, _, _):
                 return index
@@ -395,11 +403,14 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
-            case let .info(_, _, _, dateTimeFormat, peer, state, jobSummary, _):
+            case let .info(_, _, _, dateTimeFormat, peer, state, jobSummary, _, hiddenAvatar):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: EnginePeer(peer), presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
-                }, context: nil, call: nil)
+                    if peer.smallProfileImage != nil {
+                        arguments.openAvatar(peer)
+                    }
+                }, context: ItemListAvatarAndNameInfoItemContext(hiddenAvatarRepresentation: hiddenAvatar), call: nil)
             case let .sendMessage(_, _, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks, action: {
                     arguments.performAction(.sendMessage)
@@ -614,7 +625,7 @@ private func filteredContactData(contactData: DeviceContactExtendedData, exclude
     return DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumbers: phoneNumbers), middleName: contactData.middleName, prefix: contactData.prefix, suffix: contactData.suffix, organization: includeJob ? contactData.organization : "", jobTitle: includeJob ? contactData.jobTitle : "", department: includeJob ? contactData.department : "", emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: includeBirthday ? contactData.birthdayDate : nil, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: includeNote ? contactData.note : "")
 }
 
-private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, presentationData: PresentationData, peer: Peer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool) -> [DeviceContactInfoEntry] {
+private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, presentationData: PresentationData, peer: Peer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool, hiddenAvatar: TelegramMediaImageRepresentation?) -> [DeviceContactInfoEntry] {
     var entries: [DeviceContactInfoEntry] = []
     
     var editingName: ItemListAvatarAndNameInfoItemName?
@@ -652,7 +663,7 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
         firstName = presentationData.strings.Message_Contact
     }
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare, hiddenAvatar: hiddenAvatar))
     
     if !selecting {
         if let _ = peer {
@@ -856,6 +867,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     var openAddressImpl: ((DeviceContactAddressData) -> Void)?
     var inviteImpl: (([String]) -> Void)?
     var dismissImpl: ((Bool) -> Void)?
+    var openAvatarImpl: ((Peer) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1042,12 +1054,15 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
             state.addToPrivacyExceptions = value
             return state
         }
+    }, openAvatar: { peer in
+        openAvatarImpl?(peer)
     })
     
+    let hiddenAvatarPromise = Promise<TelegramMediaImageRepresentation?>(nil)
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
-    let signal = combineLatest(presentationData, statePromise.get(), contactData)
-    |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(presentationData, statePromise.get(), contactData, hiddenAvatarPromise.get())
+    |> map { presentationData, state, peerAndContactData, hiddenAvatar -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
             case .vcard:
@@ -1230,7 +1245,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
             focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deviceContactInfoEntries(account: context.account, engine: context.engine, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deviceContactInfoEntries(account: context.account, engine: context.engine, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones, hiddenAvatar: hiddenAvatar), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
         
         return (controllerState, (listState, arguments))
     }
@@ -1328,6 +1343,32 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                 }))
             }
         }
+    }
+    openAvatarImpl = { [weak controller] peer in
+        let avatarController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { _, _ in
+        })
+        hiddenAvatarPromise.set(
+            avatarController.hiddenMedia
+            |> map { entry -> TelegramMediaImageRepresentation? in
+                return entry?.representations.first?.representation
+            }
+        )
+        presentControllerImpl?(avatarController, AvatarGalleryControllerPresentationArguments(transitionArguments: { [weak controller] entry in
+            var transitionNode: ((ASDisplayNode, CGRect, () -> (UIView?, UIView?)), CGRect)?
+            controller?.forEachItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                    transitionNode = itemNode.avatarTransitionNode()
+                }
+            })
+            
+            if let transitionNode = transitionNode {
+                return GalleryTransitionArguments(transitionNode: transitionNode.0, addToTransitionSurface: { [weak controller] view in
+                    controller?.view.addSubview(view)
+                })
+            } else {
+                return nil
+            }
+        }))
     }
     
     return controller

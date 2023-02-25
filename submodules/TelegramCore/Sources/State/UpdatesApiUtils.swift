@@ -301,8 +301,6 @@ extension Api.Update {
                 return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateUserPhone(userId, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
-            case let .updateUserPhoto(userId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateServiceNotification(_, inboxDate, _, _, _, _):
                 if let _ = inboxDate {
                     return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000))]

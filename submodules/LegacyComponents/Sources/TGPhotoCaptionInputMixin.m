@@ -50,7 +50,7 @@
     UIView *parentView = [self _parentView];
     
     id<TGCaptionPanelView> inputPanel = nil;
-    if (_stickersContext) {
+    if (_stickersContext && _stickersContext.captionPanelView != nil) {
         inputPanel = _stickersContext.captionPanelView();
     }
     _inputPanel = inputPanel;
@@ -241,11 +241,11 @@
     if (animated) {
         [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
             _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
-            _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight + 1.0);
+            _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
         } completion:nil];
     } else {
         _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
-        _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight + 1.0);
+        _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
     }
 }
 

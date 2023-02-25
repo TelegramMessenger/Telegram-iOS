@@ -10,6 +10,16 @@ import TelegramUIPreferences
 import AccountContext
 import AppBundle
 import PhotoResources
+import CheckNode
+import Markdown
+
+private let textFont = Font.regular(13.0)
+private let boldTextFont = Font.semibold(13.0)
+
+private func formattedText(_ text: String, color: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
+    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: color), linkAttribute: { _ in return nil}), textAlignment: textAlignment)
+}
+
 
 private final class WebAppAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
@@ -19,6 +29,9 @@ private final class WebAppAlertContentNode: AlertContentNode {
     private let textNode: ASTextNode
     private let appIconNode: ASImageNode
     private let iconNode: ASImageNode
+    
+    private let allowWriteCheckNode: InteractiveCheckNode
+    private let allowWriteLabelNode: ASTextNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -32,7 +45,13 @@ private final class WebAppAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(account: Account, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], actions: [TextAlertAction]) {
+    var allowWriteAccess: Bool = true {
+        didSet {
+            self.allowWriteCheckNode.setSelected(self.allowWriteAccess, animated: true)
+        }
+    }
+    
+    init(account: Account, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], requestWriteAccess: Bool, actions: [TextAlertAction]) {
         self.strings = strings
         self.peerName = peerName
         
@@ -54,6 +73,12 @@ private final class WebAppAlertContentNode: AlertContentNode {
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
+        
+        self.allowWriteCheckNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
+        self.allowWriteCheckNode.setSelected(true, animated: false)
+        self.allowWriteLabelNode = ASTextNode()
+        self.allowWriteLabelNode.maximumNumberOfLines = 4
+        self.allowWriteLabelNode.isUserInteractionEnabled = true
        
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -77,6 +102,12 @@ private final class WebAppAlertContentNode: AlertContentNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.appIconNode)
         self.addSubnode(self.iconNode)
+        
+        if requestWriteAccess {
+            self.addSubnode(self.allowWriteCheckNode)
+            self.addSubnode(self.allowWriteLabelNode)
+        }
+        
     
         self.addSubnode(self.actionNodesSeparator)
         
@@ -88,10 +119,16 @@ private final class WebAppAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
+        self.allowWriteCheckNode.valueChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.allowWriteAccess = !strongSelf.allowWriteAccess
+            }
+        }
+        
         self.updateTheme(theme)
         
         if let peerIcon = self.peerIcon {
-            let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: peerIcon)).start()
+            let _ = freeMediaFileInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: peerIcon)).start()
             self.iconDisposable = (svgIconImageFile(account: account, fileReference: .standalone(media: peerIcon))
             |> deliverOnMainQueue).start(next: { [weak self] transform in
                 if let strongSelf = self {
@@ -109,11 +146,25 @@ private final class WebAppAlertContentNode: AlertContentNode {
         self.iconDisposable?.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.allowWriteLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.allowWriteTap(_:))))
+    }
+    
+    @objc private func allowWriteTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        if self.allowWriteCheckNode.isUserInteractionEnabled {
+            self.allowWriteAccess = !self.allowWriteAccess
+        }
+    }
+    
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.textNode.attributedText = NSAttributedString(string: strings.WebApp_AddToAttachmentText(self.peerName).string, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         self.appIconNode.image = generateTintedImage(image: self.appIconNode.image, color: theme.accentColor)
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/BotPlus"), color: theme.accentColor)
+        
+        self.allowWriteLabelNode.attributedText = formattedText(strings.WebApp_AddToAttachmentAllowMessages(self.peerName).string, color: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -146,6 +197,23 @@ private final class WebAppAlertContentNode: AlertContentNode {
         
         let textSize = self.textNode.measure(size)
         var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize)
+        origin.y += textSize.height
+        
+        var entriesHeight: CGFloat = 0.0
+        
+        if self.allowWriteLabelNode.supernode != nil {
+            origin.y += 16.0
+            entriesHeight += 16.0
+            
+            let checkSize = CGSize(width: 22.0, height: 22.0)
+            let condensedSize = CGSize(width: size.width - 76.0, height: size.height)
+            
+            let allowWriteSize = self.allowWriteLabelNode.measure(condensedSize)
+            transition.updateFrame(node: self.allowWriteLabelNode, frame: CGRect(origin: CGPoint(x: 46.0, y: origin.y), size: allowWriteSize))
+            transition.updateFrame(node: self.allowWriteCheckNode, frame: CGRect(origin: CGPoint(x: 12.0, y: origin.y - 2.0), size: checkSize))
+            origin.y += allowWriteSize.height
+            entriesHeight += allowWriteSize.height
+        }
         
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
@@ -180,7 +248,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
         }
         
         let resultWidth = contentWidth + insets.left + insets.right
-        let resultSize = CGSize(width: resultWidth, height: iconSize.height + textSize.height + actionsHeight + 17.0 + insets.top + insets.bottom)
+        let resultSize = CGSize(width: resultWidth, height: iconSize.height + textSize.height + entriesHeight + actionsHeight + 17.0 + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -227,7 +295,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
             nodeIndex += 1
         }
         
-        iconFrame.origin.x = floorToScreenPixels((resultSize.width - iconFrame.width) / 2.0) + 19.0
+        iconFrame.origin.x = floorToScreenPixels((resultSize.width - iconFrame.width) / 2.0) + 21.0
         
         transition.updateFrame(node: self.appIconNode, frame: CGRect(x: iconFrame.minX - 50.0, y: iconFrame.minY + 3.0, width: 42.0, height: 42.0))
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
@@ -239,7 +307,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
     }
 }
 
-public func addWebAppToAttachmentController(context: AccountContext, peerName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], completion: @escaping () -> Void) -> AlertController {
+public func addWebAppToAttachmentController(context: AccountContext, peerName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], requestWriteAccess: Bool, completion: @escaping (Bool) -> Void) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
@@ -251,10 +319,10 @@ public func addWebAppToAttachmentController(context: AccountContext, peerName: S
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_AddToAttachmentAdd, action: {
         dismissImpl?(true)
       
-        completion()
+        completion(true)
     })]
     
-    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, icons: icons, actions: actions)
+    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, icons: icons, requestWriteAccess: requestWriteAccess, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in

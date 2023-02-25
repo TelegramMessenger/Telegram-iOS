@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import RangeSet
+import TextFormat
 
 public enum MediaPlayerScrubbingNodeCap {
     case square
@@ -27,6 +28,39 @@ public struct MediaPlayerScrubbingChapter: Equatable {
         self.title = title
         self.start = start
     }
+}
+
+public func parseMediaPlayerChapters(_ string: NSAttributedString) -> [MediaPlayerScrubbingChapter] {
+    var existingTimecodes = Set<Double>()
+    var timecodeRanges: [(NSRange, TelegramTimecode)] = []
+    var lineRanges: [NSRange] = []
+    string.enumerateAttributes(in: NSMakeRange(0, string.length), options: [], using: { attributes, range, _ in
+        if let timecode = attributes[NSAttributedString.Key(TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+            if !existingTimecodes.contains(timecode.time) {
+                timecodeRanges.append((range, timecode))
+                existingTimecodes.insert(timecode.time)
+            }
+        }
+    })
+    (string.string as NSString).enumerateSubstrings(in: NSMakeRange(0, string.length), options: .byLines, using: { _, range, _, _ in
+        lineRanges.append(range)
+    })
+    
+    var chapters: [MediaPlayerScrubbingChapter] = []
+    for (timecodeRange, timecode) in timecodeRanges {
+        inner: for lineRange in lineRanges {
+            if lineRange.contains(timecodeRange.location) {
+                if lineRange.length > timecodeRange.length && timecodeRange.location < lineRange.location + 4 {
+                    var title = ((string.string as NSString).substring(with: lineRange) as NSString).replacingCharacters(in: NSMakeRange(timecodeRange.location - lineRange.location, timecodeRange.length), with: "")
+                    title = title.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
+                    chapters.append(MediaPlayerScrubbingChapter(title: title, start: timecode.time))
+                }
+                break inner
+            }
+        }
+    }
+    
+    return chapters
 }
 
 private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureRecognizerDelegate {

@@ -33,7 +33,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .page(let flags, let url, let blocks, let photos, let documents, let views):
-                return ("page", [("flags", String(describing: flags)), ("url", String(describing: url)), ("blocks", String(describing: blocks)), ("photos", String(describing: photos)), ("documents", String(describing: documents)), ("views", String(describing: views))])
+                return ("page", [("flags", flags as Any), ("url", url as Any), ("blocks", blocks as Any), ("photos", photos as Any), ("documents", documents as Any), ("views", views as Any)])
     }
     }
     
@@ -352,63 +352,63 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageBlockAnchor(let name):
-                return ("pageBlockAnchor", [("name", String(describing: name))])
+                return ("pageBlockAnchor", [("name", name as Any)])
                 case .pageBlockAudio(let audioId, let caption):
-                return ("pageBlockAudio", [("audioId", String(describing: audioId)), ("caption", String(describing: caption))])
+                return ("pageBlockAudio", [("audioId", audioId as Any), ("caption", caption as Any)])
                 case .pageBlockAuthorDate(let author, let publishedDate):
-                return ("pageBlockAuthorDate", [("author", String(describing: author)), ("publishedDate", String(describing: publishedDate))])
+                return ("pageBlockAuthorDate", [("author", author as Any), ("publishedDate", publishedDate as Any)])
                 case .pageBlockBlockquote(let text, let caption):
-                return ("pageBlockBlockquote", [("text", String(describing: text)), ("caption", String(describing: caption))])
+                return ("pageBlockBlockquote", [("text", text as Any), ("caption", caption as Any)])
                 case .pageBlockChannel(let channel):
-                return ("pageBlockChannel", [("channel", String(describing: channel))])
+                return ("pageBlockChannel", [("channel", channel as Any)])
                 case .pageBlockCollage(let items, let caption):
-                return ("pageBlockCollage", [("items", String(describing: items)), ("caption", String(describing: caption))])
+                return ("pageBlockCollage", [("items", items as Any), ("caption", caption as Any)])
                 case .pageBlockCover(let cover):
-                return ("pageBlockCover", [("cover", String(describing: cover))])
+                return ("pageBlockCover", [("cover", cover as Any)])
                 case .pageBlockDetails(let flags, let blocks, let title):
-                return ("pageBlockDetails", [("flags", String(describing: flags)), ("blocks", String(describing: blocks)), ("title", String(describing: title))])
+                return ("pageBlockDetails", [("flags", flags as Any), ("blocks", blocks as Any), ("title", title as Any)])
                 case .pageBlockDivider:
                 return ("pageBlockDivider", [])
                 case .pageBlockEmbed(let flags, let url, let html, let posterPhotoId, let w, let h, let caption):
-                return ("pageBlockEmbed", [("flags", String(describing: flags)), ("url", String(describing: url)), ("html", String(describing: html)), ("posterPhotoId", String(describing: posterPhotoId)), ("w", String(describing: w)), ("h", String(describing: h)), ("caption", String(describing: caption))])
+                return ("pageBlockEmbed", [("flags", flags as Any), ("url", url as Any), ("html", html as Any), ("posterPhotoId", posterPhotoId as Any), ("w", w as Any), ("h", h as Any), ("caption", caption as Any)])
                 case .pageBlockEmbedPost(let url, let webpageId, let authorPhotoId, let author, let date, let blocks, let caption):
-                return ("pageBlockEmbedPost", [("url", String(describing: url)), ("webpageId", String(describing: webpageId)), ("authorPhotoId", String(describing: authorPhotoId)), ("author", String(describing: author)), ("date", String(describing: date)), ("blocks", String(describing: blocks)), ("caption", String(describing: caption))])
+                return ("pageBlockEmbedPost", [("url", url as Any), ("webpageId", webpageId as Any), ("authorPhotoId", authorPhotoId as Any), ("author", author as Any), ("date", date as Any), ("blocks", blocks as Any), ("caption", caption as Any)])
                 case .pageBlockFooter(let text):
-                return ("pageBlockFooter", [("text", String(describing: text))])
+                return ("pageBlockFooter", [("text", text as Any)])
                 case .pageBlockHeader(let text):
-                return ("pageBlockHeader", [("text", String(describing: text))])
+                return ("pageBlockHeader", [("text", text as Any)])
                 case .pageBlockKicker(let text):
-                return ("pageBlockKicker", [("text", String(describing: text))])
+                return ("pageBlockKicker", [("text", text as Any)])
                 case .pageBlockList(let items):
-                return ("pageBlockList", [("items", String(describing: items))])
+                return ("pageBlockList", [("items", items as Any)])
                 case .pageBlockMap(let geo, let zoom, let w, let h, let caption):
-                return ("pageBlockMap", [("geo", String(describing: geo)), ("zoom", String(describing: zoom)), ("w", String(describing: w)), ("h", String(describing: h)), ("caption", String(describing: caption))])
+                return ("pageBlockMap", [("geo", geo as Any), ("zoom", zoom as Any), ("w", w as Any), ("h", h as Any), ("caption", caption as Any)])
                 case .pageBlockOrderedList(let items):
-                return ("pageBlockOrderedList", [("items", String(describing: items))])
+                return ("pageBlockOrderedList", [("items", items as Any)])
                 case .pageBlockParagraph(let text):
-                return ("pageBlockParagraph", [("text", String(describing: text))])
+                return ("pageBlockParagraph", [("text", text as Any)])
                 case .pageBlockPhoto(let flags, let photoId, let caption, let url, let webpageId):
-                return ("pageBlockPhoto", [("flags", String(describing: flags)), ("photoId", String(describing: photoId)), ("caption", String(describing: caption)), ("url", String(describing: url)), ("webpageId", String(describing: webpageId))])
+                return ("pageBlockPhoto", [("flags", flags as Any), ("photoId", photoId as Any), ("caption", caption as Any), ("url", url as Any), ("webpageId", webpageId as Any)])
                 case .pageBlockPreformatted(let text, let language):
-                return ("pageBlockPreformatted", [("text", String(describing: text)), ("language", String(describing: language))])
+                return ("pageBlockPreformatted", [("text", text as Any), ("language", language as Any)])
                 case .pageBlockPullquote(let text, let caption):
-                return ("pageBlockPullquote", [("text", String(describing: text)), ("caption", String(describing: caption))])
+                return ("pageBlockPullquote", [("text", text as Any), ("caption", caption as Any)])
                 case .pageBlockRelatedArticles(let title, let articles):
-                return ("pageBlockRelatedArticles", [("title", String(describing: title)), ("articles", String(describing: articles))])
+                return ("pageBlockRelatedArticles", [("title", title as Any), ("articles", articles as Any)])
                 case .pageBlockSlideshow(let items, let caption):
-                return ("pageBlockSlideshow", [("items", String(describing: items)), ("caption", String(describing: caption))])
+                return ("pageBlockSlideshow", [("items", items as Any), ("caption", caption as Any)])
                 case .pageBlockSubheader(let text):
-                return ("pageBlockSubheader", [("text", String(describing: text))])
+                return ("pageBlockSubheader", [("text", text as Any)])
                 case .pageBlockSubtitle(let text):
-                return ("pageBlockSubtitle", [("text", String(describing: text))])
+                return ("pageBlockSubtitle", [("text", text as Any)])
                 case .pageBlockTable(let flags, let title, let rows):
-                return ("pageBlockTable", [("flags", String(describing: flags)), ("title", String(describing: title)), ("rows", String(describing: rows))])
+                return ("pageBlockTable", [("flags", flags as Any), ("title", title as Any), ("rows", rows as Any)])
                 case .pageBlockTitle(let text):
-                return ("pageBlockTitle", [("text", String(describing: text))])
+                return ("pageBlockTitle", [("text", text as Any)])
                 case .pageBlockUnsupported:
                 return ("pageBlockUnsupported", [])
                 case .pageBlockVideo(let flags, let videoId, let caption):
-                return ("pageBlockVideo", [("flags", String(describing: flags)), ("videoId", String(describing: videoId)), ("caption", String(describing: caption))])
+                return ("pageBlockVideo", [("flags", flags as Any), ("videoId", videoId as Any), ("caption", caption as Any)])
     }
     }
     
@@ -909,7 +909,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageCaption(let text, let credit):
-                return ("pageCaption", [("text", String(describing: text)), ("credit", String(describing: credit))])
+                return ("pageCaption", [("text", text as Any), ("credit", credit as Any)])
     }
     }
     
@@ -963,9 +963,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pageListItemBlocks(let blocks):
-                return ("pageListItemBlocks", [("blocks", String(describing: blocks))])
+                return ("pageListItemBlocks", [("blocks", blocks as Any)])
                 case .pageListItemText(let text):
-                return ("pageListItemText", [("text", String(describing: text))])
+                return ("pageListItemText", [("text", text as Any)])
     }
     }
     

@@ -34,6 +34,7 @@ import Pasteboard
 import SettingsUI
 import PremiumUI
 import TextNodeWithEntities
+import ChatControllerInteraction
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -410,7 +411,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var actions: [ContextMenuItem] = []
-        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
         }, iconSource: nil, action: { c, _ in
             c.dismiss(completion: {
@@ -420,7 +421,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         if !chatPresentationInterfaceState.isPremium && !premiumConfiguration.isPremiumDisabled {
-            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { c, _ in
                 c.dismiss(completion: {
@@ -715,7 +716,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             }, action: { _, f in
                                 f(.dismissWithoutContent)
                                 
-                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled], selectForumThreads: true))
                                 controller.peerSelected = { [weak controller] peer, _ in
                                     let peerId = peer.id
                                     
@@ -1169,7 +1170,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             }
             
-            if resourceAvailable, !message.containsSecretMedia {
+            if resourceAvailable, !message.containsSecretMedia, !chatPresentationInterfaceState.copyProtectionEnabled, !message.isCopyProtected() {
                 var mediaReference: AnyMediaReference?
                 var isVideo = false
                 for media in message.media {
@@ -1186,7 +1187,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     actions.append(.action(ContextMenuActionItem(text: isVideo ? chatPresentationInterfaceState.strings.Gallery_SaveVideo : chatPresentationInterfaceState.strings.Gallery_SaveImage, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
+                        let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
                         |> deliverOnMainQueue).start(completed: {
                             Queue.mainQueue().after(0.2) {
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -2417,7 +2418,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 var firstCustomEmojiReaction: TelegramMediaFile?
                 for (_, file) in customEmoji {
                     loop: for attribute in file.attributes {
-                        if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                        if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                             if case let .id(id, _) = packReference, !existingIds.contains(id) {
                                 if firstCustomEmojiReaction == nil {
                                     firstCustomEmojiReaction = file

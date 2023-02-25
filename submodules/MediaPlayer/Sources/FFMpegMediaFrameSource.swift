@@ -68,6 +68,8 @@ private func contextForCurrentThread() -> FFMpegMediaFrameSourceContext? {
 public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let queue: Queue
     private let postbox: Postbox
+    private let userLocation: MediaResourceUserLocation
+    private let userContentType: MediaResourceUserContentType
     private let resourceReference: MediaResourceReference
     private let tempFilePath: String?
     private let streamable: Bool
@@ -98,9 +100,11 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    public init(queue: Queue, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
+    public init(queue: Queue, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
         self.queue = queue
         self.postbox = postbox
+        self.userLocation = userLocation
+        self.userContentType = userContentType
         self.resourceReference = resourceReference
         self.tempFilePath = tempFilePath
         self.streamable = streamable
@@ -181,13 +185,14 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         let tempFilePath = self.tempFilePath
         let queue = self.queue
         let streamable = self.streamable
+        let userLocation = self.userLocation
         let video = self.video
         let preferSoftwareDecoding = self.preferSoftwareDecoding
         let fetchAutomatically = self.fetchAutomatically
         let maximumFetchSize = self.maximumFetchSize
         
         self.performWithContext { [weak self] context in
-            context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
+            context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
             
             let (frames, endOfStream) = context.takeFrames(until: timestamp)
             
@@ -228,6 +233,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             
             let queue = self.queue
             let postbox = self.postbox
+            let userLocation = self.userLocation
             let resourceReference = self.resourceReference
             let tempFilePath = self.tempFilePath
             let streamable = self.streamable
@@ -245,7 +251,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             self.performWithContext { [weak self] context in
                 let _ = currentSemaphore.swap(context.currentSemaphore)
                 
-                context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
+                context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
                 
                 context.seek(timestamp: timestamp, completed: { streamDescriptionsAndTimestamp in
                     queue.async {

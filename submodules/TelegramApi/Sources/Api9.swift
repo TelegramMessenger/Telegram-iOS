@@ -64,19 +64,19 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputPeerChannel(let channelId, let accessHash):
-                return ("inputPeerChannel", [("channelId", String(describing: channelId)), ("accessHash", String(describing: accessHash))])
+                return ("inputPeerChannel", [("channelId", channelId as Any), ("accessHash", accessHash as Any)])
                 case .inputPeerChannelFromMessage(let peer, let msgId, let channelId):
-                return ("inputPeerChannelFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("channelId", String(describing: channelId))])
+                return ("inputPeerChannelFromMessage", [("peer", peer as Any), ("msgId", msgId as Any), ("channelId", channelId as Any)])
                 case .inputPeerChat(let chatId):
-                return ("inputPeerChat", [("chatId", String(describing: chatId))])
+                return ("inputPeerChat", [("chatId", chatId as Any)])
                 case .inputPeerEmpty:
                 return ("inputPeerEmpty", [])
                 case .inputPeerSelf:
                 return ("inputPeerSelf", [])
                 case .inputPeerUser(let userId, let accessHash):
-                return ("inputPeerUser", [("userId", String(describing: userId)), ("accessHash", String(describing: accessHash))])
+                return ("inputPeerUser", [("userId", userId as Any), ("accessHash", accessHash as Any)])
                 case .inputPeerUserFromMessage(let peer, let msgId, let userId):
-                return ("inputPeerUserFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("userId", String(describing: userId))])
+                return ("inputPeerUserFromMessage", [("peer", peer as Any), ("msgId", msgId as Any), ("userId", userId as Any)])
     }
     }
     
@@ -188,7 +188,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
-                return ("inputPeerNotifySettings", [("flags", String(describing: flags)), ("showPreviews", String(describing: showPreviews)), ("silent", String(describing: silent)), ("muteUntil", String(describing: muteUntil)), ("sound", String(describing: sound))])
+                return ("inputPeerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("sound", sound as Any)])
     }
     }
     
@@ -243,7 +243,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputPhoneCall(let id, let accessHash):
-                return ("inputPhoneCall", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputPhoneCall", [("id", id as Any), ("accessHash", accessHash as Any)])
     }
     }
     
@@ -291,7 +291,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputPhoto(let id, let accessHash, let fileReference):
-                return ("inputPhoto", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference))])
+                return ("inputPhoto", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any)])
                 case .inputPhotoEmpty:
                 return ("inputPhotoEmpty", [])
     }
@@ -529,19 +529,19 @@ public extension Api {
                 case .inputPrivacyValueAllowAll:
                 return ("inputPrivacyValueAllowAll", [])
                 case .inputPrivacyValueAllowChatParticipants(let chats):
-                return ("inputPrivacyValueAllowChatParticipants", [("chats", String(describing: chats))])
+                return ("inputPrivacyValueAllowChatParticipants", [("chats", chats as Any)])
                 case .inputPrivacyValueAllowContacts:
                 return ("inputPrivacyValueAllowContacts", [])
                 case .inputPrivacyValueAllowUsers(let users):
-                return ("inputPrivacyValueAllowUsers", [("users", String(describing: users))])
+                return ("inputPrivacyValueAllowUsers", [("users", users as Any)])
                 case .inputPrivacyValueDisallowAll:
                 return ("inputPrivacyValueDisallowAll", [])
                 case .inputPrivacyValueDisallowChatParticipants(let chats):
-                return ("inputPrivacyValueDisallowChatParticipants", [("chats", String(describing: chats))])
+                return ("inputPrivacyValueDisallowChatParticipants", [("chats", chats as Any)])
                 case .inputPrivacyValueDisallowContacts:
                 return ("inputPrivacyValueDisallowContacts", [])
                 case .inputPrivacyValueDisallowUsers(let users):
-                return ("inputPrivacyValueDisallowUsers", [("users", String(describing: users))])
+                return ("inputPrivacyValueDisallowUsers", [("users", users as Any)])
     }
     }
     
@@ -642,9 +642,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputSecureFile(let id, let accessHash):
-                return ("inputSecureFile", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputSecureFile", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputSecureFileUploaded(let id, let parts, let md5Checksum, let fileHash, let secret):
-                return ("inputSecureFileUploaded", [("id", String(describing: id)), ("parts", String(describing: parts)), ("md5Checksum", String(describing: md5Checksum)), ("fileHash", String(describing: fileHash)), ("secret", String(describing: secret))])
+                return ("inputSecureFileUploaded", [("id", id as Any), ("parts", parts as Any), ("md5Checksum", md5Checksum as Any), ("fileHash", fileHash as Any), ("secret", secret as Any)])
     }
     }
     
@@ -722,7 +722,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputSecureValue(let flags, let type, let data, let frontSide, let reverseSide, let selfie, let translation, let files, let plainData):
-                return ("inputSecureValue", [("flags", String(describing: flags)), ("type", String(describing: type)), ("data", String(describing: data)), ("frontSide", String(describing: frontSide)), ("reverseSide", String(describing: reverseSide)), ("selfie", String(describing: selfie)), ("translation", String(describing: translation)), ("files", String(describing: files)), ("plainData", String(describing: plainData))])
+                return ("inputSecureValue", [("flags", flags as Any), ("type", type as Any), ("data", data as Any), ("frontSide", frontSide as Any), ("reverseSide", reverseSide as Any), ("selfie", selfie as Any), ("translation", translation as Any), ("files", files as Any), ("plainData", plainData as Any)])
     }
     }
     
@@ -806,7 +806,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputSingleMedia(let flags, let media, let randomId, let message, let entities):
-                return ("inputSingleMedia", [("flags", String(describing: flags)), ("media", String(describing: media)), ("randomId", String(describing: randomId)), ("message", String(describing: message)), ("entities", String(describing: entities))])
+                return ("inputSingleMedia", [("flags", flags as Any), ("media", media as Any), ("randomId", randomId as Any), ("message", message as Any), ("entities", entities as Any)])
     }
     }
     

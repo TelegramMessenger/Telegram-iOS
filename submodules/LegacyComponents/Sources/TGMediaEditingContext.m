@@ -54,6 +54,16 @@
 
 @end
 
+@interface TGMediaSpoilerUpdate : NSObject
+
+@property (nonatomic, readonly, strong) id<TGMediaEditableItem> item;
+@property (nonatomic, readonly) bool spoiler;
+
++ (instancetype)spoilerUpdateWithItem:(id<TGMediaEditableItem>)item spoiler:(bool)spoiler;
++ (instancetype)spoilerUpdate:(bool)spoiler;
+
+@end
+
 
 @interface TGModernCache (Private)
 
@@ -69,6 +79,8 @@
     NSMutableDictionary *_adjustments;
     NSMutableDictionary *_timers;
     NSNumber *_timer;
+    
+    NSMutableDictionary *_spoilers;
  
     SQueue *_queue;
     
@@ -99,6 +111,7 @@
     SPipe *_adjustmentsPipe;
     SPipe *_captionPipe;
     SPipe *_timerPipe;
+    SPipe *_spoilerPipe;
     SPipe *_fullSizePipe;
     SPipe *_cropPipe;
     
@@ -119,6 +132,7 @@
         _captions = [[NSMutableDictionary alloc] init];
         _adjustments = [[NSMutableDictionary alloc] init];
         _timers = [[NSMutableDictionary alloc] init];
+        _spoilers = [[NSMutableDictionary alloc] init];
         
         _imageCache = [[TGMemoryImageCache alloc] initWithSoftMemoryLimit:[[self class] imageSoftMemoryLimit]
                                                           hardMemoryLimit:[[self class] imageHardMemoryLimit]];
@@ -165,6 +179,7 @@
         _adjustmentsPipe = [[SPipe alloc] init];
         _captionPipe = [[SPipe alloc] init];
         _timerPipe = [[SPipe alloc] init];
+        _spoilerPipe = [[SPipe alloc] init];
         _fullSizePipe = [[SPipe alloc] init];
         _cropPipe = [[SPipe alloc] init];
     }
@@ -596,6 +611,73 @@
 
 #pragma mark -
 
+- (bool)spoilerForItem:(NSObject<TGMediaEditableItem> *)item
+{
+    NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return nil;
+    
+    return [self _spoilerForItemId:itemId];
+}
+
+- (bool)_spoilerForItemId:(NSString *)itemId
+{
+    if (itemId == nil)
+        return nil;
+    
+    return _spoilers[itemId];
+}
+
+- (void)setSpoiler:(bool)spoiler forItem:(NSObject<TGMediaEditableItem> *)item
+{
+    NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return;
+    
+    if (spoiler)
+        _spoilers[itemId] = @true;
+    else
+        [_spoilers removeObjectForKey:itemId];
+
+    _spoilerPipe.sink([TGMediaSpoilerUpdate spoilerUpdateWithItem:item spoiler:spoiler]);
+}
+
+- (SSignal *)spoilerSignalForItem:(NSObject<TGMediaEditableItem> *)item
+{
+    SSignal *updateSignal = [[_spoilerPipe.signalProducer() filter:^bool(TGMediaSpoilerUpdate *update)
+    {
+        return [update.item.uniqueIdentifier isEqualToString:item.uniqueIdentifier];
+    }] map:^NSNumber *(TGMediaSpoilerUpdate *update)
+    {
+        return @(update.spoiler);
+    }];
+    
+    return [[SSignal single:@([self spoilerForItem:item])] then:updateSignal];
+}
+
+- (SSignal *)spoilerSignalForIdentifier:(NSString *)identifier
+{
+    SSignal *updateSignal = [[_spoilerPipe.signalProducer() filter:^bool(TGMediaSpoilerUpdate *update)
+    {
+        return [update.item.uniqueIdentifier isEqualToString:identifier];
+    }] map:^NSNumber *(TGMediaSpoilerUpdate *update)
+    {
+        return @(update.spoiler);
+    }];
+    
+    return [[SSignal single:@([self _spoilerForItemId:identifier])] then:updateSignal];
+}
+
+- (SSignal *)spoilersUpdatedSignal
+{
+    return [_spoilerPipe.signalProducer() map:^id(__unused id value)
+    {
+        return @true;
+    }];
+}
+
+#pragma mark -
+
 - (void)setImage:(UIImage *)image thumbnailImage:(UIImage *)thumbnailImage forItem:(id<TGMediaEditableItem>)item synchronous:(bool)synchronous
 {
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
@@ -633,7 +715,7 @@
         [_queue dispatch:block];
 }
 
-- (bool)setPaintingData:(NSData *)data image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video
+- (bool)setPaintingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl entitiesDataUrl:(NSURL **)entitiesDataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video
 {
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
     
@@ -643,6 +725,7 @@
     NSURL *imagesDirectory = video ? _videoPaintingImagesUrl : _paintingImagesUrl;
     NSURL *imageUrl = [imagesDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.png", [TGStringUtils md5:itemId]]];
     NSURL *dataUrl = [_paintingDatasUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.dat", [TGStringUtils md5:itemId]]];
+    NSURL *entitiesDataUrl = [_paintingDatasUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@_entities.dat", [TGStringUtils md5:itemId]]];
     
     [_paintingImageCache setImage:image forKey:itemId attributes:NULL];
     
@@ -651,12 +734,16 @@
     bool imageSuccess = [imageData writeToURL:imageUrl options:NSDataWritingAtomic error:nil];
     [[NSFileManager defaultManager] removeItemAtURL:dataUrl error:nil];
     bool dataSuccess = [data writeToURL:dataUrl options:NSDataWritingAtomic error:nil];
+    bool entitiesDataSuccess = [entitiesData writeToURL:entitiesDataUrl options:NSDataWritingAtomic error:nil];
     
     if (imageSuccess && imageOutUrl != NULL)
         *imageOutUrl = imageUrl;
     
     if (dataSuccess && dataOutUrl != NULL)
         *dataOutUrl = dataUrl;
+    
+    if (entitiesDataSuccess && entitiesDataOutUrl != NULL)
+        *entitiesDataOutUrl = entitiesDataUrl;
         
     if (video)
         [_storeVideoPaintingImages addObject:imageUrl];
@@ -1078,6 +1165,26 @@
 {
     TGMediaTimerUpdate *update = [[TGMediaTimerUpdate alloc] init];
     update->_timer = timer;
+    return update;
+}
+
+@end
+
+
+@implementation TGMediaSpoilerUpdate
+
++ (instancetype)spoilerUpdateWithItem:(id<TGMediaEditableItem>)item spoiler:(bool)spoiler
+{
+    TGMediaSpoilerUpdate *update = [[TGMediaSpoilerUpdate alloc] init];
+    update->_item = item;
+    update->_spoiler = spoiler;
+    return update;
+}
+
++ (instancetype)spoilerUpdate:(bool)spoiler
+{
+    TGMediaSpoilerUpdate *update = [[TGMediaSpoilerUpdate alloc] init];
+    update->_spoiler = spoiler;
     return update;
 }
 

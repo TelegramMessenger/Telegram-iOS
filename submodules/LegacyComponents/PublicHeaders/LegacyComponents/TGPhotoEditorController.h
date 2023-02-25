@@ -12,7 +12,7 @@
 @class AVPlayer;
 
 @protocol TGPhotoPaintStickersContext;
-@class TGPhotoEntitiesContainerView;
+@protocol TGPhotoDrawingEntitiesView;
 
 typedef enum {
     TGPhotoEditorControllerGenericIntent = 0,
@@ -21,7 +21,9 @@ typedef enum {
     TGPhotoEditorControllerFromCameraIntent = (1 << 2),
     TGPhotoEditorControllerWebIntent = (1 << 3),
     TGPhotoEditorControllerVideoIntent = (1 << 4),
-    TGPhotoEditorControllerForumAvatarIntent = (1 << 5)
+    TGPhotoEditorControllerForumAvatarIntent = (1 << 5),
+    TGPhotoEditorControllerSuggestedAvatarIntent = (1 << 6),
+    TGPhotoEditorControllerSuggestingAvatarIntent = (1 << 7)
 } TGPhotoEditorControllerIntent;
 
 @interface TGPhotoEditorController : TGOverlayController
@@ -51,17 +53,19 @@ typedef enum {
 
 @property (nonatomic, copy) void (^willFinishEditing)(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges);
 @property (nonatomic, copy) void (^didFinishRenderingFullSizeImage)(UIImage *fullSizeImage);
-@property (nonatomic, copy) void (^didFinishEditing)(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges);
-@property (nonatomic, copy) void (^didFinishEditingVideo)(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges);
+@property (nonatomic, copy) void (^didFinishEditing)(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void));
+@property (nonatomic, copy) void (^didFinishEditingVideo)(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void));
 
 @property (nonatomic, assign) bool skipInitialTransition;
 @property (nonatomic, assign) bool dontHideStatusBar;
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
 @property (nonatomic, strong) NSArray *faces;
 
+@property (nonatomic, strong) NSString *senderName;
+
 @property (nonatomic, strong) AVPlayer *player;
 
-@property (nonatomic, strong) TGPhotoEntitiesContainerView *entitiesView;
+@property (nonatomic, strong) UIView<TGPhotoDrawingEntitiesView> *entitiesView;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSAttributedString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab;
 

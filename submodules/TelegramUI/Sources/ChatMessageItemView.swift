@@ -12,6 +12,7 @@ import ContextUI
 import ChatListUI
 import TelegramPresentationData
 import SwiftSignalKit
+import ChatControllerInteraction
 
 struct ChatMessageItemWidthFill {
     var compactInset: CGFloat

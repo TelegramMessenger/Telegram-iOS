@@ -986,7 +986,7 @@ public class AttachmentController: ViewController {
                                 let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                                     let accountResource = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
                                     
-                                    let fetchedFullSize = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                    let fetchedFullSize = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file), reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
                                     let fetchedFullSizeDisposable = fetchedFullSize.start()
                                     let fullSizeDisposable = accountResource.start()
                                     
@@ -998,7 +998,7 @@ public class AttachmentController: ViewController {
                                 disposableSet.add(accountFullSizeData.start())
                             }
                         } else {
-                            disposableSet.add(freeMediaFileInteractiveFetched(account: context.account, fileReference: .attachBot(peer: peer, media: file)).start())
+                            disposableSet.add(freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: .attachBot(peer: peer, media: file)).start())
                         }
                     }
                 }

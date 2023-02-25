@@ -107,10 +107,14 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var buttonText: String?
         var canShare = true
         switch entry {
-            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
-                nameText = peer.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
-                if let date = date {
+            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _, isFallback):
+                if date != 0 || isFallback {
+                    nameText = peer.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
+                }
+                if let date = date, date != 0 {
                     dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).string
+                } else if isFallback {
+                    dateText = !videoRepresentations.isEmpty ? self.strings.ProfilePhoto_PublicVideo : self.strings.ProfilePhoto_PublicPhoto
                 }
                 
                 if (!videoRepresentations.isEmpty) {

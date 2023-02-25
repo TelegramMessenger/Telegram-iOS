@@ -86,6 +86,7 @@ public enum AdminLogEventAction {
     case editTopic(prevInfo: ForumTopicInfo, newInfo: ForumTopicInfo)
     case pinTopic(prevInfo: EngineMessageHistoryThread.Info?, newInfo: EngineMessageHistoryThread.Info?)
     case toggleForum(isForum: Bool)
+    case toggleAntiSpam(isEnabled: Bool)
 }
 
 public enum ChannelAdminLogEventError {
@@ -342,6 +343,8 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .pinTopic(prevInfo: prevInfo, newInfo: newInfo)
                                     case let .channelAdminLogEventActionToggleForum(newValue):
                                         action = .toggleForum(isForum: newValue == .boolTrue)
+                                    case let .channelAdminLogEventActionToggleAntiSpam(newValue):
+                                        action = .toggleAntiSpam(isEnabled: newValue == .boolTrue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

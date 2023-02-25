@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 final class ChatMediaInputSettingsItem: ListViewItem {
     let inputNodeInteraction: ChatMediaInputNodeInteraction

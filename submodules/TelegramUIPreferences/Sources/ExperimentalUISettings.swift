@@ -48,6 +48,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var inlineForums: Bool
     public var accountReactionEffectOverrides: [AccountReactionOverrides]
     public var accountStickerEffectOverrides: [AccountReactionOverrides]
+    public var disableQuickReaction: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -72,7 +73,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enableReactionOverrides: false,
             inlineForums: false,
             accountReactionEffectOverrides: [],
-            accountStickerEffectOverrides: []
+            accountStickerEffectOverrides: [],
+            disableQuickReaction: false
         )
     }
     
@@ -98,7 +100,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enableReactionOverrides: Bool,
         inlineForums: Bool,
         accountReactionEffectOverrides: [AccountReactionOverrides],
-        accountStickerEffectOverrides: [AccountReactionOverrides]
+        accountStickerEffectOverrides: [AccountReactionOverrides],
+        disableQuickReaction: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -122,6 +125,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineForums = inlineForums
         self.accountReactionEffectOverrides = accountReactionEffectOverrides
         self.accountStickerEffectOverrides = accountStickerEffectOverrides
+        self.disableQuickReaction = disableQuickReaction
     }
     
     public init(from decoder: Decoder) throws {
@@ -149,6 +153,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineForums = try container.decodeIfPresent(Bool.self, forKey: "inlineForums") ?? false
         self.accountReactionEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
         self.accountStickerEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
+        self.disableQuickReaction = try container.decodeIfPresent(Bool.self, forKey: "disableQuickReaction") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -176,6 +181,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.inlineForums, forKey: "inlineForums")
         try container.encode(self.accountReactionEffectOverrides, forKey: "accountReactionEffectOverrides")
         try container.encode(self.accountStickerEffectOverrides, forKey: "accountStickerEffectOverrides")
+        try container.encode(self.disableQuickReaction, forKey: "disableQuickReaction")
     }
 }
 

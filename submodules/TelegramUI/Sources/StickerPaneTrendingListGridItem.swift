@@ -12,6 +12,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
 import MergeLists
+import ChatPresentationInterfaceState
 
 private let boundingSize = CGSize(width: 41.0, height: 41.0)
 private let boundingImageSize = CGSize(width: 28.0, height: 28.0)
@@ -266,7 +267,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                 thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker)
                 resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
             } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                 resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
             }
         }
@@ -310,7 +311,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
                 if let resourceReference = resourceReference {
-                    self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
+                    self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: resourceReference).start())
                 }
             }
         }

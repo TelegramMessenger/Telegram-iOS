@@ -15,6 +15,7 @@ import ContextUI
 import ChatPresentationInterfaceState
 import PremiumUI
 import UndoUI
+import ChatControllerInteraction
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]

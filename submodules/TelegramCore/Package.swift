@@ -22,6 +22,7 @@ let package = Package(
         .package(name: "CryptoUtils", path: "../CryptoUtils"),
         .package(name: "NetworkLogging", path: "../NetworkLogging"),
         .package(name: "Reachability", path: "../Reachability"),
+        .package(name: "DarwinDirStat", path: "../Utils/DarwinDirStat"),
         .package(name: "EncryptionProvider", path: "../EncryptionProvider"),
     ],
     targets: [
@@ -35,6 +36,7 @@ let package = Package(
                            .product(name: "TelegramApi", package: "TelegramApi", condition: nil),
                            .product(name: "CryptoUtils", package: "CryptoUtils", condition: nil),
                            .product(name: "NetworkLogging", package: "NetworkLogging", condition: nil),
+                           .product(name: "DarwinDirStat", package: "DarwinDirStat", condition: nil),
                            .product(name: "Reachability", package: "Reachability", condition: nil),
                            .product(name: "EncryptionProvider", package: "EncryptionProvider", condition: nil)],
             path: "Sources"),

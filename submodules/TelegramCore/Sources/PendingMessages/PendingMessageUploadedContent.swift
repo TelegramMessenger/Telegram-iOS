@@ -423,6 +423,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                 ttlSeconds = autoclearMessageAttribute.timeout
                             }
                             var stickers: [Api.InputDocument]?
+                            var hasSpoiler = false
                             for attribute in attributes {
                                 if let attribute = attribute as? EmbeddedMediaStickersMessageAttribute {
                                     var stickersValue: [Api.InputDocument] = []
@@ -435,7 +436,9 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                         stickers = stickersValue
                                         flags |= 1 << 0
                                     }
-                                    break
+                                } else if let _ = attribute as? MediaSpoilerMessageAttribute {
+                                    flags |= 1 << 2
+                                    hasSpoiler = true
                                 }
                             }
                             return postbox.transaction { transaction -> Api.InputPeer? in
@@ -459,6 +462,9 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                                     if let autoclearMessageAttribute = autoclearMessageAttribute {
                                                         flags |= 1 << 0
                                                         ttlSeconds = autoclearMessageAttribute.timeout
+                                                    }
+                                                    if hasSpoiler {
+                                                        flags |= 1 << 1
                                                     }
                                                     return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(flags: flags, id: .inputPhoto(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: ttlSeconds), text), reuploadInfo: nil)), media: mediaImage)
                                                 }
@@ -726,6 +732,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                     if case let .done(file, thumbnail) = fileAndThumbnailResult {
                         var flags: Int32 = 0
                         
+                        var hasSpoiler = false
                         var thumbnailFile: Api.InputFile?
                         if case let .file(file) = thumbnail {
                             thumbnailFile = file
@@ -740,6 +747,9 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             if let attribute = attribute as? AutoclearTimeoutMessageAttribute {
                                 flags |= 1 << 1
                                 ttlSeconds = attribute.timeout
+                            } else if let _ = attribute as? MediaSpoilerMessageAttribute {
+                                flags |= 1 << 5
+                                hasSpoiler = true
                             }
                         }
                         
@@ -788,7 +798,11 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                     switch result {
                                         case let .messageMediaDocument(_, document, _):
                                         if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
-                                                return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil, query: nil), text), reuploadInfo: nil)), media: mediaFile)
+                                                var flags: Int32 = 0
+                                                if hasSpoiler {
+                                                    flags |= (1 << 1)
+                                                }
+                                                return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaDocument(flags: flags, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil, query: nil), text), reuploadInfo: nil)), media: mediaFile)
                                             }
                                         default:
                                             break
