@@ -96,7 +96,7 @@ public final class AccountStateManager {
             var canComplete: Bool = false
             
             var isInternallyComplete: Bool {
-                return self.pendingChannels.contains(where: { $0.value.isCompleted })
+                return !self.pendingChannels.contains(where: { !$0.value.isCompleted })
             }
             
             init(associatedDifferenceId: Int32) {
@@ -145,8 +145,8 @@ public final class AccountStateManager {
             return self.nextId
         }
         
-        private let isUpdatingValue = ValuePromise<Bool>(false)
-        private var currentIsUpdatingValue = false {
+        private let isUpdatingValue = ValuePromise<Bool>(true)
+        private var currentIsUpdatingValue = true {
             didSet {
                 if self.currentIsUpdatingValue != oldValue {
                     self.isUpdatingValue.set(self.currentIsUpdatingValue)
@@ -658,7 +658,7 @@ public final class AccountStateManager {
                     
                     var disableParallelChannelReset = false
                     if let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self), let data = appConfig.data {
-                        if let _ = data["ios_disable_parallel_channel_reset"] {
+                        if let _ = data["ios_disable_parallel_channel_reset_v2"] {
                             disableParallelChannelReset = true
                         }
                     }

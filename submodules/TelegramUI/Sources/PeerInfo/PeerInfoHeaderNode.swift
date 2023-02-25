@@ -2846,7 +2846,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
 
             titleStringText = title
-            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
             
             if self.isSettings, let user = peer as? TelegramUser {

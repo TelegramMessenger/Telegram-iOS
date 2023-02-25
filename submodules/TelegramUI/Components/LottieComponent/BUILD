@@ -15,6 +15,7 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/AppBundle",
     ],
     visibility = [
         "//visibility:public",

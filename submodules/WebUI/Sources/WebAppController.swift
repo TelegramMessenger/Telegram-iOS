@@ -199,6 +199,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var placeholderNode: ShimmerEffectNode?
     
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
+        
+        fileprivate var mainButtonState: AttachmentMainButtonState? {
+            didSet {
+                self.mainButtonStatePromise.set(.single(self.mainButtonState))
+            }
+        }
         fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
         
         private let context: AccountContext
@@ -397,6 +403,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         @objc fileprivate func mainButtonPressed() {
+            if let mainButtonState = self.mainButtonState, !mainButtonState.isVisible || !mainButtonState.isEnabled {
+                return
+            }
             self.webView?.lastTouchTimestamp = CACurrentMediaTime()
             self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
@@ -635,7 +644,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             let isLoading = json["is_progress_visible"] as? Bool
                             let isEnabled = json["is_active"] as? Bool
                             let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false, isEnabled: isEnabled ?? true)
-                            self.mainButtonStatePromise.set(.single(state))
+                            self.mainButtonState = state
                         }
                     }
                 case "web_app_request_viewport":
@@ -971,7 +980,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let id = id {
                 paramsString = "{button_id: \"\(id)\"}"
             }
-            self.webView?.sendEvent(name: "popup_closed", data: paramsString)
+            self.webView?.sendEvent(name: "popup_closed", data: paramsString ?? "{}")
         }
         
         fileprivate func sendPhoneRequestedEvent(phone: String?) {

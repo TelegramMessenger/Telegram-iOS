@@ -3334,15 +3334,15 @@ public extension Api.functions.help {
                 }
 }
 public extension Api.functions.help {
-                static func getAppConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.JSONValue>) {
+                static func getAppConfig(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.AppConfig>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1735311088)
-                    
-                    return (FunctionDescription(name: "help.getAppConfig", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.JSONValue? in
+                    buffer.appendInt32(1642330196)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.getAppConfig", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.AppConfig? in
                         let reader = BufferReader(buffer)
-                        var result: Api.JSONValue?
+                        var result: Api.help.AppConfig?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.JSONValue
+                            result = Api.parse(reader, signature: signature) as? Api.help.AppConfig
                         }
                         return result
                     })
@@ -7920,6 +7920,25 @@ public extension Api.functions.stickers {
                 }
 }
 public extension Api.functions.stickers {
+                static func changeSticker(flags: Int32, sticker: Api.InputDocument, emoji: String?, maskCoords: Api.MaskCoords?, keywords: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-179077444)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    sticker.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(emoji!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {maskCoords!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(keywords!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stickers.changeSticker", parameters: [("flags", String(describing: flags)), ("sticker", String(describing: sticker)), ("emoji", String(describing: emoji)), ("maskCoords", String(describing: maskCoords)), ("keywords", String(describing: keywords))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.StickerSet?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.StickerSet
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stickers {
                 static func changeStickerPosition(sticker: Api.InputDocument, position: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-4795190)
@@ -7991,12 +8010,30 @@ public extension Api.functions.stickers {
                 }
 }
 public extension Api.functions.stickers {
-                static func setStickerSetThumb(stickerset: Api.InputStickerSet, thumb: Api.InputDocument) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                static func renameStickerSet(stickerset: Api.InputStickerSet, title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1707717072)
+                    buffer.appendInt32(306912256)
                     stickerset.serialize(buffer, true)
-                    thumb.serialize(buffer, true)
-                    return (FunctionDescription(name: "stickers.setStickerSetThumb", parameters: [("stickerset", String(describing: stickerset)), ("thumb", String(describing: thumb))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                    serializeString(title, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stickers.renameStickerSet", parameters: [("stickerset", String(describing: stickerset)), ("title", String(describing: title))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.StickerSet?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.StickerSet
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stickers {
+                static func setStickerSetThumb(flags: Int32, stickerset: Api.InputStickerSet, thumb: Api.InputDocument?, thumbDocumentId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1486204014)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    stickerset.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {thumb!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt64(thumbDocumentId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stickers.setStickerSetThumb", parameters: [("flags", String(describing: flags)), ("stickerset", String(describing: stickerset)), ("thumb", String(describing: thumb)), ("thumbDocumentId", String(describing: thumbDocumentId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.StickerSet?
                         if let signature = reader.readInt32() {

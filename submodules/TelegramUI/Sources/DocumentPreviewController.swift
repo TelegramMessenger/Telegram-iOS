@@ -212,6 +212,16 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
             for toolbar in self.toolbars {
                 toolbar.isHidden = true
             }
+            
+            if let navigationBar = navigationBars.first {
+                let imageViews = imageViewsInSubviews(forView: navigationBar)
+                for imageView in imageViews {
+                    if imageView.frame.height > 4.0 {
+                        imageView.isHidden = true
+                        imageView.superview?.isUserInteractionEnabled = false
+                    }
+                }
+            }
         } else {
             self.navigationItem.rightBarButtonItems = [UIBarButtonItem()]
             self.navigationItem.setRightBarButton(UIBarButtonItem(), animated: false)
@@ -246,6 +256,18 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
         return (navigationBars, toolbars)
     }
     
+    private func imageViewsInSubviews(forView view: UIView) -> [UIView] {
+        var result: [UIView] = []
+        for subview in view.subviews {
+            if let subview = subview as? UIImageView {
+                result.append(subview)
+            } else {
+                let imageViews = imageViewsInSubviews(forView: subview)
+                result.append(contentsOf: imageViews)
+            }
+        }
+        return result
+    }
 }
 
 func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile, canShare: Bool) {

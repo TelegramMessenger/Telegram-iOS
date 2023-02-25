@@ -215,6 +215,60 @@ public extension Api.contacts {
     }
 }
 public extension Api.help {
+    enum AppConfig: TypeConstructorDescription {
+        case appConfig(hash: Int32, config: Api.JSONValue)
+        case appConfigNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .appConfig(let hash, let config):
+                    if boxed {
+                        buffer.appendInt32(-585598930)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    config.serialize(buffer, true)
+                    break
+                case .appConfigNotModified:
+                    if boxed {
+                        buffer.appendInt32(2094949405)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .appConfig(let hash, let config):
+                return ("appConfig", [("hash", hash as Any), ("config", config as Any)])
+                case .appConfigNotModified:
+                return ("appConfigNotModified", [])
+    }
+    }
+    
+        public static func parse_appConfig(_ reader: BufferReader) -> AppConfig? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.JSONValue?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.JSONValue
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.help.AppConfig.appConfig(hash: _1!, config: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_appConfigNotModified(_ reader: BufferReader) -> AppConfig? {
+            return Api.help.AppConfig.appConfigNotModified
+        }
+    
+    }
+}
+public extension Api.help {
     enum AppUpdate: TypeConstructorDescription {
         case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?, sticker: Api.Document?)
         case noAppUpdate
@@ -1270,64 +1324,6 @@ public extension Api.messages {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum AllStickers: TypeConstructorDescription {
-        case allStickers(hash: Int64, sets: [Api.StickerSet])
-        case allStickersNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .allStickers(let hash, let sets):
-                    if boxed {
-                        buffer.appendInt32(-843329861)
-                    }
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sets.count))
-                    for item in sets {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .allStickersNotModified:
-                    if boxed {
-                        buffer.appendInt32(-395967805)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .allStickers(let hash, let sets):
-                return ("allStickers", [("hash", hash as Any), ("sets", sets as Any)])
-                case .allStickersNotModified:
-                return ("allStickersNotModified", [])
-    }
-    }
-    
-        public static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.StickerSet]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSet.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.AllStickers.allStickers(hash: _1!, sets: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
-            return Api.messages.AllStickers.allStickersNotModified
         }
     
     }

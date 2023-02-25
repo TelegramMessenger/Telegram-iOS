@@ -540,11 +540,21 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     displayUndo = false
                 }
                 self.originalRemainingSeconds = duration
-            case let .audioRate(slowdown, text):
+            case let .audioRate(rate, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: slowdown ? "anim_voicespeedstop" : "anim_voicespeed", colors: [:], scale: 0.066)
+            
+                let animationName: String
+                if rate == 1.5 {
+                    animationName = "anim_voice1_5x"
+                } else if rate == 2.0 {
+                    animationName = "anim_voice2x"
+                } else {
+                    animationName = "anim_voice1x"
+                }
+            
+                self.animationNode = AnimationNode(animation: animationName, colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)

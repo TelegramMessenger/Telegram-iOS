@@ -30,7 +30,7 @@ public extension LottieComponent {
             return true
         }
         
-        override public func load(_ f: @escaping (Data) -> Void) -> Disposable {
+        override public func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
             let fileId = self.fileId
             let mediaBox = self.context.account.postbox.mediaBox
             return (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
@@ -60,7 +60,7 @@ public extension LottieComponent {
                 guard let data else {
                     return
                 }
-                f(data)
+                f(data, nil)
             })
         }
     }
