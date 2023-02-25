@@ -1662,7 +1662,7 @@ final class StorageUsageScreenComponent: Component {
                 return
             }
             
-            self.statsDisposable = (component.context.engine.resources.collectStorageUsageStats()
+            self.statsDisposable = (component.context.engine.resources.collectStorageUsageStats(excludePeerIds: component.context.inactiveSecretChatPeerIds)
             |> deliverOnMainQueue).start(next: { [weak self] stats in
                 guard let self, let component = self.component else {
                     completion()

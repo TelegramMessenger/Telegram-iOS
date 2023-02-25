@@ -47,7 +47,7 @@ private final class StorageUsageControllerArguments {
     let clearPeerMedia: (PeerId) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let openCategoryMenu: (StorageUsageEntryTag) -> Void
-
+    
     init(context: AccountContext, updateKeepMediaTimeout: @escaping (Int32) -> Void, updateMaximumCacheSize: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, openCategoryMenu: @escaping (StorageUsageEntryTag) -> Void) {
         self.context = context
         self.updateKeepMediaTimeout = updateKeepMediaTimeout
@@ -71,7 +71,7 @@ private enum StorageUsageEntryTag: Hashable, ItemListItemTag {
     case privateChats
     case groups
     case channels
-
+    
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? StorageUsageEntryTag, self == other {
             return true
@@ -83,11 +83,11 @@ private enum StorageUsageEntryTag: Hashable, ItemListItemTag {
 
 private enum StorageUsageEntry: ItemListNodeEntry {
     case keepMediaHeader(PresentationTheme, String)
-
+    
     case keepMediaPrivateChats(title: String, text: String?, value: String)
     case keepMediaGroups(title: String, text: String?, value: String)
     case keepMediaChannels(title: String, text: String?, value: String)
-
+    
     case keepMedia(PresentationTheme, PresentationStrings, Int32)
     case keepMediaInfo(PresentationTheme, String)
     
@@ -345,7 +345,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     var entries: [StorageUsageEntry] = []
     
     entries.append(.keepMediaHeader(presentationData.theme, presentationData.strings.Cache_KeepMedia.uppercased()))
-
+    
     let sections: [StorageUsageEntryTag] = [.privateChats, .groups, .channels]
     for section in sections {
         let mappedCategory: CacheStorageSettings.PeerStorageCategory
@@ -358,14 +358,14 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             mappedCategory = .channels
         }
         let value = cacheSettings.categoryStorageTimeout[mappedCategory] ?? Int32.max
-
+        
         let optionText: String
         if value == Int32.max {
             optionText = presentationData.strings.ClearCache_Forever
         } else {
             optionText = timeIntervalString(strings: presentationData.strings, value: value)
         }
-
+        
         switch section {
         case .privateChats:
             entries.append(.keepMediaPrivateChats(title: presentationData.strings.Notifications_PrivateChats, text: nil, value: optionText))
@@ -375,9 +375,9 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             entries.append(.keepMediaChannels(title: presentationData.strings.Notifications_Channels, text: nil, value: optionText))
         }
     }
-
+    
     //entries.append(.keepMedia(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageTimeout))
-
+    
     entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_KeepMediaHelp))
     
     entries.append(.maximumSizeHeader(presentationData.theme, presentationData.strings.Cache_MaximumCacheSize.uppercased()))
@@ -438,7 +438,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             if inactiveSecretChatPeerIds.contains(peerId) {
                 continue
             }
-
+            
             if size >= 32 * 1024 {
                 if let peer = stats.peers[peerId] {
                     if !addedHeader {
@@ -510,7 +510,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         
         return cacheSettings
     })
-
+    
     let accountSpecificCacheSettingsPromise = Promise<AccountSpecificCacheStorageSettings>()
     let viewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.accountSpecificCacheStorageSettings]))
     accountSpecificCacheSettingsPromise.set(context.account.postbox.combinedView(keys: [viewKey])
@@ -529,7 +529,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     var pushControllerImpl: ((ViewController) -> Void)?
     var findAutoremoveReferenceNode: ((StorageUsageEntryTag) -> ItemListDisclosureItemNode?)?
     var presentInGlobalOverlay: ((ViewController) -> Void)?
-
+    
     var statsPromise: Promise<CacheUsageStatsResult?>
     if let cacheUsagePromise = cacheUsagePromise {
         statsPromise = cacheUsagePromise
@@ -1093,7 +1093,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         case .channels:
             mappedCategory = .channels
         }
-
+        
         let viewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.accountSpecificCacheStorageSettings]))
         let accountSpecificSettings: Signal<AccountSpecificCacheStorageSettings, NoError> = context.account.postbox.combinedView(keys: [viewKey])
         |> map { views -> AccountSpecificCacheStorageSettings in
@@ -1107,16 +1107,16 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
             return cacheSettings
         }
         |> distinctUntilChanged
-
+        
         let peerExceptions: Signal<[(peer: FoundPeer, value: Int32)], NoError> = accountSpecificSettings
         |> mapToSignal { accountSpecificSettings -> Signal<[(peer: FoundPeer, value: Int32)], NoError> in
             return context.account.postbox.transaction { transaction -> [(peer: FoundPeer, value: Int32)] in
                 var result: [(peer: FoundPeer, value: Int32)] = []
-
+                
                 for item in accountSpecificSettings.peerStorageTimeoutExceptions {
                     let peerId = item.key
                     let value = item.value
-
+                    
                     guard let peer = transaction.getPeer(peerId) else {
                         continue
                     }
@@ -1126,7 +1126,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                         peerCategory = .privateChats
                     } else if peer is TelegramGroup {
                         peerCategory = .groups
-
+                        
                         if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData {
                             subscriberCount = (cachedData.participants?.participants.count).flatMap(Int32.init)
                         }
@@ -1144,14 +1144,14 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     } else {
                         continue
                     }
-
+                        
                     if peerCategory != mappedCategory {
                         continue
                     }
-
+                    
                     result.append((peer: FoundPeer(peer: peer, subscribers: subscriberCount), value: value))
                 }
-
+                
                 return result.sorted(by: { lhs, rhs in
                     if lhs.value != rhs.value {
                         return lhs.value < rhs.value
@@ -1160,14 +1160,14 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 })
             }
         }
-
+        
         let _ = (combineLatest(
             cacheSettingsPromise.get() |> take(1),
             peerExceptions |> take(1)
         )
         |> deliverOnMainQueue).start(next: { cacheSettings, peerExceptions in
             let currentValue: Int32 = cacheSettings.categoryStorageTimeout[mappedCategory] ?? Int32.max
-
+            
             let applyValue: (Int32) -> Void = { value in
                 let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { cacheSettings in
                     var cacheSettings = cacheSettings
@@ -1175,10 +1175,10 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     return cacheSettings
                 }).start()
             }
-
+            
             var subItems: [ContextMenuItem] = []
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
+            
             var presetValues: [Int32] = [
                 Int32.max,
                 31 * 24 * 60 * 60,
@@ -1189,7 +1189,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 presetValues.append(currentValue)
                 presetValues.sort(by: >)
             }
-
+            
             for value in presetValues {
                 let optionText: String
                 if value == Int32.max {
@@ -1208,9 +1208,9 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     f(.default)
                 })))
             }
-
+            
             subItems.append(.separator)
-
+            
             if peerExceptions.isEmpty {
                 let exceptionsText = presentationData.strings.GroupInfo_Permissions_AddException
                 subItems.append(.action(ContextMenuActionItem(text: exceptionsText, icon: { theme in
@@ -1221,22 +1221,22 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     }
                 }, action: { _, f in
                     f(.default)
-
+                    
                     pushControllerImpl?(storageUsageExceptionsScreen(context: context, category: mappedCategory))
                 })))
             } else {
                 subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, action: { c, _ in
                     c.dismiss(completion: {
-
+                        
                     })
                     pushControllerImpl?(storageUsageExceptionsScreen(context: context, category: mappedCategory))
                 }), false))
             }
-
+            
             if let sourceNode = findAutoremoveReferenceNode?(category) {
                 let items: Signal<ContextController.Items, NoError> = .single(ContextController.Items(content: .list(subItems)))
                 let source: ContextContentSource = .reference(StorageUsageContextReferenceContentSource(sourceView: sourceNode.labelNode.view))
-
+                
                 let contextController = ContextController(
                     account: context.account,
                     presentationData: presentationData,
@@ -1255,7 +1255,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     
     var dismissImpl: (() -> Void)?
     
-    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get(), statePromise.get(), context.inactiveSecretChatPeerIds) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), accountSpecificCacheSettingsPromise.get(), statsPromise.get(), statePromise.get(), context.inactiveSecretChatPeerIds) |> deliverOnMainQueue
         |> map { presentationData, cacheSettings, accountSpecificCacheSettings, cacheStats, state, inactiveSecretChatPeerIds -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
@@ -1287,7 +1287,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         guard let controller else {
             return nil
         }
-
+        
         let targetTag: StorageUsageEntryTag = category
         var resultItemNode: ItemListItemNode?
         controller.forEachItemNode { itemNode in
@@ -1298,7 +1298,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 }
             }
         }
-
+        
         if let resultItemNode = resultItemNode as? ItemListDisclosureItemNode {
             return resultItemNode
         } else {
@@ -1425,11 +1425,11 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
 
 private final class StorageUsageContextReferenceContentSource: ContextReferenceContentSource {
     private let sourceView: UIView
-
+    
     init(sourceView: UIView) {
         self.sourceView = sourceView
     }
-
+    
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
     }
@@ -1564,7 +1564,7 @@ private final class MultiplePeerAvatarsContextItemNode: ASDisplayNode, ContextMe
             let avatarsContent: AnimatedAvatarSetContext.Content
 
             let avatarsPeers: [EnginePeer] = self.item.peers
-
+            
             avatarsContent = self.avatarsContext.update(peers: avatarsPeers, animated: false)
 
             let avatarsSize = self.avatarsNode.update(context: self.item.context, content: avatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
@@ -1592,11 +1592,11 @@ private final class MultiplePeerAvatarsContextItemNode: ASDisplayNode, ContextMe
     }
 
     private var actionTemporarilyDisabled: Bool = false
-
+    
     func canBeHighlighted() -> Bool {
         return self.isActionEnabled
     }
-
+    
     func updateIsHighlighted(isHighlighted: Bool) {
         self.setIsHighlighted(isHighlighted)
     }
@@ -1629,7 +1629,7 @@ private final class MultiplePeerAvatarsContextItemNode: ASDisplayNode, ContextMe
             self.highlightedBackgroundNode.alpha = 0.0
         }
     }
-
+    
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
         return self
     }

@@ -672,7 +672,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         if let updatingAvatar, case let .image(image) = updatingAvatar, image.isPersonal {
             isPersonal = true
         }
-
+        
         if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
             || isPersonal
             || self.currentRepresentation != nil && updatingAvatar == nil  {
@@ -2146,7 +2146,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var isExpandedForPhoneAndId: Bool = false
-
+    
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
@@ -2190,7 +2190,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.idNodeRawContainer = ASDisplayNode()
         self.idNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.idNode.displaysAsynchronously = false
-
+        
         self.usernameNodeContainer = ASDisplayNode()
         self.usernameNodeRawContainer = ASDisplayNode()
         self.usernameNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
@@ -2329,7 +2329,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let phoneGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePhoneLongPress(_:)))
         self.subtitleNodeRawContainer.view.addGestureRecognizer(phoneGestureRecognizer)
-
+        
         let idGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleIdLongPress(_:)))
         self.idNodeRawContainer.view.addGestureRecognizer(idGestureRecognizer)
     }
@@ -2345,7 +2345,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, !self.isAvatarExpanded, false)
         }
     }
-
+    
     @objc private func handleIdLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         if gestureRecognizer.state == .began {
             self.displayCopyContextMenu?(self.idNodeRawContainer, false, false, true)
@@ -2677,13 +2677,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var subtitleIsButton: Bool = false
         var panelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
         var nextPanelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
-        var smallIdString = NSAttributedString()
-        var idString = NSAttributedString()let usernameString: (text: String, attributes: MultiScaleTextState.Attributes)
+        let usernameString: (text: String, attributes: MultiScaleTextState.Attributes)
         if let peer = peer {
             isPremium = peer.isPremium
             isVerified = peer.isVerified
             isFake = peer.isFake || peer.isScam
         }
+        
+        var idStringText = ""
         
         if let peer = peer {
             var title: String
@@ -2710,7 +2711,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleStringText = title
             titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
-
+            
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
                 
@@ -2720,12 +2721,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = subtitle
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
-                if showPeerId {
-                    let id = "\(presentationData.strings.Profile_Id): \(String(user.id.id._internalGetInt64Value()))"
-                    smallIdString = NSAttributedString(string: id, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
-                    idString = NSAttributedString(string: id, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                }
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                
+                if showPeerId {
+                    idStringText = "\(presentationData.strings.Profile_Id): \(String(user.id.id._internalGetInt64Value()))"
+                }
             } else if let _ = threadData {
                 let subtitleColor: UIColor
                 subtitleColor = presentationData.theme.list.itemAccentColor
@@ -2736,7 +2736,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = statusText
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(15.0), color: subtitleColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
-
+                
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 
                 subtitleIsButton = true
@@ -2761,11 +2761,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     subtitleColor = presentationData.theme.list.itemSecondaryTextColor
                 }
-
+                
                 subtitleStringText = statusData.text
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
-
+                
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
 
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
@@ -2785,18 +2785,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = " "
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
-
+                
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
             }
         } else {
             titleStringText = " "
             titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
-
+            
             subtitleStringText = " "
             subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
             smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
-
+            
             usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
         }
         
@@ -2817,12 +2817,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleStringText
         
-        let idNodeLayout = self.idNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: idString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallIdString, constrainedSize: titleConstrainedSize)
+        let idNodeLayout = self.idNode.updateLayout(text: idStringText, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.idNode.accessibilityLabel = idString.string
-
+        self.idNode.accessibilityLabel = idStringText
+        
         if subtitleIsButton {
             let subtitleBackgroundNode: ASDisplayNode
             if let current = self.subtitleBackgroundNode {
@@ -3299,7 +3299,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     idCenter.x = rawTitleFrame.center.x + (idCenter.x - rawTitleFrame.center.x) * subtitleScale
                     idCenter.y += subtitleOffset
                     transition.updateFrameAdditiveToCenter(node: self.idNodeContainer, frame: CGRect(origin: idCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
-
+                    
                     var usernameCenter = rawUsernameFrame.center
                     usernameCenter.x = rawTitleFrame.center.x + (usernameCenter.x - rawTitleFrame.center.x) * subtitleScale
                     transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
@@ -3490,7 +3490,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.avatarListNode.listContainerNode.setByYouNode.alpha > 0.0, setByFrame.contains(point) {
             return self.avatarListNode.listContainerNode.setByYouNode.view
         }
-
+        
         if !(self.state?.isEditing ?? false) {
             switch self.currentCredibilityIcon {
             case .premium, .emojiStatus:

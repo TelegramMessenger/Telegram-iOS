@@ -778,11 +778,11 @@ private protocol ItemLayer: SparseItemGridLayer {
 
     var hasContents: Bool { get set }
     func setSpoilerContents(_ contents: Any?)
-
+    
     func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat)
     func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
     func updateHasSpoiler(hasSpoiler: Bool)
-
+    
     func bind(item: VisualMediaItem)
     func unbind()
 }
@@ -820,7 +820,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             self.contents = image.cgImage
         }
     }
-
+    
     func setSpoilerContents(_ contents: Any?) {
         if let image = contents as? UIImage {
             self.dustLayer?.contents = image.cgImage
@@ -883,7 +883,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             }
         }
     }
-
+    
     func updateHasSpoiler(hasSpoiler: Bool) {
         if hasSpoiler {
             if let _ = self.dustLayer {
@@ -964,7 +964,7 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
             }
         }
     }
-
+    
     func setSpoilerContents(_ contents: Any?) {
         if let image = contents as? UIImage {
             self.dustLayer?.contents = image.cgImage
@@ -1023,7 +1023,7 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
             }
         }
     }
-
+    
     func updateHasSpoiler(hasSpoiler: Bool) {
         if hasSpoiler {
             if let _ = self.dustLayer {
@@ -1247,7 +1247,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     var onBeginFastScrollingImpl: (() -> Void)?
     var getShimmerColorsImpl: (() -> SparseItemGrid.ShimmerColors)?
     var updateShimmerLayersImpl: ((SparseItemGridDisplayItem) -> Void)?
-
+    
     var revealedSpoilerMessageIds = Set<MessageId>()
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
@@ -1452,7 +1452,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 let message = item.message
                 let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !self.revealedSpoilerMessageIds.contains(message.id)
                 layer.updateHasSpoiler(hasSpoiler: hasSpoiler)
-
+                
                 var selectedMedia: Media?
                 for media in message.media {
                     if let image = media as? TelegramMediaImage {
@@ -1466,10 +1466,10 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
                 if let selectedMedia = selectedMedia {
                     var result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler, synchronous: synchronous == .full)
-
+                    
                     // previewRepresentations for videos in secret chats will be empty, so using immediateThumbnailData or generated good-quality thumbnail if video is downloaded
                     if result == nil, let file = selectedMedia as? TelegramMediaFile, file.isVideo, !file.isInstantVideo, let _ = file.immediateThumbnailData, let dimensions = dimensionsForFileAttributes(file.attributes) {
-                        let loadSignal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), synchronousLoad: synchronous == .full, nilForEmptyResult: true)
+                        let loadSignal = mediaGridMessageVideo(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: FileMediaReference.message(message: MessageReference(message), media: file), synchronousLoad: synchronous == .full, nilForEmptyResult: true)
                         |> map { transform in
                             let boundingSize = CGSize(width: imageWidthSpec, height: imageWidthSpec)
                             let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
@@ -1477,7 +1477,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                         }
                         result = DirectMediaImageCache.GetMediaResult(image: nil, loadSignal: loadSignal)
                     }
-
+                    
                     if let result = result {
                         if let image = result.image {
                             layer.setContents(image)
@@ -1567,7 +1567,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 } else {
                     layer.updateSelection(theme: self.checkNodeTheme, isSelected: nil, animated: false)
                 }
-
+                
                 layer.bind(item: item)
             }
         }
@@ -1737,7 +1737,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-
+        
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, contentType: ContentType, captureProtected: Bool) {
         self.context = context
         self.peerId = peerId

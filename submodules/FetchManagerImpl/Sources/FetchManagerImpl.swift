@@ -756,26 +756,8 @@ public final class FetchManagerImpl: FetchManager {
                 
                 let newlyHiddenPeerIds = inactiveSecretChatPeerIds.subtracting(previousInactiveSecretChatPeerIds)
                 
-                for peerId in newlyHiddenPeerIds {
-                    let _ = engine.resources.collectCacheUsageStats(peerId: peerId).start(next: { result in
-                        guard case let .result(stats) = result, let categories = stats.media[peerId] else {
-                            return
-                        }
-                        
-                        var clearResourceIds = Set<MediaResourceId>()
-                        
-                        for (_, contents) in categories {
-                            for (mediaId, _) in contents {
-                                if let resourceIds = stats.mediaResourceIds[mediaId] {
-                                    clearResourceIds.formUnion(resourceIds)
-                                }
-                            }
-                        }
-                        
-                        if !clearResourceIds.isEmpty {
-                            let _ = engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds).start()
-                        }
-                    })
+                if !newlyHiddenPeerIds.isEmpty {
+                    let _ = engine.resources.clearStorage(peerIds: newlyHiddenPeerIds).start()
                 }
                 
                 previousInactiveSecretChatPeerIds = inactiveSecretChatPeerIds

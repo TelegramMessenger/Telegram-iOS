@@ -48,7 +48,7 @@ public final class ChatMediaInputGifPaneTrendingState {
 public final class EntityKeyboardGifContent: Equatable {
     public let hasRecentGifs: Bool
     public let component: GifPagerContentComponent
-
+    
     public init(hasRecentGifs: Bool, component: GifPagerContentComponent) {
         self.hasRecentGifs = hasRecentGifs
         self.component = component
@@ -110,7 +110,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
-
+                
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
         let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: true, hasTrending: true, forceHasPremium: false)
@@ -257,7 +257,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     }
     
     fileprivate var clipContentToTopPanel: Bool = false
-
+    
     var externalTopPanelContainerImpl: PagerExternalTopPanelContainer?
     public override var externalTopPanelContainer: UIView? {
         return self.externalTopPanelContainerImpl
@@ -1116,7 +1116,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             inputData.gifs = gifs
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
+            
             if let emojiSearchResult = emojiSearchResult {
                 var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
                 if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
@@ -1991,7 +1991,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         public let presentController: (ViewController, Any?) -> Void
         public let presentGlobalOverlayController: (ViewController, Any?) -> Void
         public let navigationController: () -> NavigationController?
-
+        
         public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?) {
             self.sendSticker = sendSticker
             self.presentController = presentController
@@ -1999,12 +1999,12 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
             self.navigationController = navigationController
         }
     }
-
+    
     private let context: AccountContext
     private let interaction: Interaction?
     private let chatPeerId: EnginePeer.Id?
     private let present: (ViewController, Any?) -> Void
-
+    
     private var peekRecognizer: PeekControllerGestureRecognizer?
     private weak var peekController: PeekController?
     
@@ -2051,12 +2051,12 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
 
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let isLocked = file.isPremiumSticker && !hasPremium
-
+                    
                     if let interaction = strongSelf.interaction {
                         let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void = { fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
                             let _ = interaction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
                         }
-
+                                                
                         if let chatPeerId = strongSelf.chatPeerId, !isLocked {
                             if chatPeerId != strongSelf.context.account.peerId && chatPeerId.namespace != Namespaces.Peer.SecretChat  {
                                 menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
@@ -2072,7 +2072,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     f(.default)
                                 })))
                             }
-
+                            
                             menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
@@ -2086,11 +2086,11 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 f(.default)
                             })))
                         }
-
+                        
                         menuItems.append(
                             .action(ContextMenuActionItem(text: isStarred ? presentationData.strings.Stickers_RemoveFromFavorites : presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                 f(.default)
-
+                                
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let _ = (context.engine.stickers.toggleStickerSaved(file: file, saved: !isStarred)
                                 |> deliverOnMainQueue).start(next: { result in
@@ -2122,11 +2122,11 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.default)
-
+                                
                                 guard let strongSelf = self else {
                                     return
                                 }
-
+                                
                             loop: for attribute in file.attributes {
                                 switch attribute {
                                 case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
@@ -2135,7 +2135,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                             sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                             return true
                                         })
-
+                                        
                                         interaction.navigationController()?.view.window?.endEditing(true)
                                         interaction.presentController(controller, nil)
                                     }
@@ -2151,7 +2151,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                     guard let view = view else {
                         return nil
                     }
-
+                        
                     return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked && !isStarred, menu: menuItems, openPremiumIntro: {
                         guard let strongSelf = self, let interaction = strongSelf.interaction else {
                             return
@@ -2198,7 +2198,7 @@ public class PaneGifSearchForQueryResult {
     public let nextOffset: String?
     public let isComplete: Bool
     public let isStale: Bool
-
+    
     public init(files: [MultiplexedVideoNodeFile], nextOffset: String?, isComplete: Bool, isStale: Bool) {
         self.files = files
         self.nextOffset = nextOffset
@@ -2219,14 +2219,14 @@ public func paneGifSearchForQuery(context: AccountContext, query: String, offset
             |> map { results -> (ChatPresentationInputQueryResult?, Bool, Bool) in
                 return (.contextRequestResult(.user(user), results?.results), results != nil, results?.isStale ?? false)
             }
-
+            
             let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError>
             if delayRequest {
                 maybeDelayedContextResults = results |> delay(0.4, queue: Queue.concurrentDefaultQueue())
             } else {
                 maybeDelayedContextResults = results
             }
-
+            
             return maybeDelayedContextResults
         } else {
             return .single((nil, true, false))
@@ -2256,7 +2256,7 @@ public func paneGifSearchForQuery(context: AccountContext, query: String, offset
                             thumbnailIsVideo = true
                         }
                     }
-
+                    
                     if externalReference.type == "gif", let resource = imageResource, let content = externalReference.content, let dimensions = content.dimensions {
                         var previews: [TelegramMediaImageRepresentation] = []
                         var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []

@@ -67,7 +67,7 @@ private func generateBlurredThumbnail(image: UIImage, adjustSaturation: Bool = f
     if adjustSaturation {
         adjustSaturationInContext(context: thumbnailContext, saturation: 1.7)
     }
-
+    
     return thumbnailContext.generateImage()
 }
 
@@ -344,13 +344,13 @@ public final class DirectMediaImageCache {
         guard let resource = resource else {
             return nil
         }
-
-
+        
+        
         var blurredImage: UIImage?
         if includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
             blurredImage = blurredImageValue
         }
-
+        
         var resultImage: UIImage?
         for otherWidth in possibleWidths.reversed() {
             if otherWidth == width {
@@ -373,7 +373,7 @@ public final class DirectMediaImageCache {
                 }
             }
         }
-
+        
         return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: width, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
 

@@ -994,7 +994,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                                     immediateThumbnailData = compressImageMiniThumbnail(image)
                                 }
                             }
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                             let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                             parsedMedia.append(image)
                         }

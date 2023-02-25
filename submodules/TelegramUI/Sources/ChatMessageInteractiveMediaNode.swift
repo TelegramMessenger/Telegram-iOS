@@ -188,11 +188,11 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     private var randomId: Int32?
     var isRevealed = false
     var tapped: () -> Void = {}
-
+    
     override init() {
         self.blurredImageNode = TransformImageNode()
         self.blurredImageNode.contentAnimations = []
-
+         
         self.dustNode = MediaDustNode()
         
         self.buttonNode = HighlightTrackingButtonNode()
@@ -211,7 +211,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.textNode = ImmediateTextNode()
                 
         super.init()
-
+                
         self.addSubnode(self.blurredImageNode)
         self.addSubnode(self.dustNode)
         self.addSubnode(self.buttonNode)
@@ -262,7 +262,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.blurredImageNode.removeFromSupernode()
         self.dustNode.removeFromSupernode()
     }
-
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
         if self.isRevealed {
@@ -270,22 +270,22 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         }
         return result
     }
-
+        
     func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize, Int32)?, imageFrame: CGRect, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
-
+        
         if let (imageSignal, drawingSize, boundingSize, randomId) = imageSignal {
             if self.randomId != randomId {
                 self.randomId = randomId
                 self.blurredImageNode.setSignal(imageSignal, attemptSynchronously: true)
-
+                
                 let imageLayout = self.blurredImageNode.asyncLayout()
                 let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
                 let apply = imageLayout(arguments)
                 apply()
             }
-
+            
             self.blurredImageNode.isHidden = false
 
             self.isRevealed = self.dustNode.isRevealed
@@ -302,7 +302,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             self.isRevealed = true
         }
         self.blurredImageNode.frame = imageFrame
-
+                
         self.dustNode.frame = CGRect(origin: .zero, size: size)
         self.dustNode.update(size: size, color: .white, transition: .immediate)
         
@@ -312,14 +312,14 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         } else {
             self.buttonNode.isHidden = false
             self.textNode.isHidden = false
-
+            
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(14.0), textColor: .white, paragraphAlignment: .center)
             let textSize = self.textNode.updateLayout(size)
             if let iconSize = self.iconNode.image?.size {
                 let contentSize = CGSize(width: iconSize.width + textSize.width + spacing + padding * 2.0, height: 32.0)
                 self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
                 self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
-
+                
                 self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
                 self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
             }
@@ -406,11 +406,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             self.updateVisibility()
         }
     }
-
+    
     private var internallyVisible = true
     private func updateVisibility() {
         let visibility = self.visibility && self.internallyVisible
-
+        
         if let videoNode = self.videoNode {
             if visibility {
                 if !videoNode.canAttachContent {
@@ -1356,11 +1356,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                             }
                             
-
+                            
                             if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), strongSelf.extendedMediaOverlayNode == nil {
                                 strongSelf.internallyVisible = false
                             }
-
+                            
                             if let videoNode = strongSelf.videoNode {
                                 if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
                                     decoration.updateCorners(corners)
@@ -1401,13 +1401,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
 
                                 if let imageDimensions = imageDimensions {
                                     strongSelf.currentHighQualityImageSignal = (updateImageSignal(false, true), imageDimensions)
-
+                                    
                                     if let updateBlurredImageSignal = updateBlurredImageSignal {
                                         strongSelf.currentBlurredImageSignal = (updateBlurredImageSignal(false, true), drawingSize, boundingSize, Int32.random(in: 0..<Int32.max))
                                     }
                                 }
                             }
-
+                                                        
                             if let _ = secretBeginTimeAndTimeout {
                                 if updatedStatusSignal == nil, let fetchStatus = strongSelf.fetchStatus, case .Local = fetchStatus {
                                     if let statusNode = strongSelf.statusNode, case .secretTimeout = statusNode.state {   
@@ -1930,7 +1930,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
             displaySpoiler = true
         }
-
+    
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
                 let extendedMediaOverlayNode = ExtendedMediaOverlayNode()
@@ -1950,9 +1950,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             default:
                 break
             }
-
+            
             self.extendedMediaOverlayNode?.isUserInteractionEnabled = tappable
-
+            
             var paymentText: String = ""
             outer: for attribute in message.attributes {
                 if let attribute = attribute as? ReplyMarkupMessageAttribute {
@@ -2040,7 +2040,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             self.updateVisibility()
             self.extendedMediaOverlayNode?.reveal()
         }
-
+        
         if let badgeNode = self.badgeNode, badgeNode.isHidden != isHidden {
             if isHidden {
                 badgeNode.isHidden = true
