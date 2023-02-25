@@ -1,4 +1,48 @@
 public extension Api.messages {
+    enum TranscribedAudio: TypeConstructorDescription {
+        case transcribedAudio(flags: Int32, transcriptionId: Int64, text: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .transcribedAudio(let flags, let transcriptionId, let text):
+                    if boxed {
+                        buffer.appendInt32(-1821037486)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(transcriptionId, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .transcribedAudio(let flags, let transcriptionId, let text):
+                return ("transcribedAudio", [("flags", flags as Any), ("transcriptionId", transcriptionId as Any), ("text", text as Any)])
+    }
+    }
+    
+        public static func parse_transcribedAudio(_ reader: BufferReader) -> TranscribedAudio? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.TranscribedAudio.transcribedAudio(flags: _1!, transcriptionId: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum TranslatedText: TypeConstructorDescription {
         case translateResult(result: [Api.TextWithEntities])
     

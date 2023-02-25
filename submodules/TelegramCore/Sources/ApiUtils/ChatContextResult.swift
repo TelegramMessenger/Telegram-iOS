@@ -514,7 +514,7 @@ extension ChatContextResultSwitchPeer {
 extension ChatContextResultCollection {
     convenience init(apiResults: Api.messages.BotResults, botId: PeerId, peerId: PeerId, query: String, geoPoint: (Double, Double)?) {
         switch apiResults {
-            case let .botResults(flags, queryId, nextOffset, switchPm, results, cacheTime, _):
+            case let .botResults(flags, queryId, nextOffset, switchPm, _, results, cacheTime, _):
                 var switchPeer: ChatContextResultSwitchPeer?
                 if let switchPm = switchPm {
                     switchPeer = ChatContextResultSwitchPeer(apiSwitchPeer: switchPm)

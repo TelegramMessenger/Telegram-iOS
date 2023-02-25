@@ -230,8 +230,7 @@ public extension Api {
 }
 public extension Api {
     enum MessageAction: TypeConstructorDescription {
-        case messageActionAttachMenuBotAllowed
-        case messageActionBotAllowed(domain: String)
+        case messageActionBotAllowed(flags: Int32, domain: String?, app: Api.BotApp?)
         case messageActionChannelCreate(title: String)
         case messageActionChannelMigrateFrom(title: String, chatId: Int64)
         case messageActionChatAddUser(users: [Int64])
@@ -271,17 +270,13 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageActionAttachMenuBotAllowed:
+                case .messageActionBotAllowed(let flags, let domain, let app):
                     if boxed {
-                        buffer.appendInt32(-404267113)
+                        buffer.appendInt32(-988359047)
                     }
-                    
-                    break
-                case .messageActionBotAllowed(let domain):
-                    if boxed {
-                        buffer.appendInt32(-1410748418)
-                    }
-                    serializeString(domain, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(domain!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {app!.serialize(buffer, true)}
                     break
                 case .messageActionChannelCreate(let title):
                     if boxed {
@@ -559,10 +554,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageActionAttachMenuBotAllowed:
-                return ("messageActionAttachMenuBotAllowed", [])
-                case .messageActionBotAllowed(let domain):
-                return ("messageActionBotAllowed", [("domain", domain as Any)])
+                case .messageActionBotAllowed(let flags, let domain, let app):
+                return ("messageActionBotAllowed", [("flags", flags as Any), ("domain", domain as Any), ("app", app as Any)])
                 case .messageActionChannelCreate(let title):
                 return ("messageActionChannelCreate", [("title", title as Any)])
                 case .messageActionChannelMigrateFrom(let title, let chatId):
@@ -638,15 +631,20 @@ public extension Api {
     }
     }
     
-        public static func parse_messageActionAttachMenuBotAllowed(_ reader: BufferReader) -> MessageAction? {
-            return Api.MessageAction.messageActionAttachMenuBotAllowed
-        }
         public static func parse_messageActionBotAllowed(_ reader: BufferReader) -> MessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+            var _3: Api.BotApp?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.BotApp
+            } }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionBotAllowed(domain: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageAction.messageActionBotAllowed(flags: _1!, domain: _2, app: _3)
             }
             else {
                 return nil

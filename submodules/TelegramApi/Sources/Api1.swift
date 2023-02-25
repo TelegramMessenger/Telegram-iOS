@@ -35,6 +35,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum AppWebViewResult: TypeConstructorDescription {
+        case appWebViewResultUrl(url: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .appWebViewResultUrl(let url):
+                    if boxed {
+                        buffer.appendInt32(1008422669)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .appWebViewResultUrl(let url):
+                return ("appWebViewResultUrl", [("url", url as Any)])
+    }
+    }
+    
+        public static func parse_appWebViewResultUrl(_ reader: BufferReader) -> AppWebViewResult? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.AppWebViewResult.appWebViewResultUrl(url: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum AttachMenuBot: TypeConstructorDescription {
         case attachMenuBot(flags: Int32, botId: Int64, shortName: String, peerTypes: [Api.AttachMenuPeerType], icons: [Api.AttachMenuBotIcon])
     
@@ -844,6 +880,90 @@ public extension Api {
         }
         public static func parse_boolTrue(_ reader: BufferReader) -> Bool? {
             return Api.Bool.boolTrue
+        }
+    
+    }
+}
+public extension Api {
+    enum BotApp: TypeConstructorDescription {
+        case botApp(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?, hash: Int64)
+        case botAppNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botApp(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document, let hash):
+                    if boxed {
+                        buffer.appendInt32(-1778593322)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeString(shortName, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    photo.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    break
+                case .botAppNotModified:
+                    if boxed {
+                        buffer.appendInt32(1571189943)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botApp(let flags, let id, let accessHash, let shortName, let title, let description, let photo, let document, let hash):
+                return ("botApp", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("shortName", shortName as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("document", document as Any), ("hash", hash as Any)])
+                case .botAppNotModified:
+                return ("botAppNotModified", [])
+    }
+    }
+    
+        public static func parse_botApp(_ reader: BufferReader) -> BotApp? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: Api.Photo?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Photo
+            }
+            var _8: Api.Document?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _9: Int64?
+            _9 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.BotApp.botApp(flags: _1!, id: _2!, accessHash: _3!, shortName: _4!, title: _5!, description: _6!, photo: _7!, document: _8, hash: _9!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_botAppNotModified(_ reader: BufferReader) -> BotApp? {
+            return Api.BotApp.botAppNotModified
         }
     
     }

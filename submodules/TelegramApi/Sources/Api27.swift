@@ -1,4 +1,56 @@
 public extension Api.messages {
+    enum HighScores: TypeConstructorDescription {
+        case highScores(scores: [Api.HighScore], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .highScores(let scores, let users):
+                    if boxed {
+                        buffer.appendInt32(-1707344487)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(scores.count))
+                    for item in scores {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .highScores(let scores, let users):
+                return ("highScores", [("scores", scores as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_highScores(_ reader: BufferReader) -> HighScores? {
+            var _1: [Api.HighScore]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.HighScore.self)
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.HighScores.highScores(scores: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum HistoryImport: TypeConstructorDescription {
         case historyImport(id: Int64)
     
@@ -1370,50 +1422,6 @@ public extension Api.messages {
         }
         public static func parse_stickersNotModified(_ reader: BufferReader) -> Stickers? {
             return Api.messages.Stickers.stickersNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum TranscribedAudio: TypeConstructorDescription {
-        case transcribedAudio(flags: Int32, transcriptionId: Int64, text: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .transcribedAudio(let flags, let transcriptionId, let text):
-                    if boxed {
-                        buffer.appendInt32(-1821037486)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(transcriptionId, buffer: buffer, boxed: false)
-                    serializeString(text, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .transcribedAudio(let flags, let transcriptionId, let text):
-                return ("transcribedAudio", [("flags", flags as Any), ("transcriptionId", transcriptionId as Any), ("text", text as Any)])
-    }
-    }
-    
-        public static func parse_transcribedAudio(_ reader: BufferReader) -> TranscribedAudio? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: String?
-            _3 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.TranscribedAudio.transcribedAudio(flags: _1!, transcriptionId: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

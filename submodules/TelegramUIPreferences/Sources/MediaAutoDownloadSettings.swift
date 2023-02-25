@@ -260,88 +260,82 @@ public struct MediaAutoSaveSettings: Codable, Equatable {
 
 public struct EnergyUsageSettings: Codable, Equatable {
     private enum CodingKeys: CodingKey {
+        case activationThreshold
         case autoplayVideo
         case autoplayGif
         case loopStickers
         case loopEmoji
-        case playVideoAvatars
         case fullTranslucency
         case extendBackgroundWork
-        case synchronizeInBackground
         case autodownloadInBackground
     }
     
     public static var `default`: EnergyUsageSettings {
         return EnergyUsageSettings(
+            activationThreshold: 20,
             autoplayVideo: true,
             autoplayGif: true,
             loopStickers: true,
             loopEmoji: true,
-            playVideoAvatars: true,
             fullTranslucency: true,
             extendBackgroundWork: true,
-            synchronizeInBackground: true,
             autodownloadInBackground: true
         )
     }
+    
+    public var activationThreshold: Int32
     
     public var autoplayVideo: Bool
     public var autoplayGif: Bool
     public var loopStickers: Bool
     public var loopEmoji: Bool
-    public var playVideoAvatars: Bool
     public var fullTranslucency: Bool
     public var extendBackgroundWork: Bool
-    public var synchronizeInBackground: Bool
     public var autodownloadInBackground: Bool
     
     public init(
+        activationThreshold: Int32,
         autoplayVideo: Bool,
         autoplayGif: Bool,
         loopStickers: Bool,
         loopEmoji: Bool,
-        playVideoAvatars: Bool,
         fullTranslucency: Bool,
         extendBackgroundWork: Bool,
-        synchronizeInBackground: Bool,
         autodownloadInBackground: Bool
     ) {
+        self.activationThreshold = activationThreshold
         self.autoplayVideo = autoplayVideo
         self.autoplayGif = autoplayGif
         self.loopStickers = loopStickers
         self.loopEmoji = loopEmoji
-        self.playVideoAvatars = playVideoAvatars
         self.fullTranslucency = fullTranslucency
         self.extendBackgroundWork = extendBackgroundWork
-        self.synchronizeInBackground = synchronizeInBackground
         self.autodownloadInBackground = autodownloadInBackground
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
+        self.activationThreshold = try container.decodeIfPresent(Int32.self, forKey: .activationThreshold) ?? EnergyUsageSettings.default.activationThreshold
         self.autoplayVideo = try container.decodeIfPresent(Bool.self, forKey: .autoplayVideo) ?? EnergyUsageSettings.default.autoplayVideo
         self.autoplayGif = try container.decodeIfPresent(Bool.self, forKey: .autoplayGif) ?? EnergyUsageSettings.default.autoplayGif
         self.loopStickers = try container.decodeIfPresent(Bool.self, forKey: .loopStickers) ?? EnergyUsageSettings.default.loopStickers
         self.loopEmoji = try container.decodeIfPresent(Bool.self, forKey: .loopEmoji) ?? EnergyUsageSettings.default.loopEmoji
-        self.playVideoAvatars = try container.decodeIfPresent(Bool.self, forKey: .playVideoAvatars) ?? EnergyUsageSettings.default.playVideoAvatars
         self.fullTranslucency = try container.decodeIfPresent(Bool.self, forKey: .fullTranslucency) ?? EnergyUsageSettings.default.fullTranslucency
         self.extendBackgroundWork = try container.decodeIfPresent(Bool.self, forKey: .extendBackgroundWork) ?? EnergyUsageSettings.default.extendBackgroundWork
-        self.synchronizeInBackground = try container.decodeIfPresent(Bool.self, forKey: .synchronizeInBackground) ?? EnergyUsageSettings.default.synchronizeInBackground
         self.autodownloadInBackground = try container.decodeIfPresent(Bool.self, forKey: .autodownloadInBackground) ?? EnergyUsageSettings.default.autodownloadInBackground
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
+        try container.encode(self.activationThreshold, forKey: .activationThreshold)
         try container.encode(self.autoplayVideo, forKey: .autoplayVideo)
         try container.encode(self.autoplayGif, forKey: .autoplayGif)
         try container.encode(self.loopEmoji, forKey: .loopEmoji)
         try container.encode(self.loopStickers, forKey: .loopStickers)
-        try container.encode(self.playVideoAvatars, forKey: .playVideoAvatars)
         try container.encode(self.fullTranslucency, forKey: .fullTranslucency)
         try container.encode(self.extendBackgroundWork, forKey: .extendBackgroundWork)
-        try container.encode(self.synchronizeInBackground, forKey: .synchronizeInBackground)
         try container.encode(self.autodownloadInBackground, forKey: .autodownloadInBackground)
     }
 }

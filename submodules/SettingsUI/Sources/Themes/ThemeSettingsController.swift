@@ -142,7 +142,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case .iconHeader, .iconItem:
                 return ThemeSettingsControllerSection.icon.rawValue
             case .powerSaving:
-                return ThemeSettingsControllerSection.powerSaving.rawValue
+                return ThemeSettingsControllerSection.message.rawValue
             case .otherHeader, .largeEmoji, .animations, .animationsInfo:
                 return ThemeSettingsControllerSection.other.rawValue
         }
@@ -168,11 +168,11 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 7
             case .bubbleSettings:
                 return 8
-            case .iconHeader:
-                return 9
-            case .iconItem:
-                return 10
             case .powerSaving:
+                return 9
+            case .iconHeader:
+                return 10
+            case .iconItem:
                 return 11
             case .otherHeader:
                 return 12
@@ -335,7 +335,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case .powerSaving:
                 //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: "Power Saving", label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: "Animations", label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openPowerSavingSettings()
                 })
             case let .otherHeader(_, text):
@@ -396,13 +396,12 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     entries.append(.textSize(presentationData.theme, strings.Appearance_TextSizeSetting, textSizeValue))
     entries.append(.bubbleSettings(presentationData.theme, strings.Appearance_BubbleCornersSetting, ""))
+    entries.append(.powerSaving)
     
     if !availableAppIcons.isEmpty {
         entries.append(.iconHeader(presentationData.theme, strings.Appearance_AppIcon.uppercased()))
         entries.append(.iconItem(presentationData.theme, presentationData.strings, availableAppIcons, isPremium, currentAppIconName))
     }
-    
-    entries.append(.powerSaving)
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
     entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, presentationData.largeEmoji))

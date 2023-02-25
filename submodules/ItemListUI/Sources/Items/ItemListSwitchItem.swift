@@ -225,7 +225,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
             let itemSeparatorColor: UIColor
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
-            let textFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0)
+            let textFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0)
             
             var updatedTheme: PresentationTheme?
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -250,6 +250,13 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
+            let topInset: CGFloat
+            if item.text != nil {
+                topInset = 9.0
+            } else {
+                topInset = 11.0
+            }
+            
             var leftInset = 16.0 + params.leftInset
             if let _ = item.icon {
                 leftInset += 43.0
@@ -262,11 +269,11 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: item.maximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 64.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text ?? "", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 64.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text ?? "", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 84.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            contentSize.height = max(contentSize.height, titleLayout.size.height + 22.0)
+            contentSize.height = max(contentSize.height, titleLayout.size.height + topInset * 2.0)
             if item.text != nil {
-                contentSize.height += 2.0 + textLayout.size.height
+                contentSize.height += -1.0 + textLayout.size.height
             }
             
             if !item.enabled {
@@ -307,7 +314,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         if item.text == nil {
                             iconY = floor((layout.contentSize.height - icon.size.height) / 2.0)
                         } else {
-                            iconY = max(0.0, floor(11.0 + titleLayout.size.height + 1.0 - icon.size.height * 0.5))
+                            iconY = max(0.0, floor(topInset + titleLayout.size.height + 1.0 - icon.size.height * 0.5))
                         }
                         strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - icon.size.width) / 2.0), y: iconY), size: icon.size)
                     } else if strongSelf.iconNode.supernode != nil {
@@ -415,7 +422,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleLayout.size)
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 2.0), size: textLayout.size)
                     

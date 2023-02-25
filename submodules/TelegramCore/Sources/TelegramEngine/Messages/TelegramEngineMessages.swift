@@ -352,8 +352,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func messageReactionList(message: EngineMessage, reaction: MessageReaction.Reaction?) -> EngineMessageReactionListContext {
-            return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
+        public func messageReactionList(message: EngineMessage, readStats: MessageReadStats?, reaction: MessageReaction.Reaction?) -> EngineMessageReactionListContext {
+            return EngineMessageReactionListContext(account: self.account, message: message, readStats: readStats, reaction: reaction)
         }
         
         public func translate(text: String, toLang: String) -> Signal<String?, TranslationError> {

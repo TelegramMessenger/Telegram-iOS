@@ -475,6 +475,7 @@ private enum PeerInfoSettingsSection {
     case logout
     case rememberPassword
     case emojiStatus
+    case powerSaving
 }
 
 private enum PeerInfoReportType {
@@ -816,6 +817,11 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }))
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 3, text: presentationData.strings.Settings_Appearance, icon: PresentationResourcesSettings.appearance, action: {
         interaction.openSettings(.appearance)
+    }))
+    
+    //TODO:localize
+    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 6, label: .text(data.isPowerSavingEnabled == true ? "On" : "Off"), text: "Power Saving", icon: PresentationResourcesSettings.powerSaving, action: {
+        interaction.openSettings(.powerSaving)
     }))
     
     let languageName = presentationData.strings.primaryComponent.localizedName
@@ -7718,6 +7724,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 push(controller)
             case .emojiStatus:
                 self.headerNode.invokeDisplayPremiumIntro()
+            case .powerSaving:
+                self.controller?.push(energySavingSettingsScreen(context: self.context))
         }
     }
     

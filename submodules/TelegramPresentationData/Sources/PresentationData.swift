@@ -505,6 +505,44 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
     }
 }
 
+public func automaticEnergyUsageShouldBeOnNow(settings: MediaAutoDownloadSettings) -> Bool {
+    if settings.energyUsageSettings.activationThreshold == 0 {
+        return false
+    } else if settings.energyUsageSettings.activationThreshold >= 100 {
+        return true
+    } else {
+        let batteryLevel = UIDevice.current.batteryLevel
+        if batteryLevel < 0.0 {
+            return false
+        } else {
+            return batteryLevel <= Float(settings.energyUsageSettings.activationThreshold) / 100.0
+        }
+    }
+}
+
+public func automaticEnergyUsageShouldBeOn(settings: MediaAutoDownloadSettings) -> Signal<Bool, NoError> {
+    if settings.energyUsageSettings.activationThreshold == 0 {
+        return .single(false)
+    } else if settings.energyUsageSettings.activationThreshold >= 100 {
+        return .single(true)
+    } else {
+        return Signal { subscriber in
+            subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
+            
+            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: {
+                subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
+            }, queue: Queue.mainQueue())
+            timer.start()
+            
+            return ActionDisposable {
+                timer.invalidate()
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> distinctUntilChanged
+    }
+}
+
 private func serviceColor(for data: Signal<MediaResourceData, NoError>) -> Signal<UIColor, NoError> {
     return data
     |> mapToSignal { data -> Signal<UIColor, NoError> in

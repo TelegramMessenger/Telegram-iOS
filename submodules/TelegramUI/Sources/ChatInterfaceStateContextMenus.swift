@@ -1705,7 +1705,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
 
                 actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
-                    if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
+                    if reactionCount == 0, let stats = stats, stats.peers.count == 1, !"".isEmpty {
                         c.dismiss(completion: {
                             controllerInteraction.openPeer(stats.peers[0], .default, nil, .default)
                         })
