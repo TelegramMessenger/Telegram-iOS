@@ -4254,6 +4254,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if case .user = peerType {
                     let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+                    controller?.dismiss()
                 } else {
                     var isChannel = false
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
