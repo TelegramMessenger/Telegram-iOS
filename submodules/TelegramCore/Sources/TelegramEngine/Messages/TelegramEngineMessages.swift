@@ -98,8 +98,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
 
-        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId, as senderPeerId: PeerId?) -> Signal<Void, NoError> {
-            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId, as: senderPeerId)
+        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId, threadId: Int64?, as senderPeerId: PeerId?) -> Signal<Void, NoError> {
+            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId, threadId: threadId, as: senderPeerId)
         }
 
         public func requestUpdatePinnedMessage(peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
@@ -356,8 +356,16 @@ public extension TelegramEngine {
             return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
         }
         
-        public func translate(text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
-            return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
+        public func translate(text: String, toLang: String) -> Signal<String?, TranslationError> {
+            return _internal_translate(network: self.account.network, text: text, toLang: toLang)
+        }
+        
+        public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
+            return _internal_translateMessages(account: self.account, messageIds: messageIds, toLang: toLang)
+        }
+        
+        public func togglePeerMessagesTranslationHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
+            return _internal_togglePeerMessagesTranslationHidden(account: self.account, peerId: peerId, hidden: hidden)
         }
         
         public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
@@ -498,6 +506,18 @@ public extension TelegramEngine {
         public func keepMessageCountersSyncrhonized(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: threadId)
             |> ignoreValues
+        }
+        
+        public func getSynchronizeAutosaveItemOperations() -> Signal<[(index: Int32, message: Message, mediaId: MediaId)], NoError> {
+            return self.account.postbox.transaction { transaction -> [(index: Int32, message: Message, mediaId: MediaId)] in
+                return _internal_getSynchronizeAutosaveItemOperations(transaction: transaction)
+            }
+        }
+
+        func removeSyncrhonizeAutosaveItemOperations(indices: [Int32]) {
+            let _ = (self.account.postbox.transaction { transaction -> Void in
+                _internal_removeSyncrhonizeAutosaveItemOperations(transaction: transaction, indices: indices)
+            }).start()
         }
     }
 }

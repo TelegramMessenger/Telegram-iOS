@@ -299,7 +299,7 @@ public enum ResolvedUrl {
     case joinVoiceChat(PeerId, String?)
     case importStickers
     case startAttach(peerId: PeerId, payload: String?, choose: ResolvedBotChoosePeerTypes?)
-    case invoice(slug: String, invoice: TelegramMediaInvoice)
+    case invoice(slug: String, invoice: TelegramMediaInvoice?)
     case premiumOffer(reference: String?)
 }
 
@@ -724,6 +724,7 @@ public enum CreateGroupMode {
     case generic
     case supergroup
     case locatedGroup(latitude: Double, longitude: Double, address: String?)
+    case requestPeer(ReplyMarkupButtonRequestPeerType.Group)
 }
 
 public protocol AppLockContext: AnyObject {
@@ -760,6 +761,9 @@ public protocol SharedAccountContext: AnyObject {
     var currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes> { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
+    
+    var authorizationPushConfiguration: Signal<AuthorizationCodePushNotificationConfiguration?, NoError> { get }
+    var firebaseSecretStream: Signal<[String: String], NoError> { get }
     
     var mediaManager: MediaManager { get }
     var locationManager: DeviceLocationManager? { get }
@@ -800,6 +804,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController
     func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController
     func makePrivacyAndSecurityController(context: AccountContext) -> ViewController
+    func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController
+    func makeStorageManagementController(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>
@@ -862,6 +868,7 @@ public enum PremiumIntroSource {
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case voiceToText
     case fasterDownload
+    case translation
 }
 
 public enum PremiumDemoSubject {
@@ -878,6 +885,7 @@ public enum PremiumDemoSubject {
     case appIcons
     case animatedEmoji
     case emojiStatus
+    case translation
 }
 
 public protocol ComposeController: ViewController {

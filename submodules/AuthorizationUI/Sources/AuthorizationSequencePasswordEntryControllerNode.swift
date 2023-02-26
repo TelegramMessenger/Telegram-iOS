@@ -15,7 +15,9 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     
     private let animationNode: AnimatedStickerNode
     private let titleNode: ASTextNode
+    private let titleActivateAreaNode: AccessibilityAreaNode
     private let noticeNode: ASTextNode
+    private let noticeActivateAreaNode: AccessibilityAreaNode
     private let forgotNode: HighlightableButtonNode
     private let resetNode: HighlightableButtonNode
     private let proceedNode: SolidRoundedButtonNode
@@ -68,15 +70,23 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: strings.LoginPassword_Title, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         
+        self.titleActivateAreaNode = AccessibilityAreaNode()
+        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
         self.noticeNode.lineSpacing = 0.1
         self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_EnterPasswordHelp, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
+        self.noticeActivateAreaNode = AccessibilityAreaNode()
+        self.noticeActivateAreaNode.accessibilityTraits = .staticText
+        
         self.forgotNode = HighlightableButtonNode()
         self.forgotNode.displaysAsynchronously = false
         self.forgotNode.setAttributedTitle(NSAttributedString(string: self.strings.TwoStepAuth_EnterPasswordForgot, font: Font.regular(16.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
+        self.forgotNode.accessibilityLabel = self.strings.TwoStepAuth_EnterPasswordForgot
+        self.forgotNode.accessibilityTraits = [.button]
         
         self.resetNode = HighlightableButtonNode()
         self.resetNode.displaysAsynchronously = false
@@ -95,6 +105,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.list.itemAccentColor
+        self.codeField.textField.accessibilityHint = self.strings.Login_VoiceOver_Password
         
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
         self.proceedNode.progressType = .embedded
@@ -114,9 +125,11 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.addSubnode(self.codeSeparatorNode)
         self.addSubnode(self.codeField)
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.titleActivateAreaNode)
         self.addSubnode(self.forgotNode)
         self.addSubnode(self.resetNode)
         self.addSubnode(self.noticeNode)
+        self.addSubnode(self.noticeActivateAreaNode)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.proceedNode)
         
@@ -214,6 +227,12 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.animationNode.updateLayout(size: animationSize)
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
+        
+        self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
+        self.noticeActivateAreaNode.accessibilityLabel = self.noticeNode.attributedText?.string ?? ""
+        
+        self.titleActivateAreaNode.frame = self.titleNode.frame
+        self.noticeActivateAreaNode.frame = self.noticeNode.frame
     }
     
     func activateInput() {

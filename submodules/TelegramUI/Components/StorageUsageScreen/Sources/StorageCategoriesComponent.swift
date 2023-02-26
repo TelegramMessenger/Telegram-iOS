@@ -40,6 +40,7 @@ final class StorageCategoriesComponent: Component {
     let strings: PresentationStrings
     let categories: [CategoryData]
     let isOtherExpanded: Bool
+    let displayAction: Bool
     let toggleCategorySelection: (StorageUsageScreenComponent.Category) -> Void
     let toggleOtherExpanded: () -> Void
     let clearAction: () -> Void
@@ -49,6 +50,7 @@ final class StorageCategoriesComponent: Component {
         strings: PresentationStrings,
         categories: [CategoryData],
         isOtherExpanded: Bool,
+        displayAction: Bool,
         toggleCategorySelection: @escaping (StorageUsageScreenComponent.Category) -> Void,
         toggleOtherExpanded: @escaping () -> Void,
         clearAction: @escaping () -> Void
@@ -57,6 +59,7 @@ final class StorageCategoriesComponent: Component {
         self.strings = strings
         self.categories = categories
         self.isOtherExpanded = isOtherExpanded
+        self.displayAction = displayAction
         self.toggleCategorySelection = toggleCategorySelection
         self.toggleOtherExpanded = toggleOtherExpanded
         self.clearAction = clearAction
@@ -73,6 +76,9 @@ final class StorageCategoriesComponent: Component {
             return false
         }
         if lhs.isOtherExpanded != rhs.isOtherExpanded {
+            return false
+        }
+        if lhs.displayAction != rhs.displayAction {
             return false
         }
         return true
@@ -195,59 +201,65 @@ final class StorageCategoriesComponent: Component {
                 self.itemViews.removeValue(forKey: key)
             }
             
-            let clearTitle: String
-            let label: String?
-            if totalSelectedSize == 0 {
-                clearTitle = component.strings.StorageManagement_ClearSelected
-                label = nil
-            } else if hasDeselected {
-                clearTitle = component.strings.StorageManagement_ClearSelected
-                label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
-            } else {
-                clearTitle = component.strings.StorageManagement_ClearAll
-                label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
-            }
-            
-            contentHeight += 8.0
-            let buttonSize = self.button.update(
-                transition: transition,
-                component: AnyComponent(SolidRoundedButtonComponent(
-                    title: clearTitle,
-                    label: label,
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: component.theme.list.itemCheckColors.fillColor,
-                        backgroundColors: [],
-                        foregroundColor: component.theme.list.itemCheckColors.foregroundColor
-                    ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    isEnabled: totalSelectedSize != 0,
-                    animationName: nil,
-                    iconPosition: .right,
-                    iconSpacing: 4.0,
-                    action: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.clearAction()
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 50.0)
-            )
-            let buttonFrame = CGRect(origin: CGPoint(x: 16.0, y: contentHeight), size: buttonSize)
-            if let buttonView = button.view {
-                if buttonView.superview == nil {
-                    self.addSubview(buttonView)
+            if component.displayAction {
+                let clearTitle: String
+                let label: String?
+                if totalSelectedSize == 0 {
+                    clearTitle = component.strings.StorageManagement_ClearSelected
+                    label = nil
+                } else if hasDeselected {
+                    clearTitle = component.strings.StorageManagement_ClearSelected
+                    label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
+                } else {
+                    clearTitle = component.strings.StorageManagement_ClearAll
+                    label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
                 }
-                transition.setFrame(view: buttonView, frame: buttonFrame)
+                
+                contentHeight += 8.0
+                let buttonSize = self.button.update(
+                    transition: transition,
+                    component: AnyComponent(SolidRoundedButtonComponent(
+                        title: clearTitle,
+                        label: label,
+                        theme: SolidRoundedButtonComponent.Theme(
+                            backgroundColor: component.theme.list.itemCheckColors.fillColor,
+                            backgroundColors: [],
+                            foregroundColor: component.theme.list.itemCheckColors.foregroundColor
+                        ),
+                        font: .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 10.0,
+                        gloss: false,
+                        isEnabled: totalSelectedSize != 0,
+                        animationName: nil,
+                        iconPosition: .right,
+                        iconSpacing: 4.0,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.clearAction()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 50.0)
+                )
+                let buttonFrame = CGRect(origin: CGPoint(x: 16.0, y: contentHeight), size: buttonSize)
+                if let buttonView = self.button.view {
+                    if buttonView.superview == nil {
+                        self.addSubview(buttonView)
+                    }
+                    transition.setFrame(view: buttonView, frame: buttonFrame)
+                }
+                contentHeight += buttonSize.height
+                
+                contentHeight += 16.0
+            } else {
+                if let buttonView = self.button.view {
+                    buttonView.removeFromSuperview()
+                }
             }
-            contentHeight += buttonSize.height
-            
-            contentHeight += 16.0
             
             self.backgroundColor = component.theme.list.itemBlocksBackgroundColor
             

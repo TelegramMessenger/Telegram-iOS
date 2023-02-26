@@ -241,6 +241,7 @@ public final class WindowKeyboardGestureRecognizerDelegate: NSObject, UIGestureR
 public class Window1 {
     public let hostView: WindowHostView
     public let badgeView: UIImageView
+    private let customProximityDimView: UIView
     
     private var deviceMetrics: DeviceMetrics
     
@@ -257,8 +258,6 @@ public class Window1 {
     private var updatingLayout: UpdatingLayout?
     private var updatedContainerLayout: ContainerViewLayout?
     private var upperKeyboardInputPositionBound: CGFloat?
-    private var cachedWindowSubviewCount: Int = 0
-    private var cachedHasPreview: Bool = false
     
     private let presentationContext: PresentationContext
     private let overlayPresentationContext: GlobalOverlayPresentationContext
@@ -270,10 +269,7 @@ public class Window1 {
     private var shouldInvalidateSupportedOrientations = false
     
     private var statusBarHidden = false
-    
-    public var previewThemeAccentColor: UIColor = .blue
-    public var previewThemeDarkBlur: Bool = false
-    
+        
     private var shouldNotAnimateLikelyKeyboardAutocorrectionSwitch: Bool = false
     
     public private(set) var forceInCallStatusBarText: String? = nil
@@ -332,6 +328,10 @@ public class Window1 {
         self.badgeView = UIImageView()
         self.badgeView.image = UIImage(bundleImageName: "Components/AppBadge")
         self.badgeView.isHidden = true
+        
+        self.customProximityDimView = UIView()
+        self.customProximityDimView.backgroundColor = .black
+        self.customProximityDimView.isHidden = true
         
         self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
         
@@ -549,8 +549,11 @@ public class Window1 {
                 
                 var keyboardHeight: CGFloat
                 if keyboardFrame.isEmpty || keyboardFrame.maxY < screenHeight {
-                    if isTablet && screenHeight - keyboardFrame.maxY < 5.0 {
+                    if inPopover || (isTablet && screenHeight - keyboardFrame.maxY < 5.0) {
                         keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
+                        if inPopover && !keyboardHeight.isZero {
+                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
+                        }
                     } else {
                         keyboardHeight = 0.0
                     }
@@ -564,9 +567,7 @@ public class Window1 {
                 if strongSelf.hostView.containerView is ChildWindowHostView, !isTablet {
                     keyboardHeight += 27.0
                 }
-                
-                print("keyboardHeight: \(keyboardHeight) (raw: \(keyboardFrame))")
-            
+                            
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
@@ -649,6 +650,7 @@ public class Window1 {
         self.windowPanRecognizer = recognizer
         self.hostView.containerView.addGestureRecognizer(recognizer)
         self.hostView.containerView.addSubview(self.badgeView)
+        self.hostView.containerView.addSubview(self.customProximityDimView)
     }
             
     public required init(coder aDecoder: NSCoder) {
@@ -680,6 +682,13 @@ public class Window1 {
         }
         self.forceBadgeHidden = hidden
         self.updateBadgeVisibility()
+    }
+    
+    public func setProximityDimHidden(_ hidden: Bool) {
+        guard hidden != self.customProximityDimView.isHidden else {
+            return
+        }
+        self.customProximityDimView.isHidden = hidden
     }
     
     private func updateBadgeVisibility() {
@@ -1140,6 +1149,8 @@ public class Window1 {
                     self.updateBadgeVisibility()
                     self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 5.0), size: image.size)
                 }
+                
+                self.customProximityDimView.frame = CGRect(origin: .zero, size: self.windowLayout.size)
             }
         }
     }

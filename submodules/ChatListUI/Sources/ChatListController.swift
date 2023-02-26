@@ -792,6 +792,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 isStatusSelection: true,
                 isReactionSelection: false,
                 isEmojiSelection: false,
+                hasTrending: false,
                 topReactionItems: [],
                 areUnicodeEmojiEnabled: false,
                 areCustomEmojiEnabled: true,
@@ -2131,12 +2132,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     @objc fileprivate func reorderingDonePressed() {
-        if !self.chatListDisplayNode.isReorderingFilters {
+        guard let defaultFilters = self.tabContainerData else {
             return
+        }
+        let defaultFilterIds = defaultFilters.0.compactMap { entry -> Int32? in
+            switch entry {
+            case .all:
+                return 0
+            case let .filter(id, _, _):
+                return id
+            }
         }
         
         var reorderedFilterIdsValue: [Int32]?
-        if let reorderedFilterIds = self.tabContainerNode.reorderedFilterIds {
+        if let reorderedFilterIds = self.tabContainerNode.reorderedFilterIds, reorderedFilterIds != defaultFilterIds {
             reorderedFilterIdsValue = reorderedFilterIds
         }
         

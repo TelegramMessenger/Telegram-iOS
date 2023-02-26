@@ -232,15 +232,20 @@ public class ItemListCallListItemNode: ListViewItemNode {
                 insets = UIEdgeInsets()
             }
             
+            var accessibilityText = ""
+            
             let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
             let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.presentationData.strings)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            accessibilityText.append(titleText)
+            accessibilityText.append(". ")
             
             contentHeight += titleLayout.size.height + 18.0
             
             var index = 0
             var nodesLayout: [(TextNodeLayout, TextNodeLayout)] = []
             var nodesApply: [(() -> TextNode, () -> TextNode)] = []
+            
             for message in item.messages {
                 let makeTimeLayout = makeNodesLayout[index].0
                 let time = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: item.dateTimeFormat)
@@ -249,6 +254,8 @@ public class ItemListCallListItemNode: ListViewItemNode {
                 let makeTypeLayout = makeNodesLayout[index].1
                 let type = stringForCallType(message: message, strings: item.presentationData.strings)
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: type, font: typeFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                accessibilityText.append("\(time) - \(type)")
                 
                 nodesLayout.append((timeLayout, typeLayout))
                 nodesApply.append((timeApply, typeApply))
@@ -336,6 +343,8 @@ public class ItemListCallListItemNode: ListViewItemNode {
                         index += 1
                     }
                     
+                    strongSelf.accessibilityArea.accessibilityLabel = accessibilityText
+                    strongSelf.accessibilityArea.accessibilityTraits = .staticText
                     strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                 }
             })

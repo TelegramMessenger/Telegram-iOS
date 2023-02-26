@@ -17,6 +17,7 @@ import WebsiteType
 import OpenInExternalAppUI
 import ScreenCaptureDetection
 import UndoUI
+import TranslateUI
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
@@ -148,20 +149,20 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-public func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: @escaping () -> Double?, displayInfoOnTop: Bool = false, configuration: GalleryConfiguration? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void = { _, _ in }, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void = { _, _, _ in }, present: @escaping (ViewController, Any?) -> Void) -> GalleryItem? {
+public func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: @escaping () -> Double?, displayInfoOnTop: Bool = false, configuration: GalleryConfiguration? = nil, translateToLanguage: String? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void = { _, _ in }, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void = { _, _, _ in }, generateStoreAfterDownload: ((Message, TelegramMediaFile) -> (() -> Void)?)? = nil, present: @escaping (ViewController, Any?) -> Void) -> GalleryItem? {
     let message = entry.message
     let location = entry.location
     if let (media, mediaImage) = mediaForMessage(message: message) {
         if let _ = media as? TelegramMediaImage {
-            return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, displayInfoOnTop: displayInfoOnTop, performAction: performAction, openActionOptions: openActionOptions, present: present)
+            return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, translateToLanguage: translateToLanguage, displayInfoOnTop: displayInfoOnTop, performAction: performAction, openActionOptions: openActionOptions, present: present)
         } else if let file = media as? TelegramMediaFile {
             if file.isVideo {
                 let content: UniversalVideoContent
                 if file.isAnimated {
-                    content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), loopVideo: true, enableSound: false, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected())
+                    content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), loopVideo: true, enableSound: false, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected(), storeAfterDownload: generateStoreAfterDownload?(message, file))
                 } else {
                     if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
-                        content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected())
+                        content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected(), storeAfterDownload: generateStoreAfterDownload?(message, file))
                     } else {
                         content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), userLocation: .peer(message.id.peerId), content: .file(.message(message: MessageReference(message), media: file)), streamVideo: streamVideos, loopVideo: loopVideos)
                     }
@@ -174,8 +175,17 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                         break
                     }
                 }
+                var text = galleryMessageCaptionText(message)
+                if let translateToLanguage, !text.isEmpty {
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
+                            text = attribute.text
+                            entities = attribute.entities
+                            break
+                        }
+                    }
+                }
                 
-                let text = galleryMessageCaptionText(message)
                 if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
                     entities = result
                 }
@@ -207,11 +217,11 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
             var content: UniversalVideoContent?
             switch websiteType(of: webpageContent.websiteName) {
                 case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-                    content = NativeVideoContent(id: .message(message.stableId, webpageContent.file?.id ?? webpage.webpageId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, enableSound: true, captureProtected: message.isCopyProtected())
+                    content = NativeVideoContent(id: .message(message.stableId, webpageContent.file?.id ?? webpage.webpageId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, enableSound: true, captureProtected: message.isCopyProtected(), storeAfterDownload: nil)
                 default:
                     if let embedUrl = webpageContent.embedUrl, let image = webpageContent.image {
                         if let file = webpageContent.file, file.isVideo {
-                            content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected())
+                            content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected(), storeAfterDownload: generateStoreAfterDownload?(message, file))
                         } else if URL(string: embedUrl)?.pathExtension == "mp4" {
                             content = SystemVideoContent(userLocation: .peer(message.id.peerId), url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize?.cgSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0))
                         }
@@ -397,13 +407,15 @@ public class GalleryController: ViewController, StandalonePresentableController,
     
     private var screenCaptureEventsDisposable: Disposable?
     
+    private let generateStoreAfterDownload: ((Message, TelegramMediaFile) -> (() -> Void)?)?
+    
     public var centralItemUpdated: ((MessageId) -> Void)?
     public var onDidAppear: (() -> Void)?
     public var useSimpleAnimation: Bool = false
     
     private var initialOrientation: UIInterfaceOrientation?
     
-    public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
+    public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil, generateStoreAfterDownload: ((Message, TelegramMediaFile) -> (() -> Void)?)? = nil) {
         self.context = context
         self.source = source
         self.invertItemOrder = invertItemOrder
@@ -415,6 +427,14 @@ public class GalleryController: ViewController, StandalonePresentableController,
         self.landscape = landscape
         self.timecode = timecode
         self.playbackRate = playbackRate
+        self.generateStoreAfterDownload = generateStoreAfterDownload ?? { [weak context] message, file -> (() -> Void)? in
+            return {
+                guard let context else {
+                    return
+                }
+                let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: file), peerId: message.id.peerId).start()
+            }
+        }
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -430,15 +450,31 @@ public class GalleryController: ViewController, StandalonePresentableController,
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
-        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
+        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
         self.navigationItem.leftBarButtonItem = backItem
         
         self.statusBar.statusBarStyle = .White
         
+        let baseLanguageCode = self.presentationData.strings.baseLanguageCode
         let message: Signal<Message?, NoError>
+        var translateToLanguage: Signal<String?, NoError> = .single(nil)
         switch source {
             case let .peerMessagesAtId(messageId, _, _):
                 message = context.account.postbox.messageAtId(messageId)
+                translateToLanguage = chatTranslationState(context: context, peerId: messageId.peerId)
+                |> map { translationState in
+                    if let translationState, translationState.isEnabled {
+                        var translateToLanguage = translationState.toLang ?? baseLanguageCode
+                        if translateToLanguage == "nb" {
+                            translateToLanguage = "no"
+                        } else if translateToLanguage == "pt-br" {
+                            translateToLanguage = "pt"
+                        }
+                        return translateToLanguage
+                    } else {
+                        return nil
+                    }
+                }
             case let .standaloneMessage(m):
                 message = .single(m)
             case let .custom(messages, messageId, _):
@@ -448,7 +484,6 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     return messages.first(where: { $0.id == messageId })
                 }
         }
-        
         let messageView = message
         |> filter({ $0 != nil })
         |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, NoError> in
@@ -499,7 +534,11 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         let syncResult = Atomic<(Bool, (() -> Void)?)>(value: (false, nil))
-        self.disposable.set(combineLatest(messageView, self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])).start(next: { [weak self] view, preferencesView in
+        self.disposable.set(combineLatest(
+            messageView,
+            self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
+            translateToLanguage
+        ).start(next: { [weak self] view, preferencesView, translateToLanguage in
             let f: () -> Void = {
                 if let strongSelf = self {
                     if let view = view {
@@ -553,7 +592,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                 if entry.message.stableId == strongSelf.centralEntryStableId {
                                     isCentral = true
                                 }
-                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
+                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: configuration, translateToLanguage: translateToLanguage, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, generateStoreAfterDownload: strongSelf.generateStoreAfterDownload, present: { [weak self] c, a in
                                     if let strongSelf = self {
                                         strongSelf.presentInGlobalOverlay(c, with: a)
                                     }
@@ -996,6 +1035,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
             }
         }
         
+        if let chatController = self.baseNavigationController?.topViewController as? ChatController {
+            chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+        }
+        
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             let message = self.entries[centralItemNode.index].message
             if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
@@ -1072,6 +1115,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 
                 let animatedOutNode = !simpleAnimation
                 
+                if let chatController = strongSelf.baseNavigationController?.topViewController as? ChatController {
+                    chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+                }
+                
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
                 })
             }
@@ -1118,7 +1165,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
             if entry.message.stableId == self.centralEntryStableId {
                 isCentral = true
             }
-            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, playbackRate: { [weak self] in return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: self.configuration, performAction: self.performAction, openActionOptions: self.openActionOptions, storeMediaPlaybackState: self.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
+            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, playbackRate: { [weak self] in return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: self.configuration, performAction: self.performAction, openActionOptions: self.openActionOptions, storeMediaPlaybackState: self.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, generateStoreAfterDownload: self.generateStoreAfterDownload, present: { [weak self] c, a in
                 if let strongSelf = self {
                     strongSelf.presentInGlobalOverlay(c, with: a)
                 }
@@ -1199,7 +1246,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                                 if entry.message.stableId == strongSelf.centralEntryStableId {
                                                     isCentral = true
                                                 }
-                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
+                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, generateStoreAfterDownload: strongSelf.generateStoreAfterDownload, present: { [weak self] c, a in
                                                     if let strongSelf = self {
                                                         strongSelf.presentInGlobalOverlay(c, with: a)
                                                     }
@@ -1251,7 +1298,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                                 if entry.message.stableId == strongSelf.centralEntryStableId {
                                                     isCentral = true
                                                 }
-                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, present: { [weak self] c, a in
+                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, generateStoreAfterDownload: strongSelf.generateStoreAfterDownload, present: { [weak self] c, a in
                                                     if let strongSelf = self {
                                                         strongSelf.presentInGlobalOverlay(c, with: a)
                                                     }

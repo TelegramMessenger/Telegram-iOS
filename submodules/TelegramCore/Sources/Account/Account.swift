@@ -52,6 +52,19 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
     })
 }
 
+func _internal_test(_ network: Network) -> Signal<Bool, String> {
+    return network.request(Api.functions.help.test()) |> map { result in
+        switch result {
+        case .boolFalse:
+            return false
+        case .boolTrue:
+            return true
+        }
+    } |> mapError { error in
+        return error.description
+    }
+}
+
 public class UnauthorizedAccount {
     public let networkArguments: NetworkInitializationArguments
     public let id: AccountRecordId
@@ -196,15 +209,16 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
                         var state = transaction.getState()
                         if state == nil, let backupData = backupData {
-                            let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil)
+                            let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil, invalidatedChannels: [])
                             state = backupState
                             let dict = NSMutableDictionary()
-                            dict.setObject(MTDatacenterAuthInfo(authKey: backupData.masterDatacenterKey, authKeyId: backupData.masterDatacenterKeyId, saltSet: [], authKeyAttributes: [:])!, forKey: backupData.masterDatacenterId as NSNumber)
+                            dict.setObject(MTDatacenterAuthInfo(authKey: backupData.masterDatacenterKey, authKeyId: backupData.masterDatacenterKeyId, validUntilTimestamp: Int32.max, saltSet: [], authKeyAttributes: [:])!, forKey: backupData.masterDatacenterId as NSNumber)
                             
                             for (id, datacenterKey) in backupData.additionalDatacenterKeys {
                                 dict.setObject(MTDatacenterAuthInfo(
                                     authKey: datacenterKey.key,
                                     authKeyId: datacenterKey.keyId,
+                                    validUntilTimestamp: Int32.max,
                                     saltSet: [],
                                     authKeyAttributes: [:]
                                 )!, forKey: id as NSNumber)
@@ -665,11 +679,13 @@ public final class AccountAuxiliaryMethods {
     public let fetchResource: (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     public let prepareSecretThumbnailData: (MediaResourceData) -> (PixelDimensions, Data)?
+    public let backgroundUpload: (Postbox, Network, MediaResource) -> Signal<String?, NoError>
     
-    public init(fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (PixelDimensions, Data)?) {
+    public init(fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (PixelDimensions, Data)?, backgroundUpload: @escaping (Postbox, Network, MediaResource) -> Signal<String?, NoError>) {
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
         self.prepareSecretThumbnailData = prepareSecretThumbnailData
+        self.backgroundUpload = backgroundUpload
     }
 }
 
@@ -863,6 +879,8 @@ public func accountBackupData(postbox: Postbox) -> Signal<AccountBackupData?, No
 }
 
 public class Account {
+    static let sharedQueue = Queue(name: "Account-Shared")
+    
     public let id: AccountRecordId
     public let basePath: String
     public let testingEnvironment: Bool
@@ -880,7 +898,10 @@ public class Account {
     public private(set) var stateManager: AccountStateManager!
     private(set) var contactSyncManager: ContactSyncManager!
     public private(set) var callSessionManager: CallSessionManager!
+    
     public private(set) var viewTracker: AccountViewTracker!
+    private var resetPeerHoleManagement: ((PeerId) -> Void)?
+    
     public private(set) var pendingMessageManager: PendingMessageManager!
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
@@ -893,10 +914,12 @@ public class Account {
     fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
+    private let managedServiceViewsActionDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
-    private let managedTopReactionsDisposable = MetaDisposable()
     private var storageSettingsDisposable: Disposable?
     private var automaticCacheEvictionContext: AutomaticCacheEvictionContext?
+    
+    private var taskManager: AccountTaskManager?
     
     public let importableContacts = Promise<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]>()
     
@@ -955,9 +978,28 @@ public class Account {
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
+        
+        self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
+        
         self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
             self?.contactSyncManager?.addIsContactUpdates(updates)
         }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
+        
+        self.viewTracker = AccountViewTracker(account: self)
+        self.viewTracker.resetPeerHoleManagement = { [weak self] peerId in
+            self?.resetPeerHoleManagement?(peerId)
+        }
+        
+        self.taskManager = AccountTaskManager(
+            stateManager: self.stateManager,
+            accountManager: accountManager,
+            networkArguments: networkArguments,
+            viewTracker: self.viewTracker,
+            mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext,
+            isMainApp: !supplementary,
+            testingEnvironment: testingEnvironment
+        )
+        
         self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
         self.localInputActivityManager = PeerInputActivityManager()
         self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
@@ -971,9 +1013,7 @@ public class Account {
             |> distinctUntilChanged
         )
         
-        self.viewTracker = AccountViewTracker(account: self)
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
-        self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
         self.pendingUpdateMessageManager = PendingUpdateMessageManager(postbox: postbox, network: network, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext)
         
@@ -1052,18 +1092,25 @@ public class Account {
         self.network.shouldExplicitelyKeepWorkerConnections.set(self.shouldExplicitelyKeepWorkerConnections.get())
         self.network.shouldKeepBackgroundDownloadConnections.set(self.shouldKeepBackgroundDownloadConnections.get())
         
-        let serviceTasksMaster = shouldBeMaster
-        |> deliverOn(self.serviceQueue)
-        |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
-            if let strongSelf = self, value {
+        self.managedServiceViewsDisposable.set(shouldBeMaster.start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if value {
                 Logger.shared.log("Account", "Became master")
-                return managedServiceViews(accountPeerId: peerId, network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                let data = managedServiceViews(accountPeerId: peerId, network: network, postbox: postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+                
+                let resetPeerHoles = data.resetPeerHoles
+                strongSelf.resetPeerHoleManagement = { peerId in
+                    resetPeerHoles(peerId)
+                }
+                strongSelf.managedServiceViewsActionDisposable.set(data.disposable)
             } else {
                 Logger.shared.log("Account", "Resigned master")
-                return .never()
+                strongSelf.managedServiceViewsActionDisposable.set(nil)
             }
-        }
-        self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
+        }))
         
         let pendingMessageManager = self.pendingMessageManager
         Logger.shared.log("Account", "Begin watching unsent message ids")
@@ -1076,34 +1123,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: true).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: false).start())
         self.managedOperationsDisposable.add(managedPeerTimestampAttributeOperations(network: self.network, postbox: self.postbox).start())
-        self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, accountPeerId: self.peerId, stateManager: self.stateManager).start())
-        
-        self.managedOperationsDisposable.add(managedSynchronizeGroupedPeersOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .stickers).start())
-        self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
-        self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .emoji).start())
-        self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeRecentlyUsedMediaOperations(postbox: self.postbox, network: self.network, category: .stickers, revalidationContext: self.mediaReferenceRevalidationContext).start())
-        self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
-        self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
-        self.managedOperationsDisposable.add(_internal_managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network, accountPeerId: peerId).start())
-        self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
-        self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedReadReactionActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenPersonalMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenReactionsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedApplyPendingMessageReactionsActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedSynchronizeEmojiKeywordsOperations(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedApplyPendingScheduledMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedSynchronizeAvailableReactions(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeAttachMenuBots(postbox: self.postbox, network: self.network, force: true).start())
-        self.managedOperationsDisposable.add(managedSynchronizeNotificationSoundList(postbox: self.postbox, network: self.network).start())
-
-        if !supplementary {
-            self.managedOperationsDisposable.add(managedChatListFilters(postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
-        }
+        self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
@@ -1154,40 +1174,6 @@ public class Account {
                 }
             }
         }))
-        self.managedOperationsDisposable.add(managedVoipConfigurationUpdates(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedAppConfigurationUpdates(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedPremiumPromoConfigurationUpdates(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedAutodownloadSettingsUpdates(accountManager: accountManager, network: self.network).start())
-        self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedAppUpdateInfo(network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedAppChangelog(postbox: self.postbox, network: self.network, stateManager: self.stateManager, appVersion: self.networkArguments.appVersion).start())
-        self.managedOperationsDisposable.add(managedPromoInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
-        self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
-        self.managedOperationsDisposable.add(managedThemesUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
-        if !self.testingEnvironment && !supplementary {
-            self.managedOperationsDisposable.add(managedChatThemesUpdates(accountManager: accountManager, network: self.network).start())
-        }
-        
-        if !self.supplementary {
-            self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedAnimatedEmojiAnimationsUpdates(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedGenericEmojiEffects(postbox: self.postbox, network: self.network).start())
-            
-            self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedPremiumStickers(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedAllPremiumStickers(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedRecentStatusEmoji(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedFeaturedStatusEmoji(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedRecentReactions(postbox: self.postbox, network: self.network).start())
-            self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(self.managedTopReactionsDisposable)
-            
-            self.managedOperationsDisposable.add(_internal_loadedStickerPack(postbox: self.postbox, network: self.network, reference: .iconStatusEmoji, forceActualized: true).start())
-            self.managedOperationsDisposable.add(_internal_loadedStickerPack(postbox: self.postbox, network: self.network, reference: .iconTopicEmoji, forceActualized: true).start())
-        }
 
         if !supplementary {
             let mediaBox = postbox.mediaBox
@@ -1213,13 +1199,6 @@ public class Account {
         }
         self.restartConfigurationUpdates()
         
-        self.stateManager.isPremiumUpdated = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.managedTopReactionsDisposable.set(managedTopReactions(postbox: strongSelf.postbox, network: strongSelf.network).start())
-        }
-        
         self.automaticCacheEvictionContext = AutomaticCacheEvictionContext(postbox: postbox, accountManager: accountManager)
         
         /*#if DEBUG
@@ -1233,6 +1212,7 @@ public class Account {
         self.managedContactsDisposable.dispose()
         self.managedStickerPacksDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
+        self.managedServiceViewsActionDisposable.dispose()
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()

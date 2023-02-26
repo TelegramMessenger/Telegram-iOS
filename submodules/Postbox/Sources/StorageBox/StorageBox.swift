@@ -158,6 +158,9 @@ public final class StorageBox {
         let contentTypeStatsTable: ValueBoxTable
         let metadataTable: ValueBoxTable
         
+        let totalSizeSubscribers = Bag<(Int64) -> Void>()
+        private var totalSize: Int64 = 0
+        
         init(queue: Queue, logger: StorageBox.Logger, basePath: String) {
             self.queue = queue
             self.logger = logger
@@ -183,6 +186,8 @@ public final class StorageBox {
             self.metadataTable = ValueBoxTable(id: 21, keyType: .binary, compactValuesOnCreation: true)
             
             self.performUpdatesIfNeeded()
+            
+            self.updateTotalSize()
         }
         
         private func performUpdatesIfNeeded() {
@@ -230,6 +235,35 @@ public final class StorageBox {
             })
         }
         
+        func updateTotalSize() {
+            self.valueBox.begin()
+            
+            var totalSize: Int64 = 0
+            self.valueBox.scan(self.contentTypeStatsTable, values: { key, value in
+                var size: Int64 = 0
+                value.read(&size, offset: 0, length: 8)
+                totalSize += size
+                
+                return true
+            })
+            
+            self.valueBox.commit()
+            
+            if self.totalSize != totalSize {
+                self.totalSize = totalSize
+                
+                for f in self.totalSizeSubscribers.copyItems() {
+                    f(totalSize)
+                }
+            }
+        }
+        
+        func incrementalUpdateTotalSize() {
+            for f in self.totalSizeSubscribers.copyItems() {
+                f(totalSize)
+            }
+        }
+        
         func reset() {
             self.valueBox.begin()
                         
@@ -241,6 +275,8 @@ public final class StorageBox {
             self.valueBox.removeAllFromTable(self.metadataTable)
             
             self.valueBox.commit()
+            
+            self.updateTotalSize()
         }
         
         private func internalAddSize(contentType: UInt8, delta: Int64) {
@@ -260,6 +296,8 @@ public final class StorageBox {
             }
             
             self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+            
+            self.totalSize += delta
         }
         
         private func internalAddSize(peerId: Int64, contentType: UInt8, delta: Int64) {
@@ -390,6 +428,8 @@ public final class StorageBox {
             }
             
             self.valueBox.commit()
+            
+            self.incrementalUpdateTotalSize()
         }
         
         private func peerIdsReferencing(hashId: HashId) -> Set<Int64> {
@@ -432,9 +472,13 @@ public final class StorageBox {
                 for peerId in self.peerIdsReferencing(hashId: hashId) {
                     self.internalAddSize(peerId: peerId, contentType: info.contentType, delta: sizeDelta)
                 }
+            } else {
+                self.internalAdd(reference: StorageBox.Reference(peerId: 0, messageNamespace: 0, messageId: 0), to: id, contentType: 0, size: size)
             }
             
             self.valueBox.commit()
+            
+            self.incrementalUpdateTotalSize()
         }
         
         func addEmptyReferencesIfNotReferenced(ids: [(id: Data, size: Int64)], contentType: UInt8) -> Int {
@@ -508,6 +552,8 @@ public final class StorageBox {
             }
             
             self.valueBox.commit()
+            
+            self.incrementalUpdateTotalSize()
         }
         
         func allPeerIds() -> [PeerId] {
@@ -615,6 +661,22 @@ public final class StorageBox {
             return (ids, nextId)
         }
         
+        func subscribeTotalSize(next: @escaping (Int64) -> Void) -> Disposable {
+            let index = self.totalSizeSubscribers.add(next)
+            
+            next(self.totalSize)
+            
+            let queue = self.queue
+            return ActionDisposable { [weak self] in
+                queue.async {
+                    guard let `self` = self else {
+                        return
+                    }
+                    self.totalSizeSubscribers.remove(index)
+                }
+            }
+        }
+        
         func all() -> [Entry] {
             var result: [Entry] = []
             
@@ -719,6 +781,7 @@ public final class StorageBox {
             let idKey = ValueBoxKey(length: 16 + 8)
             
             let mainKey = ValueBoxKey(length: 16)
+            var processedIds = Set<Data>()
             self.valueBox.scan(self.peerIdToIdTable, keys: { key in
                 let peerId = key.getInt64(0)
                 if peerId == 0 {
@@ -726,6 +789,10 @@ public final class StorageBox {
                 }
                 
                 let hashId = key.getData(8, length: 16)
+                if processedIds.contains(hashId) {
+                    return true
+                }
+                processedIds.insert(hashId)
                 
                 mainKey.setData(0, value: hashId)
                 if let currentInfoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
@@ -749,7 +816,7 @@ public final class StorageBox {
                             }
                             
                             return true
-                        }, limit: 0)
+                        }, limit: 1)
                     }
                 }
                 
@@ -761,16 +828,12 @@ public final class StorageBox {
             return allStats
         }
         
-        func remove(peerId: Int64?, contentTypes: [UInt8]) -> [Data] {
+        func remove(peerId: Int64?, contentTypes: [UInt8], includeIds: [Data], excludeIds: [Data]) -> [Data] {
             var resultIds: [Data] = []
             
             self.valueBox.begin()
             
             var scannedIds: [Data: Data] = [:]
-            
-            for contentType in contentTypes {
-                self.internalAddSize(contentType: contentType, delta: 0)
-            }
             
             self.valueBox.scan(self.hashIdToInfoTable, values: { key, value in
                 let info = ItemInfo(buffer: value)
@@ -781,17 +844,24 @@ public final class StorageBox {
                 return true
             })
             
+            for id in includeIds {
+                scannedIds[md5Hash(id).data] = id
+            }
+            
+            let excludeIds = Set(excludeIds)
+            
             if let peerId = peerId {
                 var filteredHashIds: [Data] = []
                 self.valueBox.scan(self.idToReferenceTable, keys: { key in
                     let id = key.getData(0, length: 16)
-                    if scannedIds[id] == nil {
+                    guard let realId = scannedIds[id] else {
+                        return true
+                    }
+                    if excludeIds.contains(realId) {
                         return true
                     }
                     
                     let itemPeerId = key.getInt64(16)
-                    //let messageNamespace: UInt8 = key.getUInt8(16 + 8)
-                    //let messageId = key.getInt32(16 + 8 + 1)
                     
                     if itemPeerId == peerId {
                         filteredHashIds.append(id)
@@ -807,23 +877,22 @@ public final class StorageBox {
                 }
             } else {
                 for (hashId, id) in scannedIds {
+                    if excludeIds.contains(id) {
+                        continue
+                    }
                     self.internalRemove(hashId: hashId)
                     resultIds.append(id)
                 }
             }
             
-            if let peerId = peerId {
-                let _ = peerId
-            } else {
-                
-            }
-            
             self.valueBox.commit()
+            
+            self.incrementalUpdateTotalSize()
             
             return Array(resultIds)
         }
         
-        func remove(peerIds: Set<PeerId>) -> [Data] {
+        func remove(peerIds: Set<PeerId>, includeIds: [Data], excludeIds: [Data]) -> [Data] {
             var resultIds: [Data] = []
             
             self.valueBox.begin()
@@ -833,21 +902,34 @@ public final class StorageBox {
                 scannedIds.formUnion(self.allInternal(peerId: peerId))
             }
             
+            for id in includeIds {
+                scannedIds.insert(id)
+            }
+            
+            let excludedIds = Set(excludeIds)
+            
             for id in scannedIds {
+                if excludedIds.contains(id) {
+                    continue
+                }
                 self.internalRemove(hashId: md5Hash(id).data)
                 resultIds.append(id)
             }
             
             self.valueBox.commit()
             
+            self.incrementalUpdateTotalSize()
+            
             return Array(resultIds)
         }
     }
     
+    private static let sharedQueue = Queue(name: "StorageBox-Shared")
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    public init(queue: Queue = Queue(name: "StorageBox"), logger: StorageBox.Logger, basePath: String) {
+    public init(logger: StorageBox.Logger, basePath: String) {
+        let queue = StorageBox.sharedQueue
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, logger: logger, basePath: basePath)
@@ -931,16 +1013,16 @@ public final class StorageBox {
         }
     }
     
-    public func remove(peerId: PeerId?, contentTypes: [UInt8], completion: @escaping ([Data]) -> Void) {
+    public func remove(peerId: PeerId?, contentTypes: [UInt8], includeIds: [Data], excludeIds: [Data], completion: @escaping ([Data]) -> Void) {
         self.impl.with { impl in
-            let ids = impl.remove(peerId: peerId?.toInt64(), contentTypes: contentTypes)
+            let ids = impl.remove(peerId: peerId?.toInt64(), contentTypes: contentTypes, includeIds: includeIds, excludeIds: excludeIds)
             completion(ids)
         }
     }
     
-    public func remove(peerIds: Set<PeerId>, completion: @escaping ([Data]) -> Void) {
+    public func remove(peerIds: Set<PeerId>, includeIds: [Data], excludeIds: [Data], completion: @escaping ([Data]) -> Void) {
         self.impl.with { impl in
-            let ids = impl.remove(peerIds: peerIds)
+            let ids = impl.remove(peerIds: peerIds, includeIds: includeIds, excludeIds: excludeIds)
             completion(ids)
         }
     }
@@ -957,6 +1039,14 @@ public final class StorageBox {
             subscriber.putCompletion()
             
             return EmptyDisposable
+        }
+    }
+    
+    public func totalSize() -> Signal<Int64, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.subscribeTotalSize(next: { value in
+                subscriber.putNext(value)
+            })
         }
     }
 }

@@ -86,6 +86,17 @@ private final class ManagedMessageHistoryHolesContext {
         self.currentEntriesDisposable?.dispose()
     }
     
+    func resetPeer(peerId: PeerId) {
+        for entry in Array(self.completedEntries.keys) {
+            switch entry.hole {
+            case let .peer(peer):
+                if peer.peerId == peerId {
+                    self.completedEntries.removeValue(forKey: entry)
+                }
+            }
+        }
+    }
+    
     func clearDisposables() -> [Disposable] {
         var disposables = Array(self.pendingEntries.map(\.disposable))
         disposables.append(contentsOf: self.discardedEntries.map(\.entry.disposable))
@@ -196,69 +207,28 @@ private final class ManagedMessageHistoryHolesContext {
     }
 }
 
-func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox: Postbox) -> ((PeerId) -> Void, Disposable) {
     let sharedQueue = Queue()
     
-    return Signal { _ in
-        var context: QueueLocalObject<ManagedMessageHistoryHolesContext>? = QueueLocalObject<ManagedMessageHistoryHolesContext>(queue: sharedQueue, generate: {
-            return ManagedMessageHistoryHolesContext(
-                queue: sharedQueue,
-                accountPeerId: accountPeerId,
-                postbox: postbox,
-                network: network,
-                entries: postbox.messageHistoryHolesView() |> map { view in
-                    return view.entries
-                }
-            )
-        })
-        
-        /*var performWorkImpl: ((@escaping (ManagedMessageHistoryHolesState) -> Void) -> Void)?
-        let state = Atomic(value: ManagedMessageHistoryHolesState(performWork: { f in
-            performWorkImpl?(f)
-        }))
-        performWorkImpl = { [weak state] f in
-            state?.with { state in
-                f(state)
+    var context: QueueLocalObject<ManagedMessageHistoryHolesContext>? = QueueLocalObject<ManagedMessageHistoryHolesContext>(queue: sharedQueue, generate: {
+        return ManagedMessageHistoryHolesContext(
+            queue: sharedQueue,
+            accountPeerId: accountPeerId,
+            postbox: postbox,
+            network: network,
+            entries: postbox.messageHistoryHolesView() |> map { view in
+                return view.entries
             }
+        )
+    })
+    
+    return ({ [weak context] peerId in
+        context?.with { context in
+            context.resetPeer(peerId: peerId)
         }
-        
-        let disposable = (postbox.messageHistoryHolesView()
-        |> deliverOn(sharedQueue)).start(next: { view in
-            let (removed, added, _) = state.with { state in
-                return state.update(entries: view.entries)
-            }
-            
-            for disposable in removed {
-                disposable.dispose()
-            }
-            
-            for (entry, disposable) in added {
-                switch entry.hole {
-                case let .peer(hole):
-                    disposable.set((fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: entry.direction, space: entry.space, count: entry.count)
-                    |> afterDisposed {
-                        sharedQueue.async {
-                            state.with { state in
-                                let _ = state
-                                //state.removeCompletedEntry(entry: entry)
-                            }
-                        }
-                    }).start())
-                }
-            }
-        })*/
-        
-        return ActionDisposable {
-            if context != nil {
-                context = nil
-            }
-            /*disposable.dispose()
-            for disposable in state.with({ state -> [Disposable] in
-                state.clearDisposables()
-            }) {
-                disposable.dispose()
-            }*/
+    }, ActionDisposable {
+        if context != nil {
+            context = nil
         }
-    }
-    |> runOn(sharedQueue)
+    })
 }

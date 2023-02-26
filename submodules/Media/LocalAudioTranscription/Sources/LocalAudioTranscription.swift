@@ -23,11 +23,20 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         guard let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: locale)), speechRecognizer.isAvailable else {
                             subscriber.putNext(nil)
                             subscriber.putCompletion()
-                            
+
                             return
                         }
-                        
-                        speechRecognizer.defaultTaskHint = .unspecified
+                            speechRecognizerValue.defaultTaskHint = .dictation
+                            sharedRecognizers[locale] = speechRecognizerValue
+                            speechRecognizer = speechRecognizerValue
+
+                            if locale == "en-US" {
+                                speechRecognizer.supportsOnDeviceRecognition = true
+                            } else {
+                                speechRecognizer.supportsOnDeviceRecognition = false
+                            }
+                            speechRecognizer.supportsOnDeviceRecognition = true
+                        }
                         
                         let tempFilePath = NSTemporaryDirectory() + "\(UInt64.random(in: 0 ... UInt64.max)).m4a"
                         let _ = try? FileManager.default.copyItem(atPath: path, toPath: tempFilePath)
@@ -36,7 +45,8 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                         if #available(iOS 16.0, *) {
                             request.addsPunctuation = true
                         }
-                        request.shouldReportPartialResults = true
+                        request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
+                        request.shouldReportPartialResults = false
                         
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
                             if let result = result {
@@ -44,14 +54,14 @@ public func transcribeAudio(path: String, locale: String) -> Signal<LocallyTrans
                                 
                                 if result.isFinal {
                                     subscriber.putCompletion()
-                                    
+
                                     let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                                 }
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
                                 
                                 subscriber.putError(error!)
-                                
+
                                 let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                             }
                         })

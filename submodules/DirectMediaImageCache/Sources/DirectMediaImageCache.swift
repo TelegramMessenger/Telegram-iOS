@@ -71,7 +71,16 @@ private func generateBlurredThumbnail(image: UIImage, adjustSaturation: Bool = f
     return thumbnailContext.generateImage()
 }
 
-private func storeImage(context: DrawingContext, to path: String) -> UIImage? {
+private func storeImage(context: DrawingContext, mediaBox: MediaBox, resourceId: MediaResourceId, imageType: DirectMediaImageCache.ImageType) -> UIImage? {
+    let representationId: String
+    switch imageType {
+    case .blurredThumbnail:
+        representationId = "blurred32"
+    case let .square(width):
+        representationId = "shm\(width)"
+    }
+    let path = mediaBox.cachedRepresentationPathForId(resourceId.stringRepresentation, representationId: representationId, keepDuration: .general)
+    
     if context.size.width <= 70.0 && context.size.height <= 70.0 {
         guard let file = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
             return nil
@@ -103,6 +112,9 @@ private func storeImage(context: DrawingContext, to path: String) -> UIImage? {
         vImageConvert_BGRA8888toRGB565(&source, &target, vImage_Flags(kvImageDoNotTile))
 
         let _ = file.write(targetData, count: targetLength)
+        if let pathData = path.data(using: .utf8), let size = file.getSize() {
+            mediaBox.cacheStorageBox.update(id: pathData, size: size)
+        }
 
         return context.generateImage()
     } else {
@@ -110,6 +122,9 @@ private func storeImage(context: DrawingContext, to path: String) -> UIImage? {
             return nil
         }
         let _ = try? resultData.write(to: URL(fileURLWithPath: path))
+        if let pathData = path.data(using: .utf8) {
+            mediaBox.cacheStorageBox.update(id: pathData, size: Int64(resultData.count))
+        }
         return image
     }
 }
@@ -212,7 +227,7 @@ public final class DirectMediaImageCache {
         }
     }
 
-    private enum ImageType {
+    fileprivate enum ImageType {
         case blurredThumbnail
         case square(width: Int)
     }
@@ -236,8 +251,6 @@ public final class DirectMediaImageCache {
 
     private func getLoadSignal(width: Int, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resource: MediaResourceReference, resourceSizeLimit: Int64) -> Signal<UIImage?, NoError>? {
         return Signal { subscriber in
-            let cachePath = self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width))
-
             let fetch = fetchedMediaResource(
                 mediaBox: self.account.postbox.mediaBox,
                 userLocation: userLocation,
@@ -281,7 +294,7 @@ public final class DirectMediaImageCache {
                         context.draw(image.cgImage!, in: imageRect)
                     }
 
-                    if let scaledImage = storeImage(context: scaledContext, to: cachePath) {
+                    if let scaledImage = storeImage(context: scaledContext, mediaBox: self.account.postbox.mediaBox, resourceId: resource.resource.id, imageType: .square(width: width)) {
                         subscriber.putNext(scaledImage)
                         subscriber.putCompletion()
                     }

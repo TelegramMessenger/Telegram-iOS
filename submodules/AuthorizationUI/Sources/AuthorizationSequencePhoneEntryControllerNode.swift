@@ -110,6 +110,8 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.numberField.textField.textColor = theme.list.itemPrimaryTextColor
         self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
         self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
+        self.phoneInputNode.countryCodeField.accessibilityHint = strings.Login_VoiceOver_PhoneCountryCode
+        self.phoneInputNode.numberField.accessibilityHint = strings.Login_VoiceOver_PhoneNumber
         
         self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
         self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
@@ -171,6 +173,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     strongSelf.phoneInputNode.mask = nil
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                 }
+                
+                strongSelf.countryButton.accessibilityLabel = strongSelf.countryButton.attributedTitle(for: .normal)?.string ?? ""
+                strongSelf.countryButton.accessibilityTraits = [.button]
                 
                 if strongSelf.hasCountry {
                     strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
@@ -289,7 +294,9 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let animationNode: AnimatedStickerNode
     private let managedAnimationNode: ManagedPhoneAnimationNode
     private let titleNode: ASTextNode
+    private let titleActivateAreaNode: AccessibilityAreaNode
     private let noticeNode: ASTextNode
+    private let noticeActivateAreaNode: AccessibilityAreaNode
     private let phoneAndCountryNode: PhoneAndCountryNode
     private let contactSyncNode: ContactSyncNode
     private let proceedNode: SolidRoundedButtonNode
@@ -378,11 +385,17 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: account == nil ? strings.Login_NewNumber : strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
+        self.titleActivateAreaNode = AccessibilityAreaNode()
+        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        
         self.noticeNode = ASTextNode()
         self.noticeNode.maximumNumberOfLines = 0
         self.noticeNode.isUserInteractionEnabled = true
         self.noticeNode.displaysAsynchronously = false
         self.noticeNode.lineSpacing = 0.1
+        
+        self.noticeActivateAreaNode = AccessibilityAreaNode()
+        self.noticeActivateAreaNode.accessibilityTraits = .staticText
         
         self.noticeNode.attributedText = NSAttributedString(string: account == nil ? strings.ChangePhoneNumberNumber_Help : strings.Login_PhoneAndCountryHelp, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
@@ -404,6 +417,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.noticeNode)
+        self.addSubnode(self.titleActivateAreaNode)
+        self.addSubnode(self.noticeActivateAreaNode)
         self.addSubnode(self.phoneAndCountryNode)
         self.addSubnode(self.contactSyncNode)
         self.addSubnode(self.proceedNode)
@@ -534,6 +549,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
         
         self.titleNode.attributedText = NSAttributedString(string: self.account == nil ? strings.Login_NewNumber : strings.Login_PhoneTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
         let inset: CGFloat = 24.0
         let maximumWidth: CGFloat = min(430.0, layout.size.width)
@@ -587,6 +603,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         
         transition.updateFrame(node: self.managedAnimationNode, frame: self.animationNode.frame)
+        
+        self.titleActivateAreaNode.frame = self.titleNode.frame
+        self.noticeActivateAreaNode.accessibilityLabel = self.noticeNode.attributedText?.string ?? ""
+        self.noticeActivateAreaNode.frame = self.noticeNode.frame
     }
     
     func activateInput() {
@@ -726,6 +746,7 @@ final class PhoneConfirmationController: ViewController {
     
     class Node: ASDisplayNode {
         private let theme: PresentationTheme
+        private let strings: PresentationStrings
         
         private let code: String
         private let number: String
@@ -740,6 +761,7 @@ final class PhoneConfirmationController: ViewController {
         private let phoneTargetNode: ImmediateTextNode
         
         private let textNode: ImmediateTextNode
+        private let textActivateAreaNode: AccessibilityAreaNode
         
         private let cancelButton: HighlightableButtonNode
         fileprivate let proceedNode: SolidRoundedButtonNode
@@ -751,6 +773,7 @@ final class PhoneConfirmationController: ViewController {
         
         init(theme: PresentationTheme, strings: PresentationStrings, code: String, number: String) {
             self.theme = theme
+            self.strings = strings
             
             self.code = code
             self.number = number
@@ -767,8 +790,13 @@ final class PhoneConfirmationController: ViewController {
             self.textNode.attributedText = NSAttributedString(string: strings.Login_PhoneNumberConfirmation, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor)
             self.textNode.textAlignment = .center
             
+            self.textActivateAreaNode = AccessibilityAreaNode()
+            self.textActivateAreaNode.accessibilityTraits = .staticText
+            
             self.cancelButton = HighlightableButtonNode()
             self.cancelButton.setTitle(strings.Login_Edit, with: Font.regular(19.0), with: theme.list.itemAccentColor, for: .normal)
+            self.cancelButton.accessibilityTraits = [.button]
+            self.cancelButton.accessibilityLabel = strings.Login_Edit
             
             self.proceedNode = SolidRoundedButtonNode(title: strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: false)
             self.proceedNode.progressType = .embedded
@@ -814,6 +842,7 @@ final class PhoneConfirmationController: ViewController {
             self.addSubnode(self.phoneTargetNode)
             
             self.addSubnode(self.textNode)
+            self.addSubnode(self.textActivateAreaNode)
             
             self.addSubnode(self.cancelButton)
             self.addSubnode(self.proceedNode)
@@ -968,7 +997,12 @@ final class PhoneConfirmationController: ViewController {
             if case .regular = layout.metrics.widthClass {
                 originY = floorToScreenPixels((layout.size.height - backgroundSize.height) / 2.0)
             } else {
-                originY = layout.size.height - backgroundSize.height - 260.0
+                let hasOnScreenNavigation = layout.deviceMetrics.onScreenNavigationHeight(inLandscape: false, systemOnScreenNavigationHeight: nil) != nil
+                if hasOnScreenNavigation || layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland {
+                    originY = layout.size.height - backgroundSize.height - 260.0
+                } else {
+                    originY = floorToScreenPixels((layout.size.height - backgroundSize.height) / 2.0)
+                }
             }
             
             let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: originY), size: backgroundSize)
@@ -1004,6 +1038,8 @@ final class PhoneConfirmationController: ViewController {
             
             let textSize = self.textNode.updateLayout(backgroundSize)
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - textSize.width) / 2.0), y: 88.0), size: textSize).offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
+            self.textActivateAreaNode.frame = self.textNode.frame
+            self.textActivateAreaNode.accessibilityLabel = "\(self.code) \(self.number). \(self.strings.Login_PhoneNumberConfirmation)"
             
             let proceedWidth = backgroundSize.width - 16.0 * 2.0
             let proceedHeight = self.proceedNode.updateLayout(width: proceedWidth, transition: transition)

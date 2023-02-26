@@ -21,7 +21,7 @@ public struct CacheStorageSettings: Codable, Equatable {
     public static var defaultSettings: CacheStorageSettings {
         return CacheStorageSettings(
             defaultCacheStorageTimeout: Int32.max,
-            defaultCacheStorageLimitGigabytes: 8 * 1024 * 1024,
+            defaultCacheStorageLimitGigabytes: Int32.max,
             categoryStorageTimeout: [
                 .privateChats: Int32.max,
                 .groups: Int32(31 * 24 * 60 * 60),
@@ -50,7 +50,7 @@ public struct CacheStorageSettings: Codable, Equatable {
         } else if let value = try container.decodeIfPresent(Int32.self, forKey: "sizeLimit") {
             self.defaultCacheStorageLimitGigabytes = value
         } else {
-            self.defaultCacheStorageLimitGigabytes = 8 * 1024 * 1024
+            self.defaultCacheStorageLimitGigabytes = Int32.max
         }
         
         if let data = try container.decodeIfPresent(Data.self, forKey: "categoryStorageTimeoutJson") {

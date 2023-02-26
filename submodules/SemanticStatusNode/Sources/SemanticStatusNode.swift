@@ -145,6 +145,9 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 if let iconImage = self.iconImage {
                     context.saveGState()
                     let iconRect = CGRect(origin: CGPoint(), size: iconImage.size)
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     context.clip(to: iconRect, mask: iconImage.cgImage!)
                     context.fill(iconRect)
                     context.restoreGState()
@@ -180,6 +183,9 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
                 if let iconImage = self.iconImage {
                     context.saveGState()
                     let iconRect = CGRect(origin: CGPoint(), size: iconImage.size)
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     context.clip(to: iconRect, mask: iconImage.cgImage!)
                     context.fill(iconRect)
                     context.restoreGState()
@@ -857,6 +863,25 @@ public final class SemanticStatusNode: ASControlNode {
             self.setNeedsDisplay()
         }
     }
+        
+    public func setBackgroundImage(_ image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>) {
+        let start = CACurrentMediaTime()
+        self.disposable = combineLatest(queue: Queue.mainQueue(), image, self.hasLayoutPromise.get()).start(next: { [weak self] transform, ready in
+            guard let strongSelf = self, ready else {
+                return
+            }
+            let context = transform(TransformImageArguments(corners: ImageCorners(radius: strongSelf.bounds.width / 2.0), imageSize: strongSelf.bounds.size, boundingSize: strongSelf.bounds.size, intrinsicInsets: UIEdgeInsets()))
+            
+            let previousAppearanceContext = strongSelf.appearanceContext
+            strongSelf.appearanceContext = strongSelf.appearanceContext.withUpdatedBackgroundImage(context?.generateImage())
+            
+            if CACurrentMediaTime() - start > 0.3 {
+                strongSelf.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: nil, previousAppearanceContext: previousAppearanceContext, completion: {})
+                strongSelf.updateAnimations()
+            }
+            strongSelf.setNeedsDisplay()
+        })
+    }
     
     private var animator: ConstantDisplayLinkAnimator?
     
@@ -889,23 +914,8 @@ public final class SemanticStatusNode: ASControlNode {
         self.isOpaque = false
         self.displaysAsynchronously = true
         
-        if let image = image {
-            let start = CACurrentMediaTime()
-            self.disposable = combineLatest(queue: Queue.mainQueue(), image, self.hasLayoutPromise.get()).start(next: { [weak self] transform, ready in
-                guard let strongSelf = self, ready else {
-                    return
-                }
-                let context = transform(TransformImageArguments(corners: ImageCorners(radius: strongSelf.bounds.width / 2.0), imageSize: strongSelf.bounds.size, boundingSize: strongSelf.bounds.size, intrinsicInsets: UIEdgeInsets()))
-                
-                let previousAppearanceContext = strongSelf.appearanceContext
-                strongSelf.appearanceContext = strongSelf.appearanceContext.withUpdatedBackgroundImage(context?.generateImage())
-                
-                if CACurrentMediaTime() - start > 0.3 {
-                    strongSelf.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: nil, previousAppearanceContext: previousAppearanceContext, completion: {})
-                    strongSelf.updateAnimations()
-                }
-                strongSelf.setNeedsDisplay()
-            })
+        if let image {
+            self.setBackgroundImage(image)
         }
     }
     

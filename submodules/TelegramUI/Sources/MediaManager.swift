@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import AVFoundation
 import MobileCoreServices
+import Display
 import Postbox
 import TelegramCore
 import MediaPlayer
@@ -42,8 +43,6 @@ private struct GlobalControlOptions: OptionSet {
     static let playPause = GlobalControlOptions(rawValue: 1 << 4)
     static let seek = GlobalControlOptions(rawValue: 1 << 5)
 }
-
-public var test: Double?
 
 public final class MediaManagerImpl: NSObject, MediaManager {
     public static var globalAudioSession: ManagedAudioSession {
@@ -248,7 +247,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     var artwork: SharedMediaPlaybackAlbumArt?
                     
                     switch displayData {
-                        case let .music(title, performer, artworkValue, _):
+                        case let .music(title, performer, artworkValue, _, _):
                             artwork = artworkValue
                             
                             let titleText: String = title ?? presentationData.strings.MediaPlayer_UnknownTrack
@@ -325,23 +324,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && $0?.1 == $1?.1 })
         |> mapToSignal { value -> Signal<UIImage?, NoError> in
             if let (account, value) = value {
-                return albumArtThumbnailData(engine: TelegramEngine(account: account), thumbnail: value.fullSizeResource)
-                |> map { data -> UIImage? in
-                    return data.flatMap(UIImage.init(data:))
+                return playerAlbumArt(postbox: account.postbox, engine: TelegramEngine(account: account), fileReference: value.fullSizeResource.file, albumArt: value, thumbnail: false)
+                |> map { generator -> UIImage? in
+                    let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: 640, height: 640), boundingSize: CGSize(width: 640, height: 640), intrinsicInsets: .zero)
+                    return generator(arguments)?.generateImage()
                 }
-                /*return Signal { subscriber in
-                    let fetched = account.postbox.mediaBox.fetchedResource(value.fullSizeResource, parameters: nil).start()
-                    let data = account.postbox.mediaBox.resourceData(value.fullSizeResource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false)).start(next: { data in
-                        if data.complete, let value = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                            subscriber.putNext(UIImage(data: value))
-                            subscriber.putCompletion()
-                        }
-                    })
-                    return ActionDisposable {
-                        fetched.dispose()
-                        data.dispose()
-                    }
-                }*/
             } else {
                 return .single(nil)
             }

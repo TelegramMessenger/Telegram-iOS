@@ -199,6 +199,9 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     @objc internal func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         var updated = textField.text ?? ""
         updated.replaceSubrange(updated.index(updated.startIndex, offsetBy: range.lowerBound) ..< updated.index(updated.startIndex, offsetBy: range.upperBound), with: string)
+        if updated.hasPrefix("#") {
+            updated.removeFirst()
+        }
         if updated.count <= 6 && updated.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil {
             textField.text = updated.uppercased()
             textField.textColor = self.theme.chat.inputPanel.inputTextColor

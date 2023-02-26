@@ -833,6 +833,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .attachMenuBotAllowed:
                 attributedString = NSAttributedString(string: strings.Notification_BotWriteAllowed, font: titleFont, textColor: primaryTextColor)
+            case let .requestedPeer(_, peerId):
+                let botName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+                let peerName = message.peers[peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+                attributedString = addAttributesToStringWithRanges(strings.Notification_RequestedPeer(peerName, botName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId), (1, message.id.peerId)]))
             case .unknown:
                 attributedString = nil
             }

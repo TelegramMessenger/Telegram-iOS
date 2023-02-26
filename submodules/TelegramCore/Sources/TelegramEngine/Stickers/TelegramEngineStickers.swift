@@ -30,7 +30,7 @@ public extension TelegramEngine {
             return _internal_randomGreetingSticker(account: self.account)
         }
 
-        public func searchStickers(query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
+        public func searchStickers(query: [String], scope: SearchStickersScope = [.installed, .remote]) -> Signal<(items: [FoundStickerItem], isFinalResult: Bool), NoError> {
             return _internal_searchStickers(account: self.account, query: query, scope: scope)
         }
 
@@ -103,6 +103,10 @@ public extension TelegramEngine {
         
         public func availableReactions() -> Signal<AvailableReactions?, NoError> {
             return _internal_cachedAvailableReactions(postbox: self.account.postbox)
+        }
+        
+        public func emojiSearchCategories(kind: EmojiSearchCategories.Kind) -> Signal<EmojiSearchCategories?, NoError> {
+            return _internal_cachedEmojiSearchCategories(postbox: self.account.postbox, kind: kind)
         }
         
         public func updateQuickReaction(reaction: MessageReaction.Reaction) -> Signal<Never, NoError> {
@@ -179,6 +183,13 @@ public extension TelegramEngine {
         public func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
             return _internal_resolveInlineStickers(postbox: self.account.postbox, network: self.account.network, fileIds: fileIds)
         }
+        
+        public func searchEmoji(emojiString: [String]) -> Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError> {
+            return _internal_searchEmoji(account: self.account, query: emojiString)
+            |> map { items, isFinalResult -> (items: [TelegramMediaFile], isFinalResult: Bool) in
+                return (items.map(\.file), isFinalResult)
+            }
+        }
     }
 }
 
@@ -204,7 +215,38 @@ func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds
             }
         }
         
-        return network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
+        var signals: [Signal<[Api.Document]?, NoError>] = []
+        var remainingIds = Array(unknownIds)
+        while !remainingIds.isEmpty {
+            let partIdCount = min(100, remainingIds.count)
+            let partIds = remainingIds.prefix(partIdCount)
+            remainingIds.removeFirst(partIdCount)
+            signals.append(network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(partIds)))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
+                return .single(nil)
+            })
+        }
+        
+        return combineLatest(signals)
+        |> mapToSignal { documentSets -> Signal<[Int64: TelegramMediaFile], NoError> in
+            return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+                var resultFiles: [Int64: TelegramMediaFile] = cachedFiles
+                for result in documentSets {
+                    if let result = result {
+                        for document in result {
+                            if let file = telegramMediaFileFromApiDocument(document) {
+                                resultFiles[file.fileId.id] = file
+                                transaction.storeMediaIfNotPresent(media: file)
+                            }
+                        }
+                    }
+                }
+                return resultFiles
+            }
+        }
+        
+        /*return network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
             return .single(nil)
@@ -223,6 +265,6 @@ func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds
                 }
                 return resultFiles
             }
-        }
+        }*/
     }
 }

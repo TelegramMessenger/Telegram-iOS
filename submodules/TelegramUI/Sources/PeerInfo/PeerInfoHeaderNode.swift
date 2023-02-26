@@ -29,6 +29,7 @@ import MultiAnimationRenderer
 import ComponentDisplayAdapters
 import ChatTitleView
 import AppBundle
+import AvatarVideoNode
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -305,10 +306,11 @@ final class PeerInfoHeaderNavigationTransition {
 final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let context: AccountContext
     
-    private let containerNode: ContextControllerSourceNode
+    let containerNode: ContextControllerSourceNode
     
     let avatarNode: AvatarNode
     fileprivate var videoNode: UniversalVideoNode?
+    fileprivate var markupNode: AvatarVideoNode?
     fileprivate var iconView: ComponentView<Empty>?
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
@@ -380,11 +382,22 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 return
             }
             if fraction > 0.0 {
-                self.videoNode?.pause()
+                videoNode.pause()
             } else {
-                self.videoNode?.play()
+                videoNode.play()
             }
             transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
+        }
+        if let markupNode = self.markupNode {
+            if case .immediate = transition, fraction == 1.0 {
+                return
+            }
+            if fraction > 0.0 {
+                markupNode.updateVisibility(false)
+            } else {
+                markupNode.updateVisibility(true)
+            }
+            transition.updateAlpha(node: markupNode, alpha: 1.0 - fraction)
         }
     }
         
@@ -399,7 +412,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if peer.isDeleted {
                 overrideImage = .deletedIcon
             } else if let previousItem = previousItem, item == nil {
-                if case let .image(_, representations, _, _, _) = previousItem, let rep = representations.last {
+                if case let .image(_, representations, _, _, _, _) = previousItem, let rep = representations.last {
                     self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
                 }
                 overrideImage = AvatarNodeImageOverride.none
@@ -461,9 +474,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 }
             }
             
+            var isForum = false
             let avatarCornerRadius: CGFloat
             if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
                 avatarCornerRadius = floor(avatarSize * 0.25)
+                isForum = true
             } else {
                 avatarCornerRadius = avatarSize / 2.0
             }
@@ -485,12 +500,14 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 let videoRepresentations: [VideoRepresentationWithReference]
                 let immediateThumbnailData: Data?
                 var videoId: Int64
+                let markup: TelegramMediaImage.EmojiMarkup?
                 switch item {
                 case .custom:
                     representations = []
                     videoRepresentations = []
                     immediateThumbnailData = nil
                     videoId = 0
+                    markup = nil
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
@@ -499,7 +516,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         videoId = videoId &+ resource.photoId
                     }
-                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _):
+                    markup = nil
+                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _, markupValue):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
@@ -508,13 +526,33 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     } else {
                         videoId = peer.id.id._internalGetInt64Value()
                     }
+                    markup = markupValue
                 }
                 
                 self.containerNode.isGestureEnabled = !isSettings
                 
-                if threadInfo == nil, let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
+                if let markup {
+                    if let videoNode = self.videoNode {
+                        self.videoContent = nil
+                        self.videoStartTimestamp = nil
+                        self.videoNode = nil
+
+                        videoNode.removeFromSupernode()
+                    }
+
+                    let markupNode: AvatarVideoNode
+                    if let current = self.markupNode {
+                        markupNode = current
+                    } else {
+                        markupNode = AvatarVideoNode(context: self.context)
+                        self.containerNode.addSubnode(markupNode)
+                        self.markupNode = markupNode
+                    }
+                    markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
+                    markupNode.updateVisibility(true)
+                } else if threadInfo == nil, let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-                    let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled)
+                    let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled, storeAfterDownload: nil)
                     if videoContent.id != self.videoContent?.id {
                         self.videoNode?.removeFromSupernode()
                         
@@ -553,28 +591,51 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                         self.videoContent = videoContent
                         self.videoNode = videoNode
                         
-                        let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
+                        let maskPath: UIBezierPath
+                        if isForum {
+                            maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size), cornerRadius: avatarCornerRadius)
+                        } else {
+                            maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
+                        }
                         let shape = CAShapeLayer()
                         shape.path = maskPath.cgPath
                         videoNode.layer.mask = shape
                                                             
                         self.containerNode.addSubnode(videoNode)
                     }
-                } else if let videoNode = self.videoNode {
+                } else {
+                    if let markupNode = self.markupNode {
+                        self.markupNode = nil
+                        markupNode.removeFromSupernode()
+                    }
+                    if let videoNode = self.videoNode {
+                        self.videoStartTimestamp = nil
+                        self.videoContent = nil
+                        self.videoNode = nil
+
+                        videoNode.removeFromSupernode()
+                    }
+                }
+            } else  {
+                if let markupNode = self.markupNode {
+                    self.markupNode = nil
+                    markupNode.removeFromSupernode()
+                }
+                if let videoNode = self.videoNode {
+                    self.videoStartTimestamp = nil
                     self.videoContent = nil
                     self.videoNode = nil
-                    
+
                     videoNode.removeFromSupernode()
                 }
-            } else if let videoNode = self.videoNode {
-                self.videoContent = nil
-                self.videoNode = nil
-                
-                videoNode.removeFromSupernode()
-                
                 self.containerNode.isGestureEnabled = false
             }
             
+            if let markupNode = self.markupNode {
+                markupNode.frame = self.avatarNode.frame
+                markupNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: avatarCornerRadius, transition: .immediate)
+            }
+
             if let videoNode = self.videoNode {
                 if self.canAttachVideo {
                     videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
@@ -651,7 +712,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         transition.updateAlpha(node: self, alpha: 1.0 - fraction)
     }
     
-    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: CGFloat?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
+    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
             return
         }
@@ -680,7 +741,20 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             if let updatingAvatar = updatingAvatar {
                 overlayHidden = false
                 
-                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true, animateRotation: true))
+                var cancelEnabled = true
+                let progressValue: CGFloat?
+                if let uploadProgress {
+                    switch uploadProgress {
+                    case let .value(value):
+                        progressValue = max(0.027, value)
+                    case .indefinite:
+                        progressValue = nil
+                        cancelEnabled = false
+                    }
+                } else {
+                    progressValue = 0.027
+                }
+                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: progressValue, cancelEnabled: cancelEnabled, animateRotation: true))
                 
                 if case let .image(representation) = updatingAvatar {
                     if representation != self.currentRepresentation {
@@ -730,6 +804,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     private let context: AccountContext
     let avatarNode: AvatarNode
     fileprivate var videoNode: UniversalVideoNode?
+    fileprivate var markupNode: AvatarVideoNode?
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     var item: PeerInfoAvatarListItem?
@@ -769,7 +844,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     }
     
     var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: CGFloat?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
+    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
             return
         }
@@ -784,7 +859,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         if canEdit, peer.profileImageRepresentations.isEmpty {
             overrideImage = .editAvatarIcon(forceNone: true)
         } else if let previousItem = previousItem, item == nil {
-            if case let .image(_, representations, _, _, _) = previousItem, let rep = representations.last {
+            if case let .image(_, representations, _, _, _, _) = previousItem, let rep = representations.last {
                 self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
             }
             overrideImage = canEdit ? .editAvatarIcon(forceNone: true) : AvatarNodeImageOverride.none
@@ -799,8 +874,10 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
         
+        var isForum = false
         let avatarCornerRadius: CGFloat
         if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            isForum = true
             avatarCornerRadius = floor(avatarSize * 0.25)
         } else {
             avatarCornerRadius = avatarSize / 2.0
@@ -816,35 +893,63 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             let representations: [ImageRepresentationWithReference]
             let videoRepresentations: [VideoRepresentationWithReference]
             let immediateThumbnailData: Data?
-            var id: Int64
+            var videoId: Int64
+            let markup: TelegramMediaImage.EmojiMarkup?
             switch item {
                 case .custom:
                     representations = []
                     videoRepresentations = []
                     immediateThumbnailData = nil
-                    id = 0
+                    videoId = 0
+                    markup = nil
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = peer.id.id._internalGetInt64Value()
+                    videoId = peer.id.id._internalGetInt64Value()
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
-                        id = id &+ resource.photoId
+                        videoId = videoId &+ resource.photoId
                     }
-                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _):
+                    markup = nil
+                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _, markupValue):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
                     if case let .cloud(imageId, _, _) = reference {
-                        id = imageId
+                        videoId = imageId
                     } else {
-                        id = peer.id.id._internalGetInt64Value()
+                        videoId = peer.id.id._internalGetInt64Value()
                     }
+                    markup = markupValue
             }
-            
-            if threadData == nil, let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
+
+            if let markup {
+                if let videoNode = self.videoNode {
+                    self.videoContent = nil
+                    self.videoStartTimestamp = nil
+                    self.videoNode = nil
+
+                    videoNode.removeFromSupernode()
+                }
+
+                let markupNode: AvatarVideoNode
+                if let current = self.markupNode {
+                    markupNode = current
+                } else {
+                    markupNode = AvatarVideoNode(context: self.context)
+                    self.insertSubnode(markupNode, aboveSubnode: self.avatarNode)
+                    self.markupNode = markupNode
+                }
+                markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
+                markupNode.updateVisibility(true)
+            } else if threadData == nil, let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
+                if let markupNode = self.markupNode {
+                    self.markupNode = nil
+                    markupNode.removeFromSupernode()
+                }
+
                 let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-                let videoContent = NativeVideoContent(id: .profileVideo(id, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled)
+                let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled, storeAfterDownload: nil)
                 if videoContent.id != self.videoContent?.id {
                     self.videoNode?.removeFromSupernode()
                     
@@ -855,19 +960,30 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     self.videoContent = videoContent
                     self.videoNode = videoNode
                     
-                    let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
+                    let maskPath: UIBezierPath
+                    if isForum {
+                        maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size), cornerRadius: avatarCornerRadius)
+                    } else {
+                        maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
+                    }
                     let shape = CAShapeLayer()
                     shape.path = maskPath.cgPath
                     videoNode.layer.mask = shape
                     
                     self.insertSubnode(videoNode, aboveSubnode: self.avatarNode)
                 }
-            } else if let videoNode = self.videoNode {
-                self.videoStartTimestamp = nil
-                self.videoContent = nil
-                self.videoNode = nil
-                
-                videoNode.removeFromSupernode()
+            } else {
+                if let markupNode = self.markupNode {
+                    self.markupNode = nil
+                    markupNode.removeFromSupernode()
+                }
+                if let videoNode = self.videoNode {
+                    self.videoStartTimestamp = nil
+                    self.videoContent = nil
+                    self.videoNode = nil
+
+                    videoNode.removeFromSupernode()
+                }
             }
         } else if let videoNode = self.videoNode {
             self.videoStartTimestamp = nil
@@ -877,6 +993,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             videoNode.removeFromSupernode()
         }
         
+        if let markupNode = self.markupNode {
+            markupNode.frame = self.avatarNode.frame
+            markupNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: avatarCornerRadius, transition: .immediate)
+        }
+
         if let videoNode = self.videoNode {
             if self.canAttachVideo {
                 videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
@@ -896,6 +1017,8 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         return super.hitTest(point, with: event)
     }
 }
+
+
 
 final class PeerInfoAvatarListNode: ASDisplayNode {
     private let isSettings: Bool
@@ -1017,6 +1140,8 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     func animateAvatarCollapse(transition: ContainedViewLayoutTransition) {
         if let currentItemNode = self.listContainerNode.currentItemNode, case .animated = transition {
             if let _ = self.avatarContainerNode.videoNode {
+
+            } else if let _ = self.avatarContainerNode.markupNode {
 
             } else if let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage {
                 let avatarCopyView = UIImageView()
@@ -1197,6 +1322,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.theme = presentationData.theme
             
             let text: String
+            var accessibilityText: String
             var icon: UIImage?
             var isBold = false
             var isGestureEnabled = false
@@ -1205,33 +1331,42 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             switch key {
                 case .edit:
                     text = presentationData.strings.Common_Edit
+                    accessibilityText = text
                 case .done, .cancel, .selectionDone:
                     text = presentationData.strings.Common_Done
+                    accessibilityText = text
                     isBold = true
                 case .select:
                     text = presentationData.strings.Common_Select
+                    accessibilityText = text
                 case .search:
                     text = ""
+                    accessibilityText = presentationData.strings.Common_Search
                     icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
                     isAnimation = true
                     animationState = .search
                 case .editPhoto:
                     text = presentationData.strings.Settings_EditPhoto
+                    accessibilityText = text
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
+                    accessibilityText = text
                 case .more:
                     text = ""
+                    accessibilityText = presentationData.strings.Common_More
                     icon = nil// PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
                     isGestureEnabled = true
                     isAnimation = true
                     animationState = .more
                 case .qrCode:
                     text = ""
+                    accessibilityText = presentationData.strings.PeerInfo_QRCode_Title
                     icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
                 case .moreToSearch:
                     text = ""
+                    accessibilityText = ""
             }
-            self.accessibilityLabel = text
+            self.accessibilityLabel = accessibilityText
             self.containerNode.isGestureEnabled = isGestureEnabled
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
@@ -1578,7 +1713,8 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
-        
+        self.clearButtonNode.isAccessibilityElement = false
+
         self.topSeparator = ASDisplayNode()
         
         self.maskNode = ASImageNode()
@@ -1738,7 +1874,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
-        
+        self.clearButtonNode.isAccessibilityElement = false
+
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
@@ -2407,10 +2544,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     func updateAvatarIsHidden(entry: AvatarGalleryEntry?) {
         if let entry = entry {
-            self.avatarListNode.avatarContainerNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
+            self.avatarListNode.avatarContainerNode.containerNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
             self.editingContentNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
         } else {
-            self.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
+            self.avatarListNode.avatarContainerNode.containerNode.isHidden = false
             self.editingContentNode.avatarNode.isHidden = false
         }
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
@@ -2428,7 +2565,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentCredibilityIcon: CredibilityIcon?
     
     private var currentPanelStatusData: PeerInfoStatusData?
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition, additive: Bool, showPeerId: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, notificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
         self.threadData = threadData
@@ -2708,7 +2845,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
 
             titleStringText = title
-            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
 
             if self.isSettings, let user = peer as? TelegramUser {
@@ -2809,7 +2946,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: MultiScaleTextState(attributes: titleAttributes, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: smallTitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.titleNode.accessibilityLabel = titleStringText
         
         let subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
@@ -3373,7 +3509,28 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 buttonIcon = .voiceChat
             case .mute:
-                if let notificationSettings = notificationSettings, case .muted = notificationSettings.muteState {
+                var peerIsMuted = false
+                if let notificationSettings {
+                    if case .muted = notificationSettings.muteState {
+                        peerIsMuted = true
+                    } else if case .default = notificationSettings.muteState, let globalNotificationSettings {
+                        if let peer {
+                            if peer is TelegramUser {
+                                peerIsMuted = !globalNotificationSettings.privateChats.enabled
+                            } else if peer is TelegramGroup {
+                                peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                            } else if let channel = peer as? TelegramChannel {
+                                switch channel.info {
+                                case .group:
+                                    peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                                case .broadcast:
+                                    peerIsMuted = !globalNotificationSettings.channels.enabled
+                                }
+                            }
+                        }
+                    }
+                }
+                if peerIsMuted {
                     buttonText = presentationData.strings.PeerInfo_ButtonUnmute
                     buttonIcon = .unmute
                 } else {

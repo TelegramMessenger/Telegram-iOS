@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import TelegramCore
 import TelegramUIPreferences
 import Postbox
@@ -28,6 +29,10 @@ public func selectReactionFillStaticColor(theme: PresentationTheme, wallpaper: T
 }
 
 public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> Bool {
+    if !DeviceMetrics.performance.isGraphicallyCapable {
+        return false
+    }
+    
     if case .builtin = wallpaper {
         return false
     } else if case .color = wallpaper {
@@ -900,7 +905,13 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         panelContentControlVibrantOverlayColor: UIColor(white: 0.85, alpha: 0.65),
         panelContentControlVibrantSelectionColor: UIColor(white: 0.85, alpha: 0.1),
         panelContentControlOpaqueOverlayColor: UIColor(white: 0.0, alpha: 0.2),
-        panelContentControlOpaqueSelectionColor: UIColor(white: 0.0, alpha: 0.1),
+        panelContentControlOpaqueSelectionColor: UIColor(rgb: 0x000000, alpha: 0.06),
+        panelContentVibrantSearchOverlayColor: UIColor(white: 0.6, alpha: 0.55),
+        panelContentVibrantSearchOverlaySelectedColor: UIColor(white: 0.4, alpha: 0.6),
+        panelContentVibrantSearchOverlayHighlightColor: UIColor(white: 0.2, alpha: 0.02),
+        panelContentOpaqueSearchOverlayColor: UIColor(rgb: 0x8e8e93),
+        panelContentOpaqueSearchOverlaySelectedColor: UIColor(white: 0.0, alpha: 0.4),
+        panelContentOpaqueSearchOverlayHighlightColor: UIColor(white: 0.0, alpha: 0.1),
         stickersBackgroundColor: UIColor(rgb: 0xe8ebf0),
         stickersSectionTextColor: UIColor(rgb: 0x9099a2),
         stickersSearchBackgroundColor: UIColor(rgb: 0xd9dbe1),

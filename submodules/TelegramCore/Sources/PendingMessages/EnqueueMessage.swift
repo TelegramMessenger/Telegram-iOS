@@ -244,7 +244,7 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
     }
 }
 
-public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], messages: [EnqueueMessage]) -> Signal<[MessageId], NoError> {
+public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], threadIds: [PeerId: Int64], messages: [EnqueueMessage]) -> Signal<[MessageId], NoError> {
     let signal: Signal<[(Bool, EnqueueMessage)], NoError>
     if let transformOutgoingMessageMedia = account.transformOutgoingMessageMedia {
         signal = opportunisticallyTransformOutgoingMedia(network: account.network, postbox: account.postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messages: messages, userInteractive: true)
@@ -256,6 +256,14 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
         return account.postbox.transaction { transaction -> [MessageId] in
             var messageIds: [MessageId] = []
             for peerId in peerIds {
+                var replyToMessageId: MessageId?
+                if let threadIds = threadIds[peerId] {
+                    replyToMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadIds))
+                }
+                var messages = messages
+                if let replyToMessageId = replyToMessageId {
+                    messages = messages.map { ($0.0, $0.1.withUpdatedReplyToMessageId(replyToMessageId)) }
+                }
                 for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages, disableAutoremove: false, transformGroupingKeysWithPeerId: true) {
                     if let id = id {
                         messageIds.append(id)
@@ -567,7 +575,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     if let replyToMessageId = replyToMessageId {
                         if let message = transaction.getMessage(replyToMessageId) {
                             if let threadIdValue = message.threadId {
-                                threadId = threadIdValue
+                                if threadIdValue == 1 {
+                                    if let channel = transaction.getPeer(message.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                                        threadId = threadIdValue
+                                    } else {
+                                        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                                            threadId = makeMessageThreadId(replyToMessageId)
+                                        }
+                                    }
+                                } else {
+                                    threadId = threadIdValue
+                                }
                             } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                                 threadId = makeMessageThreadId(replyToMessageId)
                             }

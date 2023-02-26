@@ -38,6 +38,7 @@ public struct CachedGroupFlags: OptionSet {
     }
     
     public static let canChangeUsername = CachedGroupFlags(rawValue: 1 << 0)
+    public static let translationHidden = CachedGroupFlags(rawValue: 1 << 1)
 }
 
 public enum PeerAllowedReactions: Equatable, Codable {

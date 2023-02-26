@@ -72,6 +72,12 @@
 {
     if (![(id)item conformsToProtocol:@protocol(TGMediaSelectableItem)])
         return false;
+ 
+    if (_attemptSelectingItem) {
+        if (!_attemptSelectingItem(item)) {
+            return false;
+        }
+    }
     
     NSString *identifier = item.uniqueIdentifier;
     if (selected)

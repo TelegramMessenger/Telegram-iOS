@@ -867,7 +867,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if let file = selectedMedia as? TelegramMediaFile {
                                 strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
                             } else if let image = selectedMedia as? TelegramMediaImage, let representation = image.representations.last {
-                                strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, userInitiated: true, storeToDownloadsPeerType: nil).start())
+                                strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, userInitiated: true, storeToDownloadsPeerId: nil).start())
                             }
                         }
                     }, cancel: {
@@ -1213,6 +1213,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     let _ = extensionTextApply()
                     
                     strongSelf.currentIconImage = iconImage
+                                
+                    if let updateIconImageSignal, let iconImage, case .albumArt = iconImage {
+                        strongSelf.iconStatusNode.setBackgroundImage(updateIconImageSignal)
+                    }
                     
                     if let iconImageApply = iconImageApply {
                         if let updateImageSignal = updateIconImageSignal {

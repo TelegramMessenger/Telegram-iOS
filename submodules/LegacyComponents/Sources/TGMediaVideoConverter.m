@@ -101,12 +101,12 @@
 
 @implementation TGMediaVideoConverter
 
-+ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments path:(NSString *)path watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
-    return [self convertAVAsset:avAsset adjustments:adjustments watcher:watcher inhibitAudio:false entityRenderer:entityRenderer];
+    return [self convertAVAsset:avAsset adjustments:adjustments path:path watcher:watcher inhibitAudio:false entityRenderer:entityRenderer];
 }
 
-+ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher inhibitAudio:(bool)inhibitAudio entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments path:(NSString *)path watcher:(TGMediaVideoFileWatcher *)watcher inhibitAudio:(bool)inhibitAudio entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
     if ([avAsset isKindOfClass:[NSURL class]]) {
         avAsset = [[AVURLAsset alloc] initWithURL:(NSURL *)avAsset options:nil];
@@ -116,7 +116,7 @@
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
         SAtomic *context = [[SAtomic alloc] initWithValue:[TGMediaVideoConversionContext contextWithQueue:queue subscriber:subscriber]];
-        NSURL *outputUrl = [self _randomTemporaryURL];
+        NSURL *outputUrl = [NSURL fileURLWithPath:path];
         
         NSArray *requiredKeys = @[ @"tracks", @"duration" ];
         [avAsset loadValuesAsynchronouslyForKeys:requiredKeys completionHandler:^
@@ -222,14 +222,14 @@
     }];
 }
 
-+ (SSignal *)renderUIImage:(UIImage *)image duration:(NSTimeInterval)duration adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)renderUIImage:(UIImage *)image duration:(NSTimeInterval)duration adjustments:(TGMediaVideoEditAdjustments *)adjustments path:(NSString *)path watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
     SQueue *queue = [[SQueue alloc] init];
        
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
             {
         SAtomic *context = [[SAtomic alloc] initWithValue:[TGMediaVideoConversionContext contextWithQueue:queue subscriber:subscriber]];
-        NSURL *outputUrl = [self _randomTemporaryURL];
+        NSURL *outputUrl = [NSURL fileURLWithPath:path];
         
         NSString *path = TGComponentsPathForResource(@"blank", @"mp4");
         AVAsset *avAsset = [[AVURLAsset alloc] initWithURL:[NSURL fileURLWithPath:path] options:nil];
@@ -893,11 +893,6 @@
     if (fmod(renderHeight, blockSize) != 0)
         renderHeight = CGFloor(cropSize.height / blockSize) * blockSize;
     return CGSizeMake(renderWidth, renderHeight);
-}
-
-+ (NSURL *)_randomTemporaryURL
-{
-    return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.mp4", (int)arc4random()]]];
 }
 
 + (NSUInteger)estimatedSizeForPreset:(TGMediaVideoConversionPreset)preset duration:(NSTimeInterval)duration hasAudio:(bool)hasAudio

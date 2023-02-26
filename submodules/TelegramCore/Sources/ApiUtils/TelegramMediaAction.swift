@@ -108,6 +108,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .suggestedProfilePhoto(image: telegramMediaImageFromApiPhoto(photo)))
     case .messageActionAttachMenuBotAllowed:
         return TelegramMediaAction(action: .attachMenuBotAllowed)
+    case let .messageActionRequestedPeer(buttonId, peer):
+        return TelegramMediaAction(action: .requestedPeer(buttonId: buttonId, peerId: peer.peerId))
     }
 }
 

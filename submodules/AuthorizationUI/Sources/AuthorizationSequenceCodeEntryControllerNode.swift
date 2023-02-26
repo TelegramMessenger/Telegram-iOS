@@ -22,11 +22,14 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     private let animationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
+    private let titleActivateAreaNode: AccessibilityAreaNode
     private let titleIconNode: ASImageNode
     private let currentOptionNode: ImmediateTextNode
+    private let currentOptionActivateAreaNode: AccessibilityAreaNode
     private var dustNode: InvisibleInkDustNode?
     
     private let currentOptionInfoNode: ASTextNode
+    private let currentOptionInfoActivateAreaNode: AccessibilityAreaNode
     private let nextOptionTitleNode: ImmediateTextNode
     private let nextOptionButtonNode: HighlightableButtonNode
     
@@ -91,6 +94,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
+        self.titleActivateAreaNode = AccessibilityAreaNode()
+        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        
         self.titleIconNode = ASImageNode()
         self.titleIconNode.isLayerBacked = true
         self.titleIconNode.displayWithoutProcessing = true
@@ -102,9 +108,15 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.currentOptionNode.lineSpacing = 0.1
         self.currentOptionNode.maximumNumberOfLines = 0
         
+        self.currentOptionActivateAreaNode = AccessibilityAreaNode()
+        self.currentOptionActivateAreaNode.accessibilityTraits = .staticText
+        
         self.currentOptionInfoNode = ASTextNode()
         self.currentOptionInfoNode.isUserInteractionEnabled = false
         self.currentOptionInfoNode.displaysAsynchronously = false
+        
+        self.currentOptionInfoActivateAreaNode = AccessibilityAreaNode()
+        self.currentOptionInfoActivateAreaNode.accessibilityTraits = .staticText
         
         self.nextOptionTitleNode = ImmediateTextNode()
         
@@ -113,6 +125,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: .sms(length: 5), nextType: .call, timeout: 60, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         self.nextOptionTitleNode.attributedText = nextOptionText
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
+        self.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
+        if nextOptionActive {
+            self.nextOptionButtonNode.accessibilityTraits = [.button]
+        } else {
+            self.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
+        }
         self.nextOptionButtonNode.addSubnode(self.nextOptionTitleNode)
         
         self.codeInputView = CodeInputView()
@@ -156,8 +174,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.addSubnode(self.codeInputView)
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.titleActivateAreaNode)
         self.addSubnode(self.titleIconNode)
         self.addSubnode(self.currentOptionNode)
+        self.addSubnode(self.currentOptionActivateAreaNode)
         self.addSubnode(self.currentOptionInfoNode)
         self.addSubnode(self.nextOptionButtonNode)
         self.addSubnode(self.animationNode)
@@ -266,10 +286,18 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.appleSignInAllowed = appleSignInAllowed
         
         self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, phoneNumber: self.phoneNumber, email: self.email, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        self.currentOptionActivateAreaNode.accessibilityLabel = self.currentOptionNode.attributedText?.string ?? ""
         if case .missedCall = codeType {
             self.currentOptionInfoNode.attributedText = NSAttributedString(string: self.strings.Login_CodePhonePatternInfoText, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+            self.currentOptionInfoActivateAreaNode.accessibilityLabel = self.currentOptionInfoNode.attributedText?.string ?? ""
+            if self.currentOptionInfoActivateAreaNode.supernode == nil {
+                self.addSubnode(self.currentOptionInfoActivateAreaNode)
+            }
         } else {
             self.currentOptionInfoNode.attributedText = NSAttributedString(string: "", font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor)
+            if self.currentOptionInfoActivateAreaNode.supernode != nil {
+                self.currentOptionInfoActivateAreaNode.removeFromSupernode()
+            }
         }
         if let timeout = timeout {
             #if DEBUG
@@ -283,7 +311,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                         let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemPrimaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
                         strongSelf.nextOptionTitleNode.attributedText = nextOptionText
                         strongSelf.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
-                        
+                        strongSelf.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
+                        if nextOptionActive {
+                            strongSelf.nextOptionButtonNode.accessibilityTraits = [.button]
+                        } else {
+                            strongSelf.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
+                        }
                         if let layoutArguments = strongSelf.layoutArguments {
                             strongSelf.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
                         }
@@ -301,7 +334,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         self.nextOptionTitleNode.attributedText = nextOptionText
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
-        
+        self.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
+        if nextOptionActive {
+            self.nextOptionButtonNode.accessibilityTraits = [.button]
+        } else {
+            self.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
+        }
         if let layoutArguments = self.layoutArguments {
             self.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
         }
@@ -346,6 +384,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         } else {
             self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeTelegramTitle, font: Font.semibold(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
+        
+        self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
         if let inputHeight = layout.inputHeight {
             if let codeType = self.codeType, case .email = codeType {
@@ -394,6 +434,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             codeLength = Int(length)
         case let .fragment(_, length):
             codeLength = Int(length)
+        case let .firebase(_, length):
+            codeLength = Int(length)
         case .emailSetupRequired:
             codeLength = 6
         case .none:
@@ -412,7 +454,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             prefix: codePrefix,
             count: codeLength,
             width: maximumWidth - 28.0,
-            compact: layout.size.width <= 320.0
+            compact: layout.size.width <= 320.0 || (layout.size.width <= 375.0 && codeLength > 5)
         )
         
         var items: [AuthorizationLayoutItem] = []
@@ -523,6 +565,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         self.nextOptionTitleNode.frame = self.nextOptionButtonNode.bounds
+        
+        self.titleActivateAreaNode.frame = self.titleNode.frame
+        self.currentOptionActivateAreaNode.frame = self.currentOptionNode.frame
+        self.currentOptionInfoActivateAreaNode.frame = self.currentOptionInfoNode.frame
     }
     
     func activateInput() {
@@ -581,6 +627,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 case let .email(_, length, _, _, _):
                     codeLength = length
                 case let .fragment(_, length):
+                    codeLength = length
+                case let .firebase(_, length):
                     codeLength = length
                 default:
                     break

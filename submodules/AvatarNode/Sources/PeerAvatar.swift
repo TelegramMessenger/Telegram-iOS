@@ -307,3 +307,129 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
         return nil
     }
 }
+
+public func drawPeerAvatarLetters(context: CGContext, size: CGSize, round: Bool = true, font: UIFont, letters: [String], peerId: EnginePeer.Id) {
+    if round {
+        context.beginPath()
+        context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height:
+            size.height))
+        context.clip()
+    }
+    
+    let colorIndex: Int
+    if peerId.namespace == .max {
+        colorIndex = -1
+    } else {
+        colorIndex = Int(clamping: abs(peerId.id._internalGetInt64Value()))
+    }
+    
+    let colorsArray: NSArray
+    if colorIndex == -1 {
+        colorsArray = AvatarNode.grayscaleColors.map(\.cgColor) as NSArray
+    } else {
+        colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count].map(\.cgColor) as NSArray
+    }
+    
+    var locations: [CGFloat] = [1.0, 0.0]
+    
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
+    
+    context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context.resetClip()
+    
+    context.setBlendMode(.normal)
+    
+    let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
+    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: font, NSAttributedString.Key.foregroundColor: UIColor.white])
+    
+    let line = CTLineCreateWithAttributedString(attributedString)
+    let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+    
+    let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
+    let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0))
+    
+    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context.scaleBy(x: 1.0, y: -1.0)
+    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    let textPosition = context.textPosition
+    context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+    CTLineDraw(line, context)
+    context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    context.textPosition = textPosition
+}
+
+
+public enum AvatarBackgroundColor {
+    case blue
+    case yellow
+    case green
+    case purple
+    case red
+    case violet
+}
+
+public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat = 1.0, cornerRadius: CGFloat? = nil, circleCorners: Bool = false, color: AvatarBackgroundColor) -> UIImage? {
+    return generateImage(size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.beginPath()
+        if let cornerRadius {
+            if circleCorners {
+                let roundedRect = CGPath(roundedRect: CGRect(origin: .zero, size: size), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                context.addPath(roundedRect)
+            } else {
+                let roundedRect = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: cornerRadius)
+                context.addPath(roundedRect.cgPath)
+            }
+        } else {
+            context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        }
+        context.clip()
+        
+        let colorIndex: Int
+        switch color {
+        case .blue:
+            colorIndex = 5
+        case .yellow:
+            colorIndex = 1
+        case .green:
+            colorIndex = 3
+        case .purple:
+            colorIndex = 2
+        case .red:
+            colorIndex = 0
+        case .violet:
+            colorIndex = 6
+        }
+        
+        let colorsArray: NSArray
+        if colorIndex == -1 {
+            colorsArray = AvatarNode.grayscaleColors.map(\.cgColor) as NSArray
+        } else {
+            colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count].map(\.cgColor) as NSArray
+        }
+        
+        var locations: [CGFloat] = [1.0, 0.0]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        context.resetClip()
+        
+        context.setBlendMode(.normal)
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+        
+        if let icon = icon {
+            let iconSize = CGSize(width: icon.size.width * iconScale, height: icon.size.height * iconScale)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+            context.draw(icon.cgImage!, in: iconFrame)
+        }
+    })
+}

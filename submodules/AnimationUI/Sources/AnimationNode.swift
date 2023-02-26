@@ -5,7 +5,7 @@ import Lottie
 import AppBundle
 import Display
 
-public final class AnimationNode : ASDisplayNode {
+public final class AnimationNode: ASDisplayNode {
     private let scale: CGFloat
     public var speed: CGFloat = 1.0 {
         didSet {
@@ -14,8 +14,6 @@ public final class AnimationNode : ASDisplayNode {
             }
         }
     }
-    
-    //private var colorCallbacks: [LOTColorValueCallback] = []
     
     public var didPlay = false
     public var completion: (() -> Void)?
@@ -43,9 +41,6 @@ public final class AnimationNode : ASDisplayNode {
                 if let colors = colors {
                     for (key, value) in colors {
                         view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                        /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                        self.colorCallbacks.append(colorCallback)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
                     
                     if let value = colors["__allcolors__"] {
@@ -77,9 +72,6 @@ public final class AnimationNode : ASDisplayNode {
                 if let colors = colors {
                     for (key, value) in colors {
                         view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                        /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                        self.colorCallbacks.append(colorCallback)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
                     
                     if let value = colors["__allcolors__"] {
@@ -121,9 +113,6 @@ public final class AnimationNode : ASDisplayNode {
             if let colors = colors {
                 for (key, value) in colors {
                     self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                    /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                    self.colorCallbacks.append(colorCallback)
-                    self.animationView()?.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                 }
             }
         }

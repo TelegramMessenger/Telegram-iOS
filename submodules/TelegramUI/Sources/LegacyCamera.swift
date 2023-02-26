@@ -10,7 +10,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, attachmentController: ViewController? = nil, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: NSAttributedString, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, dismissedWithResult: @escaping () -> Void = {}, finishedTransitionIn: @escaping () -> Void = {}) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, attachmentController: ViewController? = nil, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: NSAttributedString, hasSchedule: Bool, enablePhoto: Bool, enableVideo: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, dismissedWithResult: @escaping () -> Void = {}, finishedTransitionIn: @escaping () -> Void = {}) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -22,7 +22,16 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
 
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {
-        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: photoOnly ? TGCameraControllerGenericPhotoOnlyIntent : TGCameraControllerGenericIntent)
+        let intent: TGCameraControllerIntent
+        if !enableVideo {
+            intent = TGCameraControllerGenericPhotoOnlyIntent
+        } else if !enablePhoto {
+            intent = TGCameraControllerGenericVideoOnlyIntent
+        } else {
+            intent = TGCameraControllerGenericIntent
+        }
+        
+        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: intent)
     } else {
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat)
     }
@@ -234,7 +243,7 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
                 nativeGenerator(_1, _2, _3, nil)
             })
             if let parentController = parentController {
-                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account, silently in
+                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, _, text, account, silently in
                     return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
                     |> `catch` { _ -> Signal<[LegacyAssetPickerEnqueueMessage], ShareControllerError> in
                         return .single([])

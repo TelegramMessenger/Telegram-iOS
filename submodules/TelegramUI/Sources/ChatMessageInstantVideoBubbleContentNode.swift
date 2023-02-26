@@ -241,7 +241,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             
             let videoFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: videoLayout.contentSize)
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? nil : CGPoint(x: displaySize.width + 4.0, y: -25.0), hidesHeaders: !isExpanded, avatarOffset: !isExpanded && isPlaying ? -100.0 : 0.0)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? nil : CGPoint(x: avatarInset + displaySize.width + 4.0, y: -25.0), hidesHeaders: !isExpanded, avatarOffset: !isExpanded && isPlaying ? -100.0 : 0.0)
             
             let videoFrameWidth = videoFrame.width + 2.0
             

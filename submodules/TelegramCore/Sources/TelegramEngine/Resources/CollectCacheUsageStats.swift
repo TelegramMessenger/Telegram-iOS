@@ -123,18 +123,95 @@ private extension StorageUsageStats {
                 mappedCategory = .avatars
             case MediaResourceUserContentType.sticker.rawValue:
                 mappedCategory = .stickers
+            case MediaResourceUserContentType.other.rawValue:
+                mappedCategory = .misc
+            case MediaResourceUserContentType.audioVideoMessage.rawValue:
+                mappedCategory = .misc
             default:
                 mappedCategory = .misc
             }
-            mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+            if mappedCategories[mappedCategory] == nil {
+                mappedCategories[mappedCategory] = StorageUsageStats.CategoryData(size: value.size, messages: value.messages)
+            } else {
+                mappedCategories[mappedCategory]?.size += value.size
+                mappedCategories[mappedCategory]?.messages.merge(value.messages, uniquingKeysWith: { lhs, _ in lhs})
+            }
         }
         
         self.init(categories: mappedCategories)
     }
 }
 
+private func statForDirectory(path: String) -> Int64 {
+    if #available(macOS 10.13, *) {
+        var s = darwin_dirstat()
+        var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
+        if result != -1 {
+            return Int64(s.total_size)
+        } else {
+            result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
+            if result != -1 {
+                return Int64(s.total_size)
+            } else {
+                return 0
+            }
+        }
+    } else {
+        let fileManager = FileManager.default
+        let folderURL = URL(fileURLWithPath: path)
+        var folderSize: Int64 = 0
+        if let files = try? fileManager.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: nil, options: []) {
+            for file in files {
+                folderSize += (fileSize(file.path) ?? 0)
+            }
+        }
+        return folderSize
+    }
+}
+
+private func collectDirectoryUsageReportRecursive(path: String, indent: String, log: inout String) {
+    guard let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey], options: .skipsSubdirectoryDescendants) else {
+        return
+    }
+    for url in enumerator {
+        guard let url = url as? URL else {
+            continue
+        }
+        if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
+            let subdirectorySize = statForDirectory(path: url.path)
+            log.append("\(indent)+ \(url.lastPathComponent): \(subdirectorySize)\n")
+            collectDirectoryUsageReportRecursive(path: url.path, indent: indent + "  ", log: &log)
+        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
+            if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                log.append("\(indent)\(url.lastPathComponent): SYMLINK\n")
+            } else {
+                log.append("\(indent)\(url.lastPathComponent): \(fileSizeValue)\n")
+            }
+        }
+    }
+}
+
+public func collectRawStorageUsageReport(containerPath: String) -> String {
+    var log = ""
+    
+    let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+    let documentsSize = statForDirectory(path: documentsPath)
+    log.append("Documents (\(documentsPath)): \(documentsSize)\n")
+    collectDirectoryUsageReportRecursive(path: documentsPath, indent: "  ", log: &log)
+    
+    let systemCachePath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
+    let systemCacheSize = statForDirectory(path: systemCachePath)
+    log.append("System Cache (\(systemCachePath)): \(systemCacheSize)\n")
+    
+    let containerSize = statForDirectory(path: containerPath)
+    log.append("Container (\(containerPath)): \(containerSize)\n")
+    collectDirectoryUsageReportRecursive(path: containerPath, indent: "  ", log: &log)
+    
+    return log
+}
+
 func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
-    let additionalStats = Signal<Int64, NoError> { subscriber in
+    /*let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {
             var totalSize: Int64 = 0
             
@@ -207,7 +284,9 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
         }
         
         return EmptyDisposable
-    }
+    }*/
+    
+    let additionalStats = account.postbox.mediaBox.cacheStorageBox.totalSize() |> take(1)
     
     return combineLatest(
         additionalStats,
@@ -264,6 +343,7 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
 func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
     return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
         var result: [EngineMessage.Id: Message] = [:]
+        var peerInChatList: [EnginePeer.Id: Bool] = [:]
         for (category, value) in stats.categories {
             if !categories.contains(category) {
                 continue
@@ -273,8 +353,23 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
                 if result[id] == nil {
                     if let message = existingMessages[id] {
                         result[id] = message
-                    } else if let message = transaction.getMessage(id) {
-                        result[id] = message
+                    } else {
+                        var matches = false
+                        if let peerInChatListValue = peerInChatList[id.peerId] {
+                            if peerInChatListValue {
+                                matches = true
+                            }
+                        } else {
+                            let peerInChatListValue = transaction.getPeerChatListIndex(id.peerId) != nil
+                            peerInChatList[id.peerId] = peerInChatListValue
+                            if peerInChatListValue {
+                                matches = true
+                            }
+                        }
+                        
+                        if matches, let message = transaction.getMessage(id) {
+                            result[id] = message
+                        }
                     }
                 }
             }
@@ -284,29 +379,56 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
     }
 }
 
-func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
-        mediaBox.storageBox.remove(peerId: peerId, contentTypes: categories.map { item -> UInt8 in
-            let mappedItem: MediaResourceUserContentType
+        var includeResourceIds = Set<MediaResourceId>()
+        for message in includeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &includeResourceIds)
+        }
+        var includeIds: [Data] = []
+        for resourceId in includeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                includeIds.append(data)
+            }
+        }
+        
+        var excludeResourceIds = Set<MediaResourceId>()
+        for message in excludeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &excludeResourceIds)
+        }
+        var excludeIds: [Data] = []
+        for resourceId in excludeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                excludeIds.append(data)
+            }
+        }
+        
+        var mappedContentTypes: [UInt8] = []
+        for item in categories {
             switch item {
             case .photos:
-                mappedItem = .image
+                mappedContentTypes.append(MediaResourceUserContentType.image.rawValue)
             case .videos:
-                mappedItem = .video
+                mappedContentTypes.append(MediaResourceUserContentType.video.rawValue)
             case .files:
-                mappedItem = .file
+                mappedContentTypes.append(MediaResourceUserContentType.file.rawValue)
             case .music:
-                mappedItem = .audio
+                mappedContentTypes.append(MediaResourceUserContentType.audio.rawValue)
             case .stickers:
-                mappedItem = .sticker
+                mappedContentTypes.append(MediaResourceUserContentType.sticker.rawValue)
             case .avatars:
-                mappedItem = .avatar
+                mappedContentTypes.append(MediaResourceUserContentType.avatar.rawValue)
             case .misc:
-                mappedItem = .other
+                mappedContentTypes.append(MediaResourceUserContentType.other.rawValue)
+                mappedContentTypes.append(MediaResourceUserContentType.audioVideoMessage.rawValue)
+                
+                // Legacy value for Gif
+                mappedContentTypes.append(5)
             }
-            return mappedItem.rawValue
-        }, completion: { ids in
+        }
+        
+        mediaBox.storageBox.remove(peerId: peerId, contentTypes: mappedContentTypes, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {
@@ -333,6 +455,8 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                         }
                     }
                     
+                    mediaBox.cacheStorageBox.reset()
+                    
                     subscriber.putCompletion()
                 } else {
                     subscriber.putCompletion()
@@ -345,10 +469,32 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
     }
 }
 
-func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
-        mediaBox.storageBox.remove(peerIds: peerIds, completion: { ids in
+        var includeResourceIds = Set<MediaResourceId>()
+        for message in includeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &includeResourceIds)
+        }
+        var includeIds: [Data] = []
+        for resourceId in includeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                includeIds.append(data)
+            }
+        }
+        
+        var excludeResourceIds = Set<MediaResourceId>()
+        for message in excludeMessages {
+            extractMediaResourceIds(message: message, resourceIds: &excludeResourceIds)
+        }
+        var excludeIds: [Data] = []
+        for resourceId in excludeResourceIds {
+            if let data = resourceId.stringRepresentation.data(using: .utf8) {
+                excludeIds.append(data)
+            }
+        }
+        
+        mediaBox.storageBox.remove(peerIds: peerIds, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {
@@ -365,6 +511,47 @@ func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>) -> Si
     }
 }
 
+private func extractMediaResourceIds(message: Message, resourceIds: inout Set<MediaResourceId>) {
+    for media in message.media {
+        if let image = media as? TelegramMediaImage {
+            for representation in image.representations {
+                resourceIds.insert(representation.resource.id)
+            }
+        } else if let file = media as? TelegramMediaFile {
+            for representation in file.previewRepresentations {
+                resourceIds.insert(representation.resource.id)
+            }
+            resourceIds.insert(file.resource.id)
+        } else if let webpage = media as? TelegramMediaWebpage {
+            if case let .Loaded(content) = webpage.content {
+                if let image = content.image {
+                    for representation in image.representations {
+                        resourceIds.insert(representation.resource.id)
+                    }
+                }
+                if let file = content.file {
+                    for representation in file.previewRepresentations {
+                        resourceIds.insert(representation.resource.id)
+                    }
+                    resourceIds.insert(file.resource.id)
+                }
+            }
+        } else if let game = media as? TelegramMediaGame {
+            if let image = game.image {
+                for representation in image.representations {
+                    resourceIds.insert(representation.resource.id)
+                }
+            }
+            if let file = game.file {
+                for representation in file.previewRepresentations {
+                    resourceIds.insert(representation.resource.id)
+                }
+                resourceIds.insert(file.resource.id)
+            }
+        }
+    }
+}
+
 func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     
@@ -372,44 +559,7 @@ func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Nev
         DispatchQueue.global().async {
             var resourceIds = Set<MediaResourceId>()
             for message in messages {
-                for media in message.media {
-                    if let image = media as? TelegramMediaImage {
-                        for representation in image.representations {
-                            resourceIds.insert(representation.resource.id)
-                        }
-                    } else if let file = media as? TelegramMediaFile {
-                        for representation in file.previewRepresentations {
-                            resourceIds.insert(representation.resource.id)
-                        }
-                        resourceIds.insert(file.resource.id)
-                    } else if let webpage = media as? TelegramMediaWebpage {
-                        if case let .Loaded(content) = webpage.content {
-                            if let image = content.image {
-                                for representation in image.representations {
-                                    resourceIds.insert(representation.resource.id)
-                                }
-                            }
-                            if let file = content.file {
-                                for representation in file.previewRepresentations {
-                                    resourceIds.insert(representation.resource.id)
-                                }
-                                resourceIds.insert(file.resource.id)
-                            }
-                        }
-                    } else if let game = media as? TelegramMediaGame {
-                        if let image = game.image {
-                            for representation in image.representations {
-                                resourceIds.insert(representation.resource.id)
-                            }
-                        }
-                        if let file = game.file {
-                            for representation in file.previewRepresentations {
-                                resourceIds.insert(representation.resource.id)
-                            }
-                            resourceIds.insert(file.resource.id)
-                        }
-                    }
-                }
+                extractMediaResourceIds(message: message, resourceIds: &resourceIds)
             }
             
             var removeIds: [Data] = []

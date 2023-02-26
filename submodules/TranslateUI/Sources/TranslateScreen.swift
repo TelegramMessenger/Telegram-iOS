@@ -99,14 +99,11 @@ private final class TranslateScreenComponent: CombinedComponent {
             
             super.init()
                         
-            self.translationDisposable.set((context.engine.messages.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+            self.translationDisposable.set((context.engine.messages.translate(text: text, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.translatedText = text
-//                if strongSelf.fromLanguage == nil {
-//                    strongSelf.fromLanguage = result.detectedLanguage
-//                }
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -127,14 +124,11 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.translatedText = nil
             self.updated(transition: .immediate)
             
-            self.translationDisposable.set((self.context.engine.messages.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+            self.translationDisposable.set((self.context.engine.messages.translate(text: text, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.translatedText = text
-//                if strongSelf.fromLanguage == nil {
-//                    strongSelf.fromLanguage = result.detectedLanguage
-//                }
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -1007,9 +1001,14 @@ public class TranslateScreen: ViewController {
         }
         
         var toLanguage = toLanguage ?? baseLanguageCode
-        
         if toLanguage == fromLanguage {
             toLanguage = "en"
+        }
+        
+        if toLanguage == "nb" {
+            toLanguage = "no"
+        } else if toLanguage == "pt-br" {
+            toLanguage = "pt"
         }
         
         var copyTranslationImpl: ((String) -> Void)?

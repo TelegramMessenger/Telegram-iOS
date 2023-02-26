@@ -1163,6 +1163,12 @@ public final class PresentationThemeInputMediaPanel {
     public let panelContentControlVibrantSelectionColor: UIColor
     public let panelContentControlOpaqueOverlayColor: UIColor
     public let panelContentControlOpaqueSelectionColor: UIColor
+    public let panelContentVibrantSearchOverlayColor: UIColor
+    public let panelContentVibrantSearchOverlaySelectedColor: UIColor
+    public let panelContentVibrantSearchOverlayHighlightColor: UIColor
+    public let panelContentOpaqueSearchOverlayColor: UIColor
+    public let panelContentOpaqueSearchOverlaySelectedColor: UIColor
+    public let panelContentOpaqueSearchOverlayHighlightColor: UIColor
     public let stickersBackgroundColor: UIColor
     public let stickersSectionTextColor: UIColor
     public let stickersSearchBackgroundColor: UIColor
@@ -1182,6 +1188,12 @@ public final class PresentationThemeInputMediaPanel {
         panelContentControlVibrantSelectionColor: UIColor,
         panelContentControlOpaqueOverlayColor: UIColor,
         panelContentControlOpaqueSelectionColor: UIColor,
+        panelContentVibrantSearchOverlayColor: UIColor,
+        panelContentVibrantSearchOverlaySelectedColor: UIColor,
+        panelContentVibrantSearchOverlayHighlightColor: UIColor,
+        panelContentOpaqueSearchOverlayColor: UIColor,
+        panelContentOpaqueSearchOverlaySelectedColor: UIColor,
+        panelContentOpaqueSearchOverlayHighlightColor: UIColor,
         stickersBackgroundColor: UIColor,
         stickersSectionTextColor: UIColor,
         stickersSearchBackgroundColor: UIColor,
@@ -1200,6 +1212,12 @@ public final class PresentationThemeInputMediaPanel {
         self.panelContentControlVibrantSelectionColor = panelContentControlVibrantSelectionColor
         self.panelContentControlOpaqueOverlayColor = panelContentControlOpaqueOverlayColor
         self.panelContentControlOpaqueSelectionColor = panelContentControlOpaqueSelectionColor
+        self.panelContentVibrantSearchOverlayColor = panelContentVibrantSearchOverlayColor
+        self.panelContentVibrantSearchOverlaySelectedColor = panelContentVibrantSearchOverlaySelectedColor
+        self.panelContentVibrantSearchOverlayHighlightColor = panelContentVibrantSearchOverlayHighlightColor
+        self.panelContentOpaqueSearchOverlayColor = panelContentOpaqueSearchOverlayColor
+        self.panelContentOpaqueSearchOverlaySelectedColor = panelContentOpaqueSearchOverlaySelectedColor
+        self.panelContentOpaqueSearchOverlayHighlightColor = panelContentOpaqueSearchOverlayHighlightColor
         self.stickersBackgroundColor = stickersBackgroundColor
         self.stickersSectionTextColor = stickersSectionTextColor
         self.stickersSearchBackgroundColor = stickersSearchBackgroundColor
@@ -1220,6 +1238,12 @@ public final class PresentationThemeInputMediaPanel {
         panelContentControlVibrantSelectionColor: UIColor? = nil,
         panelContentControlOpaqueOverlayColor: UIColor? = nil,
         panelContentControlOpaqueSelectionColor: UIColor? = nil,
+        panelContentVibrantSearchOverlayColor: UIColor? = nil,
+        panelContentVibrantSearchOverlaySelectedColor: UIColor? = nil,
+        panelContentVibrantSearchOverlayHighlightColor: UIColor? = nil,
+        panelContentOpaqueSearchOverlayColor: UIColor? = nil,
+        panelContentOpaqueSearchOverlaySelectedColor: UIColor? = nil,
+        panelContentOpaqueSearchOverlayHighlightColor: UIColor? = nil,
         stickersBackgroundColor: UIColor? = nil,
         stickersSectionTextColor: UIColor? = nil,
         stickersSearchBackgroundColor: UIColor? = nil,
@@ -1239,6 +1263,12 @@ public final class PresentationThemeInputMediaPanel {
             panelContentControlVibrantSelectionColor: panelContentControlVibrantSelectionColor ?? self.panelContentControlVibrantSelectionColor,
             panelContentControlOpaqueOverlayColor: panelContentControlOpaqueOverlayColor ?? self.panelContentControlOpaqueOverlayColor,
             panelContentControlOpaqueSelectionColor: panelContentControlOpaqueSelectionColor ?? self.panelContentControlOpaqueSelectionColor,
+            panelContentVibrantSearchOverlayColor: panelContentVibrantSearchOverlayColor ?? self.panelContentVibrantSearchOverlayColor,
+            panelContentVibrantSearchOverlaySelectedColor: panelContentVibrantSearchOverlaySelectedColor ?? self.panelContentVibrantSearchOverlaySelectedColor,
+            panelContentVibrantSearchOverlayHighlightColor: panelContentVibrantSearchOverlayHighlightColor ?? self.panelContentVibrantSearchOverlayHighlightColor,
+            panelContentOpaqueSearchOverlayColor: panelContentOpaqueSearchOverlayColor ?? self.panelContentOpaqueSearchOverlayColor,
+            panelContentOpaqueSearchOverlaySelectedColor: panelContentOpaqueSearchOverlaySelectedColor ?? self.panelContentOpaqueSearchOverlaySelectedColor,
+            panelContentOpaqueSearchOverlayHighlightColor: panelContentOpaqueSearchOverlayHighlightColor ?? self.panelContentOpaqueSearchOverlayHighlightColor,
             stickersBackgroundColor: stickersBackgroundColor ?? self.stickersBackgroundColor,
             stickersSectionTextColor: stickersSectionTextColor ?? self.stickersSectionTextColor,
             stickersSearchBackgroundColor: stickersSearchBackgroundColor ?? self.stickersSearchBackgroundColor,

@@ -46,6 +46,32 @@ extension ReplyMarkupButton {
                 self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url, simple: false))
             case let .keyboardButtonSimpleWebView(text, url):
                 self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url, simple: true))
+            case let .keyboardButtonRequestPeer(text, buttonId, peerType):
+                let mappedPeerType: ReplyMarkupButtonRequestPeerType
+                switch peerType {
+                case let .requestPeerTypeUser(_, bot, premium):
+                    mappedPeerType = .user(ReplyMarkupButtonRequestPeerType.User(
+                        isBot: bot.flatMap({ $0 == .boolTrue }),
+                        isPremium: premium.flatMap({ $0 == .boolTrue })
+                    ))
+                case let .requestPeerTypeChat(flags, hasUsername, forum, userAdminRights, botAdminRights):
+                    mappedPeerType = .group(ReplyMarkupButtonRequestPeerType.Group(
+                        isCreator: (flags & (1 << 0)) != 0,
+                        hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
+                        isForum: forum.flatMap({ $0 == .boolTrue }),
+                        botParticipant: (flags & (1 << 5)) != 0,
+                        userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
+                        botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
+                    ))
+                case let .requestPeerTypeBroadcast(flags, hasUsername, userAdminRights, botAdminRights):
+                    mappedPeerType = .channel(ReplyMarkupButtonRequestPeerType.Channel(
+                        isCreator: (flags & (1 << 0)) != 0,
+                        hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
+                        userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
+                        botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
+                    ))
+                }
+                self.init(title: text, titleWhenForwarded: nil, action: .requestPeer(peerType: mappedPeerType, buttonId: buttonId))
         }
     }
 }

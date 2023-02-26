@@ -185,7 +185,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
-            }, present: { _ in }, openForumThread: { _, _ in })
+            }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {})
             interaction.isInlineMode = isInlineMode
             
             let items = (0 ..< 2).map { _ -> ChatListItem in
@@ -357,6 +357,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             var shimmerNodeOffset: CGFloat = 0.0
             
             var needsEmptyNode = false
+            var hasOnlyArchive = false
             var hasOnlyGeneralThread = false
             var isLoading = false
             
@@ -375,8 +376,9 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 if !isLoadingValue {
                     strongSelf.becameEmpty(filter)
                 }
-            case let .notEmpty(_, onlyGeneralThreadValue):
-                needsEmptyNode = onlyGeneralThreadValue
+            case let .notEmpty(_, onlyHasArchiveValue, onlyGeneralThreadValue):
+                needsEmptyNode = onlyHasArchiveValue || onlyGeneralThreadValue
+                hasOnlyArchive = onlyHasArchiveValue
                 hasOnlyGeneralThread = onlyGeneralThreadValue
             }
             
@@ -397,7 +399,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         if case .forum = location {
                             subject = .forum(hasGeneral: hasOnlyGeneralThread)
                         } else {
-                            subject = .chats
+                            subject = .chats(hasArchive: hasOnlyArchive)
                         }
                     }
                     
@@ -1535,7 +1537,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             //filter.insert(.excludeRecent)
         }
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: effectiveLocation, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
+        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, requestPeerType: nil, location: effectiveLocation, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, threadId, dismissSearch)
         }, openDisabledPeer: { _, _ in
         }, openRecentPeerOptions: { [weak self] peer in
