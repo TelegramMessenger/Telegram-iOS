@@ -1,6 +1,5 @@
 
 copts_arm = [
-    "-DTGVOIP_USE_CUSTOM_CRYPTO",
     "-DWEBRTC_APM_DEBUG_DUMP=0",
     "-DWEBRTC_POSIX",
     "-DTGVOIP_HAVE_TGLOG",
@@ -11,7 +10,6 @@ copts_arm = [
 ]
 
 copts_x86 = [
-    "-DTGVOIP_USE_CUSTOM_CRYPTO",
     "-DWEBRTC_APM_DEBUG_DUMP=0",
     "-DWEBRTC_POSIX",
     "-DTGVOIP_HAVE_TGLOG",
@@ -50,11 +48,8 @@ objc_library(
     copts = [
         "-I{}/PublicHeaders/TgVoip".format(package_name()),
         "-I{}/libtgvoip".format(package_name()),
-        "-I{}/third-party/webrtc/webrtc".format(package_name()),
         "-Isubmodules/Opus/Public/opus",
         "-DTGVOIP_USE_INSTALLED_OPUS",
-        "-Drtc=rtc1",
-        "-Dwebrtc=webrtc1",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": copts_arm,
         "@build_bazel_rules_apple//apple:ios_arm64": copts_arm,
