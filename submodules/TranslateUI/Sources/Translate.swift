@@ -25,9 +25,6 @@ public var supportedTranslationLanguages = [
     "ca",
     "ceb",
     "zh",
-//    "zh-Hant",
-//    "zh-CN", "zh"
-//    "zh-TW"
     "co",
     "hr",
     "cs",
@@ -127,7 +124,6 @@ public var popularTranslationLanguages = [
     "en",
     "ar",
     "zh",
-//    "zh-Hant",
     "fr",
     "de",
     "it",
@@ -135,7 +131,8 @@ public var popularTranslationLanguages = [
     "ko",
     "pt",
     "ru",
-    "es"
+    "es",
+    "uk"
 ]
 
 @available(iOS 12.0, *)
@@ -147,6 +144,10 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
     }
 
     if #available(iOS 12.0, *) {
+        if context.sharedContext.immediateExperimentalUISettings.disableLanguageRecognition {
+            return (true, nil)
+        }
+        
         var dontTranslateLanguages: [String] = []
         if let ignoredLanguages = ignoredLanguages {
             dontTranslateLanguages = ignoredLanguages
@@ -164,13 +165,36 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
             supportedTranslationLanguages = ["uk", "ru"]
         }
         
-        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
-        if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
-            return (!dontTranslateLanguages.contains(language.key.rawValue), language.key.rawValue)
+        func normalize(_ code: String) -> String {
+            if code.contains("-") {
+                return code.components(separatedBy: "-").first ?? code
+            } else if code == "nb" {
+                return "no"
+            } else {
+                return code
+            }
+        }
+        
+        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalize($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
+        if let language = filteredLanguages.first {
+            let languageCode = normalize(language.key.rawValue)
+            return (!dontTranslateLanguages.contains(languageCode), languageCode)
         } else {
             return (false, nil)
         }
     } else {
         return (false, nil)
     }
+}
+
+public func systemLanguageCodes() -> [String] {
+    var languages: [String] = []
+    for language in Locale.preferredLanguages.prefix(2) {
+        let language = language.components(separatedBy: "-").first ?? language
+        languages.append(language)
+    }
+    if languages.count == 2 && languages != ["en", "ru"] {
+        languages = Array(languages.prefix(1))
+    }
+    return languages
 }

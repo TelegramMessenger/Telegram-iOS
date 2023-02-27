@@ -48,7 +48,9 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             
             self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             if _image == nil {
-                self.item?.accessibilityLabel = value
+                if self.item?.accessibilityLabel == nil {
+                    self.item?.accessibilityLabel = value
+                }
             }
         }
     }
@@ -392,6 +394,12 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
             for node in self.nodes {
                 node.alpha = self.manualAlpha
             }
+        }
+    }
+    
+    public func updateManualAlpha(alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        for node in self.nodes {
+            transition.updateAlpha(node: node, alpha: alpha)
         }
     }
     

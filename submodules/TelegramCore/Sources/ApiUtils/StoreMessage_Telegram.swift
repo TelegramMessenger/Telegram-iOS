@@ -230,6 +230,8 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     for id in userIds {
                         result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)))
                     }
+                case let .messageActionRequestedPeer(_, peer):
+                    result.append(peer.peerId)
             }
         
             return result

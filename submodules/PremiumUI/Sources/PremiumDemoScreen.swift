@@ -456,7 +456,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation]
         self.action = action
         self.dismiss = dismiss
     }
@@ -904,6 +904,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.translation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.translation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["translations"],
+                                    decoration: .hello
+                                )),
+                                title: strings.Premium_Translation,
+                                text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
@@ -990,6 +1010,8 @@ private final class DemoSheetContent: CombinedComponent {
                             case .animatedEmoji:
                                 buttonText = strings.Premium_AnimatedEmoji_Proceed
                                 buttonAnimationName = "premium_unlock"
+                            case .translation:
+                                buttonText = strings.Premium_Translation_Proceed
                             default:
                                 buttonText = strings.Common_OK
                         }
@@ -1170,6 +1192,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case appIcons
         case animatedEmoji
         case emojiStatus
+        case translation
     }
     
     public enum Source: Equatable {

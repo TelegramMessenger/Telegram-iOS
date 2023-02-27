@@ -12,14 +12,22 @@ import AccountContext
 
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {
-        let remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
+        var remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
+        while remainder != 0 && remainder % 10 == 0 {
+            remainder /= 10
+        }
+        
         if remainder != 0 {
             return "\(size / (1024 * 1024 * 1024))\(decimalSeparator)\(remainder) GB"
         } else {
             return "\(size / (1024 * 1024 * 1024)) GB"
         }
     } else if size >= 1024 * 1024 {
-        let remainder = (size % (1024 * 1024)) / (1024 * 102)
+        var remainder = (size % (1024 * 1024)) / (1024 * 102)
+        while remainder != 0 && remainder % 10 == 0 {
+            remainder /= 10
+        }
+        
         if size < 10 * 1024 * 1024 {
             return "\(size / (1024 * 1024))\(decimalSeparator)\(remainder) MB"
         } else {
@@ -193,7 +201,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
             case let .sizeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .sizeItem(theme, strings, decimalSeparator, text, value):
-                return AutodownloadSizeLimitItem(theme: theme, strings: strings, decimalSeparator: decimalSeparator, text: text, value: value, sectionId: self.section, updated: { value in
+                return AutodownloadSizeLimitItem(theme: theme, strings: strings, decimalSeparator: decimalSeparator, text: text, value: value, range: nil, sectionId: self.section, updated: { value in
                     arguments.adjustSize(value)
                 })
             case let .sizePreload(_, text, value, enabled):

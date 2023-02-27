@@ -10,6 +10,7 @@ private extension ToolbarTheme {
 }
 
 final class TabBarControllerNode: ASDisplayNode {
+    private var navigationBarPresentationData: NavigationBarPresentationData
     private var theme: TabBarControllerTheme
     let tabBarNode: TabBarNode
     private let disabledOverlayNode: ASDisplayNode
@@ -27,8 +28,9 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void) {
+    init(theme: TabBarControllerTheme, navigationBarPresentationData: NavigationBarPresentationData, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void) {
         self.theme = theme
+        self.navigationBarPresentationData = navigationBarPresentationData
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected, contextAction: contextAction, swipeAction: swipeAction)
         self.disabledOverlayNode = ASDisplayNode()
         self.disabledOverlayNode.backgroundColor = theme.backgroundColor.withAlphaComponent(0.5)
@@ -60,8 +62,9 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    func updateTheme(_ theme: TabBarControllerTheme) {
+    func updateTheme(_ theme: TabBarControllerTheme, navigationBarPresentationData: NavigationBarPresentationData) {
         self.theme = theme
+        self.navigationBarPresentationData = navigationBarPresentationData
         self.backgroundColor = theme.backgroundColor
         
         self.tabBarNode.updateTheme(theme)

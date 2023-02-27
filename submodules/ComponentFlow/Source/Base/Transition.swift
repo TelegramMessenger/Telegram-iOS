@@ -136,21 +136,30 @@ public struct Transition {
             //view.layer.position = CGPoint(x: frame.midX, y: frame.midY)
             view.layer.removeAnimation(forKey: "position")
             view.layer.removeAnimation(forKey: "bounds")
+            view.layer.removeAnimation(forKey: "bounds.size")
             completion?(true)
         case .curve:
-            let previousFrame: CGRect
-            if (view.layer.animation(forKey: "position") != nil || view.layer.animation(forKey: "bounds") != nil), let presentation = view.layer.presentation() {
-                previousFrame = presentation.frame
+            let previousPosition: CGPoint
+            let previousBounds: CGRect
+            if (view.layer.animation(forKey: "position") != nil || view.layer.animation(forKey: "bounds") != nil || view.layer.animation(forKey: "bounds.size") != nil), let presentation = view.layer.presentation() {
+                previousPosition = presentation.position
+                previousBounds = presentation.bounds
             } else {
-                previousFrame = view.frame
+                previousPosition = view.layer.position
+                previousBounds = view.layer.bounds
             }
             
             view.frame = frame
             //view.bounds = CGRect(origin: previousBounds.origin, size: frame.size)
             //view.center = CGPoint(x: frame.midX, y: frame.midY)
+            
+            let anchorPoint = view.layer.anchorPoint
+            let updatedPosition = CGPoint(x: frame.minX + frame.width * anchorPoint.x, y: frame.minY + frame.height * anchorPoint.y)
 
-            self.animatePosition(view: view, from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: CGPoint(x: frame.midX, y: frame.midY), completion: completion)
-            self.animateBounds(view: view, from: CGRect(origin: view.bounds.origin, size: previousFrame.size), to: CGRect(origin: view.bounds.origin, size: frame.size))
+            self.animatePosition(view: view, from: previousPosition, to: updatedPosition, completion: completion)
+            if previousBounds.size != frame.size {
+                self.animateBoundsSize(view: view, from: previousBounds.size, to: frame.size)
+            }
         }
     }
     
@@ -193,10 +202,12 @@ public struct Transition {
         case .none:
             view.bounds = bounds
             view.layer.removeAnimation(forKey: "bounds")
+            view.layer.removeAnimation(forKey: "bounds.origin")
+            view.layer.removeAnimation(forKey: "bounds.size")
             completion?(true)
         case .curve:
             let previousBounds: CGRect
-            if view.layer.animation(forKey: "bounds") != nil, let presentation = view.layer.presentation() {
+            if (view.layer.animation(forKey: "bounds") != nil || view.layer.animation(forKey: "bounds.origin") != nil || view.layer.animation(forKey: "bounds.size") != nil), let presentation = view.layer.presentation() {
                 previousBounds = presentation.bounds
             } else {
                 previousBounds = view.layer.bounds
@@ -204,6 +215,30 @@ public struct Transition {
             view.bounds = bounds
 
             self.animateBounds(view: view, from: previousBounds, to: view.bounds, completion: completion)
+        }
+    }
+    
+    public func setBoundsOrigin(view: UIView, origin: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        if view.bounds.origin == origin {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            view.bounds = CGRect(origin: origin, size: view.bounds.size)
+            view.layer.removeAnimation(forKey: "bounds")
+            view.layer.removeAnimation(forKey: "bounds.origin")
+            completion?(true)
+        case .curve:
+            let previousOrigin: CGPoint
+            if (view.layer.animation(forKey: "bounds") != nil || view.layer.animation(forKey: "bounds.origin") != nil), let presentation = view.layer.presentation() {
+                previousOrigin = presentation.bounds.origin
+            } else {
+                previousOrigin = view.layer.bounds.origin
+            }
+            view.bounds = CGRect(origin: origin, size: view.bounds.size)
+
+            self.animateBoundsOrigin(view: view, from: previousOrigin, to: origin, completion: completion)
         }
     }
     
@@ -299,7 +334,7 @@ public struct Transition {
         }
     }
     
-    public func attachAnimation(view: UIView, completion: @escaping (Bool) -> Void) {
+    public func attachAnimation(view: UIView, id: String, completion: @escaping (Bool) -> Void) {
         switch self.animation {
         case .none:
             completion(true)
@@ -307,7 +342,7 @@ public struct Transition {
             view.layer.animate(
                 from: 0.0 as NSNumber,
                 to: 1.0 as NSNumber,
-                keyPath: "attached\(UInt32.random(in: 0 ... UInt32.max))",
+                keyPath: id,
                 duration: duration,
                 delay: 0.0,
                 curve: curve,
@@ -715,6 +750,62 @@ public struct Transition {
                 from: previousColor,
                 to: color.cgColor,
                 keyPath: "backgroundColor",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setTintColor(view: UIView, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let current = view.tintColor, current == color {
+            completion?(true)
+            return
+        }
+        
+        switch self.animation {
+        case .none:
+            view.tintColor = color
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousColor: UIColor = view.tintColor ?? UIColor.clear
+            view.tintColor = color
+            
+            view.layer.animate(
+                from: previousColor,
+                to: color.cgColor,
+                keyPath: "contentsMultiplyColor",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setTintColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let current = layer.layerTintColor, current == color.cgColor {
+            completion?(true)
+            return
+        }
+        
+        switch self.animation {
+        case .none:
+            layer.layerTintColor = color.cgColor
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousColor: CGColor = layer.layerTintColor ?? UIColor.clear.cgColor
+            layer.layerTintColor = color.cgColor
+            
+            layer.animate(
+                from: previousColor,
+                to: color.cgColor,
+                keyPath: "contentsMultiplyColor",
                 duration: duration,
                 delay: 0.0,
                 curve: curve,

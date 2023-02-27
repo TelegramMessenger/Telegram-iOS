@@ -9,10 +9,14 @@ import StickerResources
 import AccountContext
 
 public final class DrawingStickerEntity: DrawingEntity, Codable {
+    public enum Content {
+        case file(TelegramMediaFile)
+        case image(UIImage)
+    }
     private enum CodingKeys: String, CodingKey {
         case uuid
-        case isAnimated
         case file
+        case image
         case referenceDrawingSize
         case position
         case scale
@@ -21,8 +25,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     }
     
     public let uuid: UUID
-    public let isAnimated: Bool
-    public let file: TelegramMediaFile
+    public let content: Content
     
     public var referenceDrawingSize: CGSize
     public var position: CGPoint
@@ -38,15 +41,22 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     }
     
     public var baseSize: CGSize {
-        let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.4)
+        let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.2)
         return CGSize(width: size, height: size)
     }
     
-    init(file: TelegramMediaFile) {
+    public var isAnimated: Bool {
+        switch self.content {
+        case let .file(file):
+            return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
+        case .image:
+            return false
+        }
+    }
+    
+    public init(content: Content) {
         self.uuid = UUID()
-        self.isAnimated = file.isAnimatedSticker || file.isVideoSticker
-        
-        self.file = file
+        self.content = content
         
         self.referenceDrawingSize = .zero
         self.position = CGPoint()
@@ -58,8 +68,13 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        self.isAnimated = try container.decode(Bool.self, forKey: .isAnimated)
-        self.file = try container.decode(TelegramMediaFile.self, forKey: .file)
+        if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
+            self.content = .file(file)
+        } else if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
+            self.content = .image(image)
+        } else {
+            fatalError()
+        }
         self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
         self.position = try container.decode(CGPoint.self, forKey: .position)
         self.scale = try container.decode(CGFloat.self, forKey: .scale)
@@ -70,8 +85,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.isAnimated, forKey: .isAnimated)
-        try container.encode(self.file, forKey: .file)
+        switch self.content {
+        case let .file(file):
+            try container.encode(file, forKey: .file)
+        case let .image(image):
+            try container.encodeIfPresent(image.pngData(), forKey: .image)
+        }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)
         try container.encode(self.scale, forKey: .scale)
@@ -80,7 +99,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     }
         
     public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingStickerEntity(file: self.file)
+        let newEntity = DrawingStickerEntity(content: self.content)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.scale = self.scale
@@ -108,7 +127,6 @@ final class DrawingStickerEntityView: DrawingEntityView {
     var started: ((Double) -> Void)?
     
     private var currentSize: CGSize?
-    private var dimensions: CGSize?
     
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
@@ -139,46 +157,77 @@ final class DrawingStickerEntityView: DrawingEntityView {
         self.cachedDisposable.dispose()
     }
     
-    private var file: TelegramMediaFile {
-        return (self.entity as! DrawingStickerEntity).file
+    private var file: TelegramMediaFile? {
+        if case let .file(file) = self.stickerEntity.content {
+            return file
+        } else {
+            return nil
+        }
+    }
+    
+    private var image: UIImage? {
+        if case let .image(image) = self.stickerEntity.content {
+            return image
+        } else {
+            return nil
+        }
+    }
+    
+    private var dimensions: CGSize {
+        switch self.stickerEntity.content {
+            case let .file(file):
+                return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            case let .image(image):
+                return image.size
+        }
     }
     
     private func setup() {
-        if let dimensions = self.file.dimensions {
-            if self.file.isAnimatedSticker || self.file.isVideoSticker || self.file.mimeType == "video/webm" {
-                if self.animationNode == nil {
-                    let animationNode = DefaultAnimatedStickerNodeImpl()
-                    animationNode.autoplay = false
-                    self.animationNode = animationNode
-                    animationNode.started = { [weak self, weak animationNode] in
-                        self?.imageNode.isHidden = true
-                        
-                        if let animationNode = animationNode {
-                            let _ = (animationNode.status
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { [weak self] status in
-                                self?.started?(status.duration)
-                            })
+        if let file = self.file {
+            if let dimensions = file.dimensions {
+                if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
+                    if self.animationNode == nil {
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
+                        animationNode.autoplay = false
+                        self.animationNode = animationNode
+                        animationNode.started = { [weak self, weak animationNode] in
+                            self?.imageNode.isHidden = true
+                            
+                            if let animationNode = animationNode {
+                                let _ = (animationNode.status
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak self] status in
+                                    self?.started?(status.duration)
+                                })
+                            }
                         }
+                        self.addSubnode(animationNode)
                     }
-                    self.addSubnode(animationNode)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                        self.imageNode.isHidden = false
+                        self.didSetUpAnimationNode = false
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: file, small: false, synchronousLoad: false))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: false)).start())
                 }
-                let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: self.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(self.file), resource: self.file.resource).start())
-            } else {
-                if let animationNode = self.animationNode {
-                    animationNode.visibility = false
-                    self.animationNode = nil
-                    animationNode.removeFromSupernode()
-                    self.imageNode.isHidden = false
-                    self.didSetUpAnimationNode = false
-                }
-                self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: self.file, small: false, synchronousLoad: false))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(self.file), resource: chatMessageStickerResource(file: self.file, small: false)).start())
+                self.setNeedsLayout()
             }
-            
-            self.dimensions = dimensions.cgSize
+        } else if let image = self.image {
+            self.imageNode.setSignal(.single({ arguments -> DrawingContext? in
+                let context = DrawingContext(size: arguments.drawingSize, opaque: false, clear: true)
+                context?.withFlippedContext({ ctx in
+                    if let cgImage = image.cgImage {
+                        ctx.draw(cgImage, in: CGRect(origin: .zero, size: arguments.drawingSize))
+                    }
+                })
+                return context
+            }))
             self.setNeedsLayout()
         }
     }
@@ -215,15 +264,17 @@ final class DrawingStickerEntityView: DrawingEntityView {
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             
-            if isPlaying && !self.didSetUpAnimationNode {
-                self.didSetUpAnimationNode = true
-                let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource, isVideo: self.file.isVideoSticker || self.file.mimeType == "video/webm")
-                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            
-                self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
-                |> deliverOn(Queue.concurrentDefaultQueue())).start())
+            if let file = self.file {
+                if isPlaying && !self.didSetUpAnimationNode {
+                    self.didSetUpAnimationNode = true
+                    let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
+                    self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                    
+                    self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
+                    |> deliverOn(Queue.concurrentDefaultQueue())).start())
+                }
             }
             self.animationNode?.visibility = isPlaying
         }
@@ -241,33 +292,29 @@ final class DrawingStickerEntityView: DrawingEntityView {
             let sideSize: CGFloat = size.width
             let boundingSize = CGSize(width: sideSize, height: sideSize)
             
-            if let dimensions = self.dimensions {
-                let imageSize = dimensions.aspectFitted(boundingSize)
-                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
-                if let animationNode = self.animationNode {
-                    animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
-                    animationNode.updateLayout(size: imageSize)
-                    
-                    if !self.didApplyVisibility {
-                        self.didApplyVisibility = true
-                        self.applyVisibility()
-                    }
+            
+            let imageSize = self.dimensions.aspectFitted(boundingSize)
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+            if let animationNode = self.animationNode {
+                animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                animationNode.updateLayout(size: imageSize)
+                
+                if !self.didApplyVisibility {
+                    self.didApplyVisibility = true
+                    self.applyVisibility()
                 }
-                self.update(animated: false)
             }
+            self.update(animated: false)
         }
     }
-    
+        
     override func update(animated: Bool) {
-        guard let dimensions = self.stickerEntity.file.dimensions?.cgSize else {
-            return
-        }
         self.center = self.stickerEntity.position
         
         let size = self.stickerEntity.baseSize
         
-        self.bounds = CGRect(origin: .zero, size: dimensions.aspectFitted(size))
+        self.bounds = CGRect(origin: .zero, size: self.dimensions.aspectFitted(size))
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
         var transform = CATransform3DIdentity
@@ -297,13 +344,13 @@ final class DrawingStickerEntityView: DrawingEntityView {
         self.pushIdentityTransformForMeasurement()
      
         selectionView.transform = .identity
-        let bounds = self.selectionBounds
-        let center = bounds.center
+        let maxSide = max(self.selectionBounds.width, self.selectionBounds.height)
+        let center = self.selectionBounds.center
         
         let scale = self.superview?.superview?.layer.value(forKeyPath: "transform.scale.x") as? CGFloat ?? 1.0
         selectionView.center = self.convert(center, to: selectionView.superview)
         
-        selectionView.bounds = CGRect(origin: .zero, size: CGSize(width: (bounds.width * self.stickerEntity.scale) * scale + selectionView.selectionInset * 2.0, height: (bounds.height * self.stickerEntity.scale) * scale + selectionView.selectionInset * 2.0))
+        selectionView.bounds = CGRect(origin: .zero, size: CGSize(width: (maxSide * self.stickerEntity.scale) * scale + selectionView.selectionInset * 2.0, height: (maxSide * self.stickerEntity.scale) * scale + selectionView.selectionInset * 2.0))
         selectionView.transform = CGAffineTransformMakeRotation(self.stickerEntity.rotation)
         
         self.popIdentityTransformForMeasurement()

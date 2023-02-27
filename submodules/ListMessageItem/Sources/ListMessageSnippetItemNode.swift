@@ -424,7 +424,12 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         let (messageTextUrl, _) = parseUrl(url: message.text, wasConcealed: false)
                                         
                                         if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
-                                            mutableDescriptionText.append(NSAttributedString(string: message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
+                                            var messageText = message.text
+                                            if !messageText.isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang {
+                                                messageText = translation.text
+                                            }
+                                            
+                                            mutableDescriptionText.append(NSAttributedString(string: messageText + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                                         }
                                         
                                         let urlAttributedString = NSMutableAttributedString()
@@ -439,8 +444,17 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     }
                                     break loop
                                 case let .TextUrl(url):
+                                    var messageText = message.text
+                                    var entity = entity
+                                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty, item.translateToLanguage == translation.toLang {
+                                        messageText = translation.text
+                                        if entities.count == translation.entities.count, let index = entities.firstIndex(of: entity), index < translation.entities.count {
+                                            entity = translation.entities[index]
+                                        }
+                                    }
+                                
                                     var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                                    let nsString = message.text as NSString
+                                    let nsString = messageText as NSString
                                     if range.location + range.length > nsString.length {
                                         range.location = max(0, nsString.length - range.length)
                                         range.length = nsString.length - range.location
@@ -470,7 +484,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         let (messageTextUrl, _) = parseUrl(url: message.text, wasConcealed: false)
                                         
                                         if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
-                                            mutableDescriptionText.append(NSAttributedString(string: message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
+                                            mutableDescriptionText.append(NSAttributedString(string: messageText + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                                         }
                                         
                                         let urlAttributedString = NSMutableAttributedString()

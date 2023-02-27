@@ -274,7 +274,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { _, _, _ in
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -555,6 +555,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _ in
+        }, openRequestedPeerSelection: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -991,29 +992,33 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         let packReference: StickerPackReference = .name(name)
                         strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                     case let .invoice(slug, invoice):
-                        let inputData = Promise<BotCheckoutController.InputData?>()
-                        inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
-                            return .single(nil)
-                        })
-                        strongSelf.controllerInteraction.presentController(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let _ = strongSelf
-                            /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
-                                guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
-                                    return false
+                        if let invoice {
+                            let inputData = Promise<BotCheckoutController.InputData?>()
+                            inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
+                                          |> map(Optional.init)
+                                          |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                                return .single(nil)
+                            })
+                            strongSelf.controllerInteraction.presentController(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                                guard let strongSelf = self else {
+                                    return
                                 }
-
-                                if case .info = action {
-                                    strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                                    return true
-                                }
-                                return false
-                            }), in: .current)*/
-                        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                let _ = strongSelf
+                                /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
+                                 guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                                 return false
+                                 }
+                                 
+                                 if case .info = action {
+                                 strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                 return true
+                                 }
+                                 return false
+                                 }), in: .current)*/
+                            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        } else {
+                            strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                        }
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(strongSelf.peer.id), peerType: .channel), anchor: anchor))
                     case let .join(link):

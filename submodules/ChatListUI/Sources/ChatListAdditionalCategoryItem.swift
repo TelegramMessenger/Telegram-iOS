@@ -121,7 +121,9 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
                 }
             } else if let _ = nextItem as? ChatListAdditionalCategoryItem {
             } else {
-                last = true
+                if let nextItem = nextItem as? ListViewItemWithHeader, nextItem.header != nil {
+                    last = true
+                }
             }
         } else {
             last = true

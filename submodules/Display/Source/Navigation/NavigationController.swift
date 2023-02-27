@@ -433,8 +433,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 minHeight = 40.0
             }
             var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(minHeight, layout.safeInsets.top))))
-            if (layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland) && !isLandscape {
-                inCallStatusBarFrame.size.height += 12.0
+            if !isLandscape {
+                if layout.deviceMetrics.hasTopNotch {
+                    inCallStatusBarFrame.size.height += 12.0
+                } else if layout.deviceMetrics.hasDynamicIsland {
+                    inCallStatusBarFrame.size.height += 20.0
+                }
             }
             if inCallStatusBar.frame.isEmpty {
                 inCallStatusBar.frame = inCallStatusBarFrame
@@ -1308,19 +1312,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.pushViewController(controller, animated: animated)
         completion()
     }
-    
-    public func updateContainerPulled(_ pushed: Bool) {
-        guard self.modalContainers.isEmpty else {
-            return
-        }
-        if let rootContainer = self.rootContainer, case let .flat(container) = rootContainer {
-            let scale: CGFloat = pushed ? 1.06 : 1.0
-            
-            container.view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            container.view.layer.animateScale(from: pushed ? 1.0 : 1.06, to: scale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        }
-    }
-    
+        
     open override func pushViewController(_ viewController: UIViewController, animated: Bool) {
         var controllers = self.viewControllers
         controllers.append(viewController)

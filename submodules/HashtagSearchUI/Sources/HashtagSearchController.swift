@@ -91,6 +91,9 @@ public final class HashtagSearchController: TelegramBaseController {
             gesture?.cancel()
         }, present: { _ in
         }, openForumThread: { _, _ in
+        }, openStorageManagement: {
+        }, openPasswordSetup: {
+        }, openPremiumIntro: {
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
@@ -111,7 +114,7 @@ public final class HashtagSearchController: TelegramBaseController {
                 })
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], location: .chatList(groupId: .root), key: .chats, tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], requestPeerType: nil, location: .chatList(groupId: .root), key: .chats, tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
                 }, toggleExpandGlobalResults: {
                 }, searchPeer: { _ in
                 }, searchQuery: "", searchOptions: nil, messageContextAction: nil, openClearRecentlyDownloaded: {}, toggleAllPaused: {})

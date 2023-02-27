@@ -710,9 +710,9 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         SettingsSearchableItem(id: .data(10), title: strings.CallSettings_UseLessData, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_CallsUseLessData), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.Settings_CallSettings], present: { context, _, present in
             present(.push, voiceCallDataSavingController(context: context))
         }),
-        SettingsSearchableItem(id: .data(11), title: strings.Settings_SaveIncomingPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveIncomingPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
+        /*SettingsSearchableItem(id: .data(11), title: strings.Settings_SaveIncomingPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveIncomingPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             present(.push, saveIncomingMediaController(context: context))
-        }),
+        }),*/
         SettingsSearchableItem(id: .data(12), title: strings.Settings_SaveEditedPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveEditedPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .saveEditedPhotos)
         }),

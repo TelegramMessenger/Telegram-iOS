@@ -67,7 +67,7 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar videoModeByDefault:(bool)videoModeByDefault hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
 
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;

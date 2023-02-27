@@ -8,6 +8,8 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     private var textColor: UIColor = .black {
         didSet {
             if !self.textColor.isEqual(oldValue) {
@@ -34,6 +36,9 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.insets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
         
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = [.staticText]
+        
         super.init()
 
         self.addSubnode(self.titleNode)
@@ -50,6 +55,9 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightInset - 20.0, height: 100.0))
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize)
+        
+        self.activateAreaNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
+        self.activateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }

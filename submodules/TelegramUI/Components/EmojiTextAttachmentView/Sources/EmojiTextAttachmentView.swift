@@ -253,12 +253,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         if !self.isDisplayingPlaceholder {
             var customColor = self.contentTintColor
             if let file = self.file {
-                for attribute in file.attributes {
-                    if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                        if isSingleColor {
-                            customColor = self.dynamicColor
-                        }
-                    }
+                if file.isCustomTemplateEmoji {
+                    customColor = self.dynamicColor
                 }
             }
             
@@ -334,12 +330,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             
             self.loadAnimation()
         } else {
-            var isTemplate = false
-            for attribute in file.attributes {
-                if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                    isTemplate = isSingleColor
-                }
-            }
+            let isTemplate = file.isCustomTemplateEmoji
             
             let pointSize = self.pointSize
             let placeholderColor = self.placeholderColor
@@ -380,12 +371,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             return
         }
         
-        var isTemplate = false
-        for attribute in file.attributes {
-            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
-                isTemplate = isSingleColor
-            }
-        }
+        let isTemplate = file.isCustomTemplateEmoji
         
         let context = self.context
         if file.isAnimatedSticker || file.isVideoEmoji {

@@ -859,6 +859,8 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
+        self.cancelButton.accessibilityLabel = self.presentationData.strings.Common_Close
+        self.cancelButton.accessibilityTraits = [.button]
         
         self.switchThemeButton = HighlightTrackingButtonNode()
         self.animationContainerNode = ASDisplayNode()
@@ -2261,7 +2263,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                                 videoSnapshotView.frame = mediaFrame
                             }
                         } else {
-                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false)
+                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
                             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
                             
                             self.videoStatusDisposable.set((videoNode.status

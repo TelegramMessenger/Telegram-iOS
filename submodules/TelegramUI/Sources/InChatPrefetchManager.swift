@@ -105,7 +105,7 @@ final class InChatPrefetchManager {
                 
                 if case .full = automaticDownload {
                     if let image = media as? TelegramMediaImage {
-                        context.fetchDisposable.set(messageMediaImageInteractiveFetched(fetchManager: self.context.fetchManager, messageId: message.id, messageReference: MessageReference(message), image: image, resource: resource, userInitiated: false, priority: priority, storeToDownloadsPeerType: nil).start())
+                        context.fetchDisposable.set(messageMediaImageInteractiveFetched(fetchManager: self.context.fetchManager, messageId: message.id, messageReference: MessageReference(message), image: image, resource: resource, userInitiated: false, priority: priority, storeToDownloadsPeerId: nil).start())
                     } else if let _ = media as? TelegramMediaWebFile {
                         //strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                     } else if let file = media as? TelegramMediaFile {

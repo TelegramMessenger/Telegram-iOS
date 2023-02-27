@@ -444,9 +444,9 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     }
                     
                     let _ = reorderSizeAndApply.1(layout.contentSize.height, displayTextLimit, transition)
-                    let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderSizeAndApply.0, y: 0.0), size: CGSize(width: reorderSizeAndApply.0, height: layout.contentSize.height))
-                    strongSelf.reorderControlNode.frame = reorderControlFrame
-                    strongSelf.reorderControlNode.isHidden = !item.canMove
+                    let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderSizeAndApply.0 + (!item.canMove ? 44.0 + params.rightInset : 0.0), y: 0.0), size: CGSize(width: reorderSizeAndApply.0, height: layout.contentSize.height))
+                    transition.updateFrameAdditive(node: strongSelf.reorderControlNode, frame: reorderControlFrame)
+                    strongSelf.reorderControlNode.isUserInteractionEnabled = item.canMove
                     
                     let _ = textLimitApply()
                     strongSelf.textLimitNode.frame = CGRect(origin: CGPoint(x: reorderControlFrame.minX + floor((reorderControlFrame.width - textLimitLayout.size.width) / 2.0) - 4.0 - UIScreenPixel, y: max(floor(reorderControlFrame.midY + 2.0), layout.contentSize.height - 15.0 - textLimitLayout.size.height)), size: textLimitLayout.size)

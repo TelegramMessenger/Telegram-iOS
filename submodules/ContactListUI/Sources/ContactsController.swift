@@ -82,6 +82,8 @@ private final class SortHeaderButton: HighlightableButtonNode {
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 44.0))
         self.referenceNode.frame = self.containerNode.bounds
+        
+        self.accessibilityLabel = strings.Contacts_Sort
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -201,6 +203,7 @@ public class ContactsController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.sortButton)
+        self.navigationItem.leftBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_Sort
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
         self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_VoiceOver_AddContact
         

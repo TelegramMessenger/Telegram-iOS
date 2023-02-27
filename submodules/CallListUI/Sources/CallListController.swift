@@ -39,7 +39,7 @@ private final class DeleteAllButtonNode: ASDisplayNode {
         self.buttonNode.addSubnode(self.titleNode)
         self.contentNode.contentNode.addSubnode(self.buttonNode)
         
-        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.Notification_Exceptions_DeleteAll, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.CallList_DeleteAll, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
         
         //self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
@@ -237,32 +237,35 @@ public final class CallListController: TelegramBaseController {
                                 strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                         }
                     } else {
+                        var pressedImpl: (() -> Void)?
+                        let buttonNode = DeleteAllButtonNode(presentationData: strongSelf.presentationData, pressed: {
+                            pressedImpl?()
+                        })
+                        pressedImpl = { [weak self, weak buttonNode] in
+                            guard let strongSelf = self, let buttonNode = buttonNode else {
+                                return
+                            }
+                            strongSelf.deleteAllPressed(buttonNode: buttonNode)
+                        }
+                        
                         switch strongSelf.mode {
                             case .tab:
                                 if strongSelf.editingMode {
                                     strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: true)
-                                    var pressedImpl: (() -> Void)?
-                                    let buttonNode = DeleteAllButtonNode(presentationData: strongSelf.presentationData, pressed: {
-                                        pressedImpl?()
-                                    })
                                     strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
                                     strongSelf.navigationItem.rightBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
-                                    pressedImpl = { [weak self, weak buttonNode] in
-                                        guard let strongSelf = self, let buttonNode = buttonNode else {
-                                            return
-                                        }
-                                        strongSelf.deleteAllPressed(buttonNode: buttonNode)
-                                    }
-                                    
-                                    //strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: strongSelf, action: #selector(strongSelf.deleteAllPressed))
                                 } else {
                                     strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
                                     strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed)), animated: true)
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
+                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
+                                    strongSelf.navigationItem.leftBarButtonItem?.setCustomAction({
+                                        pressedImpl?()
+                                    })
                                     strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: true)
                                 } else {
                                     strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
@@ -412,25 +415,31 @@ public final class CallListController: TelegramBaseController {
     @objc func editPressed() {
         self.editingMode = true
         
+        var pressedImpl: (() -> Void)?
+        let buttonNode = DeleteAllButtonNode(presentationData: self.presentationData, pressed: {
+            pressedImpl?()
+        })
+        pressedImpl = { [weak self, weak buttonNode] in
+            guard let strongSelf = self, let buttonNode = buttonNode else {
+                return
+            }
+            strongSelf.deleteAllPressed(buttonNode: buttonNode)
+        }
+        
         switch self.mode {
             case .tab:
                 self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed)), animated: true)
-                var pressedImpl: (() -> Void)?
-                let buttonNode = DeleteAllButtonNode(presentationData: self.presentationData, pressed: {
-                    pressedImpl?()
-                })
+               
                 self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
                 self.navigationItem.rightBarButtonItem?.setCustomAction({
                     pressedImpl?()
                 })
-                pressedImpl = { [weak self, weak buttonNode] in
-                    guard let strongSelf = self, let buttonNode = buttonNode else {
-                        return
-                    }
-                    strongSelf.deleteAllPressed(buttonNode: buttonNode)
-                }
-                //self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Notification_Exceptions_DeleteAll, style: .plain, target: self, action: #selector(self.deleteAllPressed))
             case .navigation:
+                self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
+                self.navigationItem.leftBarButtonItem?.setCustomAction({
+                    pressedImpl?()
+                })
+            
                 self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed)), animated: true)
         }
         
@@ -446,6 +455,7 @@ public final class CallListController: TelegramBaseController {
                 self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
                 self.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed)), animated: true)
             case .navigation:
+                self.navigationItem.setLeftBarButton(nil, animated: true)
                 self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
         }
         

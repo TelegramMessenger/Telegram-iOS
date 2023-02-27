@@ -22,7 +22,7 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocati
     var userContentType: MediaResourceUserContentType = .other
     if let image = mediaReference.media as? TelegramMediaImage {
         userContentType = .image
-        if let video = image.videoRepresentations.first, forceVideo {
+        if let video = image.videoRepresentations.last, forceVideo {
             resource = video.resource
             isImage = false
         } else if let representation = largestImageRepresentation(image.representations) {

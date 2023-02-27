@@ -79,7 +79,7 @@ NS_ASSUME_NONNULL_BEGIN
  *  @return STPCardValidationStateValid if the year is valid, STPCardValidationStateInvalid if the year is invalid, or STPCardValidationStateIncomplete if the year is a substring of a valid year (e.g. @"1" or @"2").
  */
 + (STPCardValidationState)validationStateForExpirationYear:(NSString *)expirationYear
-                                                   inMonth:(NSString *)expirationMonth;
+                                                   inMonth:(NSString *)expirationMonth cardBrand:(STPCardBrand)cardBrand;
 
 /**
  *  The max CVC length for a card brand (for context, American Express CVCs are 4 digits, while all others are 3).
@@ -109,7 +109,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (STPCardValidationState)validationStateForExpirationYear:(NSString *)expirationYear
                                                    inMonth:(NSString *)expirationMonth
                                              inCurrentYear:(NSInteger)currentYear
-                                              currentMonth:(NSInteger)currentMonth;
+                                              currentMonth:(NSInteger)currentMonth cardBrand:(STPCardBrand)cardBrand;
 + (STPCardValidationState)validationStateForCard:(STPCardParams *)card
                                    inCurrentYear:(NSInteger)currentYear
                                     currentMonth:(NSInteger)currentMonth;

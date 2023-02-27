@@ -43,6 +43,12 @@
 
 - (void)setValue:(CGFloat)value animated:(BOOL)animated;
 
+- (void)increase;
+- (void)increaseBy:(CGFloat)delta;
+
+- (void)decrease;
+- (void)decreaseBy:(CGFloat)delta;
+
 @end
 
 extern const CGFloat TGPhotoEditorSliderViewMargin;

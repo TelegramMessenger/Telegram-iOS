@@ -8,7 +8,7 @@
 @property (nonatomic, copy) void (^pressed)(void);
 @property (nonatomic, strong) TGMenuSheetPallete *pallete;
 
-- (instancetype)initForSelfPortrait:(bool)selfPortrait;
+- (instancetype)initForSelfPortrait:(bool)selfPortrait videoModeByDefault:(bool)videoModeByDefault;
 
 @property (nonatomic, readonly) bool previewViewAttached;
 - (void)detachPreviewView;

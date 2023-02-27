@@ -6,7 +6,7 @@
 
 @interface TGOverlayFormsheetWindow : UIWindow
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController contentController:(UIViewController *)contentController;
+- (instancetype)initWithManager:(id<LegacyComponentsOverlayWindowManager>)manager parentController:(TGViewController *)parentController contentController:(UIViewController *)contentController;
 
 - (void)showAnimated:(bool)animated;
 - (void)dismissAnimated:(bool)animated;

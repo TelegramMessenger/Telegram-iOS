@@ -126,6 +126,13 @@ private final class ItemNode: ASDisplayNode {
         transition.updateAlpha(node: self.titleNode, alpha: deselectionAlpha)
         transition.updateAlpha(node: self.titleActiveNode, alpha: selectionAlpha)
         
+        self.buttonNode.accessibilityLabel = title
+        if selectionFraction == 1.0 {
+            self.buttonNode.accessibilityTraits = [.button, .selected]
+        } else {
+            self.buttonNode.accessibilityTraits = [.button]
+        }
+        
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             self.iconNode.image = icon

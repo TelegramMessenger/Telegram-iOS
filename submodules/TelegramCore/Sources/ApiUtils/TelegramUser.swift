@@ -93,7 +93,7 @@ extension TelegramUser {
     
     static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
-            case let .user(flags, _, _, rhsAccessHash, _, _, username, _, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, usernames):
+            case let .user(flags, _, _, rhsAccessHash, _, _, _, _, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, usernames):
                 let isMin = (flags & (1 << 20)) != 0
                 if !isMin {
                     return TelegramUser(user: rhs)
@@ -162,7 +162,7 @@ extension TelegramUser {
                             accessHash = lhs.accessHash ?? rhsAccessHashValue
                         }
                         
-                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: usernames?.map(TelegramPeerUsername.init(apiUsername:)) ?? [])
+                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: usernames?.map(TelegramPeerUsername.init(apiUsername:)) ?? [])
                     } else {
                         return TelegramUser(user: rhs)
                     }
@@ -203,13 +203,20 @@ extension TelegramUser {
             let restrictionInfo: PeerAccessRestrictionInfo? = rhs.restrictionInfo
             
             let accessHash: TelegramPeerAccessHash?
-            if let rhsAccessHashValue = lhs.accessHash, case .personal = rhsAccessHashValue {
+            if let rhsAccessHashValue = rhs.accessHash, case .personal = rhsAccessHashValue {
                 accessHash = rhsAccessHashValue
             } else {
                 accessHash = lhs.accessHash ?? rhs.accessHash
             }
             
-            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: rhs.username, phone: lhs.phone, photo: rhs.photo.isEmpty ? lhs.photo : rhs.photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: rhs.usernames)
+            let photo: [TelegramMediaImageRepresentation]
+            if case .genericPublic = rhs.accessHash {
+                photo = lhs.photo
+            } else {
+                photo = rhs.photo
+            }
+            
+            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: rhs.usernames)
         }
     }
 }

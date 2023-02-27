@@ -148,6 +148,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         return true
     }
     
+    open func visibleForSelection(at point: CGPoint) -> Bool {
+        return true
+    }
+    
     open var canBeLongTapped: Bool {
         return false
     }

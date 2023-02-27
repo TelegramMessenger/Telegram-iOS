@@ -9,20 +9,19 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AvatarNode
 import AccountContext
+import ItemListUI
 
 final class CommandChatInputPanelItem: ListViewItem {
     fileprivate let context: AccountContext
-    fileprivate let theme: PresentationTheme
-    fileprivate let fontSize: PresentationFontSize
+    fileprivate let presentationData: ItemListPresentationData
     fileprivate let command: PeerCommand
     fileprivate let commandSelected: (PeerCommand, Bool) -> Void
     
     let selectable: Bool = true
     
-    public init(context: AccountContext, theme: PresentationTheme, fontSize: PresentationFontSize, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
+    public init(context: AccountContext, presentationData: ItemListPresentationData, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
         self.context = context
-        self.theme = theme
-        self.fontSize = fontSize
+        self.presentationData = presentationData
         self.command = command
         self.commandSelected = commandSelected
     }
@@ -92,6 +91,8 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let arrowNode: ASButtonNode
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.textNode = TextNode()
@@ -107,6 +108,9 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         
         self.arrowNode = HighlightableButtonNode()
         
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = [.button]
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.topSeparatorNode)
@@ -117,6 +121,8 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         self.addSubnode(self.arrowNode)
         
         self.arrowNode.addTarget(self, action: #selector(self.arrowButtonPressed), forControlEvents: [.touchUpInside])
+        
+        self.addSubnode(self.activateAreaNode)
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -134,37 +140,40 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         return { [weak self] item, params, mergedTop, mergedBottom in
-            let textFont = Font.medium(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
-            let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let textFont = Font.medium(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let descriptionFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
             
             let leftInset: CGFloat = 55.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
             
+            let peerName = EnginePeer(item.command.peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+            
             let commandString = NSMutableAttributedString()
-            commandString.append(NSAttributedString(string: "/" + item.command.command.text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor))
+            commandString.append(NSAttributedString(string: "/" + item.command.command.text, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor))
+            let command = commandString.string
             
             if !item.command.command.description.isEmpty {
-                commandString.append(NSAttributedString(string: "  " + item.command.command.description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor))
+                commandString.append(NSAttributedString(string: "  " + item.command.command.description, font: descriptionFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor))
             }
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: commandString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 40.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             
-            let iconImage = PresentationResourcesChat.chatCommandPanelArrowImage(item.theme)
+            let iconImage = PresentationResourcesChat.chatCommandPanelArrowImage(item.presentationData.theme)
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                    strongSelf.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                    strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
-                    strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                    strongSelf.separatorNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                    strongSelf.topSeparatorNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                    strongSelf.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                    strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     
                     strongSelf.arrowNode.setImage(iconImage, for: [])
                     
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: EnginePeer(item.command.peer), emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.command.peer), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     
@@ -181,6 +190,10 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
+                
+                    strongSelf.activateAreaNode.accessibilityLabel = "\(peerName), \(command)"
+                    strongSelf.activateAreaNode.accessibilityValue = item.command.command.description
+                    strongSelf.activateAreaNode.frame = CGRect(origin: .zero, size: nodeLayout.size)
                 }
             })
         }

@@ -1642,6 +1642,12 @@ extension PresentationThemeInputMediaPanel: Codable {
         case stickersSearchControl
         case gifsBg
         case bg
+        case panelContentVibrantSearchOverlay
+        case panelContentVibrantSearchOverlaySelected
+        case panelContentVibrantSearchOverlayHighlight
+        case panelContentOpaqueSearchOverlay
+        case panelContentOpaqueSearchOverlaySelected
+        case panelContentOpaqueSearchOverlayHighlight
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -1675,6 +1681,12 @@ extension PresentationThemeInputMediaPanel: Codable {
                   panelContentControlVibrantSelectionColor: try decodeColor(values, .panelContentControlVibrantSelection, fallbackKey: "\(codingPath).stickersSectionText"),
                   panelContentControlOpaqueOverlayColor: try decodeColor(values, .panelContentControlOpaqueOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
                   panelContentControlOpaqueSelectionColor: try decodeColor(values, .panelContentControlOpaqueSelection, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentVibrantSearchOverlayColor: try decodeColor(values, .panelContentVibrantSearchOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentVibrantSearchOverlaySelectedColor: try decodeColor(values, .panelContentVibrantSearchOverlaySelected, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentVibrantSearchOverlayHighlightColor: try decodeColor(values, .panelContentVibrantSearchOverlayHighlight, fallbackKey: "\(codingPath).panelHighlightedIconBg"),
+                  panelContentOpaqueSearchOverlayColor: try decodeColor(values, .panelContentOpaqueSearchOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentOpaqueSearchOverlaySelectedColor: try decodeColor(values, .panelContentOpaqueSearchOverlaySelected, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentOpaqueSearchOverlayHighlightColor: try decodeColor(values, .panelContentOpaqueSearchOverlayHighlight, fallbackKey: "\(codingPath).panelHighlightedIconBg"),
                   stickersBackgroundColor: try decodeColor(values, .stickersBg),
                   stickersSectionTextColor: try decodeColor(values, .stickersSectionText),
                   stickersSearchBackgroundColor: try decodeColor(values, .stickersSearchBg),
@@ -1695,6 +1707,14 @@ extension PresentationThemeInputMediaPanel: Codable {
         try encodeColor(&values, self.panelContentControlVibrantSelectionColor, .panelContentControlVibrantSelection)
         try encodeColor(&values, self.panelContentControlOpaqueOverlayColor, .panelContentControlOpaqueOverlay)
         try encodeColor(&values, self.panelContentControlOpaqueSelectionColor, .panelContentControlOpaqueSelection)
+        
+        try encodeColor(&values, self.panelContentVibrantSearchOverlayColor, .panelContentVibrantSearchOverlay)
+        try encodeColor(&values, self.panelContentVibrantSearchOverlaySelectedColor, .panelContentVibrantSearchOverlaySelected)
+        try encodeColor(&values, self.panelContentVibrantSearchOverlayHighlightColor, .panelContentVibrantSearchOverlayHighlight)
+        try encodeColor(&values, self.panelContentOpaqueSearchOverlayColor, .panelContentOpaqueSearchOverlay)
+        try encodeColor(&values, self.panelContentOpaqueSearchOverlaySelectedColor, .panelContentOpaqueSearchOverlaySelected)
+        try encodeColor(&values, self.panelContentOpaqueSearchOverlayHighlightColor, .panelContentOpaqueSearchOverlayHighlight)
+        
         try encodeColor(&values, self.stickersBackgroundColor, .stickersBg)
         try encodeColor(&values, self.stickersSectionTextColor, .stickersSectionText)
         try encodeColor(&values, self.stickersSearchBackgroundColor, .stickersSearchBg)

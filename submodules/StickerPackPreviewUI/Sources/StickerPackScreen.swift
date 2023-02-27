@@ -97,6 +97,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private let requestDismiss: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
     private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     private let backgroundNode: ASImageNode
     private let gridNode: GridNode
     private let actionAreaBackgroundNode: NavigationBackgroundNode
@@ -172,6 +173,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.expandProgressUpdated = expandProgressUpdated
         self.sendSticker = sendSticker
+        self.sendEmoji = sendEmoji
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = true
@@ -481,7 +483,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                     }
                                 })))
                             }
-                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -494,6 +496,8 @@ private final class StickerPackContainer: ASDisplayNode {
                             return nil
                         }
                     }
+                } else if let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? StickerPackEmojisItemNode, let targetItem = itemNode.targetItem(at: strongSelf.gridNode.view.convert(point, to: itemNode.view)) {
+                    return strongSelf.emojiSuggestionPeekContent(itemLayer: targetItem.1, file: targetItem.0)
                 }
             }
             return nil
@@ -521,6 +525,191 @@ private final class StickerPackContainer: ASDisplayNode {
                 strongSelf.updatePreviewingItem(item: item, animated: true)
             }
         }, activateBySingleTap: true))
+    }
+    
+    private func emojiSuggestionPeekContent(itemLayer: CALayer, file: TelegramMediaFile) -> Signal<(UIView, CGRect, PeekControllerContent)?, NoError> {
+        let context = self.context
+        
+        var collectionId: ItemCollectionId?
+        for attribute in file.attributes {
+            if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                switch packReference {
+                case let .id(id, _):
+                    collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudEmojiPacks, id: id)
+                default:
+                    break
+                }
+            }
+        }
+        
+        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+        if let collectionId {
+            bubbleUpEmojiOrStickersets.append(collectionId)
+        }
+        
+        let accountPeerId = context.account.peerId
+        
+        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId))
+        |> map { peer -> Bool in
+            var hasPremium = false
+            if case let .user(user) = peer, user.isPremium {
+                hasPremium = true
+            }
+            return hasPremium
+        }
+        |> deliverOnMainQueue
+        |> map { [weak self, weak itemLayer] hasPremium -> (UIView, CGRect, PeekControllerContent)? in
+            guard let strongSelf = self, let itemLayer = itemLayer else {
+                return nil
+            }
+            
+            var menuItems: [ContextMenuItem] = []
+            menuItems.removeAll()
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            var isLocked = false
+            if !hasPremium {
+                isLocked = file.isPremiumEmoji
+                /*if isLocked && chatPeerId == context.account.peerId {
+                    isLocked = false
+                }*/
+            }
+            
+            let sendEmoji: (TelegramMediaFile) -> Void = { file in
+                guard let self else {
+                    return
+                }
+                var text = "."
+                var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                loop: for attribute in file.attributes {
+                    switch attribute {
+                    case let .CustomEmoji(_, _, displayText, stickerPackReference):
+                        text = displayText
+                        
+                        var packId: ItemCollectionId?
+                        if case let .id(id, _) = stickerPackReference {
+                            packId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudEmojiPacks, id: id)
+                        }
+                        emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: packId, fileId: file.fileId.id, file: file)
+                        break loop
+                    default:
+                        break
+                    }
+                }
+                
+                if let emojiAttribute {
+                    self.sendEmoji?(text, emojiAttribute)
+                }
+            }
+            let setStatus: (TelegramMediaFile) -> Void = { file in
+                guard let self else {
+                    return
+                }
+                guard let controller = self.controller else {
+                    return
+                }
+                
+                let context = self.context
+                
+                let _ = context.engine.accountData.setEmojiStatus(file: file, expirationDate: nil).start()
+                
+                var animateInAsReplacement = false
+                animateInAsReplacement = false
+                                            
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                controller.present(undoController, in: .window(.root))
+            }
+            let copyEmoji: (TelegramMediaFile) -> Void = { file in
+                var text = "."
+                var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                loop: for attribute in file.attributes {
+                    switch attribute {
+                    case let .CustomEmoji(_, _, displayText, _):
+                        text = displayText
+                        
+                        emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
+                        break loop
+                    default:
+                        break
+                    }
+                }
+                
+                if let _ = emojiAttribute {
+                    storeMessageTextInPasteboard(text, entities: [MessageTextEntity(range: 0 ..< (text as NSString).length, type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id))])
+                }
+            }
+            
+            if strongSelf.sendEmoji != nil {
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SendEmoji, icon: { theme in
+                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) {
+                        return generateImage(image.size, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            
+                            if let cgImage = image.cgImage {
+                                context.draw(cgImage, in: CGRect(origin: CGPoint(), size: size))
+                            }
+                        })
+                    } else {
+                        return nil
+                    }
+                }, action: { _, f in
+                    sendEmoji(file)
+                    f(.default)
+                })))
+            }
+            
+            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_SetAsStatus, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Smile"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.default)
+                
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if hasPremium {
+                    setStatus(file)
+                } else {
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
+                        let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    strongSelf.controller?.push(controller)
+                }
+            })))
+            
+            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.EmojiPreview_CopyEmoji, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                copyEmoji(file)
+                f(.default)
+            })))
+            
+            if menuItems.isEmpty {
+                return nil
+            }
+            
+            let content = StickerPreviewPeekContent(context: context, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: { [weak self] in
+                guard let self else {
+                    return
+                }
+                guard let controller = self.controller else {
+                    return
+                }
+                
+                let premiumController = PremiumIntroScreen(context: context, source: .stickers)
+                controller.push(premiumController)
+            })
+            
+            return (strongSelf.view, itemLayer.convert(itemLayer.bounds, to: strongSelf.view.layer), content)
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {

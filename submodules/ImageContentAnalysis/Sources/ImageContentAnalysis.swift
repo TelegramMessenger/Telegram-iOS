@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 private final class CachedImageRecognizedContent: Codable {
     public let results: [RecognizedContent]
@@ -332,8 +333,11 @@ private func recognizeContent(in image: UIImage?) -> Signal<[RecognizedContent],
     }
 }
 
-public func recognizedContent(engine: TelegramEngine, image: @escaping () -> UIImage?, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
-    return cachedImageRecognizedContent(engine: engine, messageId: messageId)
+public func recognizedContent(context: AccountContext, image: @escaping () -> UIImage?, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
+    if context.sharedContext.immediateExperimentalUISettings.disableImageContentAnalysis {
+        return .single([])
+    }
+    return cachedImageRecognizedContent(engine: context.engine, messageId: messageId)
     |> mapToSignal { cachedContent -> Signal<[RecognizedContent], NoError> in
         if let cachedContent = cachedContent {
             return .single(cachedContent.results)
@@ -343,7 +347,7 @@ public func recognizedContent(engine: TelegramEngine, image: @escaping () -> UII
             |> then(
                 recognizeContent(in: image())
                 |> beforeNext { results in
-                    let _ = updateCachedImageRecognizedContent(engine: engine, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
+                    let _ = updateCachedImageRecognizedContent(engine: context.engine, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
                 }
             )
         }

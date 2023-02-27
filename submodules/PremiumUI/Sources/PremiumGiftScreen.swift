@@ -260,11 +260,13 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                     let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
                     
                     var subtitle = ""
+                    var accessibilitySubtitle = ""
                     var pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
                     pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
                     
                     if discountValue > 0 {
                         subtitle = "**\(defaultPrice)** \(product.price)"
+                        accessibilitySubtitle = product.price
                     }
                    
                     items.append(SectionGroupComponent.Item(
@@ -285,6 +287,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                                 )
                             )
                         ),
+                        accessibilityLabel: "\(giftTitle). \(accessibilitySubtitle). \(pricePerMonth)",
                         action: {
                             component.selectProduct(product.id)
                         })
@@ -333,7 +336,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x5A6EEE),
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
-                UIColor(rgb: 0x54bdff)
+                UIColor(rgb: 0x54bdff),
+                UIColor(rgb: 0x71c8ff)
             ]
             
             i = 0
@@ -357,6 +361,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             )
                         )
                     ),
+                    accessibilityLabel: "\(perk.title(strings: strings)). \(perk.subtitle(strings: strings))",
                     action: { [weak state] in
                         var demoSubject: PremiumDemoScreen.Subject
                         switch perk {
@@ -386,6 +391,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .animatedEmoji
                         case .emojiStatus:
                             demoSubject = .emojiStatus
+                        case .translation:
+                            demoSubject = .translation
                         }
                         
                         var dismissImpl: (() -> Void)?
