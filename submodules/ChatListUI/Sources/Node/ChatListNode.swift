@@ -934,7 +934,7 @@ public enum ChatListNodeScrollPosition {
 }
 
 public enum ChatListNodeEmptyState: Equatable {
-    case notEmpty(containsChats: Bool, onlyGeneralThread: Bool)
+    case notEmpty(containsChats: Bool, onlyArchive: Bool, onlyGeneralThread: Bool)
     case empty(isLoading: Bool, hasArchiveInfo: Bool)
 }
 
@@ -2792,10 +2792,15 @@ public final class ChatListNode: ListView {
                         var containsChats = false
                         var threadCount = 0
                         var hasGeneral = false
+                        var hasArchive = false
                         loop: for entry in transition.chatListView.filteredEntries {
                             switch entry {
                             case .GroupReferenceEntry, .HoleEntry, .PeerEntry:
-                                containsChats = true
+                                if case .GroupReferenceEntry = entry {
+                                    hasArchive = true
+                                } else {
+                                    containsChats = true
+                                }
                                 if case .forum = strongSelf.location {
                                     if case let .PeerEntry(peerEntry) = entry, let threadInfo = peerEntry.threadInfo {
                                         if threadInfo.id == 1 {
@@ -2813,7 +2818,7 @@ public final class ChatListNode: ListView {
                                 break
                             }
                         }
-                        isEmptyState = .notEmpty(containsChats: containsChats, onlyGeneralThread: hasGeneral && threadCount == 1)
+                        isEmptyState = .notEmpty(containsChats: containsChats || hasArchive, onlyArchive: hasArchive && !containsChats, onlyGeneralThread: hasGeneral && threadCount == 1)
                     }
                     
                     var insertedPeerIds: [EnginePeer.Id] = []

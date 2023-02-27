@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import TelegramCore
 import TelegramUIPreferences
 import Postbox
@@ -28,6 +29,10 @@ public func selectReactionFillStaticColor(theme: PresentationTheme, wallpaper: T
 }
 
 public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> Bool {
+    if !DeviceMetrics.performance.isGraphicallyCapable {
+        return false
+    }
+    
     if case .builtin = wallpaper {
         return false
     } else if case .color = wallpaper {

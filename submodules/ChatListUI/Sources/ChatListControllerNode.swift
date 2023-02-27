@@ -357,6 +357,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             var shimmerNodeOffset: CGFloat = 0.0
             
             var needsEmptyNode = false
+            var hasOnlyArchive = false
             var hasOnlyGeneralThread = false
             var isLoading = false
             
@@ -375,8 +376,9 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 if !isLoadingValue {
                     strongSelf.becameEmpty(filter)
                 }
-            case let .notEmpty(_, onlyGeneralThreadValue):
-                needsEmptyNode = onlyGeneralThreadValue
+            case let .notEmpty(_, onlyHasArchiveValue, onlyGeneralThreadValue):
+                needsEmptyNode = onlyHasArchiveValue || onlyGeneralThreadValue
+                hasOnlyArchive = onlyHasArchiveValue
                 hasOnlyGeneralThread = onlyGeneralThreadValue
             }
             
@@ -397,7 +399,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         if case .forum = location {
                             subject = .forum(hasGeneral: hasOnlyGeneralThread)
                         } else {
-                            subject = .chats
+                            subject = .chats(hasArchive: hasOnlyArchive)
                         }
                     }
                     
