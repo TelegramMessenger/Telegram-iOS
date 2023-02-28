@@ -8939,3 +8939,5 @@ Sorry for the inconvenience.";
 "ChatList.ClearSavedMessagesConfirmation" = "Are you sure you want to delete all your saved messages?";
 
 "Conversation.Translation.Settings" = "Settings";
+"GroupPermission.NotAvailableInDiscussionGroups" = "This permission is not available in discussion groups.";
+"GroupPermission.NotAvailableInGeoGroups" = "This permission is not available in location-based groups.";
