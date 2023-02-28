@@ -118,7 +118,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let labelNode: TextNode
     let backgroundNode: NavigationBackgroundNode
     let stickBackgroundNode: ASImageNode
-    let activateArea: AccessibilityAreaNode
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     
@@ -191,9 +190,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         self.text = text
         
-        self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = .staticText
-        
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -212,16 +208,12 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             self.addSubnode(self.backgroundNode)
         }
         self.addSubnode(self.labelNode)
-        
-        self.addSubnode(self.activateArea)
-        
+                
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
-        self.activateArea.accessibilityLabel = text
-        
+                
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
@@ -285,9 +277,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.frame = backgroundFrame
         self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: .immediate)
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
-        
-        self.activateArea.frame = backgroundFrame
-        
+                
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
             self.backgroundNode.isHidden = true

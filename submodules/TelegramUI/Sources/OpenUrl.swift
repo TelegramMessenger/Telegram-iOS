@@ -687,6 +687,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var startAttach: String?
                         var choose: String?
                         var threadId: Int64?
+                        var appName: String?
+                        var startApp: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -714,6 +716,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         choose = value
                                     } else if queryItem.name == "thread" {
                                         threadId = Int64(value)
+                                    } else if queryItem.name == "appname" {
+                                        appName = value
+                                    } else if queryItem.name == "startapp" {
+                                        startApp = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -731,13 +737,19 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/+\(phone)"
                         } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
-                            if let threadId = threadId {
+                            if let appName {
+                                result += "\(appName)"
+                            }
+                            if let startApp {
+                                result += "?startapp=\(startApp)"
+                            }
+                            if let threadId {
                                 result += "/\(threadId)"
-                                if let post = post, let postValue = Int(post) {
+                                if let post, let postValue = Int(post) {
                                     result += "/\(postValue)"
                                 }
                             } else {
-                                if let post = post, let postValue = Int(post) {
+                                if let post, let postValue = Int(post) {
                                     result += "/\(postValue)"
                                 }
                             }

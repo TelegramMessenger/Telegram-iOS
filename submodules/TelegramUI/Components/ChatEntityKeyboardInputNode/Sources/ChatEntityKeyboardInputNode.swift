@@ -1243,7 +1243,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
-                        if let id = groupId.base as? ItemCollectionId {
+                        if let id = groupId.base as? ItemCollectionId, context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
                             bubbleUpEmojiOrStickersets.append(id)
                         }
                         let _ = interfaceInteraction.sendSticker(.standalone(media: file), false, view, rect, layer, bubbleUpEmojiOrStickersets)
@@ -2507,12 +2507,15 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                     return nil
                 }
                 
+                let context = strongSelf.context
+                
                 var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
                 if let id = groupId.base as? ItemCollectionId {
-                    bubbleUpEmojiOrStickersets.append(id)
+                    if file.isCustomEmoji || context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
+                        bubbleUpEmojiOrStickersets.append(id)
+                    }
                 }
                 
-                let context = strongSelf.context
                 let accountPeerId = context.account.peerId
                 let chatPeerId = strongSelf.chatPeerId
                 

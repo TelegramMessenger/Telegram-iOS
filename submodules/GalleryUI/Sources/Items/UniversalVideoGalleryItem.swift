@@ -2471,12 +2471,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
             var speedIconText: String = "1x"
+            var didSetSpeedValue = false
             for (text, iconText, speed) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 if abs(speed - status.baseRate) < 0.01 {
                     speedValue = text
                     speedIconText = iconText
+                    didSetSpeedValue = true
                     break
                 }
+            }
+            if !didSetSpeedValue && status.baseRate != 1.0 {
+                speedValue = String(format: "%.1fx", status.baseRate)
+                speedIconText = speedValue
             }
             
             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
@@ -2625,7 +2631,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 strongSelf.updatePlaybackRate(newValue)
                 if finished {
-                    dismiss()
+                    //dismiss()
                 }
             }), true))
             

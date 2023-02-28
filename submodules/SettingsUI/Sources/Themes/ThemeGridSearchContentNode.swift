@@ -513,7 +513,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                                 nextOffset = newNextOffset
                                             }
                                         }
-                                        let merged = ChatContextResultCollection(botId: collection.botId, peerId: collection.peerId, query: collection.query, geoPoint: collection.geoPoint, queryId: nextResults?.queryId ?? collection.queryId, nextOffset: nextOffset ?? "", presentation: collection.presentation, switchPeer: collection.switchPeer, results: results, cacheTimeout: collection.cacheTimeout)
+                                        let merged = ChatContextResultCollection(botId: collection.botId, peerId: collection.peerId, query: collection.query, geoPoint: collection.geoPoint, queryId: nextResults?.queryId ?? collection.queryId, nextOffset: nextOffset ?? "", presentation: collection.presentation, switchPeer: collection.switchPeer, webView: collection.webView, results: results, cacheTimeout: collection.cacheTimeout)
                                         return (merged, nextOffset)
                                     }
                                     |> mapToSignal { newCollection, nextOffset -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in

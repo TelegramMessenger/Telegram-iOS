@@ -71,6 +71,7 @@ public enum ParsedInternalPeerUrlParameter {
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
+    case appStart(String, String?)
 }
 
 public enum ParsedInternalUrl {
@@ -510,6 +511,19 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return .peer(.name(peerName), .channelMessage(value, timecode))
                     }
+                } else if pathComponents.count == 2 {
+                    let appName = pathComponents[1]
+                    var startApp: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "startApp"{
+                                    startApp = value
+                                }
+                            }
+                        }
+                    }
+                    return .peer(.name(peerName), .appStart(appName, startApp))
                 } else {
                     return nil
                 }
@@ -594,6 +608,20 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
                                     if let botPeer = botPeer {
                                         return .single(.peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false))))
+                                    } else {
+                                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                    }
+                                }
+                            case let .appStart(name, payload):
+                                return context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<BotApp?, NoError> in
+                                    return .single(nil)
+                                }
+                                |> take(1)
+                                |> mapToSignal { botApp -> Signal<ResolvedUrl?, NoError> in
+                                    if let botApp {
+                                        return .single(.peer(peer, .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false))))
                                     } else {
                                         return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                     }
