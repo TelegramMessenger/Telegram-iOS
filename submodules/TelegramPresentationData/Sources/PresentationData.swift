@@ -515,13 +515,12 @@ public func automaticEnergyUsageShouldBeOn(settings: MediaAutoDownloadSettings) 
         return Signal { subscriber in
             subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
             
-            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: {
+            let observer = NotificationCenter.default.addObserver(forName: UIDevice.batteryLevelDidChangeNotification, object: nil, queue: OperationQueue.main, using: { _ in
                 subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
-            }, queue: Queue.mainQueue())
-            timer.start()
+            })
             
             return ActionDisposable {
-                timer.invalidate()
+                NotificationCenter.default.removeObserver(observer)
             }
         }
         |> runOn(Queue.mainQueue())
