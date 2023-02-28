@@ -120,7 +120,7 @@ public class ShareRootControllerImpl {
     private weak var navigationController: NavigationController?
     
     private let isAppLocked: Bool
-
+    
     public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?, isAppLocked: Bool) {
         self.initializationData = initializationData
         self.getExtensionContext = getExtensionContext
@@ -217,7 +217,7 @@ public class ShareRootControllerImpl {
             let internalContext: InternalContext
             
             let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
-
+            
             initializeAccountManagement()
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
@@ -232,9 +232,9 @@ public class ShareRootControllerImpl {
                 semaphore.signal()
             })
             semaphore.wait()
-
+            
             initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
-
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
                 internalContext.sharedContext.updatePtgSecretPasscodesPromise(.single(initialPresentationDataAndSettings!.ptgSecretPasscodes))
@@ -1106,7 +1106,7 @@ public class ShareRootControllerImpl {
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 if strongSelf.isAppLocked {
                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_LockedTitle, text: presentationData.strings.Share_LockedDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -1115,7 +1115,7 @@ public class ShareRootControllerImpl {
                     strongSelf.mainWindow?.present(controller, on: .root)
                     return
                 }
-
+                
                 displayShare()
             }
             

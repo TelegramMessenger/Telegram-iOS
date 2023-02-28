@@ -75,7 +75,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var previousMediaReference: AnyMediaReference?
     private var currentTranslateToLanguage: String?
     private let translationDisposable = MetaDisposable()
-
+    
     private var isReplyThread: Bool = false
     
     private let fetchDisposable = MetaDisposable()
@@ -488,20 +488,20 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 translateToLanguage = "pt"
             }
         }
-
+        
         var currentTranslateToLanguageUpdated = false
         if self.currentTranslateToLanguage != translateToLanguage {
             self.currentTranslateToLanguage = translateToLanguage
             currentTranslateToLanguageUpdated = true
         }
-
+        
         if currentTranslateToLanguageUpdated || messageUpdated, let message = interfaceState.pinnedMessage?.message {
             if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
             } else if let translateToLanguage  {
                 self.translationDisposable.set(translateMessageIds(context: self.context, messageIds: [message.id], toLang: translateToLanguage).start())
             }
         }
-
+        
         if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated || themeUpdated || currentTranslateToLanguageUpdated {
             self.currentLayout = (width, leftInset, rightInset)
             
@@ -677,15 +677,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), titleStrings)
             
             let message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
-
+            
             let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
             
             let messageText: NSAttributedString
             let textFont = Font.regular(15.0)
             if isText {
-                var text = message.text
-                var messageEntities = message.textEntitiesAttribute?.entities ?? []
-
+                var text = message_.text
+                var messageEntities = message_.textEntitiesAttribute?.entities ?? []
+                
                 if let translateToLanguage = translateToLanguage, !text.isEmpty {
                     for attribute in message.attributes {
                         if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
@@ -695,7 +695,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         }
                     }
                 }
-
+                
                 let entities = messageEntities.filter { entity in
                     switch entity.type {
                     case .Spoiler, .CustomEmoji:

@@ -829,16 +829,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 guard let context = arguments.context, context.sharedContext.applicationBindings.isMainApp else {
                     return
                 }
-
+                
                 let allStats: Signal<Data, NoError> = Signal { subscriber in
                     DispatchQueue.global().async {
                         let log = collectRawStorageUsageReport(containerPath: context.sharedContext.applicationBindings.containerPath)
                         subscriber.putNext(log.data(using: .utf8) ?? Data())
                     }
-
+                    
                     return EmptyDisposable
                 }
-
+                
                 let _ = (allStats
                 |> deliverOnMainQueue).start(next: { allStatsData in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -1330,15 +1330,15 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.sendLogs(presentationData.theme))
         //entries.append(.sendOneLog(presentationData.theme))
         entries.append(.sendShareLogs)
-            entries.append(.sendGroupCallLogs)
+        entries.append(.sendGroupCallLogs)
         entries.append(.sendNotificationLogs(presentationData.theme))
-            entries.append(.sendCriticalLogs(presentationData.theme))
+        entries.append(.sendCriticalLogs(presentationData.theme))
         entries.append(.sendAllLogs)
-    entries.append(.sendStorageStats)
+        entries.append(.sendStorageStats)
         if isMainApp {
             entries.append(.accounts(presentationData.theme))
         }
-
+        
         entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
         entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
         entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))

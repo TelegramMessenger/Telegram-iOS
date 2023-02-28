@@ -1332,7 +1332,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.avatarVideoNode = videoNode
                             }
                             videoNode.update(peer: peer, photo: photo, size: CGSize(width: 60.0, height: 60.0))
-
+                            
                             if strongSelf.hierarchyTrackingLayer == nil {
                                 let hierarchyTrackingLayer = HierarchyTrackingLayer()
                                 hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
@@ -1358,7 +1358,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.hierarchyTrackingLayer?.removeFromSuperlayer()
                             strongSelf.hierarchyTrackingLayer = nil
-                        }
+                        }                 
                         strongSelf.updateVideoVisibility()
                     } else {
                         if let photo = peer.largeProfileImage, photo.hasVideo {
@@ -1847,14 +1847,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                         let messageString: NSAttributedString
-                        if !message.text.isEmpty && entities.count > 0 {
-                            var messageText = message.text
+                        if !firstMessage_!.text.isEmpty && entities.count > 0 {
+                            var messageText = firstMessage_!.text
                             var entities = entities
                             if !"".isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                 messageText = translation.text
                                 entities = translation.entities
                             }
-
+                            
                             messageString = foldLineBreaks(stringWithAppliedEntities(messageText, entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage()))
                         } else if spoilers != nil || customEmojiRanges != nil {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
@@ -2367,11 +2367,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if item.interaction.isInlineMode {
                 titleLeftCutout = 22.0
             }
-
+            
             if let titleAttributedStringValue = titleAttributedString, titleAttributedStringValue.length == 0 {
                 titleAttributedString = NSAttributedString(string: " ", font: titleFont, textColor: theme.titleColor)
             }
-
+                        
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
             var titleCutout: TextNodeCutout?
             if !titleLeftCutout.isZero {
@@ -3439,7 +3439,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private func updateVideoVisibility() {
         let isVisible = self.visibilityStatus && self.trackingIsInHierarchy
         self.avatarVideoNode?.updateVisibility(isVisible)
-
+      
         if let videoNode = self.avatarVideoNode {
             videoNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: self.avatarNode.frame.size.width / 2.0, transition: .immediate)
             videoNode.frame = self.avatarNode.bounds

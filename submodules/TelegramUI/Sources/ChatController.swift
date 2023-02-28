@@ -544,14 +544,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private var currentSpeechHolder: SpeechSynthesizerHolder?
-
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
 #if DEBUG
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
 #endif
-
+        
         self.context = context
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -578,7 +578,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch chatLocation {
         case let .peer(peerId):
             precondition(context.sharedContext.currentPtgSettings.with({ $0.isOriginallyInstalledViaTestFlightOrForDevelopment == true }) || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
-
+            
             locationBroadcastPanelSource = .peer(peerId)
             switch subject {
             case .message, .none:
@@ -2055,7 +2055,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }
-
+                        
                         strongSelf.sendMessages([.message(text: text, attributes: [TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< (text as NSString).length, type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id))])], inlineStickers: [file.fileId : file], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)], commit: false)
                     }
                 } else {
@@ -2065,7 +2065,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return .text
                         })
                     })
-
+                    
                     let _ = (ApplicationSpecificNotice.getEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager)
                              |> deliverOnMainQueue).start(next: { count in
                         guard let strongSelf = self else {
@@ -2073,7 +2073,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         if count < 2 {
                             let _ = ApplicationSpecificNotice.incrementEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager).start()
-
+                            
                             Queue.mainQueue().after(0.5, {
                                 strongSelf.displayEmojiTooltip()
                             })
@@ -3869,7 +3869,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, displayUndo: { [weak self] content in
             if let strongSelf = self {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
+                
                 strongSelf.window?.forEachController({ controller in
                     if let controller = controller as? UndoOverlayController {
                         controller.dismiss()
@@ -3881,7 +3881,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     return true
                 })
-
+                
                 strongSelf.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in
                         return true
                 }), in: .current)
@@ -4169,7 +4169,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: peerType, hasContactSelector: false, createNewGroup: {
                 createNewGroupImpl?()
             }))
-
+            
             let presentConfirmation: (String, Bool, @escaping () -> Void) -> Void = { [weak self] peerName, isChannel, completion in
                 guard let strongSelf = self else {
                     return
@@ -4177,14 +4177,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                 var attributedTitle: NSAttributedString?
                 let attributedText: NSAttributedString
-
+                
                 let theme = AlertControllerTheme(presentationData: strongSelf.presentationData)
                 if case .user = peerType {
                     attributedTitle = nil
                     attributedText = NSAttributedString(string: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationTitle(peerName, botName).string, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
                 } else {
                     attributedTitle = NSAttributedString(string: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationTitle(peerName, botName).string, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-
+                    
                     var botAdminRights: TelegramChatAdminRights?
                     switch peerType {
                     case let .group(group):
@@ -4224,14 +4224,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-
+                                
                 let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
-
+                    
                     completion()
                 })])
                 strongSelf.present(controller, in: .window(.root))
             }
-
+            
             controller.peerSelected = { [weak self, weak controller] peer, _ in
                 guard let strongSelf = self else {
                     return
@@ -4939,7 +4939,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedCopyProtectionEnabled(copyProtectionEnabled)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
-
+                                    
                                     if let channel = renderedPeer?.peer as? TelegramChannel {
                                         if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
                                             interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
@@ -4965,7 +4965,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                         }
                                     }
-
+                                    
                                     return interfaceState
                                 }
                         })
@@ -5377,7 +5377,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedCopyProtectionEnabled(copyProtectionEnabled)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
-
+                                    
                                     if let channel = renderedPeer?.peer as? TelegramChannel {
                                         if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
                                             interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
@@ -5403,7 +5403,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                         }
                                     }
-
+                                    
                                     return interfaceState
                                 }
                         })
@@ -5824,7 +5824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         */
-
+        
         self.canReadHistoryDisposable = (combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
             return a && b
         } |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -5853,7 +5853,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return value - 1
         }
 #endif
-
+        
         let deallocate: () -> Void = {
             self.historyStateDisposable?.dispose()
             self.messageIndexDisposable.dispose()
@@ -6510,7 +6510,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-
+                
                 if case let .replyThread(replyThreadMessageId) = strongSelf.chatLocation {
                     if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
                         pinnedMessageId = nil
@@ -6721,7 +6721,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
 
             if case .standard(previewing: true) = self.presentationInterfaceState.mode {
-
+                
             } else if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
                 var baseLanguageCode = self.presentationData.strings.baseLanguageCode
                 if baseLanguageCode.contains("-") {
@@ -6731,7 +6731,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> map { peer -> Bool in
                     return peer?.isPremium ?? false
                 } |> distinctUntilChanged
-
+                
                 let isHidden = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.TranslationHidden(id: peerId))
                 |> distinctUntilChanged
                 self.translationStateDisposable = (combineLatest(
@@ -6766,7 +6766,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             }
-
+            
             self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages,
                 hasPendingMessages,
                 isTopReplyThreadMessageShown,
@@ -7248,7 +7248,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if "".isEmpty {
                     hasDisabledContent = false
                 }
-
+                
                 if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode {
                     let forwardCount = messages.reduce(0, { count, message -> Int in
                         if case .forward = message {
@@ -8352,7 +8352,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> deliverOnMainQueue).start(next: { [weak self] searchResult in
                         if let strongSelf = self, let (searchResult, searchState, searchLocation) = searchResult {
                             let matchesOnlyBcOfFAN = strongSelf.presentationInterfaceState.search?.resultsState?.matchesOnlyBcOfFAN ?? []
-
+                            
                             let controller = ChatSearchResultsController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN, loadMorePaused: strongSelf.loadMoreCounter > 0, navigateToMessageIndex: { index in
                                 guard let strongSelf = self else {
                                     return
@@ -8564,14 +8564,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-
+            
             strongSelf.dismissAllTooltips()
-
+            
             strongSelf.mediaRecordingModeTooltipController?.dismiss()
             strongSelf.interfaceInteraction?.updateShowWebView { _ in
                 return false
             }
-
+            
             var bannedMediaInput = false
             if let channel = peer as? TelegramChannel {
                 if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
@@ -8602,12 +8602,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-
+            
             if bannedMediaInput {
                 strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil))
                 return
             }
-
+                        
             let requestId = strongSelf.beginMediaRecordingRequestId
             let begin: () -> Void = {
                 guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
@@ -8711,9 +8711,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-
+            
             var displayToast = false
-
+            
             if let (untilDate, personal) = bannedPermission {
                 let banDescription: String
                 switch subject {
@@ -8761,7 +8761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case .mediaRecording, .premiumVoiceMessages:
                                 rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                             }
-
+                            
                             if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
                                 tooltipController.updateContent(.text(banDescription), animated: true, extendTimer: true)
                             } else if let rect = rect {
@@ -8884,7 +8884,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-
+            
             var bannedMediaInput = false
             if let channel = peer as? TelegramChannel {
                 if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
@@ -8915,20 +8915,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-
+            
             if bannedMediaInput {
                 strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil))
                 return
             }
-
+            
             if strongSelf.recordingModeFeedback == nil {
                 strongSelf.recordingModeFeedback = HapticFeedback()
                 strongSelf.recordingModeFeedback?.prepareImpact()
             }
-
+            
             strongSelf.recordingModeFeedback?.impact()
             var updatedMode: ChatTextInputMediaRecordingButtonMode?
-
+            
             strongSelf.updateChatPresentationInterfaceState(interactive: true, {
                 return $0.updatedInterfaceState({ current in
                     let mode: ChatTextInputMediaRecordingButtonMode
@@ -8942,11 +8942,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return current.withUpdatedMediaRecordingMode(mode)
                 }).updatedShowWebView(false)
             })
-
+            
             if let updatedMode = updatedMode, updatedMode == .video {
                 let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(accountManager: strongSelf.context.sharedContext.accountManager, count: 3).start()
             }
-
+            
             strongSelf.displayMediaRecordingTooltip()
         }, setupMessageAutoremoveTimeout: { [weak self] in
             guard let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation else {
@@ -10099,7 +10099,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
                 return nil
             }).start()
-
+            
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             var languageCode = presentationData.strings.baseLanguageCode
             let rawSuffix = "-raw"
@@ -10108,7 +10108,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             let locale = Locale(identifier: languageCode)
             let fromLanguage: String = locale.localizedString(forLanguageCode: langCode) ?? ""
-
+            
             strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_AddedToDoNotTranslateText(fromLanguage).string, round: false, undoText: "Settings"), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
                 if case .undo = action, let strongSelf = self {
                     let controller = translationSettingsController(context: strongSelf.context)
@@ -10636,7 +10636,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if !strongSelf.context.sharedContext.currentMediaInputSettings.with({ $0.enableRaiseToSpeak }) {
                         return false
                     }
-
+                    
                     if strongSelf.presentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
                         return false
                     }
@@ -10659,7 +10659,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
 
-
+                        
                         return true
                     }
                 }
@@ -11050,7 +11050,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return interfaceState
         }).start()
     }
-
+        
     override public func viewWillLeaveNavigation() {
         self.chatDisplayNode.willNavigateAway()
     }
@@ -12302,7 +12302,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         let _ = peer
-
+        
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
@@ -12314,14 +12314,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             var enablePhoto = true
             var enableVideo = true
-
+            
             if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveCall {
                 enableVideo = false
             }
-
+            
             var bannedSendPhotos: (Int32, Bool)?
             var bannedSendVideos: (Int32, Bool)?
-
+            
             if let channel = peer as? TelegramChannel {
                 if let value = channel.hasBannedPermission(.banSendPhotos) {
                     bannedSendPhotos = value
@@ -12337,7 +12337,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     bannedSendVideos = (Int32.max, false)
                 }
             }
-
+            
             if bannedSendPhotos != nil {
                 enablePhoto = false
             }
@@ -12408,7 +12408,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var bannedSendPhotos: (Int32, Bool)?
         var bannedSendVideos: (Int32, Bool)?
         var bannedSendFiles: (Int32, Bool)?
-
+        
         var canSendPolls = true
         if let peer = peer as? TelegramUser, peer.botInfo == nil {
             canSendPolls = false
@@ -12998,14 +12998,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var enablePhoto = true
                     var enableVideo = true
-
+                    
                     if let callManager = strongSelf.context.sharedContext.callManager as? PresentationCallManagerImpl, callManager.hasActiveCall {
                         enableVideo = false
                     }
-
+                    
                     var bannedSendPhotos: (Int32, Bool)?
                     var bannedSendVideos: (Int32, Bool)?
-
+                    
                     if let channel = peer as? TelegramChannel {
                         if let value = channel.hasBannedPermission(.banSendPhotos) {
                             bannedSendPhotos = value
@@ -13028,7 +13028,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if bannedSendVideos != nil {
                         enableVideo = false
                     }
-
+                    
                     presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos:  peer.id.namespace != Namespaces.Peer.SecretChat, mediaGrouping: true, initialCaption: inputText, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                         if let strongSelf = self {
                             if editMediaOptions != nil {
@@ -13521,13 +13521,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                         return false
                     }
-
+                    
                     enum ItemType {
                         case gif
                         case image
                         case video
                     }
-
+                    
                     var itemType: ItemType?
                     switch item {
                     case let .internalReference(reference):
@@ -13547,11 +13547,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             itemType = .video
                         }
                     }
-
+                    
                     var bannedSendPhotos: (Int32, Bool)?
                     var bannedSendVideos: (Int32, Bool)?
                     var bannedSendGifs: (Int32, Bool)?
-
+                    
                     if let channel = peer as? TelegramChannel {
                         if let value = channel.hasBannedPermission(.banSendPhotos) {
                             bannedSendPhotos = value
@@ -13573,30 +13573,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             bannedSendGifs = (Int32.max, false)
                         }
                     }
-
+                    
                     if let itemType {
                         switch itemType {
                         case .image:
                             if bannedSendPhotos != nil {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-
+                                
                                 return false
                             }
                         case .video:
                             if bannedSendVideos != nil {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-
+                                
                                 return false
                             }
                         case .gif:
                             if bannedSendGifs != nil {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-
+                                
                                 return false
                             }
                         }
                     }
-
+                    
                     return true
                 }
                 controller.getCaptionPanelView = { [weak strongSelf] in
@@ -14225,7 +14225,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let stickerPackReference = stickerPackReference {
             self.presentEmojiList(references: [stickerPackReference])
-
+            
             /*let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
             |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
                 if let strongSelf = self, case let .result(info, _, _) = stickerPack {
@@ -15115,12 +15115,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return (results, updatedState, [])
                             }
-
+                            
                             var matchesOnlyBcOfFAN = strongSelf.presentationInterfaceState.search?.resultsState?.matchesOnlyBcOfFAN ?? []
-
+                            
                             if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
                                 let alreadyKnownIds = Set(strongSelf.presentationInterfaceState.search?.resultsState?.messageIndices.lazy.map { $0.id } ?? [])
-
+                                
                                 let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages.filter { !alreadyKnownIds.contains($0.id) }, query: searchState.query)
                                 matchesOnlyBcOfFAN.formUnion(newMatchesOnlyBcOfFAN)
                             }
@@ -15131,10 +15131,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let strongSelf = self else {
                                 return
                             }
-
+                            
                             let updatedValue: (SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)? = (results, updatedState, searchState.location)
                             strongSelf.searchResult.set(.single(updatedValue))
-
+                            
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
@@ -16063,7 +16063,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     Queue.mainQueue().after(0.88) {
                         strongSelf.chatDisplayNode.hapticFeedback.success()
                     }
-
+                    
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                         if case .info = value, let strongSelf = self {
@@ -17166,13 +17166,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
-
+        
         let rect: CGRect? = self.chatDisplayNode.frameForInputActionButton()
         
         let updatedMode: ChatTextInputMediaRecordingButtonMode = self.presentationInterfaceState.interfaceState.mediaRecordingMode
         
         let text: String
-
+        
         var canSwitch = true
         if let channel = peer as? TelegramChannel {
             if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
@@ -17199,7 +17199,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }
-
+        
         if updatedMode == .audio {
             if canSwitch {
                 text = self.presentationData.strings.Conversation_HoldForAudio
@@ -18208,14 +18208,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.historyNodeContainer.layer.addShakeAnimation(amplitude: -6.0, decay: true)
     }
-
+    
     public func hideChat() {
         self.stopMediaRecorder()
         self.dismissAllTooltips()
         self.commitPurposefulAction()
         self.effectiveNavigationController?.popToRoot(animated: false)
     }
-
+    
     public func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
         if !transition.isAnimated {
             self.chatDisplayNode.historyNodeContainer.layer.removeAllAnimations()
@@ -18223,14 +18223,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let scale: CGFloat = 1.0 - 0.06 * fraction
         transition.updateTransformScale(node: self.chatDisplayNode.historyNodeContainer, scale: scale)
     }
-
+    
     func restrictedSendingContentsText() -> String {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return self.presentationData.strings.Chat_SendNotAllowedText
         }
-
+        
         var itemList: [String] = []
-
+        
         let order: [TelegramChatBannedRightsFlags] = [
             .banSendText,
             .banSendPhotos,
@@ -18241,7 +18241,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             .banSendMusic,
             .banSendStickers
         ]
-
+        
         for right in order {
             if let channel = peer as? TelegramChannel {
                 if channel.hasBannedPermission(right) != nil {
@@ -18252,7 +18252,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     continue
                 }
             }
-
+            
             var title: String?
             switch right {
             case .banSendText:
@@ -18278,11 +18278,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 itemList.append(title)
             }
         }
-
+        
         if itemList.isEmpty {
             return self.presentationData.strings.Chat_SendNotAllowedText
         }
-
+        
         var itemListString = ""
         if #available(iOS 13.0, *) {
             let listFormatter = ListFormatter()
@@ -18291,7 +18291,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 itemListString = value
             }
         }
-
+        
         if itemListString.isEmpty {
             for i in 0 ..< itemList.count {
                 if i != 0 {
@@ -18300,7 +18300,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 itemListString.append(itemList[i])
             }
         }
-
+        
         return self.presentationData.strings.Chat_SendAllowedContentText(itemListString).string
     }
 }

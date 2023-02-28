@@ -132,7 +132,7 @@ final class AuthorizedApplicationContext {
         // badge on app icon should not include unread messages from secret chats from secret passcodes
         // regardless whether they are active or not
         // inactive are already excluded, here we subtract unread messages of active secret chats
-
+        
         let accountId = self.context.account.id
         let activeSecretChatData = self.context.sharedContext.ptgSecretPasscodes
         |> map { ptgSecretPasscodes in
@@ -149,14 +149,14 @@ final class AuthorizedApplicationContext {
                 activeSecretChatPeerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init)
             ))
         }
-
+        
         let totalUnreadCountDisplayCategory = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData in
             let inAppSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? .defaultSettings
             return inAppSettings.totalUnreadCountDisplayCategory
         }
         |> distinctUntilChanged
-
+        
         let activeSecretChatUnreadCount = combineLatest(activeSecretChatData, totalUnreadCountDisplayCategory)
         |> map { activeSecretChatData, totalUnreadCountDisplayCategory -> Int32 in
             let (peerUnreadCount, peerNotificationSettings) = activeSecretChatData
@@ -174,7 +174,7 @@ final class AuthorizedApplicationContext {
             return Int32(activeUnreadCount)
         }
         |> distinctUntilChanged
-
+        
         return combineLatest(renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine), activeSecretChatUnreadCount)
         |> map {
             max($0.0 - $1, 0)
@@ -197,7 +197,6 @@ final class AuthorizedApplicationContext {
         self.sharedApplicationContext = sharedApplicationContext
         
         setupLegacyComponents(context: context)
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.mainWindow = mainWindow
         
@@ -206,7 +205,7 @@ final class AuthorizedApplicationContext {
         self.showCallsTab = showCallsTab
         
         self.notificationController = NotificationContainerController(context: context)
-
+        
         self.rootController = TelegramRootController(context: context)
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
@@ -404,7 +403,7 @@ final class AuthorizedApplicationContext {
                             if inactiveSecretChatPeerIds.contains(firstMessage.id.peerId) {
                                 return
                             }
-
+                            
                             guard !locked else {
                                 return
                             }
@@ -779,7 +778,6 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
-                    strongSelf.lockedCoveringView.updateTheme(presentationData.theme)
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }
             }

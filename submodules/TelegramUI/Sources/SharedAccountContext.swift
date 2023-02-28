@@ -83,12 +83,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let voipNotificationToken: Signal<Data?, NoError>
     
     public let firebaseSecretStream: Signal<[String: String], NoError>
-
+    
     private let authorizationPushConfigurationValue = Promise<AuthorizationCodePushNotificationConfiguration?>(nil)
     public var authorizationPushConfiguration: Signal<AuthorizationCodePushNotificationConfiguration?, NoError> {
         return self.authorizationPushConfigurationValue.get()
     }
-
+    
     private var activeAccountsValue: (primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?)?
     private let activeAccountsPromise = Promise<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?)>()
     public var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?), NoError> {
@@ -184,7 +184,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     public let currentPtgSettings: Atomic<PtgSettings>
     private var ptgSettingsDisposable: Disposable?
-
+    
     private let _ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
     public var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> {
         return self._ptgSecretPasscodes.get()
@@ -192,7 +192,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes>
     private var ptgSecretPasscodesDisposable: Disposable?
     private var applicationInForegroundDisposable: Disposable?
-
+    
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
@@ -228,9 +228,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.apsNotificationToken = apsNotificationToken
         self.voipNotificationToken = voipNotificationToken
-
+        
         self.firebaseSecretStream = firebaseSecretStream
-
+        
         self.authorizationPushConfigurationValue.set(apsNotificationToken |> map { data -> AuthorizationCodePushNotificationConfiguration? in
             guard let data else {
                 return nil
@@ -246,7 +246,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 isSandbox: sandbox
             )
         })
-
+                
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
             self.contactDataManager = DeviceContactDataManagerImpl()
@@ -262,7 +262,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         self.currentPtgSettings = Atomic(value: initialPresentationDataAndSettings.ptgSettings)
         self.currentPtgSecretPasscodes = Atomic(value: initialPresentationDataAndSettings.ptgSecretPasscodes)
-
+        
         let presentationData: Signal<PresentationData, NoError> = .single(initialPresentationDataAndSettings.presentationData)
         |> then(
             updatedPresentationData(accountManager: self.accountManager, applicationInForeground: self.applicationBindings.applicationInForeground, systemUserInterfaceStyle: mainWindow?.systemUserInterfaceStyle ?? .single(.light))
@@ -282,7 +282,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         (self.mediaManager as! MediaManagerImpl).animationsTemporarilyDisabledForCoverUp = { [weak self] in
             return self?.animationsTemporarilyDisabledForCoverUp == true
         }
-
+        
         self.mediaManager.overlayMediaManager.updatePossibleEmbeddingItem = { [weak self] item in
             guard let strongSelf = self else {
                 return
@@ -416,7 +416,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let _ = strongSelf.currentPtgSettings.swap(next)
             }
         })
-
+        
         if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isOriginallyInstalledViaTestFlightOrForDevelopment == nil {
             let _ = accountManager.transaction({ transaction in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.ptgSettings, { entry in
@@ -440,16 +440,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let strongSelf = self else {
                 return
             }
-
+            
             let newlyHiddenPeerIds = next.inactiveSecretChatPeerIdsForAllAccounts().subtracting(strongSelf.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIdsForAllAccounts() })
-
+            
             let _ = strongSelf.currentPtgSecretPasscodes.swap(next)
-
+            
             if !newlyHiddenPeerIds.isEmpty && applicationBindings.isMainApp {
                 strongSelf.hideUIOfInactiveSecretChats(peerIds: newlyHiddenPeerIds)
             }
         })
-
+        
         if applicationBindings.isMainApp {
             // pause all media in hidable secret chats when app enters background
             self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
@@ -528,7 +528,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
                 if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate))
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: id) }))
                     |> mapToSignal { result -> Signal<AddedAccountResult, NoError> in
                         switch result {
                             case let .authorized(account):
@@ -550,7 +550,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate))
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: authRecord.0) }))
                 |> mapToSignal { result -> Signal<UnauthorizedAccount?, NoError> in
                     switch result {
                         case let .unauthorized(account):
@@ -949,7 +949,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.ptgSecretPasscodesDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
     }
-
+    
     public func updatePtgSecretPasscodesPromise(_ ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError>) {
         assert(!self.applicationBindings.isMainApp)
         self._ptgSecretPasscodes.set(ptgSecretPasscodesSignal)
@@ -1587,7 +1587,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController {
         return SettingsUI.makeSetupTwoFactorAuthController(context: context)
     }
-
+    
     public func makeStorageManagementController(context: AccountContext) -> ViewController {
         return StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { [weak context] category in
             guard let context else {
@@ -1596,7 +1596,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return storageUsageExceptionsScreen(context: context, category: category)
         })
     }
-
+    
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
@@ -1692,33 +1692,33 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController {
         return installedStickerPacksController(context: context, mode: mode)
     }
-
+    
     private func hideUIOfInactiveSecretChats(peerIds: Set<PeerId>) {
         assert(Queue.mainQueue().isCurrent())
-
+        
         UIView.performWithoutAnimation {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             CATransaction.setAnimationDuration(0.0)
-
+            
             var insideInactiveSecretChat = false
             var dismissesIfInsideInactiveSecretChat: [() -> Void] = []
-
+            
             self.mainWindow?.forEachViewController({ controller in
                 if let controller = controller as? ActionSheetController {
                     controller.dismiss(animated: false)
                 }
-
+                
                 if let controller = controller as? ContextController {
                     controller.dismissNow()
                 }
-
+                
                 if let controller = controller as? AlertController {
                     dismissesIfInsideInactiveSecretChat.append { [weak controller] in
                         controller?.dismiss()
                     }
                 }
-
+                
                 if let controller = controller as? ChatControllerImpl {
                     if let peerId = controller.chatLocation.peerId {
                         if peerIds.contains(peerId) {
@@ -1727,7 +1727,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? PeerInfoScreenImpl {
                     if let peerId = controller.chatLocation.peerId {
                         if peerIds.contains(peerId) {
@@ -1736,7 +1736,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? OverlayAudioPlayerControllerImpl {
                     if let peerId = controller.chatLocation.peerId {
                         if peerIds.contains(peerId) {
@@ -1744,7 +1744,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? TelegramBaseController {
                     if let (mediaAccessoryPanel, _) = controller.mediaAccessoryPanel, let (state, _, _, _, _, _) = controller.playlistStateAndType, let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if peerIds.contains(id.messageId.peerId) {
@@ -1752,7 +1752,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? TabBarController {
                     for case let node as ChatListSearchListPaneNode in ASDisplayNodeFindAllSubnodesOfClass(controller.displayNode, ChatListSearchListPaneNode.self) {
                         if let (mediaAccessoryPanel, _) = node.mediaAccessoryPanel, let (state, _, _, _, _, _) = node.playlistStateAndType, let id = state.id as? PeerMessagesMediaPlaylistItemId {
@@ -1761,13 +1761,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             }
                         }
                     }
-
+                    
                     for controller in controller.controllers {
                         if let controller = controller as? ChatListControllerImpl {
                             controller.doneEditing()
                             controller.deactivateSearch(animated: false)
                         }
-
+                        
                         if let controller = controller as? TelegramBaseController {
                             if let (mediaAccessoryPanel, _) = controller.mediaAccessoryPanel, let (state, _, _, _, _, _) = controller.playlistStateAndType, let id = state.id as? PeerMessagesMediaPlaylistItemId {
                                 if peerIds.contains(id.messageId.peerId) {
@@ -1777,7 +1777,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? GalleryController {
                     let peerId: PeerId
                     switch controller.source {
@@ -1796,13 +1796,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         (controller.displayNode as! GalleryControllerNode).dismiss?()
                     }
                 }
-
+                
                 if let controller = controller as? SecretMediaPreviewController {
                     if peerIds.contains(controller.messageId.peerId) {
                         (controller.displayNode as! GalleryControllerNode).dismiss?()
                     }
                 }
-
+                
                 if let controller = controller as? LegacyController {
                     if let controller = controller.legacyController as? TGModernGalleryController {
                         dismissesIfInsideInactiveSecretChat.append { [weak controller] in
@@ -1810,7 +1810,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? ShareController {
                     if !insideInactiveSecretChat {
                         controller.updatePeers()
@@ -1819,7 +1819,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         controller?.presentingViewController?.dismiss(animated: false, completion: nil)
                     }
                 }
-
+                
                 if let controller = controller as? OverlayMediaControllerImpl {
                     for case let node as OverlayUniversalVideoNode in ASDisplayNodeFindAllSubnodesOfClass(controller.displayNode, OverlayUniversalVideoNode.self) {
                         if case let .peer(peerId) = node.content.userLocation {
@@ -1829,7 +1829,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                     }
                 }
-
+                
                 if let controller = controller as? NotificationContainerController {
                     controller.removeItems { item in
                         if let item = item as? ChatMessageNotificationItem {
@@ -1842,12 +1842,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         return false
                     }
                 }
-
+                
                 if let controller = controller as? StorageUsageScreen {
                     // close all, because otherwise we need to call reloadStats(), which may take some time, but we can't wait here for too long
                     (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
                 }
-
+                
                 if let controller = controller as? ItemListController {
                     var isOldStorageUsage = false
                     controller.forEachItemNode { itemNode in
@@ -1859,28 +1859,28 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
                     }
                 }
-
+                
                 return true
             }, includeAllOverlayControllers: true)
-
+            
             if insideInactiveSecretChat {
                 for dismiss in dismissesIfInsideInactiveSecretChat {
                     dismiss()
                 }
-
+                
                 (self.appLockContext as! AppLockContextImpl).dismissPresentedViewController()
             }
-
+            
             CATransaction.commit()
         }
     }
-
+    
     private func pauseMediaInHidableChats() {
         assert(Queue.mainQueue().isCurrent())
-
+        
         // pause voice messages and instant videos
         // it seems regular videos are already paused by some other code
-
+        
         let _ = (self.mediaManager.globalMediaPlayerState
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] next in
@@ -1899,7 +1899,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         })
     }
-
+    
     public var animationsTemporarilyDisabledForCoverUp: Bool {
         return (self.appLockContext as! AppLockContextImpl).animationsTemporarilyDisabledForCoverUp
     }

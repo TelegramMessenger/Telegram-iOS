@@ -384,7 +384,7 @@ public final class AccountContextImpl: AccountContext {
                 
                 // delay to allow dismissed UI release used media in hiding secret chats
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.0, execute: {
-                    let _ = strongSelf.engine.resources.clearStorage(peerIds: newlyHiddenPeerIds).start()
+                    let _ = strongSelf.engine.resources.clearStorage(peerIds: newlyHiddenPeerIds, includeMessages: [], excludeMessages: []).start()
                 })
             }
         })

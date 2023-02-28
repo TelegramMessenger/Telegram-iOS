@@ -38,9 +38,9 @@ private struct AccountTasks {
         if self.watchTasks {
             return false
         }
-//        if self.userInterfaceInUse {
-//            return false
-//        }
+        if self.userInterfaceInUse {
+            return false
+        }
         return true
     }
 }
@@ -50,7 +50,7 @@ public final class SharedWakeupManager {
     private let endBackgroundTask: (UIBackgroundTaskIdentifier) -> Void
     private let backgroundTimeRemaining: () -> Double
     private let acquireIdleExtension: () -> Disposable?
-
+    
     private var inForeground: Bool = false
     private var hasActiveAudioSession: Bool = false
     private var activeExplicitExtensionTimer: SwiftSignalKit.Timer?
@@ -68,7 +68,7 @@ public final class SharedWakeupManager {
     
     private var managedPausedInBackgroundPlayer: Disposable?
     private var keepIdleDisposable: Disposable?
-
+    
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
     public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
@@ -78,7 +78,7 @@ public final class SharedWakeupManager {
         self.endBackgroundTask = endBackgroundTask
         self.backgroundTimeRemaining = backgroundTimeRemaining
         self.acquireIdleExtension = acquireIdleExtension
-
+        
         self.inForegroundDisposable = (inForeground
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
@@ -290,9 +290,9 @@ public final class SharedWakeupManager {
         self.checkTasks()
     }
     
-    func checkTasks(backgroundTaskExpired: Bool = false) {
+    func checkTasks() {
         var hasTasksForBackgroundExtension = false
-
+        
         var hasActiveCalls = false
         var hasPendingMessages = false
         for (_, _, tasks) in self.accountsAndTasks {
@@ -304,7 +304,7 @@ public final class SharedWakeupManager {
                 hasPendingMessages = true
             }
         }
-
+        
         if self.inForeground || self.hasActiveAudioSession || hasActiveCalls {
             if let (completion, timer) = self.currentExternalCompletion {
                 self.currentExternalCompletion = nil
@@ -369,7 +369,7 @@ public final class SharedWakeupManager {
                             }
                             
                             strongSelf.isInBackgroundExtension = false
-                            strongSelf.checkTasks(backgroundTaskExpired: true)
+                            strongSelf.checkTasks()
                         }
                         if let taskId = self.beginBackgroundTask("background-wakeup", {
                             handleExpiration()
@@ -395,7 +395,7 @@ public final class SharedWakeupManager {
             }
         }
         self.updateAccounts(hasTasks: hasTasksForBackgroundExtension)
-
+        
         if hasPendingMessages {
             if self.keepIdleDisposable == nil {
                 self.keepIdleDisposable = self.acquireIdleExtension()
