@@ -10556,7 +10556,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
             }
         }
         
-        let addMembers: ([ContactListPeerId]) -> Signal<Void, AddChannelMemberError> = { members -> Signal<Void, AddChannelMemberError> in
+        let addMembers: ([ContactListPeerId]) -> Signal<[(PeerId, AddChannelMemberError)], NoError> = { members -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
             let memberIds = members.compactMap { contact -> PeerId? in
                 switch contact {
                 case let .peer(peerId):
@@ -10568,15 +10568,17 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
             return context.account.postbox.multiplePeersView(memberIds)
             |> take(1)
             |> deliverOnMainQueue
-            |> castError(AddChannelMemberError.self)
-            |> mapToSignal { view -> Signal<Void, AddChannelMemberError> in
+            |> mapToSignal { view -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
                 if memberIds.count == 1 {
                     return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberIds[0])
-                    |> map { _ -> Void in
+                    |> map { _ -> [(PeerId, AddChannelMemberError)] in
+                    }
+                    |> then(Signal<[(PeerId, AddChannelMemberError)], AddChannelMemberError>.single([]))
+                    |> `catch` { error -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
+                        return .single([(memberIds[0], error)])
                     }
                 } else {
-                    return context.peerChannelMemberCategoriesContextsManager.addMembers(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds) |> map { _ in
-                    }
+                    return context.peerChannelMemberCategoriesContextsManager.addMembersAllowPartial(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds)
                 }
             }
         }
@@ -10619,18 +10621,38 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                 
                 contactsController?.displayProgress = true
                 addMemberDisposable.set((addMembers(peers)
-                |> deliverOnMainQueue).start(error: { error in
-                    if let exportedInvitation, let link = exportedInvitation.link {
-                        switch error {
-                        case .restricted, .notMutualContact, .kicked:
+                |> deliverOnMainQueue).start(next: { failedPeerIds in
+                    if failedPeerIds.isEmpty {
+                        contactsController?.dismiss()
+                        
+                        let mappedPeerIds: [EnginePeer.Id] = peers.compactMap { peer -> EnginePeer.Id? in
+                            switch peer {
+                            case let .peer(id):
+                                return id
+                            default:
+                                return nil
+                            }
+                        }
+                        if !mappedPeerIds.isEmpty {
+                            let _ = (context.engine.data.get(EngineDataMap(mappedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))))
+                            |> deliverOnMainQueue).start(next: { maybePeers in
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                let peers = maybePeers.compactMap { $0.value }
+                                
+                                let text: String
+                                if peers.count == 1 {
+                                    text = presentationData.strings.PeerInfo_NotificationMemberAdded(peers[0].displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                } else {
+                                    text = presentationData.strings.PeerInfo_NotificationMultipleMembersAdded(Int32(peers.count))
+                                }
+                                parentController?.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: context, peers: peers, title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            })
+                        }
+                    } else {
+                        if let exportedInvitation, let link = exportedInvitation.link {
                             let _ = (context.engine.data.get(
-                                EngineDataList(peers.compactMap { item -> EnginePeer.Id? in
-                                    switch item {
-                                    case let .peer(peerId):
-                                        return peerId
-                                    default:
-                                        return nil
-                                    }
+                                EngineDataList(failedPeerIds.compactMap { item -> EnginePeer.Id? in
+                                    return item.0
                                 }.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
                             )
                             |> deliverOnMainQueue).start(next: { peerItems in
@@ -10649,62 +10671,34 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                             })
                             
                             return
-                        default:
-                            break
                         }
-                    }
-                    
-                    if peers.count == 1, case .restricted = error {
-                        switch peers[0] {
+                        
+                        if peers.count == 1, case .restricted = failedPeerIds[0].1 {
+                            switch peers[0] {
                             case let .peer(peerId):
                                 let _ = (context.account.postbox.loadedPeerWithId(peerId)
-                                |> deliverOnMainQueue).start(next: { peer in
+                                         |> deliverOnMainQueue).start(next: { peer in
                                     parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(peer).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 })
                             default:
                                 break
-                        }
-                    } else if peers.count == 1, case .notMutualContact = error {
-                        let text: String
-                        if let peer = groupPeer as? TelegramChannel, case .broadcast = peer.info {
-                            text = presentationData.strings.Channel_AddUserLeftError
-                        } else {
-                            text = presentationData.strings.GroupInfo_AddUserLeftError
+                            }
+                        } else if peers.count == 1, case .notMutualContact = failedPeerIds[0].1 {
+                            let text: String
+                            if let peer = groupPeer as? TelegramChannel, case .broadcast = peer.info {
+                                text = presentationData.strings.Channel_AddUserLeftError
+                            } else {
+                                text = presentationData.strings.GroupInfo_AddUserLeftError
+                            }
+                            
+                            parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        } else if case .tooMuchJoined = failedPeerIds[0].1 {
+                            parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        } else if peers.count == 1, case .kicked = failedPeerIds[0].1 {
+                            parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_AddUserKickedError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                         
-                        parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    } else if case .tooMuchJoined = error {
-                        parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    } else if peers.count == 1, case .kicked = error {
-                        parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_AddUserKickedError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    }
-                    
-                    contactsController?.dismiss()
-                }, completed: {
-                    contactsController?.dismiss()
-                    
-                    let mappedPeerIds: [EnginePeer.Id] = peers.compactMap { peer -> EnginePeer.Id? in
-                        switch peer {
-                        case let .peer(id):
-                            return id
-                        default:
-                            return nil
-                        }
-                    }
-                    if !mappedPeerIds.isEmpty {
-                        let _ = (context.engine.data.get(EngineDataMap(mappedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))))
-                        |> deliverOnMainQueue).start(next: { maybePeers in
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let peers = maybePeers.compactMap { $0.value }
-                            
-                            let text: String
-                            if peers.count == 1 {
-                                text = presentationData.strings.PeerInfo_NotificationMemberAdded(peers[0].displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
-                            } else {
-                                text = presentationData.strings.PeerInfo_NotificationMultipleMembersAdded(Int32(peers.count))
-                            }
-                            parentController?.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: context, peers: peers, title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                        })
+                        contactsController?.dismiss()
                     }
                 }))
             }))
