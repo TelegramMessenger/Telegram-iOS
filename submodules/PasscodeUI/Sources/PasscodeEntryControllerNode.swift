@@ -250,11 +250,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.background = CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
             case .image, .file:
                 if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
+                    self.coverNode.backgroundColor = .black
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
                     if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
+                        self.coverNode.backgroundColor = file.settings.colors.last.flatMap { UIColor(rgb: $0) }
                         self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
                     } else {
+                        self.coverNode.backgroundColor = self.theme.passcode.backgroundColors.bottomColor
                         self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
                     }
                 }
@@ -462,7 +465,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         let maxSide = max(layout.size.width, layout.size.height)
         let coverSize = CGSize(width: maxSide, height: maxSide)
-        self.coverNode.frame = CGRect(origin: CGPoint(x: round((layout.size.width - coverSize.width) / 2.0), y: round((layout.size.height - coverSize.height) / 2.0)), size: coverSize)
+        transition.updateFrame(node: self.coverNode, frame: CGRect(origin: CGPoint(x: round((layout.size.width - coverSize.width) / 2.0), y: round((layout.size.height - coverSize.height) / 2.0)), size: coverSize))
             
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
         transition.updateFrame(node: self.backgroundImageNode, frame: bounds)

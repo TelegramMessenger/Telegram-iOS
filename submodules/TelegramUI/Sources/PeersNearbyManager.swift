@@ -41,21 +41,6 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
                 strongSelf.visibilityUpdated(visible: visibility != nil)
             }
         })
-
-        self.accessDisposable = (DeviceAccess.authorizationStatus(applicationInForeground: nil, siriAuthorization: nil, subject: .location(.live))
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            guard let strongSelf = self else {
-                return
-            }
-            switch status {
-            case .denied:
-                let _ = strongSelf.engine.peersNearby.updatePeersNearbyVisibility(update: .invisible, background: false).start()
-                strongSelf.locationDisposable.set(nil)
-                strongSelf.updateDisposable.set(nil)
-            default:
-                break
-            }
-        })
     }
     
     deinit {
