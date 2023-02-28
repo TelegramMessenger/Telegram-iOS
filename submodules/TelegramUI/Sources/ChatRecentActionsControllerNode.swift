@@ -666,7 +666,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let cleanInsets = layout.insets(options: [])
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, transition: transition)
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, tile: false, transition: transition)
         
         let intrinsicPanelHeight: CGFloat = 47.0
         let panelHeight = intrinsicPanelHeight + cleanInsets.bottom

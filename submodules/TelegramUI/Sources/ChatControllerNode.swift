@@ -1468,7 +1468,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
-        self.backgroundNode.updateLayout(size: contentBounds.size, transition: transition)
+        
+        var shouldTile = false
+        if case .regular = layout.metrics.widthClass, layout.size.height == layout.deviceMetrics.screenSize.width {
+            shouldTile = true
+        }
+        self.backgroundNode.updateLayout(size: contentBounds.size, tile: shouldTile, transition: transition)
 
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)

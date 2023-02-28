@@ -712,11 +712,11 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.messagesContainerNode.frame = self.chatContainerNode.bounds
         self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
-        self.instantChatBackgroundNode.updateLayout(size: self.instantChatBackgroundNode.bounds.size, transition: .immediate)
+        self.instantChatBackgroundNode.updateLayout(size: self.instantChatBackgroundNode.bounds.size, tile: false, transition: .immediate)
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
         self.wallpaperNode.frame = self.chatContainerNode.bounds
-        self.wallpaperNode.updateLayout(size: self.wallpaperNode.bounds.size, transition: .immediate)
+        self.wallpaperNode.updateLayout(size: self.wallpaperNode.bounds.size, tile: false, transition: .immediate)
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)

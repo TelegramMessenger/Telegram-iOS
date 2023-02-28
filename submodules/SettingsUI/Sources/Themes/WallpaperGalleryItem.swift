@@ -1169,7 +1169,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         if self.cropNode.supernode == nil {
             self.imageNode.frame = self.wrapperNode.bounds
             self.nativeNode.frame = self.wrapperNode.bounds
-            self.nativeNode.updateLayout(size: self.nativeNode.bounds.size, transition: .immediate)
+            self.nativeNode.updateLayout(size: self.nativeNode.bounds.size, tile: false, transition: .immediate)
             self.blurredNode.frame = self.imageNode.frame
         } else {
             self.cropNode.frame = self.wrapperNode.bounds

@@ -125,7 +125,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         }
     }
     
-    var screenSize: CGSize {
+    public var screenSize: CGSize {
         switch self {
             case .iPhone4:
                 return CGSize(width: 320.0, height: 480.0)

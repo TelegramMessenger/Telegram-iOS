@@ -60,7 +60,7 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
 
     func update(wallpaper: TelegramWallpaper)
     func _internalUpdateIsSettingUpWallpaper()
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, tile: Bool, transition: ContainedViewLayoutTransition)
     func updateIsLooping(_ isLooping: Bool)
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool)
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
@@ -599,7 +599,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
     private let bakedBackgroundView: UIImageView
 
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, Bool)?
     private var wallpaper: TelegramWallpaper?
     private var isSettingUpWallpaper: Bool = false
 
@@ -884,8 +884,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             }
         }
 
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .immediate)
+        if let (size, tile) = self.validLayout {
+            self.updateLayout(size: size, tile: tile, transition: .immediate)
             self.updateBubbles()
             
             if scheduleLoopingEvent {
@@ -953,7 +953,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
     }
 
-    private func loadPatternForSizeIfNeeded(size: CGSize, transition: ContainedViewLayoutTransition) {
+    private func loadPatternForSizeIfNeeded(size: CGSize, tile: Bool, transition: ContainedViewLayoutTransition) {
         guard let wallpaper = self.wallpaper else {
             return
         }
@@ -1024,8 +1024,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                             
                             strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, invertPattern: invertPattern, generate: generator)
                             strongSelf.validPatternGeneratedImage = nil
-                            if let size = strongSelf.validLayout {
-                                strongSelf.loadPatternForSizeIfNeeded(size: size, transition: .immediate)
+                            if let (size, tile) = strongSelf.validLayout {
+                                strongSelf.loadPatternForSizeIfNeeded(size: size, tile: tile, transition: .immediate)
                             } else {
                                 strongSelf._isReady.set(true)
                             }
@@ -1067,7 +1067,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     self.patternImageLayer.suspendCompositionUpdates = false
                     self.patternImageLayer.updateCompositionIfNeeded()
                 } else {
-                    let patternArguments = TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false), scale: min(2.0, UIScreenScale))
+                    let patternArguments = TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: PatternWallpaperArguments(colors: [patternBackgroundColor], rotation: nil, customPatternColor: patternColor, preview: false, tile: tile), scale: min(2.0, UIScreenScale))
                     if self.useSharedAnimationPhase || self.patternImageLayer.contents == nil {
                         if let drawingContext = validPatternImage.generate(patternArguments) {
                             if let image = drawingContext.generateImage() {
@@ -1121,9 +1121,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         transition.updateFrame(layer: self.patternImageLayer, frame: CGRect(origin: CGPoint(), size: size))
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, tile: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.validLayout == nil
-        self.validLayout = size
+        self.validLayout = (size, tile)
         
         if let blurredBackgroundPortalSourceView = self.blurredBackgroundPortalSourceView {
             transition.updateFrame(view: blurredBackgroundPortalSourceView, frame: CGRect(origin: CGPoint(), size: size))
@@ -1151,7 +1151,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: transition, extendAnimation: false, backwards: false, completion: {})
         }
 
-        self.loadPatternForSizeIfNeeded(size: size, transition: transition)
+        self.loadPatternForSizeIfNeeded(size: size, tile: tile, transition: transition)
         
         /*for (animationNode, relativePosition) in self.inlineAnimationNodes {
             let sizeNorm = CGSize(width: 1440, height: 2960)
@@ -1201,7 +1201,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             if bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.count >= 3 && bubbleTheme.chat.animateMessageColors {
                 if self.outgoingBubbleGradientBackgroundNode == nil {
                     let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode(adjustSaturation: false)
-                    if let size = self.validLayout {
+                    if let (size, _) = self.validLayout {
                         outgoingBubbleGradientBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
                         outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
                     }
@@ -2021,7 +2021,7 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         self.isSettingUpWallpaper = true
     }
 
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, tile: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
 
         self.staticView.frame = CGRect(origin: CGPoint(), size: size)
