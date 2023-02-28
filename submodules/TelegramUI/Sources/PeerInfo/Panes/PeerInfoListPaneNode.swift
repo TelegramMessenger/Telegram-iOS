@@ -262,7 +262,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                         strongSelf.context.sharedContext.mediaManager.setPlaylist(nil, type: type, control: SharedMediaPlayerControlAction.playback(.pause))
                     }
                 }
-                mediaAccessoryPanel.setRate = { [weak self] rate, fromMenu in
+                mediaAccessoryPanel.setRate = { [weak self] rate, changeType in
                     guard let strongSelf = self else {
                         return
                     }
@@ -289,7 +289,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 }
                                 return true
                             })
-                            
+
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let text: String?
                             let rate: CGFloat?
@@ -303,10 +303,25 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 text = presentationData.strings.Conversation_AudioRateTooltipSpeedUp
                                 rate = 2.0
                             } else {
-                                text = nil
-                                rate = nil
+                                let value = String(format: "%0.1f", baseRate.doubleValue)
+                                text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+                                if case let .sliderCommit(previousValue, newValue) = changeType {
+                                    if newValue > previousValue {
+                                        rate = .infinity
+                                    } else if newValue < previousValue {
+                                        rate = -.infinity
+                                    } else {
+                                        rate = nil
+                                    }
+                                } else {
+                                    rate = nil
+                                }
                             }
-                            if let rate, let text, !fromMenu {
+                            var showTooltip = true
+                            if case .sliderChange = changeType {
+                                showTooltip = false
+                            }
+                            if let rate, let text, showTooltip {
                                 controller.present(
                                     UndoOverlayController(
                                         presentationData: presentationData,

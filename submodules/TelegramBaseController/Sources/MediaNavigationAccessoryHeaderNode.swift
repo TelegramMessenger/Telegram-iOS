@@ -174,7 +174,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     
     public var tapAction: (() -> Void)?
     public var close: (() -> Void)?
-    public var setRate: ((AudioPlaybackRate, Bool) -> Void)?
+    public var setRate: ((AudioPlaybackRate, MediaNavigationAccessoryPanel.ChangeType) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
@@ -500,7 +500,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         } else {
             nextRate = .x2
         }
-        self.setRate?(nextRate, false)
+        self.setRate?(nextRate, .preset)
         
         let frame = self.rateButton.view.convert(self.rateButton.bounds, to: nil)
         
@@ -527,8 +527,10 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     private func contextMenuSpeedItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         var items: [ContextMenuItem] = []
 
-        items.append(.custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: self.playbackBaseRate?.doubleValue ?? 1.0, valueChanged: { [weak self] newValue, finished in
-            self?.setRate?(AudioPlaybackRate(newValue), true)
+        let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
+        items.append(.custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+            let type: MediaNavigationAccessoryPanel.ChangeType = finished ? .sliderCommit(previousValue, newValue) : .sliderChange
+            self?.setRate?(AudioPlaybackRate(newValue), type)
             if finished {
                 dismiss()
             }
@@ -547,7 +549,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             }, action: { [weak self] _, f in
                 f(.default)
                 
-                self?.setRate?(rate, true)
+                self?.setRate?(rate, .preset)
             })))
         }
 

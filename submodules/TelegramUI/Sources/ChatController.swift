@@ -4255,6 +4255,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if case .user = peerType {
                     let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
+                    controller?.dismiss()
                 } else {
                     var isChannel = false
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
@@ -10117,7 +10118,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let locale = Locale(identifier: languageCode)
             let fromLanguage: String = locale.localizedString(forLanguageCode: langCode) ?? ""
             
-            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_AddedToDoNotTranslateText(fromLanguage).string, round: false, undoText: "Settings"), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
+            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/Translate"), color: .white)!, title: nil, text: presentationData.strings.Conversation_Translation_AddedToDoNotTranslateText(fromLanguage).string, round: false, undoText: presentationData.strings.Conversation_Translation_Settings), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
                 if case .undo = action, let strongSelf = self {
                     let controller = translationSettingsController(context: strongSelf.context)
                     controller.navigationPresentation = .modal
@@ -15633,7 +15634,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.dismiss()
                     
                     let navigateToLocation: NavigateToChatControllerParams.Location
-                    if let threadId = messages.first?.threadId {
+                    if let message = messages.first, let threadId = message.threadId, threadId != 1 || (message.peers[message.id.peerId] as? TelegramChannel)?.flags.contains(.isForum) == true {
                         navigateToLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                     } else {
                         navigateToLocation = .peer(peer)
