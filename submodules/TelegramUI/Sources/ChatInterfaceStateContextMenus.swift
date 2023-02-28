@@ -1739,8 +1739,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             }
                         }
                         
+                        var displayReadTimestamps = false
+                        if let stats, !stats.readTimestamps.isEmpty {
+                            displayReadTimestamps = true
+                        }
+                        
                         c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(
                             context: context,
+                            displayReadTimestamps: displayReadTimestamps,
                             availableReactions: availableReactions,
                             animationCache: controllerInteraction.presentationContext.animationCache,
                             animationRenderer: controllerInteraction.presentationContext.animationRenderer,
@@ -2564,14 +2570,14 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
                     self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
                 }
-            } else if currentStats.peers.count == 1 {
+            }/* else if currentStats.peers.count == 1 {
                 if reactionCount != 0 {
                     let text: String = self.presentationData.strings.Chat_OutgoingContextReactionCount(Int32(reactionCount))
                     self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 } else {
                     self.textNode.attributedText = NSAttributedString(string: currentStats.peers[0].displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 }
-            } else {
+            }*/ else {
                 if reactionCount != 0 {
                     let text: String
                     if reactionCount >= currentStats.peers.count {
