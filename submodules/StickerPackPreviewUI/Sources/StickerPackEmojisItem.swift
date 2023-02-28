@@ -192,7 +192,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
         }
         self.boundsChangeTrackerLayer =  boundsChangeTrackerLayer
         
-        let gestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        /*let gestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         gestureRecognizer.longTap = { [weak self] point, _ in
             guard let strongSelf = self else {
                 return
@@ -217,7 +217,20 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 }
             }
         }
-        self.containerNode.view.addGestureRecognizer(gestureRecognizer)
+        self.containerNode.view.addGestureRecognizer(gestureRecognizer)*/
+    }
+    
+    func targetItem(at point: CGPoint) -> (TelegramMediaFile, CALayer)? {
+        if let (item, _) = self.item(atPoint: point), let file = item.itemFile {
+            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(
+                groupId: 0,
+                itemId: .animation(.file(file.fileId))
+            )
+            if let itemLayer = self.visibleItemLayers[itemId] {
+                return (file, itemLayer)
+            }
+        }
+        return nil
     }
     
     @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -384,10 +397,14 @@ final class StickerPackEmojisItemNode: GridItemNode {
                                 if let current = strongSelf.visibleItemPlaceholderViews[itemId] {
                                     placeholderView = current
                                 } else {
+                                    var placeholderContent: EmojiPagerContentComponent.View.ItemPlaceholderView.Content?
+                                    if let immediateThumbnailData = item.file.immediateThumbnailData {
+                                        placeholderContent = .thumbnail(immediateThumbnailData)
+                                    }
                                     placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
                                         context: context,
                                         dimensions: item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0),
-                                        immediateThumbnailData: item.file.immediateThumbnailData,
+                                        content: placeholderContent,
                                         shimmerView: nil,//strongSelf.shimmerHostView,
                                         color: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
                                         size: itemNativeFitSize

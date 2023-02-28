@@ -22,9 +22,9 @@ func _internal_unregisterNotificationToken(account: Account, token: Data, type: 
     |> ignoreValues
 }
 
-func _internal_registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Never, NoError> {
+func _internal_registerNotificationToken(account: Account, token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Bool, NoError> {
     return masterNotificationsKey(account: account, ignoreDisabled: false)
-    |> mapToSignal { masterKey -> Signal<Never, NoError> in
+    |> mapToSignal { masterKey -> Signal<Bool, NoError> in
         let mappedType: Int32
         var keyData = Data()
         switch type {
@@ -42,7 +42,15 @@ func _internal_registerNotificationToken(account: Account, token: Data, type: No
             flags |= 1 << 0
         }
         return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt64Value() })))
-        |> retryRequest
-        |> ignoreValues
+        |> map { _ -> Bool in
+            return true
+        }
+        |> `catch` { error -> Signal<Bool, NoError> in
+            if error.errorDescription == "TOKEN_WAS_INVALIDATED" {
+                return .single(false)
+            } else {
+                return .single(true)
+            }
+        }
     }
 }

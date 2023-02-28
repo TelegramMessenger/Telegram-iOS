@@ -341,7 +341,7 @@
 "PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
 "PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
 
-"PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@ suggested you new profile photo";
+"PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@|suggested you new profile photo";
 
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
@@ -8154,7 +8154,7 @@ Sorry for the inconvenience.";
 "Login.Continue" = "Continue";
 
 "Login.EnterCodeSMSTitle" = "Enter Code";
-"Login.EnterCodeSMSText" = "We've sent and SMS with an activation code to your phone **%@**.";
+"Login.EnterCodeSMSText" = "We've sent an SMS with an activation code to your phone **%@**.";
 "Login.SendCodeAsSMS" = "Send the code as an SMS";
 "Login.EnterCodeTelegramTitle" = "Enter Code";
 "Login.EnterCodeTelegramText" = "We've sent the code to the **Telegram app** for %@ on your other device.";
@@ -8586,15 +8586,15 @@ Sorry for the inconvenience.";
 "UserInfo.SuggestPhotoTitle" = "Do you want to suggest a profile picture for %@?";
 "UserInfo.SetCustomPhotoTitle" = "Do you want to set a custom profile picture for %@?";
 
-"UserInfo.SuggestPhoto.AlertPhotoText" = "Do you want to suggest %@ to set this photo for his/her profile?";
-"UserInfo.SuggestPhoto.AlertVideoText" = "Do you want to suggest %@ to set this video for his/her profile?";
+"UserInfo.SuggestPhoto.AlertPhotoText" = "Do you want to suggest %@ to set this photo for their profile?";
+"UserInfo.SuggestPhoto.AlertVideoText" = "Do you want to suggest %@ to set this video for their profile?";
 "UserInfo.SuggestPhoto.AlertSuggest" = "Suggest";
 
-"UserInfo.SetCustomPhoto.AlertPhotoText" = "Do you want to set this photo for %@? Only you will see this photo and it will replace any photo %@ sets for themselves.";
-"UserInfo.SetCustomPhoto.AlertVideoText" = "Do you want to set this video for %@? Only you will see this video and it will replace any photo %@ sets for themselves.";
+"UserInfo.SetCustomPhoto.AlertPhotoText" = "Do you want to set this photo for %@? It will replace any photo %@ sets, but only you will see it.";
+"UserInfo.SetCustomPhoto.AlertVideoText" = "Do you want to set this video for %@? It will replace any photo %@ sets, but only you will see it.";
 "UserInfo.SetCustomPhoto.AlertSet" = "Set";
-"UserInfo.SetCustomPhoto.SuccessPhotoText" = "You will now always see this photo for **%@** account.";
-"UserInfo.SetCustomPhoto.SuccessVideoText" = "You will now always see this video for **%@** account.";
+"UserInfo.SetCustomPhoto.SuccessPhotoText" = "You will now always see this photo for **%@**.";
+"UserInfo.SetCustomPhoto.SuccessVideoText" = "You will now always see this video for **%@**.";
 
 "UserInfo.CustomPhoto" = "photo set by you";
 "UserInfo.CustomVideo" = "video set by you";
@@ -8602,7 +8602,7 @@ Sorry for the inconvenience.";
 "UserInfo.PublicPhoto" = "public photo";
 "UserInfo.PublicVideo" = "public video";
 
-"UserInfo.ResetToOriginalAlertText" = "Are you sure you want to reset to %@ original photo?";
+"UserInfo.ResetToOriginalAlertText" = "Are you sure you want to reset to the original photo from %@?";
 "UserInfo.ResetToOriginalAlertReset" = "Reset";
 
 "Conversation.SuggestedPhotoTitle" = "Suggested Photo";
@@ -8633,18 +8633,18 @@ Sorry for the inconvenience.";
 "PhotoEditor.SetAsMyPhoto" = "Set as My Photo";
 "PhotoEditor.SetAsMyVideo" = "Set as My Video";
 
-"Notification.BotWriteAllowed" = "You allowed this bot to message you when you added it in the attachment menu.";
+"Notification.BotWriteAllowed" = "You allowed this bot to message you when you added to your attachment menu.";
 
 "Privacy.ProfilePhoto.SetPublicPhoto" = "Set Public Photo";
 "Privacy.ProfilePhoto.UpdatePublicPhoto" = "Update Public Photo";
 "Privacy.ProfilePhoto.RemovePublicPhoto" = "Remove Public Photo";
 "Privacy.ProfilePhoto.RemovePublicVideo" = "Remove Public Video";
 "Privacy.ProfilePhoto.PublicPhotoInfo" = "You can upload a public photo for those who are restricted from viewing your real profile photo.";
-"Privacy.ProfilePhoto.PublicPhotoSuccess" = "This photo is now set for those who are restricted from viewing your main photo.";
-"Privacy.ProfilePhoto.PublicVideoSuccess" = "This video is now set for those who are restricted from viewing your main photo.";
+"Privacy.ProfilePhoto.PublicPhotoSuccess" = "This photo will be shown to those who are restricted from viewing your main photo.";
+"Privacy.ProfilePhoto.PublicVideoSuccess" = "This video will be shown to those who are restricted from viewing your main photo.";
 
-"Privacy.ProfilePhoto.CustomOverrideInfo" = "You can add users or entire groups which will not see your profile photo.";
-"Privacy.ProfilePhoto.CustomOverrideAddInfo" = "Add users or entire groups which will still see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideInfo" = "You can add users or entire groups that will not see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideAddInfo" = "Add users or entire groups that will still see your profile photo.";
 "Privacy.ProfilePhoto.CustomOverrideBothInfo" = "You can add users or entire groups as exceptions that will override the settings above.";
 
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
@@ -8656,9 +8656,9 @@ Sorry for the inconvenience.";
 "GroupInfo.TitleMembers_1" = "%@ Member";
 "GroupInfo.TitleMembers_any" = "%@ Members";
 
-"PeerInfo.HideMembersLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have their member list hidden.";
-"PeerInfo.HideMembersLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have their member list hidden.";
-"PeerInfo.HideMembersLimitedRights" = "You don't have permission to change this setting.";
+"PeerInfo.HideMembersLimitedParticipantCountText_1" = "Hiding members is available only for groups with more than **%d member**.";
+"PeerInfo.HideMembersLimitedParticipantCountText_any" = "Hiding members is available only for groups with more than **%d members**.";
+"PeerInfo.HideMembersLimitedRights" = "You don't have the permission to change this setting.";
 
 "Privacy.Exceptions" = "EXCEPTIONS";
 "Privacy.ExceptionsCount_1" = "%@ EXCEPTION";
@@ -8687,6 +8687,12 @@ Sorry for the inconvenience.";
 
 "Paint.MoveForward" = "Move Forward";
 
+"Paint.ColorTitle" = "Colors";
+"Paint.ColorGrid" = "Grid";
+"Paint.ColorSpectrum" = "Spectrum";
+"Paint.ColorSliders" = "Sliders";
+"Paint.ColorOpacity" = "OPACITY";
+
 "StorageManagement.Title" = "Storage Usage";
 "StorageManagement.TitleCleared" = "Storage Cleared";
 
@@ -8694,7 +8700,7 @@ Sorry for the inconvenience.";
 "StorageManagement.DescriptionChatUsage" = "This chat uses %1$@% of your Telegram cache.";
 "StorageManagement.DescriptionAppUsage" = "Telegram uses %1$@% of your free disk space.";
 
-"StorageManagement.ClearAll" = "Clear All Cache";
+"StorageManagement.ClearAll" = "Clear Entire Cache";
 "StorageManagement.ClearSelected" = "Clear Selected";
 
 "StorageManagement.SectionPhotos" = "Photos";
@@ -8704,7 +8710,7 @@ Sorry for the inconvenience.";
 "StorageManagement.SectionOther" = "Other";
 "StorageManagement.SectionStickers" = "Stickers";
 "StorageManagement.SectionAvatars" = "Avatars";
-"StorageManagement.SectionMiscellaneous" = "Miscellaneous";
+"StorageManagement.SectionMiscellaneous" = "Misc";
 
 "StorageManagement.SectionsDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
 
@@ -8712,6 +8718,8 @@ Sorry for the inconvenience.";
 "StorageManagement.AutoremoveDescription" = "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.";
 
 "StorageManagement.AutoremoveSpaceDescription" = "If your cache size exceeds this limit, the oldest media will be deleted.";
+
+"StorageManagement.ClearConfirmationText" = "Media and documents will stay in the cloud and can be re-downloaded if you need them again.";
 
 "StorageManagement.TabChats" = "Chats";
 "StorageManagement.TabMedia" = "Media";
@@ -8723,3 +8731,313 @@ Sorry for the inconvenience.";
 "GroupMembers.HideMembers" = "Hide Members";
 "GroupMembers.MembersHiddenOn" = "Switch this off to show the list of members in this group.";
 "GroupMembers.MembersHiddenOff" = "Switch this on to hide the list of members in this group. Admins will remain visible.";
+
+"StorageManagement.ClearCache" = "Clear Cache";
+
+"ChatList.StorageHintTitle" = "Free up to %@";
+"ChatList.StorageHintText" = "Clear storage space on your iPhone";
+
+"StorageManagement.PeerShowDetails" = "Show Details";
+"StorageManagement.PeerOpenProfile" = "Open Profile";
+"StorageManagement.ContextSelect" = "Select";
+"StorageManagement.ContextDeselect" = "Deselect";
+"StorageManagement.OpenPhoto" = "Open Photo";
+"StorageManagement.OpenVideo" = "Open Video";
+"StorageManagement.OpenFile" = "Open File";
+
+"ChatListFilter.AddChatsSearchPlaceholder" = "Search Chats";
+
+"RequestPeer.ChooseUserTitle" = "Choose User";
+"RequestPeer.ChooseBotTitle" = "Choose Bot";
+"RequestPeer.ChooseGroupTitle" = "Choose Group";
+"RequestPeer.ChooseChannelTitle" = "Choose Channel";
+"RequestPeer.Requirements" = "Requirements:";
+
+"RequestPeer.CreateNewGroup" = "Create a New Group for This";
+"RequestPeer.CreateNewChannel" = "Create a New Channel for This";
+
+"RequestPeer.UsersEmpty" = "You don't have users that meet the following requirements:";
+"RequestPeer.UsersAllEmpty" = "You don't have any users.";
+"RequestPeer.BotsAllEmpty" = "You don't have any bots.";
+"RequestPeer.GroupsEmpty" = "You don't have groups that meet the following requirements:";
+"RequestPeer.GroupsAllEmpty" = "You don't have any groups.";
+"RequestPeer.ChannelsEmpty" = "You don't have channels that meet the following requirements:";
+"RequestPeer.ChannelsAllEmpty" = "You don't have any channels.";
+
+"RequestPeer.Requirement.UserPremiumOff" = "User should not have a Premium subscription.";
+"RequestPeer.Requirement.UserPremiumOn" = "User should have a Premium subscription.";
+
+"RequestPeer.Requirement.Group.HasUsernameOff" = "The group should be private.";
+"RequestPeer.Requirement.Group.HasUsernameOn" = "The group should be public.";
+
+"RequestPeer.Requirement.Group.ForumOff" = "The group should have topics turned off.";
+"RequestPeer.Requirement.Group.ForumOn" = "The group should have topics turned on.";
+
+"RequestPeer.Requirement.Group.ParticipantOn" = "Bot should be in the group.";
+"RequestPeer.Requirement.Group.CreatorOn" = "You should be the owner of the group.";
+
+"RequestPeer.Requirement.Group.Rights" = "You have the admin rights to %@.";
+"RequestPeer.Requirement.Group.Rights.Info" = "change group info";
+"RequestPeer.Requirement.Group.Rights.Send" = "post messages";
+"RequestPeer.Requirement.Group.Rights.Delete" = "delete messages";
+"RequestPeer.Requirement.Group.Rights.Edit" = "edit messages";
+"RequestPeer.Requirement.Group.Rights.Ban" = "ban users";
+"RequestPeer.Requirement.Group.Rights.Invite" = "add members";
+"RequestPeer.Requirement.Group.Rights.Pin" = "pin messages";
+"RequestPeer.Requirement.Group.Rights.Topics" = "manage topics";
+"RequestPeer.Requirement.Group.Rights.VideoChats" = "manage video chats";
+"RequestPeer.Requirement.Group.Rights.Anonymous" = "remain anonymous";
+"RequestPeer.Requirement.Group.Rights.AddAdmins" = "add new admins";
+
+"RequestPeer.Requirement.Channel.HasUsernameOff" = "The channel should be private.";
+"RequestPeer.Requirement.Channel.HasUsernameOn" = "The channel should be public.";
+
+"RequestPeer.Requirement.Channel.CreatorOn" = "You should be the owner of the channel.";
+
+"RequestPeer.Requirement.Channel.Rights" = "You have the admin rights to %@.";
+"RequestPeer.Requirement.Channel.Rights.Info" = "change channel info";
+"RequestPeer.Requirement.Channel.Rights.Send" = "post messages";
+"RequestPeer.Requirement.Channel.Rights.Delete" = "delete messages";
+"RequestPeer.Requirement.Channel.Rights.Edit" = "edit messages";
+"RequestPeer.Requirement.Channel.Rights.Invite" = "invite users via link";
+"RequestPeer.Requirement.Channel.Rights.Pin" = "pin messages";
+"RequestPeer.Requirement.Channel.Rights.Topics" = "manage topics";
+"RequestPeer.Requirement.Channel.Rights.VideoChats" = "manage live streams";
+"RequestPeer.Requirement.Channel.Rights.Anonymous" = "remain anonymous";
+"RequestPeer.Requirement.Channel.Rights.AddAdmins" = "add new admins";
+
+"RequestPeer.SelectionConfirmationTitle" = "Are you sure you want to send %1$@ to %2$@?";
+"RequestPeer.SelectionConfirmationInviteText" = "This will also add %1$@ to %2$@.";
+"RequestPeer.SelectionConfirmationInviteAdminText" = "This will also add %1$@ to %2$@ as an admin.";
+"RequestPeer.SelectionConfirmationInviteWithRightsText" = "This will also add %1$@ to %2$@ with the following rights:\n\n%3$@";
+"RequestPeer.SelectionConfirmationSend" = "Send";
+
+"CreateGroup.PublicLinkTitle" = "SET A PUBLIC LINK";
+"CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
+
+"Notification.RequestedPeer" = "You shared %1$@ with %2$@.";
+
+"Conversation.ViewInChannel" = "View in Channel";
+
+"Conversation.HoldForAudioOnly" = "Hold to record audio.";
+"Conversation.HoldForVideoOnly" = "Hold to record video.";
+"Conversation.Translation.TranslateTo" = "Translate to %@";
+"Conversation.Translation.TranslateToOther" = "Translate to %@";
+"Conversation.Translation.ShowOriginal" = "Show Original";
+"Conversation.Translation.ChooseLanguage" = "Choose Another Language";
+"Conversation.Translation.DoNotTranslate" = "Do Not Translate %@";
+"Conversation.Translation.DoNotTranslateOther" = "Do Not Translate %@";
+"Conversation.Translation.Hide" = "Hide";
+"Conversation.Translation.AddedToDoNotTranslateText" = "**%@** is added to the Do Not Translate list.";
+"Conversation.Translation.TranslationBarHiddenChatText" = "Translation bar is now hidden for this chat.";
+"Conversation.Translation.TranslationBarHiddenGroupText" = "Translation bar is now hidden for this group.";
+"Conversation.Translation.TranslationBarHiddenChannelText" = "Translation bar is now hidden for this channel.";
+
+"ProfilePhoto.SetEmoji" = "Set Emoji";
+
+"AvatarEditor.Background" = "BACKGROUND";
+"AvatarEditor.EmojiOrSticker" = "EMOJI OR STICKER";
+"AvatarEditor.Emoji" = "Emoji";
+"AvatarEditor.Stickers" = "Stickers";
+"AvatarEditor.SwitchToEmoji" = "SWITCH TO EMOJI";
+"AvatarEditor.SwitchToStickers" = "SWITCH TO STICKERS";
+"AvatarEditor.SetProfilePhoto" = "Set as Profile Photo";
+"AvatarEditor.SuggestProfilePhoto" = "Suggest as Profile Photo";
+"AvatarEditor.SetGroupPhoto" = "Set as Group Photo";
+"AvatarEditor.SetChannelPhoto" = "Set as Channel Photo";
+"AvatarEditor.Set" = "Set";
+"AvatarEditor.Suggest" = "Suggest";
+
+"Premium.UpgradeDescription" = "Your current **Telegram Premium** plan can be upgraded at a **discount**.";
+"Premium.CurrentPlan" = "your current plan";
+"Premium.UpgradeFor" = "Upgrade for %@ / month";
+"Premium.UpgradeForAnnual" = "Upgrade for %@ / year";
+
+"ChatList.PremiumAnnualDiscountTitle" = "Telegram Premium with a discount of %@";
+"ChatList.PremiumAnnualDiscountText" = "Sign up for the annual payment plan for Telegram Premium now to get the discount.";
+"ChatList.PremiumAnnualUpgradeTitle" = "Save on your subscription up to %@";
+"ChatList.PremiumAnnualUpgradeText" = "Upgrade to the annual payment plan for Telegram Premium to enjoy the discount.";
+
+"Premium.Emoji.Description" = "Unlock this emoji and many more by subscribing to Telegram Premium.";
+"Premium.Emoji.Proceed" = "Unlock Premium Emoji";
+
+"Localization.TranslateEntireChat" = "Translate Entire Chat";
+
+"Premium.Translation" = "Real-Time Translation";
+"Premium.TranslationInfo" = "Real-time translation of channels and chats into other languages.";
+"Premium.TranslationStandaloneInfo" = "Subscribe to **Telegram Premium** to be able to translate all messages in a chat at once.";
+"Premium.Translation.Proceed" = "About Telegram Premium";
+
+"Settings.PauseMusicOnRecording" = "Pause Music While Recoding";
+
+"Settings.SuggestSetupPasswordTitle" = "Protect Your Account";
+"Settings.SuggestSetupPasswordText" = "Set a password that will be required each time you log in with this phone number.";
+"Settings.SuggestSetupPasswordAction" = "Set Additional Password";
+
+"Chat.SendNotAllowedText" = "Sending messages is not allowed in this group";
+"Chat.SendNotAllowedPeerText" = "Sending messages is not allowed in %@";
+"Chat.SendNotAllowedPhoto" = "Sending photos is not allowed in this group";
+"Chat.SendNotAllowedVideo" = "Sending videos is not allowed in this group";
+"Chat.SendNotAllowedFile" = "Sending files is not allowed in this group";
+"Chat.SendNotAllowedAudioMessage" = "Sending audio messages is not allowed in this group";
+"Chat.SendNotAllowedVideoMessage" = "Sending video messages is not allowed in this group";
+"Chat.SendNotAllowedMusic" = "Sending music is not allowed in this group";
+
+"Chat.SendAllowedContentText" = "The admins of this group only allow to send %1$@.";
+"Chat.SendAllowedContentPeerText" = "The admins of %1$@ only allow to send %2$@.";
+
+"Chat.SendAllowedContentTypeText" = "text messages";
+"Chat.SendAllowedContentTypePhoto" = "photos";
+"Chat.SendAllowedContentTypeVideo" = "videos";
+"Chat.SendAllowedContentTypeVoiceMessage" = "voice messages";
+"Chat.SendAllowedContentTypeVideoMessage" = "video messages";
+"Chat.SendAllowedContentTypeFile" = "files";
+"Chat.SendAllowedContentTypeMusic" = "music";
+"Chat.SendAllowedContentTypeSticker" = "stickers & GIFs";
+
+"Channel.BanUser.PermissionSendPhoto" = "Send Photos";
+"Channel.BanUser.PermissionSendVideo" = "Send Videos";
+"Channel.BanUser.PermissionSendMusic" = "Send Music";
+"Channel.BanUser.PermissionSendVoiceMessage" = "Send Audio Messages";
+"Channel.BanUser.PermissionSendVideoMessage" = "Send Video Messages";
+"Channel.BanUser.PermissionSendFile" = "Send Files";
+
+"GroupPermission.NoSendPhoto" = "no photos";
+"GroupPermission.NoSendVideo" = "no videos";
+"GroupPermission.NoSendMusic" = "no music";
+"GroupPermission.NoSendVoiceMessage" = "no audio messages";
+"GroupPermission.NoSendVideoMessage" = "no video messages";
+"GroupPermission.NoSendFile" = "no files";
+
+"Settings.AutosaveMediaOn" = "On";
+"Settings.AutosaveMediaOff" = "Off";
+"Settings.AutosaveMediaOn" = "On";
+"Settings.AutosaveMediaAllMedia" = "All Media (%@)";
+"Settings.AutosaveMediaPhoto" = "Photos";
+"Settings.AutosaveMediaNoPhoto" = "No Photos";
+"Settings.AutosaveMediaVideo" = "Videos up to %@";
+"Settings.AutosaveMediaNoVideo" = "No Videos";
+
+"Settings.SaveToCameraRollSection" = "SAVE TO CAMERA ROLL";
+"Settings.SaveToCameraRollInfo" = "Automatically save all new photos and videos from these chats to your Cameral Roll.";
+
+"Autosave.TypesSection" = "SAVE TO CAMERA ROLL";
+"Autosave.TypePhoto" = "Photos";
+"Autosave.TypeVideo" = "Videos";
+"Autosave.TypesInfo" = "Automatically save all new media from private chats to your Cameral Roll.";
+"Autosave.VideoSizeSection" = "MAXIMUM VIDEO SIZE";
+"Autosave.VideoInfo" = "All downloaded videos in private chats less than %@ will be saved to Cameral Roll.";
+"Autosave.ExceptionsSection" = "EXCEPTIONS";
+"Autosave.AddException" = "Add Exception";
+"Autosave.Exception" = "Exception";
+"Autosave.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Chat.ErrorInvoiceNotFound" = "Invoice not found.";
+
+"EmojiStatus.AppliedText" = "Your emoji status has been updated.";
+"EmojiPreview.SendEmoji" = "Send Emoji";
+"EmojiPreview.SetAsStatus" = "Set as Status";
+"EmojiPreview.CopyEmoji" = "Copy Emoji";
+
+"EmojiSearch.SearchStickersEmptyResult" = "No emoji found";
+
+"DataUsage.MediaDirectionIncoming" = "Incoming";
+"DataUsage.MediaDirectionOutgoing" = "Outgoing";
+"DataUsage.InfoTotalUsageSinceTime" = "Your data usage since %@";
+"DataUsage.InfoMobileUsageSinceTime" = "Your mobile data usage since %@";
+"DataUsage.InfoWifiUsageSinceTime" = "Your Wi-Fi data usage since %@";
+"DataUsage.SectionsInfo" = "Tap on each section for detailed view.";
+"DataUsage.SectionUsageTotal" = "TOTAL NETWORK USAGE";
+"DataUsage.SectionUsageMobile" = "MOBILE NETWORK USAGE";
+"DataUsage.SectionUsageWifi" = "WI-FI NETWORK USAGE";
+"DataUsage.AutoDownloadSettings" = "Auto-Download Settings";
+
+"StorageManagement.SectionMessages" = "Messages";
+"StorageManagement.SectionVoiceMessages" = "Voice Messages";
+"StorageManagement.SectionCalls" = "Calls";
+
+"DataUsage.SectionTotalIncoming" = "Data Received";
+"DataUsage.SectionTotalOutgoing" = "Data Sent";
+
+"EmojiInput.TabMasks" = "Masks";
+"EmojiInput.TabGifs" = "GIFs";
+"EmojiInput.TabStickers" = "Stickers";
+"EmojiInput.TabEmoji" = "Emoji";
+
+"EmojiInput.TrendingEmoji" = "TRENDING EMOJI";
+
+"Chat.PlaceholderTextNotAllowed" = "Text not allowed";
+
+"CallList.DeleteAll" = "Delete All";
+
+"DataUsage.TopSectionAll" = "All";
+"DataUsage.TopSectionMobile" = "Mobile";
+"DataUsage.TopSectionWifi" = "Wifi";
+
+"Translation.Language.en" = "English";
+"Translation.Language.ar" = "Arabic";
+"Translation.Language.zh" = "Chinese";
+"Translation.Language.fr" = "French";
+"Translation.Language.de" = "German";
+"Translation.Language.it" = "Italian";
+"Translation.Language.ja" = "Japanese";
+"Translation.Language.ko" = "Korean";
+"Translation.Language.pt" = "Portuguese";
+"Translation.Language.ru" = "Russian";
+"Translation.Language.es" = "Spanish";
+"Translation.Language.uk" = "Ukrainian";
+"Translation.Language.be" = "Belarusian";
+"Translation.Language.ca" = "Catalan";
+"Translation.Language.hr" = "Croatian";
+"Translation.Language.cs" = "Czech";
+"Translation.Language.nl" = "Dutch";
+"Translation.Language.eo" = "Esperanto";
+"Translation.Language.fi" = "Finnish";
+"Translation.Language.he" = "Hebrew";
+"Translation.Language.hu" = "Hungarian";
+"Translation.Language.id" = "Indonesian";
+"Translation.Language.ms" = "Malay";
+"Translation.Language.ml" = "Malayalam";
+"Translation.Language.no" = "Norwegian";
+"Translation.Language.fa" = "Persian";
+"Translation.Language.po" = "Polish";
+"Translation.Language.ro" = "Romanian";
+"Translation.Language.sr" = "Serbian";
+"Translation.Language.sk" = "Slovak";
+"Translation.Language.sv" = "Swedish";
+"Translation.Language.ta" = "Tamil";
+"Translation.Language.tr" = "Turkish";
+"Translation.Language.uz" = "Uzbek";
+
+"Settings.RaiseToListen" = "Raise to Listen";
+"Settings.RaiseToListenInfo" = "Raise to Listen allows you to quickly listen and reply to incoming audio messages by raising the phone to your ear.";
+
+"Login.CodeSentCallText" = "Calling **%@** to dictate the code.";
+
+"Premium.Purchase.OnlyOneSubscriptionAllowed" = "You have already purchased Telegram Premium for another account. You can only have one Telegram Premium subscription on one Apple ID.";
+
+"Call.VoiceOver.Minimize" = "Minimize Call";
+
+"Login.VoiceOver.PhoneCountryCode" = "Phone country code";
+"Login.VoiceOver.PhoneNumber" = "Phone number";
+"Login.VoiceOver.Password" = "Password";
+
+"Gallery.VoiceOver.Delete" = "Delete";
+"Gallery.VoiceOver.Fullscreen" = "Fullscreen";
+"Gallery.VoiceOver.Share" = "Share";
+"Gallery.VoiceOver.Edit" = "Edit";
+"Gallery.VoiceOver.Stickers" = "Stickers";
+"Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
+
+"Appearance.VoiceOver.Theme" = "%@ Theme";
+
+"ChatList.EmptyChatListWithArchive" = "All of your chats are archived.";
+
+"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5X speed.";
+"Conversation.AudioRateOptionsTooltip" = "Long tap for more speed values.";
+
+"ImportStickerPack.EmojiCount_1" = "%@ Emoji";
+"ImportStickerPack.EmojiCount_any" = "%@ Emojis";
+
+"ImportStickerPack.ImportingEmojis" = "Importing Emojis";
+"ImportStickerPack.CreateNewEmojiPack" = "Create a New Emoji Pack";

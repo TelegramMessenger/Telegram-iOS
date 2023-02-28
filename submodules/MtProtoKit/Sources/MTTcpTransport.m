@@ -804,4 +804,18 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
+- (void)simulateDisconnection {
+    MTTcpTransportContext *transportContext = _transportContext;
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^ {
+        if (transportContext.connection.scheme != nil) {
+            MTTransportScheme *scheme = transportContext.connection.scheme;
+            __weak MTTcpTransport *weakSelf = self;
+            dispatch_async([MTTcpTransport tcpTransportQueue].nativeQueue, ^{
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                [strongSelf connectionWatchdogTimeout:scheme];
+            });
+        }
+    }];
+}
+
 @end

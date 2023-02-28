@@ -561,27 +561,32 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
     let additionalCategories: [ChatListNodeAdditionalCategory] = [
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.contacts.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: .white), color: .blue),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
+            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
             title: presentationData.strings.ChatListFolder_CategoryContacts
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.nonContacts.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/UnknownUser"), color: .white), color: .yellow),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .yellow),
+            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
             title: presentationData.strings.ChatListFolder_CategoryNonContacts
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.groups.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: .white), color: .green),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), cornerRadius: 12.0, color: .green),
+            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
             title: presentationData.strings.ChatListFolder_CategoryGroups
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.channels.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: .white), color: .red),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: 12.0, color: .red),
+            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .red),
             title: presentationData.strings.ChatListFolder_CategoryChannels
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalCategoryId.bots.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: .white), color: .violet),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), cornerRadius: 12.0, color: .violet),
+            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .violet),
             title: presentationData.strings.ChatListFolder_CategoryBots
         )
     ]
@@ -603,7 +608,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
     
     let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
         title: presentationData.strings.ChatListFolder_IncludeChatsTitle,
-        searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsTitle,
+        searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsSearchPlaceholder,
         selectedChats: Set(filterData.includePeers.peers),
         additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
         chatListFilters: allFilters
@@ -704,17 +709,20 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
     let additionalCategories: [ChatListNodeAdditionalCategory] = [
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.muted.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: .white), color: .red),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Muted"), color: .white), cornerRadius: 12.0, color: .red),
+            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Muted"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .red),
             title: presentationData.strings.ChatListFolder_CategoryMuted
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.read.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: .white), color: .blue),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Read"), color: .white), cornerRadius: 12.0, color: .blue),
+            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Read"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
             title: presentationData.strings.ChatListFolder_CategoryRead
         ),
         ChatListNodeAdditionalCategory(
             id: AdditionalExcludeCategoryId.archived.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: .white), color: .yellow),
+            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Archive"), color: .white), cornerRadius: 12.0, color: .yellow),
+            smallIcon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Archive"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
             title: presentationData.strings.ChatListFolder_CategoryArchived
         ),
     ]
@@ -731,7 +739,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
     
     let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
         title: presentationData.strings.ChatListFolder_ExcludeChatsTitle,
-        searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsTitle,
+        searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsSearchPlaceholder,
         selectedChats: Set(filterData.excludePeers),
         additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
         chatListFilters: allFilters

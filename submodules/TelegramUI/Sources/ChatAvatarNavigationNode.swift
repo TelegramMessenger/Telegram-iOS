@@ -15,26 +15,22 @@ import HierarchyTrackingLayer
 import AccountContext
 import ComponentFlow
 import EmojiStatusComponent
+import AvatarVideoNode
 
 private let normalFont = avatarPlaceholderFont(size: 16.0)
 private let smallFont = avatarPlaceholderFont(size: 12.0)
-
-private let maxVideoLoopCount = 3
 
 final class ChatAvatarNavigationNode: ASDisplayNode {
     private var context: AccountContext?
     
     private let containerNode: ContextControllerSourceNode
     let avatarNode: AvatarNode
-    private var videoNode: UniversalVideoNode?
+    private var avatarVideoNode: AvatarVideoNode?
     
     let statusView: ComponentView<Empty>
     
-    private var videoContent: NativeVideoContent?
-    private let playbackStartDisposable = MetaDisposable()
     private var cachedDataDisposable = MetaDisposable()
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
-    private var videoLoopCount = 0
     
     private var trackingIsInHierarchy: Bool = false {
         didSet {
@@ -79,7 +75,6 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     
     deinit {
         self.cachedDataDisposable.dispose()
-        self.playbackStartDisposable.dispose()
     }
     
     override func didLoad() {
@@ -140,14 +135,16 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
                 
                 if isKnown {
                     let photo = personalPhoto ?? profilePhoto
-                    if let photo = photo, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
-                        let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
-                        let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                        let videoContent = NativeVideoContent(id: .profileVideo(videoId, "header"), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)
-                        if videoContent.id != strongSelf.videoContent?.id {
-                            strongSelf.videoNode?.removeFromSupernode()
-                            strongSelf.videoContent = videoContent
+                    if let photo = photo, !photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil {
+                        let videoNode: AvatarVideoNode
+                        if let current = strongSelf.avatarVideoNode {
+                            videoNode = current
+                        } else {
+                            videoNode = AvatarVideoNode(context: context)
+                            strongSelf.avatarNode.addSubnode(videoNode)
+                            strongSelf.avatarVideoNode = videoNode
                         }
+                        videoNode.update(peer: peer, photo: photo, size: CGSize(width: 37.0, height: 37.0))
                         
                         if strongSelf.hierarchyTrackingLayer == nil {
                             let hierarchyTrackingLayer = HierarchyTrackingLayer()
@@ -168,23 +165,25 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
                             strongSelf.layer.addSublayer(hierarchyTrackingLayer)
                         }
                     } else {
-                        strongSelf.videoContent = nil
-                        
+                        if let avatarVideoNode = strongSelf.avatarVideoNode {
+                            avatarVideoNode.removeFromSupernode()
+                            strongSelf.avatarVideoNode = nil
+                        }
                         strongSelf.hierarchyTrackingLayer?.removeFromSuperlayer()
                         strongSelf.hierarchyTrackingLayer = nil
                     }
-                    
                     strongSelf.updateVideoVisibility()
                 } else {
-                    let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                    if let photo = peer.largeProfileImage, photo.hasVideo {
+                        let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                    }
                 }
             }))
         } else {
             self.cachedDataDisposable.set(nil)
-            self.videoContent = nil
             
-            self.videoNode?.removeFromSupernode()
-            self.videoNode = nil
+            self.avatarVideoNode?.removeFromSupernode()
+            self.avatarVideoNode = nil
             
             self.hierarchyTrackingLayer?.removeFromSuperlayer()
             self.hierarchyTrackingLayer = nil
@@ -229,75 +228,12 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     private func updateVideoVisibility() {
-        guard let context = self.context else {
-            return
-        }
-        
         let isVisible = self.trackingIsInHierarchy
-        if isVisible, let videoContent = self.videoContent, self.videoLoopCount != maxVideoLoopCount {
-            if self.videoNode == nil {
-                let mediaManager = context.sharedContext.mediaManager
-                let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .minimal)
-                videoNode.clipsToBounds = true
-                videoNode.isUserInteractionEnabled = false
-                videoNode.isHidden = true
-                videoNode.playbackCompleted = { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.videoLoopCount += 1
-                        if strongSelf.videoLoopCount == maxVideoLoopCount {
-                            if let videoNode = strongSelf.videoNode {
-                                strongSelf.videoNode = nil
-                                videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
-                                    videoNode?.removeFromSupernode()
-                                })
-                            }
-                        }
-                    }
-                }
-                
-                if let _ = videoContent.startTimestamp {
-                    self.playbackStartDisposable.set((videoNode.status
-                    |> map { status -> Bool in
-                        if let status = status, case .playing = status.status {
-                            return true
-                        } else {
-                            return false
-                        }
-                    }
-                    |> filter { playing in
-                        return playing
-                    }
-                    |> take(1)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        if let strongSelf = self {
-                            Queue.mainQueue().after(0.15) {
-                                strongSelf.videoNode?.isHidden = false
-                            }
-                        }
-                    }))
-                } else {
-                    self.playbackStartDisposable.set(nil)
-                    videoNode.isHidden = false
-                }
-                videoNode.layer.cornerRadius = self.avatarNode.frame.size.width / 2.0
-                if #available(iOS 13.0, *) {
-                    videoNode.layer.cornerCurve = .circular
-                }
-                
-                videoNode.canAttachContent = true
-                videoNode.play()
-                
-                self.containerNode.insertSubnode(videoNode, aboveSubnode: self.avatarNode)
-                self.videoNode = videoNode
-            }
-        } else if let videoNode = self.videoNode {
-            self.videoNode = nil
-            videoNode.removeFromSupernode()
-        }
-        
-        if let videoNode = self.videoNode {
-            videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
-            videoNode.frame = self.avatarNode.frame
+        self.avatarVideoNode?.updateVisibility(isVisible)
+      
+        if let videoNode = self.avatarVideoNode {
+            videoNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: self.avatarNode.frame.size.width / 2.0, transition: .immediate)
+            videoNode.frame = self.avatarNode.bounds
         }
     }
 }

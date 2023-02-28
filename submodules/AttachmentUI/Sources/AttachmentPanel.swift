@@ -124,6 +124,7 @@ private final class AttachButtonComponent: CombinedComponent {
     let strings: PresentationStrings
     let theme: PresentationTheme
     let action: () -> Void
+    let longPressAction: () -> Void
     
     init(
         context: AccountContext,
@@ -131,7 +132,8 @@ private final class AttachButtonComponent: CombinedComponent {
         isSelected: Bool,
         strings: PresentationStrings,
         theme: PresentationTheme,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        longPressAction: @escaping () -> Void
     ) {
         self.context = context
         self.type = type
@@ -139,6 +141,7 @@ private final class AttachButtonComponent: CombinedComponent {
         self.strings = strings
         self.theme = theme
         self.action = action
+        self.longPressAction = longPressAction
     }
 
     static func ==(lhs: AttachButtonComponent, rhs: AttachButtonComponent) -> Bool {
@@ -293,6 +296,11 @@ private final class AttachButtonComponent: CombinedComponent {
                 .gesture(.tap {
                     component.action()
                 })
+                .gesture(.longPress({ state in
+                    if case .began = state {
+                        component.longPressAction()
+                    }
+                }))
             )
                         
             return context.availableSize
@@ -363,12 +371,12 @@ private final class LoadingProgressNode: ASDisplayNode {
 }
 
 public struct AttachmentMainButtonState {
-    let text: String?
-    let backgroundColor: UIColor
-    let textColor: UIColor
-    let isVisible: Bool
-    let isLoading: Bool
-    let isEnabled: Bool
+    public let text: String?
+    public let backgroundColor: UIColor
+    public let textColor: UIColor
+    public let isVisible: Bool
+    public let isLoading: Bool
+    public let isEnabled: Bool
     
     public init(
         text: String?,
@@ -495,6 +503,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     var isStandalone: Bool = false
     
     var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
+    var longPressed: (AttachmentButtonType) -> Void = { _ in }
+
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
     var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
@@ -705,6 +715,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, insertText: { _ in
         }, backwardsDeleteText: {
         }, restartTopic: {
+        }, toggleTranslation: { _ in
+        }, changeTranslationLanguage: { _ in
+        }, addDoNotTranslateLanguage: { _ in
+        }, hideTranslationPanel: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil
@@ -743,6 +757,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.delegate = self
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
+        
+        self.view.accessibilityTraits = .tabBar
     }
     
     @objc private func buttonPressed() {
@@ -870,12 +886,36 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                                 }
                             }
                         }
+                    }, longPressAction: { [weak self] in
+                        if let strongSelf = self, i == strongSelf.selectedIndex {
+                            strongSelf.longPressed(type)
+                        }
                     })
                 ),
                 environment: {},
                 containerSize: CGSize(width: buttonWidth, height: buttonSize.height)
             )
             buttonTransition.setFrame(view: buttonView, frame: buttonFrame)
+            var accessibilityTitle = ""
+            switch type {
+            case .gallery:
+                accessibilityTitle = self.presentationData.strings.Attachment_Gallery
+            case .file:
+                accessibilityTitle = self.presentationData.strings.Attachment_File
+            case .location:
+                accessibilityTitle = self.presentationData.strings.Attachment_Location
+            case .contact:
+                accessibilityTitle = self.presentationData.strings.Attachment_Contact
+            case .poll:
+                accessibilityTitle = self.presentationData.strings.Attachment_Poll
+            case let .app(_, appName, _):
+                accessibilityTitle = appName
+            case .standalone:
+                accessibilityTitle = ""
+            }
+            buttonView.isAccessibilityElement = true
+            buttonView.accessibilityLabel = accessibilityTitle
+            buttonView.accessibilityTraits = [.button]
         }
     }
     

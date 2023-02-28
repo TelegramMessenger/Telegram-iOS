@@ -9,6 +9,8 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
     
@@ -19,10 +21,15 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
         
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = .staticText
+        
         super.init()
 
         self.addSubnode(self.titleNode)
         self.addSubnode(self.separatorNode)
+        
+        self.addSubnode(self.activateAreaNode)
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
@@ -45,6 +52,9 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
+        
+        self.activateAreaNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
+        self.activateAreaNode.accessibilityLabel = interfaceState.strings.Channel_NotificationLoading
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }

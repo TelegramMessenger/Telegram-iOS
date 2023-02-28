@@ -84,7 +84,7 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
     }
 }
 
-public struct TelegramChatAdminRights: PostboxCoding, Equatable {
+public struct TelegramChatAdminRights: PostboxCoding, Codable, Equatable {
     public let rights: TelegramChatAdminRightsFlags
     
     public init(rights: TelegramChatAdminRightsFlags) {
@@ -95,8 +95,20 @@ public struct TelegramChatAdminRights: PostboxCoding, Equatable {
         self.rights = TelegramChatAdminRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        self.rights = TelegramChatAdminRightsFlags(rawValue: try container.decode(Int32.self, forKey: "f"))
+    }
+    
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.rights.rawValue, forKey: "f")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        try container.encode(self.rights.rawValue, forKey: "f")
     }
     
     public static func ==(lhs: TelegramChatAdminRights, rhs: TelegramChatAdminRights) -> Bool {

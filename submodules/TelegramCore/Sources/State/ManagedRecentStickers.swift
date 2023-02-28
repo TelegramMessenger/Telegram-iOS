@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import MtProtoKit
 
 private func hashForIds(_ ids: [Int64]) -> Int64 {
     var acc: UInt64 = 0
@@ -247,6 +248,62 @@ func managedFeaturedStatusEmoji(postbox: Postbox, network: Network) -> Signal<Vo
                     var items: [OrderedItemListEntry] = []
                     for status in parsedStatuses {
                         guard let file = files[status.fileId] else {
+                            continue
+                        }
+                        if let entry = CodableEntry(RecentMediaItem(file)) {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func managedProfilePhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getDefaultProfilePhotoEmojis(hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiListNotModified:
+                return .single(nil)
+            case let .emojiList(_, documentIds):
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: documentIds)
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for fileId in documentIds {
+                        guard let file = files[fileId] else {
+                            continue
+                        }
+                        if let entry = CodableEntry(RecentMediaItem(file)) {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func managedGroupPhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedGroupPhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getDefaultGroupPhotoEmojis(hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiListNotModified:
+                return .single(nil)
+            case let .emojiList(_, documentIds):
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: documentIds)
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for fileId in documentIds {
+                        guard let file = files[fileId] else {
                             continue
                         }
                         if let entry = CodableEntry(RecentMediaItem(file)) {

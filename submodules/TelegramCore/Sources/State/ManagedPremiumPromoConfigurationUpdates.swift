@@ -79,8 +79,8 @@ private extension PremiumPromoConfiguration {
             
                 var productOptions: [PremiumProductOption] = []
                 for option in options {
-                    if case let .premiumSubscriptionOption(_, months, currency, amount, botUrl, storeProduct) = option {
-                        productOptions.append(PremiumProductOption(months: months, currency: currency, amount: amount, botUrl: botUrl, storeProductId: storeProduct))
+                    if case let .premiumSubscriptionOption(flags, transaction, months, currency, amount, botUrl, storeProduct) = option {
+                        productOptions.append(PremiumProductOption(isCurrent: (flags & (1 << 1)) != 0, months: months, currency: currency, amount: amount, botUrl: botUrl, transactionId: transaction, availableForUpgrade: (flags & (1 << 2)) != 0, storeProductId: storeProduct))
                     }
                 }
                 self.premiumProductOptions = productOptions

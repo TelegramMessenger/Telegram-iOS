@@ -663,7 +663,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         contentSize.width = min(layout.size.width - 40.0, 250.0)
         var applyNodes: [(ASDisplayNode, CGFloat, (CGFloat) -> Void)] = []
         for itemNode in self.contentNodes {
-            let (width, height, apply) = itemNode.updateLayout(maxWidth: layout.size.width - sideInset * 2.0)
+            let (width, height, apply) = itemNode.updateLayout(maxWidth: layout.size.width - 16.0 * 2.0)
             applyNodes.append((itemNode, height, apply))
             contentSize.width = max(contentSize.width, width)
             contentSize.height += height
@@ -679,8 +679,14 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         let contentOffset = self.scrollNode.view.contentOffset.y
+        let initialSendButtonFrame = self.sendButtonFrame
         
-        var contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
+        var contentOrigin: CGPoint
+        if initialSendButtonFrame.width > initialSendButtonFrame.height * 1.2 {
+            contentOrigin = CGPoint(x: layout.size.width - contentSize.width - layout.safeInsets.right - 5.0, y: initialSendButtonFrame.minY - contentSize.height)
+        } else {
+            contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
+        }
         if inputHeight > 0.0 && !layout.isNonExclusive && self.animateInputField {
             contentOrigin.y += menuHeightWithInset
         }
@@ -694,7 +700,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             nextY += height
         }
         
-        let initialSendButtonFrame = self.sendButtonFrame
         var sendButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - initialSendButtonFrame.width + 1.0 - UIScreenPixel - layout.safeInsets.right, y: layout.size.height - insets.bottom - initialSendButtonFrame.height), size: initialSendButtonFrame.size)
         if (inputHeight.isZero || layout.isNonExclusive) && self.animateInputField {
             sendButtonFrame.origin.y -= menuHeightWithInset

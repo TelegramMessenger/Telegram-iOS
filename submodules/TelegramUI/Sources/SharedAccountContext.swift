@@ -40,6 +40,7 @@ import PremiumUI
 import StickerPackPreviewUI
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
+import StorageUsageScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -80,6 +81,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private let apsNotificationToken: Signal<Data?, NoError>
     private let voipNotificationToken: Signal<Data?, NoError>
+    
+    public let firebaseSecretStream: Signal<[String: String], NoError>
+    
+    private let authorizationPushConfigurationValue = Promise<AuthorizationCodePushNotificationConfiguration?>(nil)
+    public var authorizationPushConfiguration: Signal<AuthorizationCodePushNotificationConfiguration?, NoError> {
+        return self.authorizationPushConfigurationValue.get()
+    }
     
     private var activeAccountsValue: (primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?)?
     private let activeAccountsPromise = Promise<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?)>()
@@ -193,12 +201,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    private weak var appDelegate: AppDelegate?
+    
+    private var invalidatedApsToken: Data?
+    
+    init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
         testHasInstance = true
         
+        self.appDelegate = appDelegate
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
         self.sharedContainerPath = sharedContainerPath
@@ -215,6 +228,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.apsNotificationToken = apsNotificationToken
         self.voipNotificationToken = voipNotificationToken
+        
+        self.firebaseSecretStream = firebaseSecretStream
+        
+        self.authorizationPushConfigurationValue.set(apsNotificationToken |> map { data -> AuthorizationCodePushNotificationConfiguration? in
+            guard let data else {
+                return nil
+            }
+            let sandbox: Bool
+            #if DEBUG
+            sandbox = true
+            #else
+            sandbox = false
+            #endif
+            return AuthorizationCodePushNotificationConfiguration(
+                token: hexString(data),
+                isSandbox: sandbox
+            )
+        })
                 
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
@@ -497,7 +528,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
                 if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods, initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: id) }))
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, backupData: attributes.backupData, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: id) }))
                     |> mapToSignal { result -> Signal<AddedAccountResult, NoError> in
                         switch result {
                             case let .authorized(account):
@@ -519,7 +550,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: telegramAccountAuxiliaryMethods, initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: authRecord.0) }))
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, encryptionParameters: encryptionParameters, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, backupData: nil, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), initialPeerIdsExcludedFromUnreadCounters: self.currentPtgSecretPasscodes.with({ $0.inactiveSecretChatPeerIds(accountId: authRecord.0) }))
                 |> mapToSignal { result -> Signal<UnauthorizedAccount?, NoError> in
                     switch result {
                         case let .unauthorized(account):
@@ -869,7 +900,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             let _ = immediateHasOngoingCallValue.swap(value)
         })
         
-        let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods, encryptionParameters: encryptionParameters).start()
+        let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), encryptionParameters: encryptionParameters).start()
         
         self.updateNotificationTokensRegistration()
         
@@ -973,10 +1004,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return true
         })
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, self.activeAccountContexts)
-        |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
+        let updatedApsToken = self.apsNotificationToken |> distinctUntilChanged(isEqual: { $0 == $1 })
+        self.registeredNotificationTokensDisposable.set((combineLatest(
+            queue: .mainQueue(),
+            settings,
+            self.activeAccountContexts,
+            updatedApsToken
+        )
+        |> mapToSignal { settings, activeAccountsAndInfo, apsNotificationToken -> Signal<(Bool, Data?), NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
-            var applied: [Signal<Never, NoError>] = []
+            var appliedApsList: [Signal<Bool?, NoError>] = []
+            var appliedVoipList: [Signal<Never, NoError>] = []
             var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.account.testingEnvironment }).map({ $0.account.peerId.id })
             var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.account.testingEnvironment }).map({ $0.account.peerId.id })
             
@@ -999,18 +1037,19 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             
             for (_, account, _) in activeAccounts {
-                let appliedAps: Signal<Never, NoError>
+                let appliedAps: Signal<Bool, NoError>
                 let appliedVoip: Signal<Never, NoError>
                 
                 if !activeProductionUserIds.contains(account.account.peerId.id) && !activeTestingUserIds.contains(account.account.peerId.id) {
-                    appliedAps = self.apsNotificationToken
-                    |> distinctUntilChanged(isEqual: { $0 == $1 })
-                    |> mapToSignal { token -> Signal<Never, NoError> in
-                        guard let token = token else {
-                            return .complete()
+                    if let apsNotificationToken {
+                        appliedAps = account.engine.accountData.unregisterNotificationToken(token: apsNotificationToken, type: .aps(encrypt: false), otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
+                        |> map { _ -> Bool in
                         }
-                        return account.engine.accountData.unregisterNotificationToken(token: token, type: .aps(encrypt: false), otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
+                        |> then(.single(true))
+                    } else {
+                        appliedAps = .single(true)
                     }
+                    
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
                     |> mapToSignal { token -> Signal<Never, NoError> in
@@ -1020,19 +1059,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         return account.engine.accountData.unregisterNotificationToken(token: token, type: .voip, otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
                     }
                 } else {
-                    appliedAps = self.apsNotificationToken
-                    |> distinctUntilChanged(isEqual: { $0 == $1 })
-                    |> mapToSignal { token -> Signal<Never, NoError> in
-                        guard let token = token else {
-                            return .complete()
-                        }
-                        let encrypt: Bool
-                        if #available(iOS 10.0, *) {
-                            encrypt = true
-                        } else {
-                            encrypt = false
-                        }
-                        return account.engine.accountData.registerNotificationToken(token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                    if let apsNotificationToken {
+                        appliedAps = account.engine.accountData.registerNotificationToken(token: apsNotificationToken, type: .aps(encrypt: true), sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                    } else {
+                        appliedAps = .single(true)
                     }
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -1041,15 +1071,47 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             return .complete()
                         }
                         return account.engine.accountData.registerNotificationToken(token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        |> ignoreValues
                     }
                 }
                 
-                applied.append(appliedAps)
-                applied.append(appliedVoip)
+                appliedApsList.append(Signal<Bool?, NoError>.single(nil) |> then(appliedAps |> map(Optional.init)))
+                appliedVoipList.append(appliedVoip)
             }
-            return combineLatest(applied)
-            |> ignoreValues
-        }).start())
+            
+            let allApsSuccess = combineLatest(appliedApsList)
+            |> map { values -> Bool in
+                return !values.contains(false)
+            }
+            
+            let allVoipSuccess = combineLatest(appliedVoipList)
+            
+            return combineLatest(
+                allApsSuccess,
+                Signal<Void, NoError>.single(Void())
+                |> then(
+                    allVoipSuccess
+                    |> map { _ -> Void in
+                        return Void()
+                    }
+                )
+            )
+            |> map { allApsSuccess, _ -> (Bool, Data?) in
+                return (allApsSuccess, apsNotificationToken)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] allApsSuccess, apsToken in
+            guard let self, let appDelegate = self.appDelegate else {
+                return
+            }
+            if !allApsSuccess {
+                if self.invalidatedApsToken != apsToken {
+                    self.invalidatedApsToken = apsToken
+                    
+                    appDelegate.requestNotificationTokenInvalidation()
+                }
+            }
+        }))
     }
     
     public func beginNewAuth(testingEnvironment: Bool) {
@@ -1397,7 +1459,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 tapMessage?(message)
         }, clickThroughMessage: {
             clickThroughMessage?()
-        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
+        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
@@ -1450,6 +1512,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _ in
+        }, openRequestedPeerSelection: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1470,7 +1533,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             chatLocation = .peer(id: messages.first!.id.peerId)
         }
         
-        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: nil, forceInlineReactions: true), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
+        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: nil, forceInlineReactions: true), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
@@ -1521,6 +1584,19 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
     }
     
+    public func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController {
+        return SettingsUI.makeSetupTwoFactorAuthController(context: context)
+    }
+    
+    public func makeStorageManagementController(context: AccountContext) -> ViewController {
+        return StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { [weak context] category in
+            guard let context else {
+                return nil
+            }
+            return storageUsageExceptionsScreen(context: context, category: category)
+        })
+    }
+    
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
@@ -1564,6 +1640,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .voiceToText
         case .fasterDownload:
             mappedSource = .fasterDownload
+        case .translation:
+            mappedSource = .translation
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
     }
@@ -1597,6 +1675,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .animatedEmoji
         case .emojiStatus:
             mappedSubject = .emojiStatus
+        case .translation:
+            mappedSubject = .translation
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }

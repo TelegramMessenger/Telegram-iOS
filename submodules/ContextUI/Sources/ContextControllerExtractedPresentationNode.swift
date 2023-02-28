@@ -671,7 +671,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let actionsPositionLock = self.actionsStackNode.topPositionLock {
                 actionsConstrainedHeight = layout.size.height - bottomInset - layout.intrinsicInsets.bottom - actionsPositionLock
             } else {
-                actionsConstrainedHeight = layout.size.height - contentTopInset - contentRect.height - contentActionsSpacing - bottomInset - layout.intrinsicInsets.bottom
+                if case let .reference(reference) = self.source, reference.keepInPlace {
+                    actionsConstrainedHeight = layout.size.height - contentRect.maxY - contentActionsSpacing - bottomInset - layout.intrinsicInsets.bottom
+                } else {
+                    actionsConstrainedHeight = layout.size.height - contentTopInset - contentRect.height - contentActionsSpacing - bottomInset - layout.intrinsicInsets.bottom
+                }
             }
             
             let actionsStackPresentation: ContextControllerActionsStackNode.Presentation
@@ -732,7 +736,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 
                 reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: reactionAnchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
                 
-                self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight - 46.0
+                self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight - (46.0 + 54.0 - 4.0)
             } else {
                 self.proposedReactionsPositionLock = nil
             }
@@ -755,6 +759,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             var actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
 
             var contentVerticalOffset: CGFloat = 0.0
+            
             if keepInPlace, case .extracted = self.source {
                 actionsFrame.origin.y = contentRect.minY - contentActionsSpacing - actionsFrame.height
                 let statusBarHeight = (layout.statusBarHeight ?? 0.0)
@@ -769,8 +774,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let reactionContextNode = self.reactionContextNode {
                 additionalVisibleOffsetY += reactionContextNode.visibleExtensionDistance
             }
-            if case .reference = self.source {
-                if actionsFrame.maxY > layout.size.height {
+            if case let .reference(source) = self.source {
+                var actionsFrameIsOutOfScreen = false
+                if let contentAreaInScreenSpace = source.transitionInfo()?.contentAreaInScreenSpace {
+                    if !contentAreaInScreenSpace.contains(actionsFrame) {
+                        actionsFrameIsOutOfScreen = true
+                    }
+                }
+                if actionsFrame.maxY > layout.size.height || actionsFrameIsOutOfScreen {
                     actionsFrame.origin.y = contentRect.minY - actionsSize.height - contentActionsSpacing
                 }
             }

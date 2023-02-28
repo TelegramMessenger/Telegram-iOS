@@ -697,8 +697,15 @@ open class NavigationBar: ASDisplayNode {
             if self.rightButtonNode.supernode != nil {
                 addAccessibilityChildren(of: self.rightButtonNode, container: self, to: &accessibilityElements)
             }
+            if let customHeaderContentView = self.customHeaderContentView, customHeaderContentView.superview != nil {
+                customHeaderContentView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(customHeaderContentView.bounds, in: customHeaderContentView)
+                accessibilityElements.append(customHeaderContentView)
+            }
             if let contentNode = self.contentNode {
                 addAccessibilityChildren(of: contentNode, container: self, to: &accessibilityElements)
+            }
+            if let secondaryContentNode = self.secondaryContentNode {
+                addAccessibilityChildren(of: secondaryContentNode, container: self, to: &accessibilityElements)
             }
             return accessibilityElements
         } set(value) {
@@ -1190,6 +1197,7 @@ open class NavigationBar: ASDisplayNode {
             
             self.badgeNode.updateTheme(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
             
+            self.updateLeftButton(animated: false)
             self.requestLayout()
         }
     }

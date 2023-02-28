@@ -469,6 +469,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             if (flags2 & Int32(1 << 1)) != 0 {
                                                 channelFlags.insert(.antiSpamEnabled)
                                             }
+                                            if (flags2 & Int32(1 << 3)) != 0 {
+                                                channelFlags.insert(.translationHidden)
+                                            }
                                         
                                             let sendAsPeerId = defaultSendAs?.peerId
                                             

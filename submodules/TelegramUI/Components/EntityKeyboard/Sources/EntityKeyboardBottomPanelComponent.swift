@@ -10,25 +10,25 @@ import ComponentDisplayAdapters
 import BundleIconComponent
 
 private final class BottomPanelIconComponent: Component {
-    let imageName: String
+    let title: String
     let isHighlighted: Bool
     let theme: PresentationTheme
     let action: () -> Void
     
     init(
-        imageName: String,
+        title: String,
         isHighlighted: Bool,
         theme: PresentationTheme,
         action: @escaping () -> Void
     ) {
-        self.imageName = imageName
+        self.title = title
         self.isHighlighted = isHighlighted
         self.theme = theme
         self.action = action
     }
     
     static func ==(lhs: BottomPanelIconComponent, rhs: BottomPanelIconComponent) -> Bool {
-        if lhs.imageName != rhs.imageName {
+        if lhs.title != rhs.title {
             return false
         }
         if lhs.isHighlighted != rhs.isHighlighted {
@@ -67,13 +67,23 @@ private final class BottomPanelIconComponent: Component {
         }
         
         func update(component: BottomPanelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            if self.component?.imageName != component.imageName {
-                self.contentView.image = UIImage(bundleImageName: component.imageName)
+            if self.component?.title != component.title {
+                let text = NSAttributedString(string: component.title, font: Font.medium(15.0), textColor: .white)
+                let textBounds = text.boundingRect(with: CGSize(width: 120.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                self.contentView.image = generateImage(CGSize(width: ceil(textBounds.width), height: ceil(textBounds.height)), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    UIGraphicsPushContext(context)
+                    text.draw(in: textBounds)
+                    UIGraphicsPopContext()
+                })?.withRenderingMode(.alwaysTemplate)
             }
             
             self.component = component
             
-            let size = CGSize(width: 28.0, height: 28.0)
+            let textInset: CGFloat = 12.0
+            
+            let textSize = self.contentView.image?.size ?? CGSize()
+            let size = CGSize(width: textSize.width + textInset * 2.0, height: 28.0)
             
             let color = component.isHighlighted ? component.theme.chat.inputMediaPanel.panelHighlightedIconColor : component.theme.chat.inputMediaPanel.panelIconColor
             
@@ -87,8 +97,7 @@ private final class BottomPanelIconComponent: Component {
                 }
             }
             
-            let contentSize = self.contentView.image?.size ?? size
-            transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: (size.height - contentSize.height) / 2.0), size: contentSize))
+            transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: (size.height - textSize.height) / 2.0 - 1.0), size: textSize))
             
             return size
         }
@@ -304,7 +313,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
             var iconInfos: [AnyHashable: (size: CGSize, transition: Transition)] = [:]
             
             var iconTotalSize = CGSize()
-            let iconSpacing: CGFloat = 22.0
+            let iconSpacing: CGFloat = 4.0
             
             let navigateToContentId = panelEnvironment.navigateToContentId
             
@@ -326,7 +335,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     let iconSize = iconView.update(
                         transition: iconTransition,
                         component: AnyComponent(BottomPanelIconComponent(
-                            imageName: icon.imageName,
+                            title: icon.title,
                             isHighlighted: icon.id == activeContentId,
                             theme: component.theme,
                             action: {
@@ -365,12 +374,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                         self.highlightedIconBackgroundView.isHidden = false
                         transition.setFrame(view: self.highlightedIconBackgroundView, frame: iconFrame)
                         
-                        let cornerRadius: CGFloat
-                        if icon.id == AnyHashable("emoji") {
-                            cornerRadius = min(iconFrame.width, iconFrame.height) / 2.0
-                        } else {
-                            cornerRadius = 10.0
-                        }
+                        let cornerRadius: CGFloat = min(iconFrame.width, iconFrame.height) / 2.0
                         transition.setCornerRadius(layer: self.highlightedIconBackgroundView.layer, cornerRadius: cornerRadius)
                     }
                     

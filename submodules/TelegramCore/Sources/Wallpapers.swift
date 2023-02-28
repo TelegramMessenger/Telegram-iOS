@@ -109,7 +109,7 @@ private enum UploadedWallpaperDataContent {
 }
 
 private func uploadedWallpaper(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedWallpaperData, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> map { result -> UploadedWallpaperData in
         return UploadedWallpaperData(resource: resource, content: .result(result))
     }

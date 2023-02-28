@@ -32,7 +32,9 @@ private final class InternalContext {
     
     init(sharedContext: SharedAccountContextImpl) {
         self.sharedContext = sharedContext
-        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, acquireIdleExtension: {
+            return nil
+        }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
             return sharedContext.accountUserInterfaceInUse(id)
         })
     }
@@ -243,7 +245,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), firebaseSecretStream: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, appDelegate: nil)
                 appLockContext.sharedAccountContext = sharedContext
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
@@ -360,8 +362,8 @@ public class ShareRootControllerImpl {
                             } |> runOn(Queue.mainQueue())
                         }
                         
-                        let sentItems: ([PeerId], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account, silently in
-                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents, silently: silently)
+                        let sentItems: ([PeerId], [PeerId: Int64], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, threadIds, contents, account, silently in
+                            let sentItems = sentShareItems(account: account, to: peerIds, threadIds: threadIds, items: contents, silently: silently)
                             |> `catch` { _ -> Signal<
                                 Float, NoError> in
                                 return .complete()
@@ -373,7 +375,7 @@ public class ShareRootControllerImpl {
                             |> then(.single(.done))
                         }
                                             
-                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account, silently in
+                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, threadIds, additionalText, account, silently in
                             if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
@@ -399,11 +401,11 @@ public class ShareRootControllerImpl {
                                             return requestUserInteraction(value)
                                             |> castError(ShareControllerError.self)
                                             |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, ShareControllerError> in
-                                                return sentItems(peerIds, contents, account, silently)
+                                                return sentItems(peerIds, threadIds, contents, account, silently)
                                                 |> castError(ShareControllerError.self)
                                             }
                                         case let .done(contents):
-                                            return sentItems(peerIds, contents, account, silently)
+                                            return sentItems(peerIds, threadIds, contents, account, silently)
                                             |> castError(ShareControllerError.self)
                                     }
                                 }

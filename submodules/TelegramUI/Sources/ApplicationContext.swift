@@ -197,7 +197,6 @@ final class AuthorizedApplicationContext {
         self.sharedApplicationContext = sharedApplicationContext
         
         setupLegacyComponents(context: context)
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.mainWindow = mainWindow
         
@@ -206,9 +205,6 @@ final class AuthorizedApplicationContext {
         self.showCallsTab = showCallsTab
         
         self.notificationController = NotificationContainerController(context: context)
-        
-        self.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-        self.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
         
         self.rootController = TelegramRootController(context: context)
         
@@ -782,8 +778,6 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
-                    strongSelf.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                    strongSelf.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }
             }

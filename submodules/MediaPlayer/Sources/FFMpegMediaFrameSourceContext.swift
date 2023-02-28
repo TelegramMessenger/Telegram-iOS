@@ -290,6 +290,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     fileprivate let fetchedDataDisposable = MetaDisposable()
     fileprivate let keepDataDisposable = MetaDisposable()
     fileprivate let fetchedFullDataDisposable = MetaDisposable()
+    fileprivate let autosaveDisposable = MetaDisposable()
     fileprivate var requestedCompleteFetch = false
     
     fileprivate var readingError = false {
@@ -320,9 +321,10 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.fetchedDataDisposable.dispose()
         self.fetchedFullDataDisposable.dispose()
         self.keepDataDisposable.dispose()
+        self.autosaveDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
+    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?, storeAfterDownload: (() -> Void)?) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -342,6 +344,26 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         if self.tempFilePath == nil {
             self.keepDataDisposable.set(postbox.mediaBox.keepResource(id: resourceReference.resource.id).start())
+        }
+        
+        if let storeAfterDownload = storeAfterDownload {
+            self.autosaveDisposable.set((postbox.mediaBox.resourceData(resourceReference.resource)
+            |> take(1)
+            |> mapToSignal { initialData -> Signal<Bool, NoError> in
+                if initialData.complete {
+                    return .single(false)
+                } else {
+                    return postbox.mediaBox.resourceData(resourceReference.resource)
+                    |> filter { $0.complete }
+                    |> take(1)
+                    |> map { _ -> Bool in return true }
+                }
+            }
+            |> deliverOnMainQueue).start(next: { shouldSave in
+                if shouldSave {
+                    storeAfterDownload()
+                }
+            }))
         }
         
         if streamable {

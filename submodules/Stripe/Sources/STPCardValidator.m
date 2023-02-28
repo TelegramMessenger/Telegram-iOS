@@ -75,7 +75,7 @@ static NSString * _Nonnull stringByRemovingCharactersFromSet(NSString * _Nonnull
     }
 }
 
-+ (STPCardValidationState)validationStateForExpirationYear:(NSString *)expirationYear inMonth:(NSString *)expirationMonth inCurrentYear:(NSInteger)currentYear currentMonth:(NSInteger)currentMonth {
++ (STPCardValidationState)validationStateForExpirationYear:(NSString *)expirationYear inMonth:(NSString *)expirationMonth inCurrentYear:(NSInteger)currentYear currentMonth:(NSInteger)currentMonth cardBrand:(STPCardBrand)cardBrand {
     
     NSInteger moddedYear = currentYear % 100;
     
@@ -91,6 +91,15 @@ static NSString * _Nonnull stringByRemovingCharactersFromSet(NSString * _Nonnull
         case 1:
             return STPCardValidationStateIncomplete;
         case 2: {
+            switch (cardBrand) {
+                case STPCardBrandVisa:
+                case STPCardBrandMasterCard:
+                case STPCardBrandOther:
+                    return STPCardValidationStateValid;
+                default:
+                    break;
+            }
+            
             if (sanitizedYear.integerValue == moddedYear) {
                 return sanitizedMonth.integerValue >= currentMonth ? STPCardValidationStateValid : STPCardValidationStateInvalid;
             } else {
@@ -104,11 +113,11 @@ static NSString * _Nonnull stringByRemovingCharactersFromSet(NSString * _Nonnull
 
 
 + (STPCardValidationState)validationStateForExpirationYear:(NSString *)expirationYear
-                                                   inMonth:(NSString *)expirationMonth {
+                                                   inMonth:(NSString *)expirationMonth cardBrand:(STPCardBrand)cardBrand {
     return [self validationStateForExpirationYear:expirationYear
                                           inMonth:expirationMonth
                                     inCurrentYear:[self currentYear]
-                                     currentMonth:[self currentMonth]];
+                                     currentMonth:[self currentMonth] cardBrand:cardBrand];
 }
 
 
@@ -143,7 +152,11 @@ static NSString * _Nonnull stringByRemovingCharactersFromSet(NSString * _Nonnull
     if (sanitizedNumber.length == 0) {
         return STPCardValidationStateIncomplete;
     }
-    STPBINRange *binRange = [STPBINRange mostSpecificBINRangeForNumber:sanitizedNumber];
+    
+    BOOL isValidLuhn = [self stringIsValidLuhn:sanitizedNumber];
+    return isValidLuhn ? STPCardValidationStateValid : STPCardValidationStateInvalid;
+    
+    /*STPBINRange *binRange = [STPBINRange mostSpecificBINRangeForNumber:sanitizedNumber];
     if (binRange.brand == STPCardBrandUnknown && validatingCardBrand) {
         return STPCardValidationStateInvalid;
     }
@@ -154,7 +167,7 @@ static NSString * _Nonnull stringByRemovingCharactersFromSet(NSString * _Nonnull
         return STPCardValidationStateInvalid;
     } else {
         return STPCardValidationStateIncomplete;
-    }
+    }*/
 }
 
 + (STPCardValidationState)validationStateForCard:(nonnull STPCardParams *)card inCurrentYear:(NSInteger)currentYear currentMonth:(NSInteger)currentMonth {
@@ -165,7 +178,12 @@ static NSString * _Nonnull stringByRemovingCharactersFromSet(NSString * _Nonnull
     STPCardValidationState expYearValidation = [self validationStateForExpirationYear:expYearString
                                                                               inMonth:expMonthString
                                                                         inCurrentYear:currentYear
-                                                                         currentMonth:currentMonth];
+                                                                         currentMonth:currentMonth cardBrand:[STPCardValidator brandForNumber:card.number]];
+    if (expMonthValidation == STPCardValidationStateInvalid || expYearValidation == STPCardValidationStateInvalid) {
+        expMonthValidation = STPCardValidationStateValid;
+        expYearValidation = STPCardValidationStateValid;
+    }
+    
     STPCardBrand brand = [self brandForNumber:card.number];
     STPCardValidationState cvcValidation = [self validationStateForCVC:card.cvc cardBrand:brand];
 

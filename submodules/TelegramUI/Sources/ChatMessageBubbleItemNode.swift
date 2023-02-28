@@ -628,6 +628,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 case .action, .optionalAction:
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    var tapMessage = tapMessage
+                    if selectAll, case let .group(messages) = item.content, tapMessage.text.isEmpty {
+                        for message in messages {
+                            if !message.0.text.isEmpty {
+                                tapMessage = message.0
+                                break
+                            }
+                        }
+                    }
                     item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
                 }
             }
@@ -1794,7 +1803,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     dateFormat = .regular
                 }
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType
                 if incoming {
@@ -2005,7 +2014,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
-                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
+                    associatedData: item.associatedData
                 ))
                 replyInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
                 
@@ -3643,13 +3653,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         return .action({
                             self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage)
                         })
-                    case let .peerMention(peerId, _):
+                    case let .peerMention(peerId, _, openProfile):
                         return .action({ [weak self] in
                             if let item = self?.item {
                                 let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                 |> deliverOnMainQueue).start(next: { peer in
                                     if let self = self, let item = self.item, let peer = peer {
-                                        item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                        item.controllerInteraction.openPeer(peer, openProfile ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                     }
                                 })
                             }
@@ -3784,7 +3794,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             return .action({
                                 item.controllerInteraction.longTap(.url(url), message)
                             })
-                        case let .peerMention(peerId, mention):
+                        case let .peerMention(peerId, mention, _):
                             return .action({
                                 item.controllerInteraction.longTap(.peerMention(peerId, mention), message)
                             })

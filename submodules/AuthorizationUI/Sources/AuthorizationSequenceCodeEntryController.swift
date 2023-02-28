@@ -208,6 +208,8 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
                 minimalCodeLength = Int(length)
             case let .fragment(_, length):
                 minimalCodeLength = Int(length)
+            case let .firebase(_, length):
+                minimalCodeLength = Int(length)
             case .flashCall, .emailSetupRequired:
                 break
         }

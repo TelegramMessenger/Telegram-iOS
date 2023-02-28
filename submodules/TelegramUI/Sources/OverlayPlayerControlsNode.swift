@@ -35,6 +35,51 @@ private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
     })
 }
 
+private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
+    return generateImage(CGSize(width: 36.0, height: 16.0), rotatedContext: { size, context in
+        UIGraphicsPushContext(context)
+
+        context.clear(CGRect(origin: CGPoint(), size: size))
+
+        let lineWidth = 1.0 + UIScreenPixel
+        context.setLineWidth(lineWidth)
+        context.setStrokeColor(color.cgColor)
+        
+
+        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: color)
+
+        var offset = CGPoint(x: 1.0, y: 0.0)
+        var width: CGFloat
+        if rate.count >= 5 {
+            string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+            offset.x += -0.5
+            width = 33.0
+        } else if rate.count >= 3 {
+            if rate == "0.5X" {
+                string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+                offset.x += -0.5
+            } else {
+                string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+                offset.x += -0.3
+            }
+            width = 29.0
+        } else {
+            string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+            width = 19.0
+            offset.x += -0.3
+        }
+        
+        let path = UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: 0.0, width: width, height: 16.0).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 2.0, height: 2.0))
+        context.addPath(path.cgPath)
+        context.strokePath()
+        
+        let boundingRect = string.boundingRect(with: size, options: [], context: nil)
+        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + UIScreenPixel + floor((size.height - boundingRect.height) / 2.0)))
+
+        UIGraphicsPopContext()
+    })
+}
+
 private let digitsSet = CharacterSet(charactersIn: "0123456789")
 private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
     let text: String
@@ -61,19 +106,21 @@ private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
 private let titleFont = Font.semibold(18.0)
 private let descriptionFont = Font.regular(18.0)
 
-private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, presentationData: PresentationData) -> (NSAttributedString?, NSAttributedString?, Bool) {
+private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, presentationData: PresentationData) -> (NSAttributedString?, NSAttributedString?, Bool, NSAttributedString?) {
     var titleString: NSAttributedString?
     var descriptionString: NSAttributedString?
     var hasArtist = false
+    var captionString: NSAttributedString?
     
     if let data = data {
         let titleText: String
         let subtitleText: String
         switch data {
-            case let .music(title, performer, _, _):
+            case let .music(title, performer, _, _, caption):
                 titleText = title ?? presentationData.strings.MediaPlayer_UnknownTrack
                 subtitleText = performer ?? presentationData.strings.MediaPlayer_UnknownArtist
                 hasArtist = performer != nil
+                captionString = caption
             case .voice, .instantVideo:
                 titleText = ""
                 subtitleText = ""
@@ -83,7 +130,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
         descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: hasArtist ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
     }
     
-    return (titleString, descriptionString, hasArtist)
+    return (titleString, descriptionString, hasArtist, captionString)
 }
 
 final class OverlayPlayerControlsNode: ASDisplayNode {
@@ -146,6 +193,13 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private var currentAlbumArt: SharedMediaPlaybackAlbumArt?
     private var currentFileReference: FileMediaReference?
     private var statusDisposable: Disposable?
+    private var chapterDisposable: Disposable?
+    
+    private var previousCaption: NSAttributedString?
+    private var chaptersPromise = ValuePromise<[MediaPlayerScrubbingChapter]>([])
+    private var currentChapter: MediaPlayerScrubbingChapter?
+    
+    private let hapticFeedback = HapticFeedback()
     
     private var scrubbingDisposable: Disposable?
     private var leftDurationLabelPushed = false
@@ -366,8 +420,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 
                 let baseRate: AudioPlaybackRate
-                if !value.status.baseRate.isEqual(to: 1.0) {
+                if value.status.baseRate.isEqual(to: 2.0) {
                     baseRate = .x2
+                } else if value.status.baseRate.isEqual(to: 1.5) {
+                    baseRate = .x1_5
+                } else if value.status.baseRate.isEqual(to: 0.5) {
+                    baseRate = .x0_5
                 } else {
                     baseRate = .x1
                 }
@@ -376,7 +434,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.updateRateButton(baseRate)
                 }
                 
-                if let displayData = displayData, case let .music(_, _, _, long) = displayData, long {
+                if let displayData = displayData, case let .music(_, _, _, long, _) = displayData, long {
                     strongSelf.scrubberNode.enableFineScrubbing = true
                     rateButtonIsHidden = false
                 } else {
@@ -430,6 +488,58 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
         })
         
+        self.chapterDisposable = combineLatest(queue: Queue.mainQueue(), mappedStatus, self.chaptersPromise.get())
+        .start(next: { [weak self] status, chapters in
+            if let strongSelf = self, status.duration > 1.0, chapters.count > 0 {
+                let previousChapter = strongSelf.currentChapter
+                var currentChapter: MediaPlayerScrubbingChapter?
+                for chapter in chapters {
+                    if chapter.start > status.timestamp {
+                        break
+                    } else {
+                        currentChapter = chapter
+                    }
+                }
+                
+                if let chapter = currentChapter, chapter != previousChapter {
+                    strongSelf.currentChapter = chapter
+                    
+                    if strongSelf.scrubberNode.isScrubbing {
+                        strongSelf.hapticFeedback.impact(.light)
+                    }
+                    
+                    if let previousChapter = previousChapter, !strongSelf.infoNode.alpha.isZero {
+                        if let snapshotView = strongSelf.infoNode.view.snapshotView(afterScreenUpdates: false) {
+                            snapshotView.frame = strongSelf.infoNode.frame
+                            strongSelf.infoNode.view.superview?.addSubview(snapshotView)
+                            
+                            let offset: CGFloat = 30.0
+                            let snapshotTargetPosition: CGPoint
+                            let nodeStartPosition: CGPoint
+                            if previousChapter.start < chapter.start {
+                                snapshotTargetPosition = CGPoint(x: -offset, y: 0.0)
+                                nodeStartPosition = CGPoint(x: offset, y: 0.0)
+                            } else {
+                                snapshotTargetPosition = CGPoint(x: offset, y: 0.0)
+                                nodeStartPosition = CGPoint(x: -offset, y: 0.0)
+                            }
+                            snapshotView.layer.animatePosition(from: CGPoint(), to: snapshotTargetPosition, duration: 0.2, removeOnCompletion: false, additive: true)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            strongSelf.infoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            strongSelf.infoNode.layer.animatePosition(from: nodeStartPosition, to: CGPoint(), duration: 0.2, additive: true)
+                        }
+                    }
+                    strongSelf.infoNode.attributedText = NSAttributedString(string: chapter.title, font: Font.regular(13.0), textColor: strongSelf.presentationData.theme.list.itemSecondaryTextColor)
+                    
+                    if let layout = strongSelf.validLayout {
+                        let _ = strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .immediate)
+                    }
+                }
+            }
+        })
+        
         self.scrubberNode.seek = { [weak self] value in
             self?.control?(.seek(value))
         }
@@ -463,6 +573,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     deinit {
         self.statusDisposable?.dispose()
+        self.chapterDisposable?.dispose()
         self.scrubbingDisposable?.dispose()
     }
     
@@ -600,7 +711,15 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let infoVerticalOrigin: CGFloat = panelHeight - OverlayPlayerControlsNode.basePanelHeight + 36.0
         
-        let (titleString, descriptionString, hasArtist) = stringsForDisplayData(self.displayData, presentationData: self.presentationData)
+        let (titleString, descriptionString, hasArtist, caption) = stringsForDisplayData(self.displayData, presentationData: self.presentationData)
+        
+        if self.previousCaption?.string != caption?.string {
+            self.previousCaption = caption
+            let chapters = caption.flatMap { parseMediaPlayerChapters($0) } ?? []
+            self.chaptersPromise.set(chapters)
+            self.scrubberNode.updateContent(.standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: self.presentationData.theme.list.controlSecondaryColor, foregroundColor: self.presentationData.theme.list.itemAccentColor, bufferingColor: self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), chapters: chapters))
+        }
+        
         self.artistButton.isUserInteractionEnabled = hasArtist
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
@@ -619,7 +738,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         var albumArt: SharedMediaPlaybackAlbumArt?
         if let displayData = self.displayData {
             switch displayData {
-                case let .music(_, _, value, _):
+                case let .music(_, _, value, _, _):
                     albumArt = value
                 default:
                     break
@@ -645,10 +764,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     }
     
     private func updateOrderButton(_ order: MusicPlaybackSettingsOrder) {
-        let baseColor = self.presentationData.theme.list.itemSecondaryTextColor
         switch order {
             case .regular:
-                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: baseColor)
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.presentationData.theme.list.itemSecondaryTextColor)
             case .reversed:
                 self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.presentationData.theme.list.itemAccentColor)
             case .random:
@@ -670,10 +788,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private func updateRateButton(_ baseRate: AudioPlaybackRate) {
         switch baseRate {
-            case .x2:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.presentationData.theme), for: [])
-            default:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateInactiveIcon(self.presentationData.theme), for: [])
+        case .x2:
+            self.rateButton.setImage(optionsRateImage(rate: "2X", color: self.presentationData.theme.list.itemAccentColor), for: [])
+        case .x1_5:
+            self.rateButton.setImage(optionsRateImage(rate: "1.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
+        case .x0_5:
+            self.rateButton.setImage(optionsRateImage(rate: "0.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
+        default:
+            self.rateButton.setImage(optionsRateImage(rate: "1X", color: self.presentationData.theme.list.itemSecondaryTextColor), for: [])
         }
     }
     
@@ -889,12 +1011,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if let currentRate = self.currentRate {
             switch currentRate {
                 case .x1:
+                    nextRate = .x1_5
+                case .x1_5:
                     nextRate = .x2
                 default:
                     nextRate = .x1
             }
         } else {
-            nextRate = .x2
+            nextRate = .x1_5
         }
         self.control?(.setBaseRate(nextRate))
     }
@@ -913,7 +1037,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     }
     
     @objc func artistPressed() {
-        let (_, descriptionString, _) = stringsForDisplayData(self.displayData, presentationData: self.presentationData)
+        let (_, descriptionString, _, _) = stringsForDisplayData(self.displayData, presentationData: self.presentationData)
         if let artist = descriptionString?.string {
             self.requestSearchByArtist?(artist)
         }

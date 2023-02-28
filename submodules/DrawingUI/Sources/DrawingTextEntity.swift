@@ -43,6 +43,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         case text
         case textAttributes
         case style
+        case animation
         case font
         case alignment
         case fontSize
@@ -61,19 +62,13 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         case filled
         case semi
         case stroke
-        
-        init(style: DrawingTextEntity.Style) {
-            switch style {
-            case .regular:
-                self = .regular
-            case .filled:
-                self = .filled
-            case .semi:
-                self = .semi
-            case .stroke:
-                self = .stroke
-            }
-        }
+    }
+    
+    enum Animation: Codable {
+        case none
+        case typing
+        case wiggle
+        case zoomIn
     }
     
     enum Font: Codable {
@@ -100,6 +95,9 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     
     public var uuid: UUID
     public var isAnimated: Bool {
+        if self.animation != .none {
+            return true
+        }
         var isAnimated = false
         self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
             if let _ = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
@@ -111,6 +109,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     
     var text: NSAttributedString
     var style: Style
+    var animation: Animation
     var font: Font
     var alignment: Alignment
     var fontSize: CGFloat
@@ -130,11 +129,12 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     public var renderImage: UIImage?
     public var renderSubEntities: [DrawingStickerEntity]?
     
-    init(text: NSAttributedString, style: Style, font: Font, alignment: Alignment, fontSize: CGFloat, color: DrawingColor) {
+    init(text: NSAttributedString, style: Style, animation: Animation, font: Font, alignment: Alignment, fontSize: CGFloat, color: DrawingColor) {
         self.uuid = UUID()
         
         self.text = text
         self.style = style
+        self.animation = animation
         self.font = font
         self.alignment = alignment
         self.fontSize = fontSize
@@ -160,6 +160,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         self.text = attributedString
 
         self.style = try container.decode(Style.self, forKey: .style)
+        self.animation = try container.decode(Animation.self, forKey: .animation)
         self.font = try container.decode(Font.self, forKey: .font)
         self.alignment = try container.decode(Alignment.self, forKey: .alignment)
         self.fontSize = try container.decode(CGFloat.self, forKey: .fontSize)
@@ -191,6 +192,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         try container.encode(textAttributes, forKey: .textAttributes)
         
         try container.encode(self.style, forKey: .style)
+        try container.encode(self.animation, forKey: .animation)
         try container.encode(self.font, forKey: .font)
         try container.encode(self.alignment, forKey: .alignment)
         try container.encode(self.fontSize, forKey: .fontSize)
@@ -210,7 +212,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     }
 
     public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingTextEntity(text: self.text, style: self.style, font: self.font, alignment: self.alignment, fontSize: self.fontSize, color: self.color)
+        let newEntity = DrawingTextEntity(text: self.text, style: self.style, animation: self.animation, font: self.font, alignment: self.alignment, fontSize: self.fontSize, color: self.color)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.width = self.width
@@ -390,9 +392,11 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.becomeFirstResponder()
         
         UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
-            self.transform = .identity
-            if let superview = self.superview {
-                self.center = CGPoint(x: superview.bounds.width / 2.0, y: superview.bounds.height / 2.0)
+            if let parentView = self.superview as? DrawingEntitiesView {
+                let scale = parentView.getEntityAdditionalScale() / (parentView.drawingView?.zoomScale ?? 1.0)
+                self.transform = CGAffineTransformMakeRotation(parentView.getEntityInitialRotation()).scaledBy(x: scale, y: scale)
+                
+                self.center = parentView.getEntityCenterPosition()
             }
         }
 
@@ -698,7 +702,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             }
             let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
-            let entity = DrawingStickerEntity(file: file)
+            let entity = DrawingStickerEntity(content: .file(file))
             entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
             entity.scale = scale
             entity.position = textPosition.offsetBy(

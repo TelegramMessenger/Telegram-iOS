@@ -367,7 +367,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
-        }, openForumThread: { _, _ in })
+        }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {} )
 
         func makeChatListItem(
             peer: EnginePeer,

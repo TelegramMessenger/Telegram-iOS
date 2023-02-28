@@ -687,28 +687,33 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             })
         case let .invoice(slug, invoice):
             dismissInput()
-            if let navigationController = navigationController {
-                let inputData = Promise<BotCheckoutController.InputData?>()
-                inputData.set(BotCheckoutController.InputData.fetch(context: context, source: .slug(slug))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
-                    return .single(nil)
-                })
-                let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                    /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
-                        guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
-                            return false
-                        }
-
-                        if case .info = action {
-                            strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                            return true
-                        }
-                        return false
-                    }), in: .current)*/
-                })
-                checkoutController.navigationPresentation = .modal
-                navigationController.pushViewController(checkoutController)
+        
+            if let invoice {
+                if let navigationController = navigationController {
+                    let inputData = Promise<BotCheckoutController.InputData?>()
+                    inputData.set(BotCheckoutController.InputData.fetch(context: context, source: .slug(slug))
+                                  |> map(Optional.init)
+                                  |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                        return .single(nil)
+                    })
+                    let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                        /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
+                         guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                         return false
+                         }
+                         
+                         if case .info = action {
+                         strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                         return true
+                         }
+                         return false
+                         }), in: .current)*/
+                    })
+                    checkoutController.navigationPresentation = .modal
+                    navigationController.pushViewController(checkoutController)
+                }
+            } else {
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
     }
 }

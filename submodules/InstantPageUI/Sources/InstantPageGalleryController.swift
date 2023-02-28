@@ -112,7 +112,7 @@ public struct InstantPageGalleryEntry: Equatable {
                     nativeId = .instantPage(self.pageId, file.fileId)
                 }
                 
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file, nil), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, playbackRate: { nil }, performAction: { _ in }, openActionOptions: { _, _ in }, storeMediaPlaybackState: { _, _, _ in }, present: { _, _ in })
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none, storeAfterDownload: nil), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file, nil), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, playbackRate: { nil }, performAction: { _ in }, openActionOptions: { _, _ in }, storeMediaPlaybackState: { _, _, _ in }, present: { _, _ in })
             } else {
                 var representations: [TelegramMediaImageRepresentation] = []
                 representations.append(contentsOf: file.previewRepresentations)

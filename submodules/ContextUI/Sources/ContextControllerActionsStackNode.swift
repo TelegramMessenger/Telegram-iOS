@@ -101,6 +101,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         
         self.isAccessibilityElement = true
         self.accessibilityLabel = item.text
+        self.accessibilityTraits = [.button]
         
         self.addSubnode(self.highlightBackgroundNode)
         self.addSubnode(self.titleLabelNode)
@@ -340,7 +341,11 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             if let titleVerticalOffset {
                 titleFrame = titleFrame.offsetBy(dx: 0.0, dy: titleVerticalOffset)
             }
-            let subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+            var subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+            if self.item.iconPosition == .left {
+                titleFrame = titleFrame.offsetBy(dx: 36.0, dy: 0.0)
+                subtitleFrame = subtitleFrame.offsetBy(dx: 36.0, dy: 0.0)
+            }
             
             transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
             transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
@@ -348,7 +353,12 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             
             if let iconSize = iconSize {
                 let iconWidth = max(standardIconWidth, iconSize.width)
-                let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+                let iconFrame = CGRect(
+                    origin: CGPoint(
+                        x: self.item.iconPosition == .left ? iconSideInset : size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0),
+                        y: floor((size.height - iconSize.height) / 2.0)
+                    ),
+                    size: iconSize)
                 transition.updateFrame(node: self.iconNode, frame: iconFrame, beginWithCurrentState: true)
                 if let animationNode = self.animationNode {
                     transition.updateFrame(node: animationNode, frame: iconFrame, beginWithCurrentState: true)

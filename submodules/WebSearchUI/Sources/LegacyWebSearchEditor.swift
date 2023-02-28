@@ -8,6 +8,7 @@ import Display
 import TelegramPresentationData
 import AccountContext
 import LegacyUI
+import LegacyMediaPickerUI
 
 func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTheme, result: ChatContextResult, initialLayout: ContainerViewLayout?, updateHiddenMedia: @escaping (String?) -> Void, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (UIImage) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     guard let item = legacyWebSearchItem(account: context.account, result: result) else {
@@ -33,7 +34,10 @@ func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTh
         let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
         legacyController.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         
+        let paintStickersContext = LegacyPaintStickersContext(context: context)
+        
         let controller = TGPhotoEditorController(context: legacyController.context, item: item, intent: TGPhotoEditorControllerAvatarIntent, adjustments: nil, caption: nil, screenImage: screenImage ?? UIImage(), availableTabs: TGPhotoEditorController.defaultTabsForAvatarIntent(), selectedTab: .cropTab)!
+        controller.stickersContext = paintStickersContext
         legacyController.bind(controller: controller)
         
         controller.editingContext = TGMediaEditingContext()

@@ -22,9 +22,9 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: primaryColor)
         return parseMarkdownIntoAttributedString(strings.Login_ShortCallTitle, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
     case .call:
-        return NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
+        return parseMarkdownIntoAttributedString(strings.Login_CodeSentCallText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .flashCall:
-        return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
+        return parseMarkdownIntoAttributedString(strings.Login_CodeSentCallText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .emailSetupRequired:
         return NSAttributedString(string: "", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case let .email(emailPattern, _, _, _, _):
@@ -43,6 +43,8 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         return mutableString
     case .fragment:
         return parseMarkdownIntoAttributedString(strings.Login_EnterCodeFragmentText(phoneNumber).string, attributes: attributes, textAlignment: .center)
+    case .firebase:
+        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeSMSText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     }
 }
 

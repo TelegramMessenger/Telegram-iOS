@@ -421,7 +421,7 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
+func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var channelStates: [PeerId: AccountStateChannelState] = [:]
     
@@ -540,7 +540,7 @@ func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Differ
     }
 }
 
-func finalStateWithUpdateGroups(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, groups: [UpdateGroup]) -> Signal<AccountFinalState, NoError> {
+func finalStateWithUpdateGroups(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, groups: [UpdateGroup], asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var hadReset = false
@@ -664,10 +664,10 @@ func finalStateWithUpdateGroups(accountPeerId: PeerId, postbox: Postbox, network
         collectedUpdates.append(Api.Update.updateDeleteChannelMessages(channelId: channelId, messages: [], pts: pts, ptsCount: ptsCount))
     }
     
-    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: false, updatesDate: updatesDate)
+    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: false, updatesDate: updatesDate, asyncResetChannels: asyncResetChannels)
 }
 
-func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference) -> Signal<AccountFinalState, NoError> {
+func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var messages: [Api.Message] = []
@@ -726,7 +726,7 @@ func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: 
         updatedState.addSecretMessages(encryptedMessages)
     }
     
-    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil)
+    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil, asyncResetChannels: asyncResetChannels)
 }
 
 private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
@@ -861,21 +861,25 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
     return result
 }
 
-private func finalStateWithUpdates(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?) -> Signal<AccountFinalState, NoError> {
+private func finalStateWithUpdates(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?) -> Signal<AccountFinalState, NoError> {
     return network.currentGlobalTime
     |> take(1)
     |> mapToSignal { serverTime -> Signal<AccountFinalState, NoError> in
-        return finalStateWithUpdatesAndServerTime(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime))
+        return finalStateWithUpdatesAndServerTime(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime), asyncResetChannels: asyncResetChannels)
     }
 }
     
-private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32) -> Signal<AccountFinalState, NoError> {
+private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32, asyncResetChannels: (([(peer: Peer, pts: Int32?)]) -> Void)?) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
-    var channelsToPoll = Set<PeerId>()
+    var channelsToPoll: [PeerId: Int32?] = [:]
     
     if !updatedState.initialState.channelsToPollExplicitely.isEmpty {
-        channelsToPoll.formUnion(updatedState.initialState.channelsToPollExplicitely)
+        for peerId in updatedState.initialState.channelsToPollExplicitely {
+            if case .none = channelsToPoll[peerId] {
+                channelsToPoll[peerId] = Optional<Int32>.none
+            }
+        }
     }
     
     var missingUpdatesFromChannels = Set<PeerId>()
@@ -884,11 +888,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         switch update {
             case let .updateChannelTooLong(_, channelId, channelPts):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
-                if !channelsToPoll.contains(peerId) {
+                if case .none = channelsToPoll[peerId] {
                     if let channelPts = channelPts, let channelState = state.channelStates[peerId], channelState.pts >= channelPts {
                         Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip updateChannelTooLong by pts")
                     } else {
-                        channelsToPoll.insert(peerId)
+                        channelsToPoll[peerId] = channelPts
                     }
                 }
             case let .updateChannelPinnedTopics(_, channelId, order):
@@ -896,8 +900,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     updatedState.addUpdatePinnedTopicOrder(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadIds: order.map(Int64.init))
                 } else {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
-                    if !channelsToPoll.contains(peerId) {
-                        channelsToPoll.insert(peerId)
+                    if case .none = channelsToPoll[peerId] {
+                        channelsToPoll[peerId] = nil
                     }
                 }
             case let .updateDeleteChannelMessages(channelId, messages, pts: pts, ptsCount):
@@ -915,9 +919,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         }
                     }
                 } else {
-                    if !channelsToPoll.contains(peerId) {
+                    if case .none = channelsToPoll[peerId] {
                         //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
-                        channelsToPoll.insert(peerId)
+                        channelsToPoll[peerId] = nil
                     }
                 }
             case let .updateEditChannelMessage(apiMessage, pts, ptsCount):
@@ -947,9 +951,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             }
                         }
                     } else {
-                        if !channelsToPoll.contains(peerId) {
+                        if case .none = channelsToPoll[peerId] {
                             //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
-                            channelsToPoll.insert(peerId)
+                            channelsToPoll[peerId] = nil
                         }
                     }
                 } else {
@@ -971,14 +975,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         
                         updatedState.updateChannelState(peerId, pts: pts)
                     } else {
-                        if !channelsToPoll.contains(peerId) {
+                        if case .none = channelsToPoll[peerId] {
                             Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateWebPage pts hole \(previousState.pts) + \(ptsCount) != \(pts)")
-                            channelsToPoll.insert(peerId)
+                            channelsToPoll[peerId] = nil
                         }
                     }
                 } else {
-                    if !channelsToPoll.contains(peerId) {
-                        channelsToPoll.insert(peerId)
+                    if case .none = channelsToPoll[peerId] {
+                        channelsToPoll[peerId] = nil
                     }
                 }
             case let .updateChannelAvailableMessages(channelId, minId):
@@ -1047,9 +1051,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             }
                         }
                     } else {
-                        if !channelsToPoll.contains(message.id.peerId) {
+                        if case .none = channelsToPoll[message.id.peerId] {
                             Logger.shared.log("State", "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
-                            channelsToPoll.insert(message.id.peerId)
+                            channelsToPoll[message.id.peerId] = nil
                         }
                     }
                 }
@@ -1278,9 +1282,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         }
                     }
                 } else {
-                    if !channelsToPoll.contains(peerId) {
+                    if case .none = channelsToPoll[peerId] {
                         //Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
-                        channelsToPoll.insert(peerId)
+                        channelsToPoll[peerId] = nil
                     }
                 }
             case let .updatePeerBlocked(peerId, blocked):
@@ -1634,24 +1638,36 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         pollChannelSignals = []
     } else if shouldResetChannels {
         var channelPeers: [Peer] = []
-        for peerId in channelsToPoll.union(missingUpdatesFromChannels) {
+        for peerId in Set(channelsToPoll.keys).union(missingUpdatesFromChannels) {
             if let peer = updatedState.peers[peerId] {
                 channelPeers.append(peer)
             } else {
                 Logger.shared.log("State", "can't reset channel \(peerId): no peer found")
             }
         }
-        if !channelPeers.isEmpty {
-            let resetSignal = resetChannels(accountPeerId: accountPeerId, postbox: postbox, network: network, peers: channelPeers, state: updatedState)
-            |> map { resultState -> (AccountMutableState, Bool, Int32?) in
-                return (resultState, true, nil)
-            }
-            pollChannelSignals = [resetSignal]
-        } else {
+        
+        if let asyncResetChannels = asyncResetChannels {
             pollChannelSignals = []
+            asyncResetChannels(channelPeers.map({ peer -> (peer: Peer, pts: Int32?) in
+                var pts: Int32?
+                if let maybePts = channelsToPoll[peer.id] {
+                    pts = maybePts
+                }
+                return (peer, pts)
+            }))
+        } else {
+            if !channelPeers.isEmpty {
+                let resetSignal = resetChannels(accountPeerId: accountPeerId, postbox: postbox, network: network, peers: channelPeers, state: updatedState)
+                |> map { resultState -> (AccountMutableState, Bool, Int32?) in
+                    return (resultState, true, nil)
+                }
+                pollChannelSignals = [resetSignal]
+            } else {
+                pollChannelSignals = []
+            }
         }
     } else {
-        for peerId in channelsToPoll.union(missingUpdatesFromChannels) {
+        for peerId in Set(channelsToPoll.keys).union(missingUpdatesFromChannels) {
             if let peer = updatedState.peers[peerId] {
                 pollChannelSignals.append(pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: updatedState.branch()))
             } else {
@@ -2442,7 +2458,7 @@ func keepPollingChannel(accountPeerId: PeerId, postbox: Postbox, network: Networ
     |> delay(1.0, queue: .concurrentDefaultQueue())
 }
 
-private func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     var inputPeers: [Api.InputDialogPeer] = []
     for peer in peers {
         if let inputPeer = apiInputPeer(peer) {
@@ -3065,12 +3081,15 @@ func replayFinalState(
     auxiliaryMethods: AccountAuxiliaryMethods,
     finalState: AccountFinalState,
     removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId],
-    ignoreDate: Bool
+    ignoreDate: Bool,
+    skipVerification: Bool
 ) -> AccountReplayedFinalState? {
-    let verified = verifyTransaction(transaction, finalState: finalState.state)
-    if !verified {
-        Logger.shared.log("State", "failed to verify final state")
-        return nil
+    if !skipVerification {
+        let verified = verifyTransaction(transaction, finalState: finalState.state)
+        if !verified {
+            Logger.shared.log("State", "failed to verify final state")
+            return nil
+        }
     }
     
     var peerIdsWithAddedSecretMessages = Set<PeerId>()
@@ -3494,6 +3513,7 @@ func replayFinalState(
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
                     var updatedLocalTags = message.localTags
+                    var updatedAttributes = message.attributes
                     if previousMessage.localTags.contains(.OutgoingLiveLocation) {
                         updatedLocalTags.insert(.OutgoingLiveLocation)
                     }
@@ -3509,10 +3529,20 @@ func replayFinalState(
                         return current
                     })
                     
+                    if previousMessage.text == message.text {
+                        let previousEntities = previousMessage.textEntitiesAttribute?.entities ?? []
+                        let updatedEntities = (message.attributes.first(where: { $0 is TextEntitiesMessageAttribute }) as? TextEntitiesMessageAttribute)?.entities ?? []
+                        if previousEntities == updatedEntities, let translation = previousMessage.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute {
+                            if message.attributes.firstIndex(where: { $0 is TranslationMessageAttribute }) == nil {
+                                updatedAttributes.append(translation)
+                            }
+                        }
+                    }
+                    
                     if let message = locallyRenderedMessage(message: message, peers: peers) {
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
+                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)

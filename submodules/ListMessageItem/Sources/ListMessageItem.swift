@@ -49,6 +49,7 @@ public final class ListMessageItem: ListViewItem {
     let chatLocation: ChatLocation
     let interaction: ListMessageItemInteraction
     let message: Message?
+    let translateToLanguage: String?
     public let selection: ChatHistoryMessageSelection
     let hintIsLink: Bool
     let isGlobalSearchResult: Bool
@@ -61,12 +62,13 @@ public final class ListMessageItem: ListViewItem {
     
     public let selectable: Bool = true
     
-    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message?, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false, isDownloadList: Bool = false, displayFileInfo: Bool = true, displayBackground: Bool = false, style: ItemListStyle = .plain) {
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message?, translateToLanguage: String? = nil, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false, isDownloadList: Bool = false, displayFileInfo: Bool = true, displayBackground: Bool = false, style: ItemListStyle = .plain) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation
         self.interaction = interaction
         self.message = message
+        self.translateToLanguage = translateToLanguage
         if let header = customHeader {
             self.header = header
         } else if displayHeader, let message = message {

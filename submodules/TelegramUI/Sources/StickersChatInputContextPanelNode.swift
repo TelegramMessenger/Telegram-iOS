@@ -199,7 +199,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
+                                return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }

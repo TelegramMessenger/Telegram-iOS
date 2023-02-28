@@ -668,4 +668,32 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         self.interactionEnded();
 }
 
+- (void)increase {
+    self.value = MIN(self.maximumValue, self.value + 1);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
+- (void)increaseBy:(CGFloat)delta {
+    self.value = MIN(self.maximumValue, self.value + delta);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
+- (void)decrease {
+    self.value = MAX(self.minimumValue, self.value - 1);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
+- (void)decreaseBy:(CGFloat)delta {
+    self.value = MAX(self.minimumValue, self.value - delta);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
 @end

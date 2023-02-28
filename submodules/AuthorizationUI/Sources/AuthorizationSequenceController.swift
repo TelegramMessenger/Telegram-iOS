@@ -165,96 +165,115 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 strongSelf.account = updatedAccount
             }
             controller.loginWithNumber = { [weak self, weak controller] number, syncContacts in
-                if let strongSelf = self {
-                    controller?.inProgress = true
-                    strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, syncContacts: syncContacts) |> deliverOnMainQueue).start(next: { [weak self] account in
-                        if let strongSelf = self {
-                            controller?.inProgress = false
-                            strongSelf.account = account
-                        }
-                    }, error: { error in
-                        if let strongSelf = self, let controller = controller {
-                            controller.inProgress = false
-                            
-                            let text: String
-                            var actions: [TextAlertAction] = []
-                            switch error {
-                                case .limitExceeded:
-                                    text = strongSelf.presentationData.strings.Login_CodeFloodError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
-                                case .invalidPhoneNumber:
-                                    text = strongSelf.presentationData.strings.Login_InvalidPhoneError
-                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
-                                        guard let strongSelf = self, let controller = controller else {
-                                            return
-                                        }
-                                        let formattedNumber = formatPhoneNumber(number)
-                                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-                                        let systemVersion = UIDevice.current.systemVersion
-                                        let locale = Locale.current.identifier
-                                        let carrier = CTCarrier()
-                                        let mnc = carrier.mobileNetworkCode ?? "none"
-                                        
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
-                                    }))
-                                case .phoneLimitExceeded:
-                                    text = strongSelf.presentationData.strings.Login_PhoneFloodError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
-                                case .phoneBanned:
-                                    text = strongSelf.presentationData.strings.Login_PhoneBannedError
-                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
-                                        guard let strongSelf = self, let controller = controller else {
-                                            return
-                                        }
-                                        let formattedNumber = formatPhoneNumber(number)
-                                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-                                        let systemVersion = UIDevice.current.systemVersion
-                                        let locale = Locale.current.identifier
-                                        let carrier = CTCarrier()
-                                        let mnc = carrier.mobileNetworkCode ?? "none"
-                                        
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
-                                    }))
-                                case let .generic(info):
-                                    text = strongSelf.presentationData.strings.Login_UnknownError
-                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
-                                        guard let strongSelf = self, let controller = controller else {
-                                            return
-                                        }
-                                        let formattedNumber = formatPhoneNumber(number)
-                                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-                                        let systemVersion = UIDevice.current.systemVersion
-                                        let locale = Locale.current.identifier
-                                        let carrier = CTCarrier()
-                                        let mnc = carrier.mobileNetworkCode ?? "none"
-                                        let errorString: String
-                                        if let (code, description) = info {
-                                            errorString = "\(code): \(description)"
-                                        } else {
-                                            errorString = "unknown"
-                                        }
-                                        
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).string, from: controller)
-                                    }))
-                                case .timeout:
-                                    text = strongSelf.presentationData.strings.Login_NetworkError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
-                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
-                                        guard let strongSelf = self, let controller = controller else {
-                                            return
-                                        }
-                                        controller.present(strongSelf.sharedContext.makeProxySettingsController(sharedContext: strongSelf.sharedContext, account: strongSelf.account), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                                    }))
-                            }
-                            (controller.navigationController as? NavigationController)?.presentOverlay(controller: standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), inGlobal: true, blockInteraction: true)
-                            
-                            controller.dismissConfirmation()
-                        }
-                    }))
+                guard let self else {
+                    return
                 }
+                let authorizationPushConfiguration = self.sharedContext.authorizationPushConfiguration
+                |> take(1)
+                |> timeout(2.0, queue: .mainQueue(), alternate: .single(nil))
+                let _ = (authorizationPushConfiguration
+                |> deliverOnMainQueue).start(next: { [weak self] authorizationPushConfiguration in
+                    if let strongSelf = self {
+                        controller?.inProgress = true
+                        strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, pushNotificationConfiguration: authorizationPushConfiguration, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream, syncContacts: syncContacts, forcedPasswordSetupNotice: { value in
+                            guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
+                                return nil
+                            }
+                            return (ApplicationSpecificNotice.forcedPasswordSetupKey(), entry)
+                        }) |> deliverOnMainQueue).start(next: { [weak self] result in
+                            if let strongSelf = self {
+                                switch result {
+                                case let .sentCode(account):
+                                    controller?.inProgress = false
+                                    strongSelf.account = account
+                                case .loggedIn:
+                                    break
+                                }
+                            }
+                        }, error: { error in
+                            if let strongSelf = self, let controller = controller {
+                                controller.inProgress = false
+                                
+                                let text: String
+                                var actions: [TextAlertAction] = []
+                                switch error {
+                                    case .limitExceeded:
+                                        text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                        actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                    case .invalidPhoneNumber:
+                                        text = strongSelf.presentationData.strings.Login_InvalidPhoneError
+                                        actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                        actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                            guard let strongSelf = self, let controller = controller else {
+                                                return
+                                            }
+                                            let formattedNumber = formatPhoneNumber(number)
+                                            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                            let systemVersion = UIDevice.current.systemVersion
+                                            let locale = Locale.current.identifier
+                                            let carrier = CTCarrier()
+                                            let mnc = carrier.mobileNetworkCode ?? "none"
+                                            
+                                            strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
+                                        }))
+                                    case .phoneLimitExceeded:
+                                        text = strongSelf.presentationData.strings.Login_PhoneFloodError
+                                        actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                    case .phoneBanned:
+                                        text = strongSelf.presentationData.strings.Login_PhoneBannedError
+                                        actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                        actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                            guard let strongSelf = self, let controller = controller else {
+                                                return
+                                            }
+                                            let formattedNumber = formatPhoneNumber(number)
+                                            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                            let systemVersion = UIDevice.current.systemVersion
+                                            let locale = Locale.current.identifier
+                                            let carrier = CTCarrier()
+                                            let mnc = carrier.mobileNetworkCode ?? "none"
+                                            
+                                            strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
+                                        }))
+                                    case let .generic(info):
+                                        text = strongSelf.presentationData.strings.Login_UnknownError
+                                        actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                        actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                            guard let strongSelf = self, let controller = controller else {
+                                                return
+                                            }
+                                            let formattedNumber = formatPhoneNumber(number)
+                                            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                            let systemVersion = UIDevice.current.systemVersion
+                                            let locale = Locale.current.identifier
+                                            let carrier = CTCarrier()
+                                            let mnc = carrier.mobileNetworkCode ?? "none"
+                                            let errorString: String
+                                            if let (code, description) = info {
+                                                errorString = "\(code): \(description)"
+                                            } else {
+                                                errorString = "unknown"
+                                            }
+                                            
+                                            strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).string, from: controller)
+                                        }))
+                                    case .timeout:
+                                        text = strongSelf.presentationData.strings.Login_NetworkError
+                                        actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
+                                        actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
+                                            guard let strongSelf = self, let controller = controller else {
+                                                return
+                                            }
+                                            controller.present(strongSelf.sharedContext.makeProxySettingsController(sharedContext: strongSelf.sharedContext, account: strongSelf.account), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        }))
+                                }
+                                (controller.navigationController as? NavigationController)?.presentOverlay(controller: standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), inGlobal: true, blockInteraction: true)
+                                
+                                controller.dismissConfirmation()
+                            }
+                        }))
+                    }
+                })
             }
         }
         controller.updateData(countryCode: countryCode, countryName: nil, number: number)
@@ -458,7 +477,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                 } else {
                     controller?.inProgress = true
-                    strongSelf.actionDisposable.set((resendAuthorizationCode(account: strongSelf.account)
+                    strongSelf.actionDisposable.set((resendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream)
                     |> deliverOnMainQueue).start(next: { result in
                         controller?.inProgress = false
                     }, error: { error in
@@ -935,7 +954,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 }
                             }
                             
-                            let signal = TGMediaVideoConverter.convert(avatarAsset, adjustments: avatarAdjustments, watcher: nil, entityRenderer: entityRenderer)!
+                            let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                            let signal = TGMediaVideoConverter.convert(avatarAsset, adjustments: avatarAdjustments, path: tempFile.path, watcher: nil, entityRenderer: entityRenderer)!
                             
                             let signalDisposable = signal.start(next: { next in
                                 if let result = next as? TGMediaVideoConversionResult {
@@ -945,6 +965,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                             account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
+                                            
+                                            EngineTempBox.shared.dispose(tempFile)
                                         }
                                     }
                                     subscriber.putCompletion()
@@ -1098,7 +1120,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         let wasEmpty = self.viewControllers.isEmpty
         super.setViewControllers(viewControllers, animated: animated)
         if wasEmpty {
-            self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            if self.topViewController is AuthorizationSequenceSplashController {
+            } else {
+                self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
         }
         if !self.didSetReady {
             self.didSetReady = true
@@ -1131,7 +1156,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     
     private func animateIn() {
-        self.view.layer.animatePosition(from: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), to: self.view.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        if !self.otherAccountPhoneNumbers.1.isEmpty {
+            self.view.layer.animatePosition(from: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), to: self.view.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        } else {
+            if let splashController = self.topViewController as? AuthorizationSequenceSplashController {
+                splashController.animateIn()
+            }
+        }
     }
     
     private func animateOut(completion: (() -> Void)? = nil) {

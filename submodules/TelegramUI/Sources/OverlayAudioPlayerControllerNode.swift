@@ -84,7 +84,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, sendMessage: { _ in
         }, sendSticker: { _, _, _, _, _, _, _, _, _ in
             return false
-        }, sendEmoji: { _, _ in
+        }, sendEmoji: { _, _, _ in
         }, sendGif: { _, _, _, _, _ in
             return false
         }, sendBotContextResultAsGif: { _, _, _, _, _ in
@@ -158,6 +158,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _ in
+        }, openRequestedPeerSelection: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

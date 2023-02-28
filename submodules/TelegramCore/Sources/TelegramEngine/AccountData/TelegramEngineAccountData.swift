@@ -39,12 +39,12 @@ public extension TelegramEngine {
             return _internal_unregisterNotificationToken(account: self.account, token: token, type: type, otherAccountUserIds: otherAccountUserIds)
         }
 
-        public func registerNotificationToken(token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Never, NoError> {
+        public func registerNotificationToken(token: Data, type: NotificationTokenType, sandbox: Bool, otherAccountUserIds: [PeerId.Id], excludeMutedChats: Bool) -> Signal<Bool, NoError> {
             return _internal_registerNotificationToken(account: self.account, token: token, type: type, sandbox: sandbox, otherAccountUserIds: otherAccountUserIds, excludeMutedChats: excludeMutedChats)
         }
 
-        public func updateAccountPhoto(resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fallback: false, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+        public func updateAccountPhoto(resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, markup: UploadPeerPhotoMarkup?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, fallback: false, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
         }
 
         public func updatePeerPhotoExisting(reference: TelegramMediaImageReference) -> Signal<TelegramMediaImage?, NoError> {
@@ -55,8 +55,8 @@ public extension TelegramEngine {
             return _internal_removeAccountPhoto(account: self.account, reference: reference, fallback: false)
         }
         
-        public func updateFallbackPhoto(resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
-            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, fallback: true, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+        public func updateFallbackPhoto(resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, markup: UploadPeerPhotoMarkup?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+            return _internal_updateAccountPhoto(account: self.account, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, fallback: true, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
         }
 
         public func removeFallbackPhoto(reference: TelegramMediaImageReference?) -> Signal<Void, NoError> {

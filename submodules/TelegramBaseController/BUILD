@@ -24,6 +24,9 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/TelegramCallsUI:TelegramCallsUI",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/TooltipUI:TooltipUI",
+        "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
     ],
     visibility = [
         "//visibility:public",

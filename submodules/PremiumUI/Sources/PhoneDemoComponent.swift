@@ -37,6 +37,35 @@ private var phoneBorderImage = {
     })
 }()
 
+private var phoneBorderImage14 = {
+    return generateImage(phoneSize, rotatedContext: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
+        try? drawSvgPath(context, path: "M203.506,7.0 C211.281,0.0 217.844,0.0 223.221,0.439253 C228.851,0.899605 234.245,1.90219 239.377,4.51905 C247.173,8.49411 253.512,14.8369 257.484,22.6384 C260.099,27.7743 261.101,33.1718 261.561,38.8062 C262.0,44.1865 262.0,50.754 262.0,58.5351 V480.465 C262.0,488.246 262.0,494.813 261.561,500.194 C261.101,505.828 260.099,511.226 257.484,516.362 C253.512,524.163 247.173,530.506 239.377,534.481 C234.245,537.098 228.851,538.1 223.221,538.561 C217.844,539.0 211.281,539.0 203.506,539.0 H58.4942 C50.7185,539 44.1556,539.0 38.7791,538.561 C33.1486,538.1 27.7549,537.098 22.6226,534.481 C14.8265,530.506 8.48817,524.163 4.51589,516.362 C1.90086,511.226 0.898976,505.828 0.438946,500.194 C0.0,494.813 0.0,488.246 7.0,480.465 V58.5354 C0.0,50.7541 0.0,44.1866 0.438946,38.8062 C0.898976,33.1718 1.90086,27.7743 4.51589,22.6384 C8.48817,14.8369 14.8265,8.49411 22.6226,4.51905 C27.7549,1.90219 33.1486,0.899605 38.7791,0.439253 C44.1557,-0.0 50.7187,0.0 58.4945,7.0 H203.506 Z ")
+        context.setBlendMode(.copy)
+        context.fill(CGRect(origin: CGPoint(x: 43.0, y: UIScreenPixel), size: CGSize(width: 175.0, height: 8.0)))
+        context.fill(CGRect(origin: CGPoint(x: UIScreenPixel, y: 43.0), size: CGSize(width: 8.0, height: 452.0)))
+        
+        context.setBlendMode(.clear)
+        try? drawSvgPath(context, path: "M15.3737,28.1746 C12.1861,34.4352 12.1861,42.6307 12.1861,59.0217 V479.978 C12.1861,496.369 12.1861,504.565 15.3737,510.825 C18.1777,516.332 22.6518,520.81 28.1549,523.615 C34.4111,526.805 42.6009,526.805 58.9805,526.805 H203.02 C219.399,526.805 227.589,526.805 233.845,523.615 C239.348,520.81 243.822,516.332 246.626,510.825 C249.814,504.565 249.814,496.369 249.814,479.978 V59.0217 C249.814,42.6307 249.814,34.4352 246.626,28.1746 C243.822,22.6677 239.348,18.1904 233.845,15.3845 C227.589,12.1946 219.399,12.1946 203.02,12.1946 H58.9805 C42.6009,12.1946 34.4111,12.1946 28.1549,15.3845 C22.6518,18.1904 18.1777,22.6677 15.3737,28.1746 Z ")
+        
+        context.setBlendMode(.copy)
+        context.setFillColor(UIColor.black.cgColor)
+        try? drawSvgPath(context, path: "M222.923,4.08542 C217.697,3.65815 211.263,3.65823 203.378,3.65833 H58.6219 C50.7366,3.65823 44.3026,3.65815 39.0768,4.08542 C33.6724,4.52729 28.8133,5.46834 24.2823,7.77863 C17.1741,11.4029 11.395,17.1861 7.77325,24.2992 C5.46457,28.8334 4.52418,33.6959 4.08262,39.1041 C3.65565,44.3336 3.65573,50.7721 3.65583,58.6628 V480.337 C3.65573,488.228 3.65565,494.666 4.08262,499.896 C4.52418,505.304 5.46457,510.167 7.77325,514.701 C11.395,521.814 17.1741,527.597 24.2823,531.221 C28.8133,533.532 33.6724,534.473 39.0768,534.915 C44.3028,535.342 50.737,535.342 58.6226,535.342 H203.377 C211.263,535.342 217.697,535.342 222.923,534.915 C228.328,534.473 233.187,533.532 237.718,531.221 C244.826,527.597 250.605,521.814 254.227,514.701 C256.535,510.167 257.476,505.304 257.917,499.896 C258.344,494.667 258.344,488.228 258.344,480.338 V58.6617 C258.344,50.7714 258.344,44.3333 257.917,39.1041 C257.476,33.6959 256.535,28.8334 254.227,24.2992 C250.605,17.1861 244.826,11.4029 237.718,7.77863 C233.187,5.46834 228.328,4.52729 222.923,4.08542 Z ")
+        
+        context.setBlendMode(.clear)
+        try? drawSvgPath(context, path: "M12.1861,59.0217 C12.1861,42.6306 12.1861,34.4351 15.3737,28.1746 C18.1777,22.6676 22.6519,18.1904 28.1549,15.3844 C34.4111,12.1945 42.6009,12.1945 58.9805,12.1945 H76.6868 H162.561 L185.316,12.1945 H203.02 C219.399,12.1945 227.589,12.1945 233.845,15.3844 C239.348,18.1904 243.822,22.6676 246.626,28.1746 C249.814,34.4351 249.814,42.6306 249.814,59.0217 V479.978 C249.814,496.369 249.814,504.565 246.626,510.825 C243.822,516.332 239.348,520.81 233.845,523.615 C227.589,526.805 219.399,526.805 203.02,526.805 H58.9805 C42.6009,526.805 34.4111,526.805 28.1549,523.615 C22.6519,520.81 18.1777,516.332 15.3737,510.825 C12.1861,504.565 12.1861,496.369 12.1861,479.978 V59.0217 Z ")
+        
+        context.setBlendMode(.copy)
+        
+        let islandSize = CGSize(width: 76.0, height: 23.0)
+        let island = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: floor((size.width - islandSize.width) / 2.0), y: 17.0), size: islandSize), cornerRadius: islandSize.height / 2.0)
+        context.addPath(island.cgPath)
+        context.fillPath()
+    })
+}()
+
 private var phoneBorderMaskImage = {
     generateImage(phoneSize, rotatedContext: { size, context in
         context.clear(CGRect(origin: .zero, size: size))
@@ -47,6 +76,19 @@ private var phoneBorderMaskImage = {
         context.translateBy(x: 12.0, y: 12.0 - UIScreenPixel)
         
         try? drawSvgPath(context, path: "M1.17188,47.3156 C1.17188,39.1084 1.17265,33.013 1.56706,28.1857 C1.96052,23.3701 2.74071,19.9044 4.25094,16.9404 C6.95936,11.6248 11.2811,7.30311 16.5966,4.59469 C19.5606,3.08446 23.0263,2.30427 27.842,1.91081 C32.6693,1.5164 38.7646,1.51562 46.9719,1.51562 H64.6745 H64.6803 L64.8409,1.51754 C64.8419,1.51756 64.8429,1.51758 64.8439,1.5176 C66.0418,1.53925 66.7261,1.73731 67.3042,2.04519 L67.7736,1.16377 L67.3042,2.04519 C67.9232,2.37486 68.4036,2.8529 68.7364,3.47024 C69.0069,3.97209 69.1915,4.54972 69.2551,5.46352 C69.3102,10.9333 69.9419,13.1793 71.16,15.457 C72.4216,17.816 74.2789,19.6733 76.6379,20.9349 C79.0269,22.2126 81.3803,22.8438 87.4372,22.8438 H150.565 C156.622,22.8438 158.976,22.2126 161.364,20.9349 C163.723,19.6733 165.581,17.816 166.842,15.457 C168.061,13.1793 168.692,10.9334 168.747,5.46231 C168.811,4.54985 168.995,3.97217 169.266,3.47025 C169.599,2.8529 170.079,2.37486 170.698,2.04519 C171.276,1.7373 171.961,1.53925 173.159,1.5176 C173.16,1.51758 173.161,1.51756 173.162,1.51754 L173.322,1.51562 H173.328 H191.028 C199.235,1.51562 205.331,1.5164 210.158,1.91081 C214.974,2.30427 218.439,3.08446 221.403,4.59469 C226.719,7.30311 231.041,11.6248 233.749,16.9404 C235.259,19.9044 236.039,23.3701 236.433,28.1857 C236.827,33.013 236.828,39.1084 236.828,47.3156 V468.028 C236.828,476.235 236.827,482.331 236.433,487.158 C236.039,491.974 235.259,495.439 233.749,498.403 C231.041,503.719 226.719,508.041 221.403,510.749 C218.439,512.259 214.974,513.039 210.158,513.433 C205.331,513.827 199.235,513.828 191.028,513.828 H46.9719 C38.7646,513.828 32.6693,513.827 27.842,513.433 C23.0263,513.039 19.5606,512.259 16.5966,510.749 C11.2811,508.041 6.95936,503.719 4.25094,498.403 C2.74071,495.439 1.96052,491.974 1.56706,487.158 C1.17265,482.331 1.17188,476.235 1.17188,468.028 V47.3156 S ")
+    })
+}()
+
+private var phoneBorderMaskImage14 = {
+    generateImage(phoneSize, rotatedContext: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        context.setStrokeColor(UIColor.white.cgColor)
+        context.setLineWidth(2.0)
+        
+        context.translateBy(x: 12.0, y: 12.0 - UIScreenPixel)
+        
+        try? drawSvgPath(context, path: "  M1.17188,47.3156 C1.17188,39.1084 1.17265,33.013 1.56706,28.1857 C1.96052,23.3701 2.74071,19.9044 4.25094,16.9404 C6.95936,11.6248 11.2811,7.30311 16.5966,4.59469 C19.5606,3.08446 23.0263,2.30427 27.842,1.91081 C32.6693,1.5164 38.7646,1.51562 46.9719,1.51562 H64.6745 H64.6803 L64.8409,1.51754 L173.322,1.51562 H173.328 H191.028 C199.235,1.51562 205.331,1.5164 210.158,1.91081 C214.974,2.30427 218.439,3.08446 221.403,4.59469 C226.719,7.30311 231.041,11.6248 233.749,16.9404 C235.259,19.9044 236.039,23.3701 236.433,28.1857 C236.827,33.013 236.828,39.1084 236.828,47.3156 V468.028 C236.828,476.235 236.827,482.331 236.433,487.158 C236.039,491.974 235.259,495.439 233.749,498.403 C231.041,503.719 226.719,508.041 221.403,510.749 C218.439,512.259 214.974,513.039 210.158,513.433 C205.331,513.827 199.235,513.828 191.028,513.828 H46.9719 C38.7646,513.828 32.6693,513.827 27.842,513.433 C23.0263,513.039 19.5606,512.259 16.5966,510.749 C11.2811,508.041 6.95936,503.719 4.25094,498.403 C2.74071,495.439 1.96052,491.974 1.56706,487.158 C1.17265,482.331 1.17188,476.235 1.17188,468.028 V47.3156 S ")
     })
 }()
 
@@ -96,6 +138,21 @@ private final class PhoneView: UIView {
         }
     }
     
+    var model: PhoneDemoComponent.Model = .notch {
+        didSet {
+            if self.model != oldValue {
+                switch self.model {
+                case .notch:
+                    self.borderView.image = phoneBorderImage
+                    self.shimmerBorderView.image = phoneBorderMaskImage
+                case .island:
+                    self.borderView.image = phoneBorderImage14
+                    self.shimmerBorderView.image = phoneBorderMaskImage14
+                }
+            }
+        }
+    }
+    
     override init(frame: CGRect) {
         self.contentContainerView = UIView()
         self.contentContainerView.clipsToBounds = true
@@ -141,7 +198,7 @@ private final class PhoneView: UIView {
         self.frontShimmerView.mask = self.shimmerMaskView
         self.frontShimmerView.addSubview(self.shimmerEffectView)
         
-        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.35), gradientSize: 60.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
+        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.45), gradientSize: 32.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
         self.backShimmerEffectView.layer.compositingFilter = "overlayBlendMode"
         
         self.shimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.5), gradientSize: 16.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
@@ -174,7 +231,8 @@ private final class PhoneView: UIView {
             onlyFullSizeThumbnail: false,
             continuePlayingWithoutSoundOnLostAudioSession: false,
             placeholderColor: .darkGray,
-            hintDimensions: CGSize(width: 1170, height: 1754)
+            hintDimensions: CGSize(width: 1170, height: 1754),
+            storeAfterDownload: nil
         )
         let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
         videoNode.canAttachContent = true
@@ -280,8 +338,8 @@ private final class PhoneView: UIView {
             self.shimmerMaskView.frame = phoneBounds
             self.shimmerBorderView.frame = phoneBounds
             
-            self.backShimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 12.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 25.0, height: phoneBounds.height))
-            self.shimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 12.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 25.0, height: phoneBounds.height))
+            self.backShimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 8.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 17.0, height: phoneBounds.height))
+            self.shimmerEffectView.updateAbsoluteRect(CGRect(origin: CGPoint(x: phoneBounds.width * 8.0, y: 0.0), size: phoneBounds.size), within: CGSize(width: phoneBounds.width * 17.0, height: phoneBounds.height))
             
             let notchHeight: CGFloat = 20.0
             if let starImage = self.shimmerStarView.image {
@@ -312,21 +370,30 @@ final class PhoneDemoComponent: Component {
         case fasterStars
         case badgeStars
         case emoji
+        case hello
+    }
+    
+    enum Model {
+        case notch
+        case island
     }
     
     let context: AccountContext
     let position: Position
+    let model: Model
     let videoFile: TelegramMediaFile?
     let decoration: BackgroundDecoration
     
     public init(
         context: AccountContext,
         position: PhoneDemoComponent.Position,
+        model: Model = .notch,
         videoFile: TelegramMediaFile?,
         decoration: BackgroundDecoration = .none
     ) {
         self.context = context
         self.position = position
+        self.model = model
         self.videoFile = videoFile
         self.decoration = decoration
     }
@@ -336,6 +403,9 @@ final class PhoneDemoComponent: Component {
             return false
         }
         if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.model != rhs.model {
             return false
         }
         if lhs.videoFile != rhs.videoFile {
@@ -409,6 +479,7 @@ final class PhoneDemoComponent: Component {
             self.containerView.frame = CGRect(origin: .zero, size: availableSize)
             self.decorationContainerView.frame = CGRect(origin: CGPoint(x: -availableSize.width * 0.5, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             self.phoneView.bounds = CGRect(origin: .zero, size: phoneSize)
+            self.phoneView.model = component.model
             
             switch component.decoration {
                 case .none:
@@ -458,6 +529,13 @@ final class PhoneDemoComponent: Component {
                     if let _ = self.decorationView as? EmojiStarsView {
                     } else {
                         let starsView = EmojiStarsView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
+                    }
+                case .hello:
+                    if let _ = self.decorationView as? HelloView {
+                    } else {
+                        let starsView = HelloView(frame: self.decorationContainerView.bounds)
                         self.decorationView = starsView
                         self.decorationContainerView.addSubview(starsView)
                     }

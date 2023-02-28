@@ -79,7 +79,7 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
         Queue.mainQueue().after(0.1) {
             self.controllerNode.updateStickerPack(self.stickerPack, verifiedStickers: Set(), declinedStickers: Set(), uploadedStickerResources: [:])
             
-            if case .image = self.stickerPack.type {
+            if case .image = self.stickerPack.type.contentType {
             } else {
                 let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] peer in

@@ -312,6 +312,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     }
                     
                     self.button.setTitle(title, with: Font.regular(17.0), with: color, for: [])
+                    self.button.accessibilityLabel = title
                 } else {
                     self.action = nil
                 }

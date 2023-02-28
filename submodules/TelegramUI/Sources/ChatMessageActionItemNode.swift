@@ -243,7 +243,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.insertSubnode(imageNode, at: 0)
                                     strongSelf.insertSubnode(strongSelf.mediaBackgroundNode, at: 0)
                                 }
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).start())
                                 let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoads)
 
                                 imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)
@@ -263,7 +263,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if let image = image, let video = image.videoRepresentations.last, let id = image.id?.id {
                                 let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                                let videoContent = NativeVideoContent(id: .profileVideo(id, "action"), userLocation: .peer(item.message.id.peerId), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                                let videoContent = NativeVideoContent(id: .profileVideo(id, "action"), userLocation: .peer(item.message.id.peerId), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, storeAfterDownload: nil)
                                 if videoContent.id != strongSelf.videoContent?.id {
                                     let mediaManager = item.context.sharedContext.mediaManager
                                     let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
@@ -479,7 +479,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 return .url(url: url, concealed: concealed)
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                return .peerMention(peerMention.peerId, peerMention.mention)
+                return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: true)
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {

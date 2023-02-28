@@ -1,4 +1,46 @@
 public extension Api {
+    indirect enum InputFolderPeer: TypeConstructorDescription {
+        case inputFolderPeer(peer: Api.InputPeer, folderId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputFolderPeer(let peer, let folderId):
+                    if boxed {
+                        buffer.appendInt32(-70073706)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputFolderPeer(let peer, let folderId):
+                return ("inputFolderPeer", [("peer", peer as Any), ("folderId", folderId as Any)])
+    }
+    }
+    
+        public static func parse_inputFolderPeer(_ reader: BufferReader) -> InputFolderPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputFolderPeer.inputFolderPeer(peer: _1!, folderId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum InputGame: TypeConstructorDescription {
         case inputGameID(id: Int64, accessHash: Int64)
         case inputGameShortName(botId: Api.InputUser, shortName: String)
@@ -952,116 +994,6 @@ public extension Api {
         }
         public static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyUsers
-        }
-    
-    }
-}
-public extension Api {
-    enum InputPaymentCredentials: TypeConstructorDescription {
-        case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
-        case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
-        case inputPaymentCredentialsGooglePay(paymentToken: Api.DataJSON)
-        case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputPaymentCredentials(let flags, let data):
-                    if boxed {
-                        buffer.appendInt32(873977640)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    data.serialize(buffer, true)
-                    break
-                case .inputPaymentCredentialsApplePay(let paymentData):
-                    if boxed {
-                        buffer.appendInt32(178373535)
-                    }
-                    paymentData.serialize(buffer, true)
-                    break
-                case .inputPaymentCredentialsGooglePay(let paymentToken):
-                    if boxed {
-                        buffer.appendInt32(-1966921727)
-                    }
-                    paymentToken.serialize(buffer, true)
-                    break
-                case .inputPaymentCredentialsSaved(let id, let tmpPassword):
-                    if boxed {
-                        buffer.appendInt32(-1056001329)
-                    }
-                    serializeString(id, buffer: buffer, boxed: false)
-                    serializeBytes(tmpPassword, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputPaymentCredentials(let flags, let data):
-                return ("inputPaymentCredentials", [("flags", flags as Any), ("data", data as Any)])
-                case .inputPaymentCredentialsApplePay(let paymentData):
-                return ("inputPaymentCredentialsApplePay", [("paymentData", paymentData as Any)])
-                case .inputPaymentCredentialsGooglePay(let paymentToken):
-                return ("inputPaymentCredentialsGooglePay", [("paymentToken", paymentToken as Any)])
-                case .inputPaymentCredentialsSaved(let id, let tmpPassword):
-                return ("inputPaymentCredentialsSaved", [("id", id as Any), ("tmpPassword", tmpPassword as Any)])
-    }
-    }
-    
-        public static func parse_inputPaymentCredentials(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPaymentCredentials.inputPaymentCredentials(flags: _1!, data: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPaymentCredentialsApplePay(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsApplePay(paymentData: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPaymentCredentialsGooglePay(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsGooglePay(paymentToken: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPaymentCredentialsSaved(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsSaved(id: _1!, tmpPassword: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

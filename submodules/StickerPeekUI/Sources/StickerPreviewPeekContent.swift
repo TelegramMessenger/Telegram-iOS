@@ -29,7 +29,7 @@ public enum StickerPreviewPeekItem: Equatable {
 }
 
 public final class StickerPreviewPeekContent: PeekControllerContent {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     public let item: StickerPreviewPeekItem
@@ -37,8 +37,8 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     let menu: [ContextMenuItem]
     let openPremiumIntro: () -> Void
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.item = item
@@ -64,7 +64,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     }
     
     public func node() -> PeekControllerContentNode & ASDisplayNode {
-        return StickerPreviewPeekContentNode(account: self.account, item: self.item)
+        return StickerPreviewPeekContentNode(context: self.context, item: self.item, theme: self.theme)
     }
     
     public func topAccessoryNode() -> ASDisplayNode? {
@@ -73,7 +73,9 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     
     public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isLocked {
-            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, proceed: self.openPremiumIntro)
+            let isEmoji = self.item.file.isCustomEmoji
+            
+            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, isEmoji: isEmoji, proceed: self.openPremiumIntro)
         } else {
             return nil
         }
@@ -89,7 +91,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
 }
 
 public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
-    private let account: Account
+    private let context: AccountContext
     private let item: StickerPreviewPeekItem
     
     private var textNode: ASTextNode
@@ -103,8 +105,8 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     
     private let _ready = Promise<Bool>()
     
-    init(account: Account, item: StickerPreviewPeekItem) {
-        self.account = account
+    init(context: AccountContext, item: StickerPreviewPeekItem, theme: PresentationTheme) {
+        self.context = context
         self.item = item
         
         self.textNode = ASTextNode()
@@ -123,16 +125,26 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.animationNode = animationNode
             
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
+            let fitSize: CGSize
+            if item.file.isCustomEmoji {
+                fitSize = CGSize(width: 200.0, height: 200.0)
+            } else {
+                fitSize = CGSize(width: 400.0, height: 400.0)
+            }
+            let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
             
-            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: isPremiumSticker ? .once : .loop, mode: .direct(cachePathPrefix: nil))
+            if item.file.isCustomTemplateEmoji {
+                animationNode.dynamicColor = theme.list.itemPrimaryTextColor
+            }
+            
+            animationNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: isPremiumSticker ? .once : .loop, mode: .direct(cachePathPrefix: nil))
             animationNode.visibility = true
             animationNode.addSubnode(self.textNode)
             
             if isPremiumSticker, let effect = item.file.videoThumbnails.first {
-                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: item.file), resource: effect.resource).start())
+                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: item.file), resource: effect.resource).start())
                 
-                let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
+                let source = AnimatedStickerResourceSource(account: context.account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
                 additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 additionalAnimationNode.visibility = true
@@ -143,7 +155,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.animationNode = nil
         }
         
-        self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: item.file, small: false, fetched: true))
+        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: item.file, small: false, fetched: true))
         
         super.init()
         
@@ -197,7 +209,9 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let boundingSize: CGSize
-        if let _ = self.additionalAnimationNode {
+        if self.item.file.isCustomEmoji {
+            boundingSize = CGSize(width: 120.0, height: 120.0)
+        } else if let _ = self.additionalAnimationNode {
             boundingSize = CGSize(width: 240.0, height: 240.0).fitted(size)
         } else {
             boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
@@ -219,11 +233,11 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing - topOffset), size: imageSize)
+            var imageFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0), y: textSize.height + textSpacing - topOffset), size: imageSize)
             var centerOffset: CGFloat = 0.0
             if self.item.file.isPremiumSticker {
                 let originalImageFrame = imageFrame
-                imageFrame.origin.x = size.width - imageFrame.width - 18.0
+                imageFrame.origin.x = min(imageFrame.minX + imageFrame.width * 0.1, size.width - imageFrame.width - 18.0)
                 centerOffset = imageFrame.minX - originalImageFrame.minX
             }
             self.imageNode.frame = imageFrame
@@ -239,7 +253,11 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)
             
-            return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
+            if self.item.file.isCustomEmoji {
+                return CGSize(width: boundingSize.width, height: imageFrame.height)
+            } else {
+                return CGSize(width: boundingSize.width, height: imageFrame.height + textSize.height + textSpacing)
+            }
         } else {
             return CGSize(width: size.width, height: 10.0)
         }
@@ -254,17 +272,17 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
     let proceedButton: SolidRoundedButtonNode
     let cancelButton: HighlightableButtonNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings, proceed: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, isEmoji: Bool, proceed: @escaping () -> Void) {
         self.proceed = proceed
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: isEmoji ? strings.Premium_Stickers_Description : strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
         self.textNode.lineSpacing = 0.1
         
-        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, theme: SolidRoundedButtonTheme(
+        self.proceedButton = SolidRoundedButtonNode(title: isEmoji ? strings.Premium_Emoji_Proceed: strings.Premium_Stickers_Proceed, theme: SolidRoundedButtonTheme(
             backgroundColor: .white,
             backgroundColors: [
             UIColor(rgb: 0x0077ff),

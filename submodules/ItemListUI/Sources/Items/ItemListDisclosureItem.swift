@@ -375,7 +375,11 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             
             var additionalDetailLabelInfo: (TextNodeLayout, () -> TextNode)?
             if let additionalDetailLabel = item.additionalDetailLabel {
-                additionalDetailLabelInfo = makeAdditionalDetailLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: additionalDetailLabel, font: detailFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - additionalTextRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                var detailRightInset: CGFloat = 20.0 + params.rightInset + additionalTextRightInset
+                if labelLayout.size.width != 0 {
+                    detailRightInset += labelLayout.size.width + 12.0
+                }
+                additionalDetailLabelInfo = makeAdditionalDetailLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: additionalDetailLabel, font: detailFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - detailRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             let verticalInset: CGFloat
@@ -426,9 +430,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.label
                     if item.enabled {
-                        strongSelf.activateArea.accessibilityTraits = []
+                        strongSelf.activateArea.accessibilityTraits = [.button]
                     } else {
-                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                        strongSelf.activateArea.accessibilityTraits = [.button, .notEnabled]
                     }
                     
                     if let icon = item.icon {

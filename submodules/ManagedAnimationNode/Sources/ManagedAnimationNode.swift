@@ -145,7 +145,7 @@ open class ManagedAnimationNode: ASDisplayNode {
     public let intrinsicSize: CGSize
     
     private let imageNode: ASImageNode
-    private let displayLink: CADisplayLink
+    private let displayLink: SharedDisplayLinkDriver.Link
     
     public var imageUpdated: ((UIImage) -> Void)?
     public var image: UIImage? {
@@ -179,18 +179,13 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
         
         var displayLinkUpdate: (() -> Void)?
-        self.displayLink = CADisplayLink(target: DisplayLinkTarget {
+        self.displayLink = SharedDisplayLinkDriver.shared.add {
             displayLinkUpdate?()
-        }, selector: #selector(DisplayLinkTarget.event))
-        if #available(iOS 10.0, *) {
-            self.displayLink.preferredFramesPerSecond = 60
         }
         
         super.init()
         
         self.addSubnode(self.imageNode)
-        
-        self.displayLink.add(to: RunLoop.main, forMode: .common)
         
         displayLinkUpdate = { [weak self] in
             self?.updateAnimation()
@@ -199,6 +194,7 @@ open class ManagedAnimationNode: ASDisplayNode {
     
     open func advanceState() {
         guard !self.trackStack.isEmpty else {
+            self.displayLink.isPaused = true
             return
         }
         
@@ -211,6 +207,7 @@ open class ManagedAnimationNode: ASDisplayNode {
         }
         
         self.didTryAdvancingState = false
+        self.displayLink.isPaused = false
     }
     
     public func updateAnimation() {
@@ -219,6 +216,7 @@ open class ManagedAnimationNode: ASDisplayNode {
         }
         
         guard let state = self.state else {
+            self.displayLink.isPaused = true
             return
         }
         
