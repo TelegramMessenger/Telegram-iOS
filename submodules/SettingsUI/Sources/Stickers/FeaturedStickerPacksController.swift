@@ -123,7 +123,7 @@ private struct FeaturedStickerPacksControllerState: Equatable {
     }
 }
 
-private func featuredStickerPacksControllerEntries(presentationData: PresentationData, state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool], stickerSettings: StickerSettings)  -> [FeaturedStickerPacksEntry] {
+private func featuredStickerPacksControllerEntries(context: AccountContext, presentationData: PresentationData, state: FeaturedStickerPacksControllerState, view: CombinedView, featured: [FeaturedStickerPackItem], unreadPacks: [ItemCollectionId: Bool], stickerSettings: StickerSettings)  -> [FeaturedStickerPacksEntry] {
     var entries: [FeaturedStickerPacksEntry] = []
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView, !featured.isEmpty {
@@ -148,7 +148,7 @@ private func featuredStickerPacksControllerEntries(presentationData: Presentatio
                     countTitle = presentationData.strings.StickerPack_StickerCount(item.info.count)
                 }
                 
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, countTitle, stickerSettings.loopAnimatedStickers, installedPacks.contains(item.info.id)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, unread, item.topItems.first, countTitle, context.sharedContext.energyUsageSettings.loopStickers, installedPacks.contains(item.info.id)))
                 index += 1
             }
         }
@@ -215,7 +215,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.FeaturedStickerPacks_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
             
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: featuredStickerPacksControllerEntries(presentationData: presentationData, state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks, stickerSettings: stickerSettings), style: .blocks, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: featuredStickerPacksControllerEntries(context: context, presentationData: presentationData, state: state, view: view, featured: featured, unreadPacks: initialUnreadPacks, stickerSettings: stickerSettings), style: .blocks, animateChanges: false)
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()

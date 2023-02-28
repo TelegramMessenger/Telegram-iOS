@@ -598,7 +598,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.stickerSettings = stickerSettings
         self.stickerPackUpdated = true
         
-        self.interaction.playAnimatedStickers = stickerSettings.loopAnimatedStickers
+        self.interaction.playAnimatedStickers = self.context.sharedContext.energyUsageSettings.loopStickers
         
         if let _ = self.containerLayout {
             self.dequeueUpdateStickerPack()

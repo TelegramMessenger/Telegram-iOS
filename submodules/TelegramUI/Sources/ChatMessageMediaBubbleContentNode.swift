@@ -100,13 +100,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         
                         if !item.message.containsSecretMedia {
-                            if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
+                            if telegramFile.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayGif {
                                 if case .full = automaticDownload {
                                     automaticPlayback = true
                                 } else {
                                     automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                                 }
-                            } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                            } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
                                 if case .full = automaticDownload {
                                     automaticPlayback = true
                                 } else {
@@ -131,13 +131,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 
                                 if !item.message.containsSecretMedia {
-                                    if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
+                                    if telegramFile.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayGif {
                                         if case .full = automaticDownload {
                                             automaticPlayback = true
                                         } else {
                                             automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                                         }
-                                    } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                                    } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
                                         if case .full = automaticDownload {
                                             automaticPlayback = true
                                         } else {

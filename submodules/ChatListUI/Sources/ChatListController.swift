@@ -201,6 +201,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var plainTitle: String = ""
     
+    private var powerSavingMonitoringDisposable: Disposable?
+    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
             self.chatListDisplayNode.effectiveContainerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
@@ -733,6 +735,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.addMemberDisposable.dispose()
         self.joinForumDisposable.dispose()
         self.actionDisposables.dispose()
+        self.powerSavingMonitoringDisposable?.dispose()
     }
     
     private func updateNavigationMetadata() {
@@ -1610,9 +1613,51 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
+    private static var sharedPreviousPowerSavingEnabled: Bool?
+    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
                 
+        if !self.didAppear {
+            self.powerSavingMonitoringDisposable = (self.context.sharedContext.automaticMediaDownloadSettings
+            |> mapToSignal { settings -> Signal<Bool, NoError> in
+                return automaticEnergyUsageShouldBeOn(settings: settings)
+            }
+            |> distinctUntilChanged).start(next: { [weak self] isPowerSavingEnabled in
+                guard let self else {
+                    return
+                }
+                var previousValueValue: Bool?
+                
+                previousValueValue = ChatListControllerImpl.sharedPreviousPowerSavingEnabled
+                ChatListControllerImpl.sharedPreviousPowerSavingEnabled = isPowerSavingEnabled
+                
+                /*#if DEBUG
+                previousValueValue = false
+                #endif*/
+                
+                if isPowerSavingEnabled != previousValueValue && previousValueValue != nil && isPowerSavingEnabled {
+                    let batteryLevel = UIDevice.current.batteryLevel
+                    if batteryLevel > 0.0 && self.view.window != nil {
+                        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                        let batteryPercentage = Int(batteryLevel * 100.0)
+                        
+                        self.dismissAllUndoControllers()
+                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: "Power Saving mode enabled", text: "\(batteryPercentage)% battery remaining.", customUndoText: "Disable"), elevatedLayout: false, action: { [weak self] action in
+                            if case .undo = action, let self {
+                                let _ = updateMediaDownloadSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
+                                    var settings = settings
+                                    settings.energyUsageSettings.activationThreshold = 0
+                                    return settings
+                                }).start()
+                            }
+                            return false
+                        }), in: .current)
+                    }
+                }
+            })
+        }
+        
         self.didAppear = true
         
         self.chatListDisplayNode.mainContainerNode.updateEnableAdjacentFilterLoading(true)

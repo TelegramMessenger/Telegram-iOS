@@ -4,18 +4,14 @@ import StickerPeekUI
 import TelegramUIPreferences
 
 public struct ChatInterfaceStickerSettings: Equatable {
-    public let loopAnimatedStickers: Bool
-    
-    public init(loopAnimatedStickers: Bool) {
-        self.loopAnimatedStickers = loopAnimatedStickers
+    public init() {
     }
     
     public init(stickerSettings: StickerSettings) {
-        self.loopAnimatedStickers = stickerSettings.loopAnimatedStickers
     }
     
     public static func ==(lhs: ChatInterfaceStickerSettings, rhs: ChatInterfaceStickerSettings) -> Bool {
-        return lhs.loopAnimatedStickers == rhs.loopAnimatedStickers
+        return true
     }
 }
 

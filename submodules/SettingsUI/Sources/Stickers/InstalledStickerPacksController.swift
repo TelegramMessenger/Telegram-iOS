@@ -32,14 +32,13 @@ private final class InstalledStickerPacksControllerArguments {
     let openFeatured: () -> Void
     let openArchived: ([ArchivedStickerPackItem]?) -> Void
     let openSuggestOptions: () -> Void
-    let toggleAnimatedStickers: (Bool) -> Void
     let toggleSuggestAnimatedEmoji: (Bool) -> Void
     let togglePackSelected: (ItemCollectionId) -> Void
     let toggleLargeEmoji: (Bool) -> Void
     let toggleDynamicPackOrder: (Bool) -> Void
     let addPack: (StickerPackCollectionInfo) -> Void
     
-    init(context: AccountContext, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openEmoji: @escaping () -> Void, openQuickReaction: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void, toggleSuggestAnimatedEmoji: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, toggleDynamicPackOrder: @escaping (Bool) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
+    init(context: AccountContext, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openEmoji: @escaping () -> Void, openQuickReaction: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleSuggestAnimatedEmoji: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, toggleDynamicPackOrder: @escaping (Bool) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
         self.context = context
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
@@ -51,7 +50,6 @@ private final class InstalledStickerPacksControllerArguments {
         self.openFeatured = openFeatured
         self.openArchived = openArchived
         self.openSuggestOptions = openSuggestOptions
-        self.toggleAnimatedStickers = toggleAnimatedStickers
         self.toggleSuggestAnimatedEmoji = toggleSuggestAnimatedEmoji
         self.togglePackSelected = togglePackSelected
         self.toggleLargeEmoji = toggleLargeEmoji
@@ -69,7 +67,6 @@ private enum InstalledStickerPacksSection: Int32 {
 
 public enum InstalledStickerPacksEntryTag: ItemListItemTag {
     case suggestOptions
-    case loopAnimatedStickers
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? InstalledStickerPacksEntryTag, self == other {
@@ -396,11 +393,10 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }, tag: InstalledStickerPacksEntryTag.suggestOptions)
             case let .largeEmoji(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleAnimatedStickers(value)
+                    arguments.toggleLargeEmoji(value)
                 })
             case let .animatedStickers(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleAnimatedStickers(value)
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { _ in
                 })
             case let .animatedStickersInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -521,7 +517,7 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
 
 private let maxTrendingPacksDisplayedLimit: Int32 = 3
 
-private func installedStickerPacksControllerEntries(presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, temporaryPackOrder: [ItemCollectionId]?, featured: [FeaturedStickerPackItem], archived: [ArchivedStickerPackItem]?, stickerSettings: StickerSettings, quickReaction: MessageReaction.Reaction?, availableReactions: AvailableReactions?, emojiCount: Int32) -> [InstalledStickerPacksEntry] {
+private func installedStickerPacksControllerEntries(context: AccountContext, presentationData: PresentationData, state: InstalledStickerPacksControllerState, mode: InstalledStickerPacksControllerMode, view: CombinedView, temporaryPackOrder: [ItemCollectionId]?, featured: [FeaturedStickerPackItem], archived: [ArchivedStickerPackItem]?, stickerSettings: StickerSettings, quickReaction: MessageReaction.Reaction?, availableReactions: AvailableReactions?, emojiCount: Int32) -> [InstalledStickerPacksEntry] {
     var entries: [InstalledStickerPacksEntry] = []
     
     var installedPacks = Set<ItemCollectionId>()
@@ -551,10 +547,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         entries.append(.suggestOptions(presentationData.theme, presentationData.strings.Stickers_SuggestStickers, suggestString))
         
         entries.append(.largeEmoji(presentationData.theme, presentationData.strings.Appearance_LargeEmoji, presentationData.largeEmoji))
-        
-        entries.append(.animatedStickers(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickers, stickerSettings.loopAnimatedStickers))
-        entries.append(.animatedStickersInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickersInfo))
-        
+                
         if !featured.isEmpty {
             entries.append(.trending(presentationData.theme, presentationData.strings.StickerPacksSettings_TrendingStickers, Int32(featured.count)))
         }
@@ -620,7 +613,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
                         countTitle = presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count)
                     }
                     
-                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, countTitle, stickerSettings.loopAnimatedStickers, true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true, selectable: true), state.selectedPackIds?.contains(info.id)))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, countTitle, context.sharedContext.energyUsageSettings.loopStickers, true, ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == entry.id, reorderable: true, selectable: true), state.selectedPackIds?.contains(info.id)))
                     index += 1
                 }
             }
@@ -813,10 +806,6 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-    }, toggleAnimatedStickers: { value in
-        let _ = updateStickerSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedLoopAnimatedStickers(value)
-        }).start()
     }, toggleSuggestAnimatedEmoji: { value in
         let _ = updateStickerSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedSuggestAnimatedEmoji(value)
@@ -1076,7 +1065,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, temporaryPackOrder: temporaryPackOrder, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings, quickReaction: quickReaction, availableReactions: availableReactions, emojiCount: emojiCount), style: .blocks, ensureVisibleItemTag: focusOnItemTag, toolbarItem: toolbarItem, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: installedStickerPacksControllerEntries(context: context, presentationData: presentationData, state: state, mode: mode, view: view, temporaryPackOrder: temporaryPackOrder, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings, quickReaction: quickReaction, availableReactions: availableReactions, emojiCount: emojiCount), style: .blocks, ensureVisibleItemTag: focusOnItemTag, toolbarItem: toolbarItem, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {

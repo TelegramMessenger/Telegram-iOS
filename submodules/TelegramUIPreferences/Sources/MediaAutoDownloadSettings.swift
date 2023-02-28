@@ -272,7 +272,7 @@ public struct EnergyUsageSettings: Codable, Equatable {
     
     public static var `default`: EnergyUsageSettings {
         return EnergyUsageSettings(
-            activationThreshold: 20,
+            activationThreshold: 10,
             autoplayVideo: true,
             autoplayGif: true,
             loopStickers: true,
@@ -345,8 +345,6 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
     public var cellular: MediaAutoDownloadConnection
     public var wifi: MediaAutoDownloadConnection
     
-    public var autoplayGifs: Bool
-    public var autoplayVideos: Bool
     public var downloadInBackground: Bool
     
     public var energyUsageSettings: EnergyUsageSettings
@@ -362,15 +360,13 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
             high: MediaAutoDownloadCategories(basePreset: .high, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
             video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),
             file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 3 * mb, predownload: false)))
-        return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), autoplayGifs: true, autoplayVideos: true, downloadInBackground: true, energyUsageSettings: EnergyUsageSettings.default)
+        return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), downloadInBackground: true, energyUsageSettings: EnergyUsageSettings.default)
     }
     
-    public init(presets: MediaAutoDownloadPresets, cellular: MediaAutoDownloadConnection, wifi: MediaAutoDownloadConnection, autoplayGifs: Bool, autoplayVideos: Bool, downloadInBackground: Bool, energyUsageSettings: EnergyUsageSettings) {
+    public init(presets: MediaAutoDownloadPresets, cellular: MediaAutoDownloadConnection, wifi: MediaAutoDownloadConnection, downloadInBackground: Bool, energyUsageSettings: EnergyUsageSettings) {
         self.presets = presets
         self.cellular = cellular
         self.wifi = wifi
-        self.autoplayGifs = autoplayGifs
-        self.autoplayVideos = autoplayGifs
         self.downloadInBackground = downloadInBackground
         self.energyUsageSettings = energyUsageSettings
     }
@@ -385,8 +381,6 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
         self.cellular = (try? container.decodeIfPresent(MediaAutoDownloadConnection.self, forKey: "cellular")) ?? defaultSettings.cellular
         self.wifi = (try? container.decodeIfPresent(MediaAutoDownloadConnection.self, forKey: "wifi")) ?? defaultSettings.wifi
 
-        self.autoplayGifs = try container.decode(Int32.self, forKey: "autoplayGifs") != 0
-        self.autoplayVideos = try container.decode(Int32.self, forKey: "autoplayVideos") != 0
         self.downloadInBackground = try container.decode(Int32.self, forKey: "downloadInBackground") != 0
         
         self.energyUsageSettings = (try container.decodeIfPresent(EnergyUsageSettings.self, forKey: "energyUsageSettings")) ?? EnergyUsageSettings.default
@@ -397,8 +391,6 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
 
         try container.encode(self.cellular, forKey: "cellular")
         try container.encode(self.wifi, forKey: "wifi")
-        try container.encode((self.autoplayGifs ? 1 : 0) as Int32, forKey: "autoplayGifs")
-        try container.encode((self.autoplayVideos ? 1 : 0) as Int32, forKey: "autoplayVideos")
         try container.encode((self.downloadInBackground ? 1 : 0) as Int32, forKey: "downloadInBackground")
         try container.encode(self.energyUsageSettings, forKey: "energyUsageSettings")
     }

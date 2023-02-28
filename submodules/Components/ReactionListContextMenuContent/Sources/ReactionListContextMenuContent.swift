@@ -350,11 +350,12 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
     }
     
-    private static let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: .white)?.withRenderingMode(.alwaysTemplate)
+    private static let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
     
     private final class ReactionsTabNode: ASDisplayNode, UIScrollViewDelegate {
         private final class ItemNode: HighlightTrackingButtonNode {
             let context: AccountContext
+            let displayReadTimestamps: Bool
             let availableReactions: AvailableReactions?
             let animationCache: AnimationCache
             let animationRenderer: MultiAnimationRenderer
@@ -375,9 +376,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             private var item: EngineMessageReactionListContext.Item?
             
-            init(context: AccountContext, availableReactions: AvailableReactions?, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, action: @escaping () -> Void) {
+            init(context: AccountContext, displayReadTimestamps: Bool, availableReactions: AvailableReactions?, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, action: @escaping () -> Void) {
                 self.action = action
                 self.context = context
+                self.displayReadTimestamps = displayReadTimestamps
                 self.availableReactions = availableReactions
                 self.animationCache = animationCache
                 self.animationRenderer = animationRenderer
@@ -617,9 +619,16 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
                 self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
                 let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth - 18.0, height: 100.0))
+                self.textLabelNode.isHidden = !self.displayReadTimestamps
                 
                 let textSpacing: CGFloat = 2.0
-                let contentHeight = titleSize.height + textSpacing + textSize.height
+                let contentHeight: CGFloat
+                
+                if self.displayReadTimestamps {
+                    contentHeight = titleSize.height + textSpacing + textSize.height
+                } else {
+                    contentHeight = titleSize.height
+                }
                 let contentY = floor((size.height - contentHeight) / 2.0)
                 
                 let titleFrame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: contentY), size: titleSize)
@@ -629,10 +638,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.textLabelNode.frame = textFrame
                 if let readImage = self.readIconView.image {
                     self.readIconView.tintColor = presentationData.theme.contextMenu.secondaryColor
-                    let fraction: CGFloat = 0.7
+                    let fraction: CGFloat = 1.0
                     let iconSize = CGSize(width: floor(readImage.size.width * fraction), height: floor(readImage.size.height * fraction))
-                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + 2.0), size: iconSize)
+                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + 4.0 - UIScreenPixel), size: iconSize)
                 }
+                self.readIconView.isHidden = !self.displayReadTimestamps
                 
                 if let credibilityIconView = self.credibilityIconView, let credibilityIconSize = credibilityIconSize {
                     if let credibilityIconComponentView = credibilityIconView.view {
@@ -716,6 +726,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         private let context: AccountContext
+        private let displayReadTimestamps: Bool
         private let availableReactions: AvailableReactions?
         private let animationCache: AnimationCache
         private let animationRenderer: MultiAnimationRenderer
@@ -746,6 +757,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         init(
             context: AccountContext,
+            displayReadTimestamps: Bool,
             availableReactions: AvailableReactions?,
             animationCache: AnimationCache,
             animationRenderer: MultiAnimationRenderer,
@@ -757,6 +769,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             openPeer: @escaping (EnginePeer) -> Void
         ) {
             self.context = context
+            self.displayReadTimestamps = displayReadTimestamps
             self.availableReactions = availableReactions
             self.animationCache = animationCache
             self.animationRenderer = animationRenderer
@@ -817,7 +830,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             if let size = self.currentSize {
                 var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
-                apparentHeight = max(apparentHeight, 56.0)
+                apparentHeight = max(apparentHeight, self.displayReadTimestamps ? 56.0 : 44.0)
                 apparentHeight = min(apparentHeight, size.height + 100.0)
                 if self.apparentHeight != apparentHeight {
                     self.apparentHeight = apparentHeight
@@ -834,7 +847,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             guard let presentationData = self.presentationData else {
                 return
             }
-            let itemHeight: CGFloat = 56.0
+            let itemHeight: CGFloat = self.displayReadTimestamps ? 56.0 : 44.0
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -180.0)
             
             var validIds = Set<Int>()
@@ -856,7 +869,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         } else {
                             let openPeer = self.openPeer
                             let peer = item.peer
-                            itemNode = ItemNode(context: self.context, availableReactions: self.availableReactions, animationCache: self.animationCache, animationRenderer: self.animationRenderer, action: {
+                            itemNode = ItemNode(context: self.context, displayReadTimestamps: self.displayReadTimestamps, availableReactions: self.availableReactions, animationCache: self.animationCache, animationRenderer: self.animationRenderer, action: {
                                 openPeer(peer)
                             })
                             self.itemNodes[index] = itemNode
@@ -930,7 +943,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         func update(presentationData: PresentationData, constrainedSize: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
-            let itemHeight: CGFloat = 56.0
+            let itemHeight: CGFloat = self.displayReadTimestamps ? 56.0 : 44.0
             
             if self.presentationData?.theme !== presentationData.theme {
                 let sideInset: CGFloat = 40.0
@@ -1003,6 +1016,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     
     final class ItemsNode: ASDisplayNode, ContextControllerItemsNode, UIGestureRecognizerDelegate {
         private let context: AccountContext
+        private let displayReadTimestamps: Bool
         private let availableReactions: AvailableReactions?
         private let animationCache: AnimationCache
         private let animationRenderer: MultiAnimationRenderer
@@ -1033,6 +1047,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         init(
             context: AccountContext,
+            displayReadTimestamps: Bool,
             availableReactions: AvailableReactions?,
             animationCache: AnimationCache,
             animationRenderer: MultiAnimationRenderer,
@@ -1045,6 +1060,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             openPeer: @escaping (EnginePeer) -> Void
         ) {
             self.context = context
+            self.displayReadTimestamps = displayReadTimestamps
             self.availableReactions = availableReactions
             self.animationCache = animationCache
             self.animationRenderer = animationRenderer
@@ -1267,6 +1283,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     
                     tabNode = ReactionsTabNode(
                         context: self.context,
+                        displayReadTimestamps: self.displayReadTimestamps,
                         availableReactions: self.availableReactions,
                         animationCache: self.animationCache,
                         animationRenderer: self.animationRenderer,
@@ -1382,6 +1399,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     }
     
     let context: AccountContext
+    let displayReadTimestamps: Bool
     let availableReactions: AvailableReactions?
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
@@ -1393,6 +1411,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     
     public init(
         context: AccountContext,
+        displayReadTimestamps: Bool,
         availableReactions: AvailableReactions?,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
@@ -1403,6 +1422,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         openPeer: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
+        self.displayReadTimestamps = displayReadTimestamps
         self.availableReactions = availableReactions
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
@@ -1419,6 +1439,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     ) -> ContextControllerItemsNode {
         return ItemsNode(
             context: self.context,
+            displayReadTimestamps: self.displayReadTimestamps,
             availableReactions: self.availableReactions,
             animationCache: self.animationCache,
             animationRenderer: self.animationRenderer,

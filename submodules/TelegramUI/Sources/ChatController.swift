@@ -607,7 +607,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
         
-        self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: context.sharedContext.currentStickerSettings.with { $0 }.loopAnimatedStickers)
+        self.stickerSettings = ChatInterfaceStickerSettings()
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
         self.presentationInterfaceStatePromise = ValuePromise(self.presentationInterfaceState)
@@ -1505,6 +1505,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 var items = ContextController.Items(content: .custom(ReactionListContextMenuContent(
                     context: strongSelf.context,
+                    displayReadTimestamps: false,
                     availableReactions: availableReactions,
                     animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
                     animationRenderer: strongSelf.controllerInteraction!.presentationContext.animationRenderer,
