@@ -117,7 +117,7 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
 }
 
 final class ChatMediaInputStickerGridItem: GridItem {
-    let account: Account
+    let context: AccountContext
     let index: ItemCollectionViewEntryIndex
     let stickerItem: StickerPackItem
     let selected: () -> Void
@@ -129,8 +129,8 @@ final class ChatMediaInputStickerGridItem: GridItem {
     
     let section: GridSection?
     
-    init(account: Account, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, canManagePeerSpecificPack: Bool?, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, hasAccessory: Bool, theme: PresentationTheme, large: Bool = false, isLocked: Bool = false, selected: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, canManagePeerSpecificPack: Bool?, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, hasAccessory: Bool, theme: PresentationTheme, large: Bool = false, isLocked: Bool = false, selected: @escaping () -> Void) {
+        self.context = context
         self.index = index
         self.stickerItem = stickerItem
         self.interfaceInteraction = interfaceInteraction
@@ -165,7 +165,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
 }
 
 final class ChatMediaInputStickerGridItemNode: GridItemNode {
-    private var currentState: (Account, StickerPackItem, CGSize)?
+    private var currentState: (AccountContext, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
     let imageNode: TransformImageNode
     private(set) var animationNode: AnimatedStickerNode?
@@ -260,7 +260,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         
         self.item = item
                         
-        if self.currentState == nil || self.currentState!.0 !== item.account || self.currentState!.1 != item.stickerItem || self.isLocked != item.isLocked {
+        if self.currentState == nil || self.currentState!.0 !== item.context || self.currentState!.1 != item.stickerItem || self.isLocked != item.isLocked {
             if !item.inputNodeInteraction.displayStickerPlaceholder {
                 self.removePlaceholder(animated: false)
             }
@@ -283,12 +283,12 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
                     if item.stickerItem.file.isVideoSticker {
-                        self.imageNode.setSignal(chatMessageSticker(account: item.account, userLocation: .other, file: item.stickerItem.file, small: false, synchronousLoad: synchronousLoads && isVisible))
+                        self.imageNode.setSignal(chatMessageSticker(account: item.context.account, userLocation: .other, file: item.stickerItem.file, small: false, synchronousLoad: synchronousLoads && isVisible))
                     } else {
-                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, userLocation: .other, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(fittedSize)))
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, userLocation: .other, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(fittedSize)))
                     }
                     self.updateVisibility()
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, userLocation: .other, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
                         animationNode.visibility = false
@@ -297,11 +297,11 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         self.imageNode.isHidden = false
                         self.didSetUpAnimationNode = false
                     }
-                    self.imageNode.setSignal(chatMessageSticker(account: item.account, userLocation: .other, file: item.stickerItem.file, small: !item.large, synchronousLoad: synchronousLoads && isVisible))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, userLocation: .other, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: !item.large)).start())
+                    self.imageNode.setSignal(chatMessageSticker(account: item.context.account, userLocation: .other, file: item.stickerItem.file, small: !item.large, synchronousLoad: synchronousLoads && isVisible))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: !item.large)).start())
                 }
                 
-                self.currentState = (item.account, item.stickerItem, dimensions.cgSize)
+                self.currentState = (item.context, item.stickerItem, dimensions.cgSize)
                 self.setNeedsLayout()
             }
             
@@ -426,7 +426,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         guard let item = self.item else {
             return
         }
-        let isPlaying = self.isPanelVisible && self.isVisibleInGrid && (item.interfaceInteraction?.stickerSettings.loopAnimatedStickers ?? true)
+        let isPlaying = self.isPanelVisible && self.isVisibleInGrid && (item.context.sharedContext.energyUsageSettings.loopStickers)
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode?.visibility = isPlaying
@@ -438,7 +438,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fitSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
-                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                 }
             }
         }

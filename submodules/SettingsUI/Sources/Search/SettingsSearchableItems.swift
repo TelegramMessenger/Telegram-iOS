@@ -374,9 +374,9 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
     items.append(SettingsSearchableItem(id: .stickers(1), title: strings.Stickers_SuggestStickers, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_SuggestStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         presentStickerSettings(context, present, .suggestOptions)
     }))
-    items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_AnimatedStickers, alternate: synonyms(strings.StickerPacksSettings_AnimatedStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
+    /*items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_AnimatedStickers, alternate: synonyms(strings.StickerPacksSettings_AnimatedStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         presentStickerSettings(context, present, .loopAnimatedStickers)
-    }))
+    }))*/
     items.append(SettingsSearchableItem(id: .stickers(3), title: strings.StickerPacksSettings_FeaturedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_FeaturedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         present(.push, featuredStickerPacksController(context: context))
     }))
@@ -740,12 +740,12 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         SettingsSearchableItem(id: .data(7), title: strings.ChatSettings_AutoDownloadReset, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .automaticDownloadReset)
         }),
-        SettingsSearchableItem(id: .data(8), title: strings.ChatSettings_AutoPlayGifs, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayGifs), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
+        /*SettingsSearchableItem(id: .data(8), title: strings.ChatSettings_AutoPlayGifs, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayGifs), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
             presentDataSettings(context, present, .autoplayGifs)
-        }),
-        SettingsSearchableItem(id: .data(9), title: strings.ChatSettings_AutoPlayVideos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayVideos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
+        }),*/
+        /*SettingsSearchableItem(id: .data(9), title: strings.ChatSettings_AutoPlayVideos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayVideos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
             presentDataSettings(context, present, .autoplayVideos)
-        }),
+        }),*/
         SettingsSearchableItem(id: .data(10), title: strings.CallSettings_UseLessData, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_CallsUseLessData), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.Settings_CallSettings], present: { context, _, present in
             present(.push, voiceCallDataSavingController(context: context))
         }),

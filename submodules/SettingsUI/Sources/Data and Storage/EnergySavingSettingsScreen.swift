@@ -231,9 +231,9 @@ private func energeSavingSettingsScreenEntries(
     
     let itemsEnabled: Bool
     if settings.energyUsageSettings.activationThreshold == 0 {
-        itemsEnabled = false
-    } else if settings.energyUsageSettings.activationThreshold == 100 {
         itemsEnabled = true
+    } else if settings.energyUsageSettings.activationThreshold == 100 {
+        itemsEnabled = false
     } else if isOn {
         itemsEnabled = false
     } else {
@@ -277,7 +277,7 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
             } else {
                 text = "Turn off Power Saving Mode or charge your phone to change these settings."
             }
-            displayTooltipImpl?(.info(title: nil, text: text))
+            displayTooltipImpl?(.universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: nil, text: text, customUndoText: nil))
         }
     )
     

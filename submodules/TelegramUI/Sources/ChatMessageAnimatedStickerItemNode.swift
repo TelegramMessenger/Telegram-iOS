@@ -692,7 +692,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramFile = self.telegramFile {
             file = telegramFile
-            if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
+            if !item.context.sharedContext.energyUsageSettings.loopStickers {
                 playbackMode = .once
             }
         } else if let emojiFile = self.emojiFile {

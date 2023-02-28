@@ -583,8 +583,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             automaticDownload = .prefetch
                         }
                         if file.isAnimated {
-                            automaticPlayback = automaticDownloadSettings.autoplayGifs
-                        } else if file.isVideo && automaticDownloadSettings.autoplayVideos {
+                            automaticPlayback = context.sharedContext.energyUsageSettings.autoplayGif
+                        } else if file.isVideo && context.sharedContext.energyUsageSettings.autoplayVideo {
                             var willDownloadOrLocal = false
                             if case .full = automaticDownload {
                                 willDownloadOrLocal = true
