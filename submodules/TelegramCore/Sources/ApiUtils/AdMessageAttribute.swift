@@ -16,12 +16,16 @@ public final class AdMessageAttribute: MessageAttribute {
     public let messageType: MessageType
     public let displayAvatar: Bool
     public let target: MessageTarget
+    public let sponsorInfo: String?
+    public let additionalInfo: String?
 
-    public init(opaqueId: Data, messageType: MessageType, displayAvatar: Bool, target: MessageTarget) {
+    public init(opaqueId: Data, messageType: MessageType, displayAvatar: Bool, target: MessageTarget, sponsorInfo: String?, additionalInfo: String?) {
         self.opaqueId = opaqueId
         self.messageType = messageType
         self.displayAvatar = displayAvatar
         self.target = target
+        self.sponsorInfo = sponsorInfo
+        self.additionalInfo = additionalInfo
     }
 
     public init(decoder: PostboxDecoder) {

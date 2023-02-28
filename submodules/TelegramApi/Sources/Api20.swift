@@ -434,13 +434,13 @@ public extension Api {
 }
 public extension Api {
     indirect enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
+        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?, sponsorInfo: String?, additionalInfo: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
+                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities, let sponsorInfo, let additionalInfo):
                     if boxed {
-                        buffer.appendInt32(981691896)
+                        buffer.appendInt32(-64636888)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
@@ -455,14 +455,16 @@ public extension Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
+                    if Int(flags) & Int(1 << 7) != 0 {serializeString(sponsorInfo!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeString(additionalInfo!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
-                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("fromId", fromId as Any), ("chatInvite", chatInvite as Any), ("chatInviteHash", chatInviteHash as Any), ("channelPost", channelPost as Any), ("startParam", startParam as Any), ("message", message as Any), ("entities", entities as Any)])
+                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities, let sponsorInfo, let additionalInfo):
+                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("fromId", fromId as Any), ("chatInvite", chatInvite as Any), ("chatInviteHash", chatInviteHash as Any), ("channelPost", channelPost as Any), ("startParam", startParam as Any), ("message", message as Any), ("entities", entities as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any)])
     }
     }
     
@@ -491,6 +493,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
                 _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
+            var _10: String?
+            if Int(_1!) & Int(1 << 7) != 0 {_10 = parseString(reader) }
+            var _11: String?
+            if Int(_1!) & Int(1 << 8) != 0 {_11 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
@@ -500,8 +506,10 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3, chatInvite: _4, chatInviteHash: _5, channelPost: _6, startParam: _7, message: _8!, entities: _9)
+            let _c10 = (Int(_1!) & Int(1 << 7) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3, chatInvite: _4, chatInviteHash: _5, channelPost: _6, startParam: _7, message: _8!, entities: _9, sponsorInfo: _10, additionalInfo: _11)
             }
             else {
                 return nil
