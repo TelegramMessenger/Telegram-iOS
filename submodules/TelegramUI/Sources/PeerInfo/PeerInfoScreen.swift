@@ -85,6 +85,7 @@ import ChatListHeaderComponent
 import ChatControllerInteraction
 import StorageUsageScreen
 import AvatarEditorScreen
+import SendInviteLinkScreen
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -2746,7 +2747,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, dismissTextInput: {
         }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             guard let strongSelf = self else {
                 return
@@ -10605,8 +10606,12 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
             }
         }
         if let contactsController = contactsController as? ContactMultiselectionController {
-            selectAddMemberDisposable.set((contactsController.result
-            |> deliverOnMainQueue).start(next: { [weak contactsController] result in
+            selectAddMemberDisposable.set((
+                combineLatest(queue: .mainQueue(),
+                    context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: groupPeer.id)),
+                    contactsController.result
+                )
+            |> deliverOnMainQueue).start(next: { [weak contactsController] exportedInvitation, result in
                 var peers: [ContactListPeerId] = []
                 if case let .result(peerIdsValue, _) = result {
                     peers = peerIdsValue
@@ -10615,6 +10620,40 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                 contactsController?.displayProgress = true
                 addMemberDisposable.set((addMembers(peers)
                 |> deliverOnMainQueue).start(error: { error in
+                    if let exportedInvitation, let link = exportedInvitation.link {
+                        switch error {
+                        case .restricted, .notMutualContact, .kicked:
+                            let _ = (context.engine.data.get(
+                                EngineDataList(peers.compactMap { item -> EnginePeer.Id? in
+                                    switch item {
+                                    case let .peer(peerId):
+                                        return peerId
+                                    default:
+                                        return nil
+                                    }
+                                }.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                            )
+                            |> deliverOnMainQueue).start(next: { peerItems in
+                                let peers = peerItems.compactMap { $0 }
+                                if !peers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
+                                    var viewControllers = navigationController.viewControllers
+                                    if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
+                                        let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: peers)
+                                        viewControllers.remove(at: index)
+                                        viewControllers.append(inviteScreen)
+                                        navigationController.setViewControllers(viewControllers, animated: true)
+                                    }
+                                } else {
+                                    contactsController?.dismiss()
+                                }
+                            })
+                            
+                            return
+                        default:
+                            break
+                        }
+                    }
+                    
                     if peers.count == 1, case .restricted = error {
                         switch peers[0] {
                             case let .peer(peerId):
@@ -10634,7 +10673,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                         }
                         
                         parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    } else if case .tooMuchJoined = error  {
+                    } else if case .tooMuchJoined = error {
                         parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     } else if peers.count == 1, case .kicked = error {
                         parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_AddUserKickedError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
