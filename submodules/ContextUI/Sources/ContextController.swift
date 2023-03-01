@@ -2344,6 +2344,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public struct Items {
         public enum Content {
             case list([ContextMenuItem])
+            case twoLists([ContextMenuItem], [ContextMenuItem])
             case custom(ContextControllerItemsContent)
         }
         

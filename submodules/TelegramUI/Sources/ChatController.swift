@@ -1120,7 +1120,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if itemList.isEmpty {
                             return
                         }
-                    case .custom:
+                    case .custom, .twoLists:
                         break
                     }
 

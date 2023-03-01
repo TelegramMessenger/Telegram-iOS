@@ -29,8 +29,6 @@ public enum PresentationResourceKey: Int32 {
     
     case navigationLiveLocationIcon
     
-    case navigationPlayerPlayIcon
-    case navigationPlayerPauseIcon
     case navigationPlayerRateActiveIcon
     case navigationPlayerRateInactiveIcon
     case navigationPlayerMaximizedRateActiveIcon
@@ -167,20 +165,11 @@ public enum PresentationResourceKey: Int32 {
     case chatInputPanelEditIconImage
     case chatInputPanelWebpageIconImage
     
-    case chatMediaInputPanelHighlightedIconImage
-    case chatInputMediaPanelSavedStickersIconImage
-    case chatInputMediaPanelRecentStickersIconImage
-    case chatInputMediaPanelRecentGifsIconImage
-    case chatInputMediaPanelTrendingIconImage
-    case chatInputMediaPanelSettingsIconImage
     case chatInputMediaPanelAddPackButtonImage
     case chatInputMediaPanelAddedPackButtonImage
     case chatInputMediaPanelGridSetupImage
     case chatInputMediaPanelGridDismissImage
-    case chatInputMediaPanelTrendingGifsIcon
-    case chatInputMediaPanelStickersModeIcon
-    case chatInputMediaPanelPremiumIcon
-    
+
     case chatInputButtonPanelButtonHighlightImage
     case chatInputButtonPanelButtonShadowImage
     
@@ -268,7 +257,6 @@ public enum PresentationResourceKey: Int32 {
     case genericSearchBar
     
     case inAppNotificationBackground
-    case inAppNotificationSecretChatIcon
     
     case groupInfoAdminsIcon
     case groupInfoPermissionsIcon
@@ -324,10 +312,6 @@ public enum PresentationResourceParameterKey: Hashable {
     
     case chatBubbleLamp(incoming: Bool)
     case chatPsaInfo(color: UInt32)
-    
-    case chatMessageLike(incoming: Bool, isSelected: Bool)
-    case chatMessageFreeLike(isSelected: Bool)
-    case chatMessageMediaLike(isSelected: Bool)
     
     case chatMessageCommentsIcon(incoming: Bool)
     case chatMessageCommentsArrowIcon(incoming: Bool)

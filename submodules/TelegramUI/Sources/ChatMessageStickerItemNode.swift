@@ -266,10 +266,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 break
             }
         }
-        
-        if self.telegramFile == nil && item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
-            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text, outline: false))
-        }
     }
     
     private var absoluteRect: (CGRect, CGSize)?

@@ -524,23 +524,20 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         return speedList
     }
     
-    private func contextMenuSpeedItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
-        var items: [ContextMenuItem] = []
+    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType) -> Void) -> Signal<ContextController.Items, NoError> {
+        var presetItems: [ContextMenuItem] = []
 
         let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
-        items.append(.custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
-            let type: MediaNavigationAccessoryPanel.ChangeType = finished ? .sliderCommit(previousValue, newValue) : .sliderChange
-            self?.setRate?(AudioPlaybackRate(newValue), type)
+        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+            self?.setRate?(AudioPlaybackRate(newValue), .sliderChange)
             if finished {
-                dismiss()
+                scheduleTooltip(.sliderCommit(previousValue, newValue))
             }
-        }), true))
-        
-        items.append(.separator)
-        
+        }), true)
+               
         for (text, _, rate) in self.speedList(strings: self.strings) {
             let isSelected = self.playbackBaseRate == rate
-            items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
+            presetItems.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                 if isSelected {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 } else {
@@ -553,20 +550,22 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             })))
         }
 
-        return .single(items)
+        return .single(ContextController.Items(content: .twoLists(presetItems, [sliderItem])))
     }
     
     private func openRateMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
         guard let controller = self.getController?() else {
             return
         }
-        var dismissImpl: (() -> Void)?
-        let items: Signal<[ContextMenuItem], NoError> = self.contextMenuSpeedItems(dismiss: {
-            dismissImpl?()
+        var scheduledTooltip: MediaNavigationAccessoryPanel.ChangeType?
+        let items = self.contextMenuSpeedItems(scheduleTooltip: { change in
+            scheduledTooltip = change
         })
-        let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: self.dismissedPromise.get())), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
-        dismissImpl = {
-            //contextController?.dismiss()
+        let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: self.dismissedPromise.get())), items: items, gesture: gesture)
+        contextController.dismissed = { [weak self] in
+            if let scheduledTooltip, let self, let rate = self.playbackBaseRate {
+                self.setRate?(rate, scheduledTooltip)
+            }
         }
         self.presentInGlobalOverlay?(contextController)
     }
