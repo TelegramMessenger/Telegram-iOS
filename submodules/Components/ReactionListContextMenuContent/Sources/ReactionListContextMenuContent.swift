@@ -617,8 +617,13 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     )).string
                     text = dateText
                 }
+                
+                /*#if DEBUG
+                text = "yesterday at 12:00 PM"
+                #endif*/
+                
                 self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
-                let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth - 18.0, height: 100.0))
+                let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth + 16.0, height: 100.0))
                 self.textLabelNode.isHidden = !self.displayReadTimestamps || text.isEmpty
                 
                 let textSpacing: CGFloat = 2.0
@@ -1230,7 +1235,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         func update(presentationData: PresentationData, constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat) {
-            let constrainedSize = CGSize(width: min(260.0, constrainedWidth), height: maxHeight)
+            let constrainedSize = CGSize(width: min(self.displayReadTimestamps ? 280.0 : 260.0, constrainedWidth), height: maxHeight)
             
             var topContentHeight: CGFloat = 0.0
             if let backButtonNode = self.backButtonNode {
