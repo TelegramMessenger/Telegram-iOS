@@ -841,7 +841,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openPaymentMethod()
     }))*/
     
-    let stickersLabel: String
+    /*let stickersLabel: String
     if let settings = data.globalSettings {
         stickersLabel = settings.unreadTrendingStickerPacks > 0 ? "\(settings.unreadTrendingStickerPacks)" : ""
     } else {
@@ -849,7 +849,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 5, label: .badge(stickersLabel, presentationData.theme.list.itemAccentColor), text: presentationData.strings.ChatSettings_StickersAndReactions, icon: PresentationResourcesSettings.stickers, action: {
         interaction.openSettings(.stickers)
-    }))
+    }))*/
     
     if let settings = data.globalSettings {
         if settings.hasPassport {
@@ -10543,67 +10543,99 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                         return .complete()
                     }
                 } else {
-                    return context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: memberId)
-                    |> deliverOnMainQueue
-                    |> `catch` { error -> Signal<Void, NoError> in
-                        switch error {
-                        case .generic:
-                            return .complete()
-                        case .privacy:
-                            let _ = (context.account.postbox.loadedPeerWithId(memberId)
-                            |> deliverOnMainQueue).start(next: { peer in
-                                parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(peer).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            })
-                            return .complete()
-                        case .notMutualContact:
-                            let _ = (context.account.postbox.loadedPeerWithId(memberId)
-                            |> deliverOnMainQueue).start(next: { peer in
-                                let text: String
-                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                    text = presentationData.strings.Channel_AddUserLeftError
-                                } else {
-                                    text = presentationData.strings.GroupInfo_AddUserLeftError
-                                }
-                                parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            })
-                            return .complete()
-                        case .tooManyChannels:
-                            let _ = (context.account.postbox.loadedPeerWithId(memberId)
-                            |> deliverOnMainQueue).start(next: { peer in
-                                parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            })
-                            return .complete()
-                        case .groupFull:
-                            let signal = context.engine.peers.convertGroupToSupergroup(peerId: groupPeer.id)
-                            |> map(Optional.init)
-                            |> `catch` { error -> Signal<PeerId?, NoError> in
-                                switch error {
-                                case .tooManyChannels:
-                                    Queue.mainQueue().async {
-                                        parentController?.push(oldChannelsController(context: context, intent: .upgrade))
+                    return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: groupPeer.id))
+                    |> mapToSignal { exportedInvitation in
+                        return context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: memberId)
+                        |> deliverOnMainQueue
+                        |> `catch` { error -> Signal<Void, NoError> in
+                            if let exportedInvitation, let link = exportedInvitation.link {
+                                let failedPeerIds: [(PeerId, AddGroupMemberError)] = [(memberId, error)]
+                                let _ = (context.engine.data.get(
+                                    EngineDataList(failedPeerIds.compactMap { item -> EnginePeer.Id? in
+                                        return item.0
+                                    }.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                                )
+                                |> deliverOnMainQueue).start(next: { peerItems in
+                                    let peers = peerItems.compactMap { $0 }
+                                    if !peers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
+                                        var viewControllers = navigationController.viewControllers
+                                        
+                                        let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: peers)
+                                        
+                                        if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
+                                            viewControllers.remove(at: index)
+                                            viewControllers.append(inviteScreen)
+                                            navigationController.setViewControllers(viewControllers, animated: true)
+                                        } else {
+                                            navigationController.pushViewController(inviteScreen)
+                                        }
+                                    } else {
+                                        contactsController?.dismiss()
                                     }
-                                default:
-                                    break
-                                }
-                                return .single(nil)
-                            }
-                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                                guard let upgradedPeerId = upgradedPeerId else {
-                                    return .single(nil)
-                                }
-                                return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: upgradedPeerId, memberId: memberId)
-                                |> `catch` { _ -> Signal<Never, NoError> in
-                                    return .complete()
-                                }
-                                |> mapToSignal { _ -> Signal<PeerId?, NoError> in
-                                }
-                                |> then(.single(upgradedPeerId))
-                            }
-                            |> deliverOnMainQueue
-                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                })
+                                
                                 return .complete()
                             }
-                            return signal
+                            
+                            switch error {
+                            case .generic:
+                                return .complete()
+                            case .privacy:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(peer).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
+                            case .notMutualContact:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                         |> deliverOnMainQueue).start(next: { peer in
+                                    let text: String
+                                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                        text = presentationData.strings.Channel_AddUserLeftError
+                                    } else {
+                                        text = presentationData.strings.GroupInfo_AddUserLeftError
+                                    }
+                                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
+                            case .tooManyChannels:
+                                let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                         |> deliverOnMainQueue).start(next: { peer in
+                                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                })
+                                return .complete()
+                            case .groupFull:
+                                let signal = context.engine.peers.convertGroupToSupergroup(peerId: groupPeer.id)
+                                |> map(Optional.init)
+                                |> `catch` { error -> Signal<PeerId?, NoError> in
+                                    switch error {
+                                    case .tooManyChannels:
+                                        Queue.mainQueue().async {
+                                            parentController?.push(oldChannelsController(context: context, intent: .upgrade))
+                                        }
+                                    default:
+                                        break
+                                    }
+                                    return .single(nil)
+                                }
+                                |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                                    guard let upgradedPeerId = upgradedPeerId else {
+                                        return .single(nil)
+                                    }
+                                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: upgradedPeerId, memberId: memberId)
+                                    |> `catch` { _ -> Signal<Never, NoError> in
+                                        return .complete()
+                                    }
+                                    |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                    }
+                                    |> then(.single(upgradedPeerId))
+                                }
+                                |> deliverOnMainQueue
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                                return signal
+                            }
                         }
                     }
                 }

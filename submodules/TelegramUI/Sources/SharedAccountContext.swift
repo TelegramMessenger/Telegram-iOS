@@ -244,9 +244,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         
         if automaticEnergyUsageShouldBeOnNow(settings: self.currentAutomaticMediaDownloadSettings) {
-            self.energyUsageSettings = self.currentAutomaticMediaDownloadSettings.energyUsageSettings
+            self.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
         } else {
-            self.energyUsageSettings = EnergyUsageSettings.default
+            self.energyUsageSettings = self.currentAutomaticMediaDownloadSettings.energyUsageSettings
         }
         
         let presentationData: Signal<PresentationData, NoError> = .single(initialPresentationDataAndSettings.presentationData)
@@ -389,17 +389,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 strongSelf.currentAutomaticMediaDownloadSettings = next
                 
                 if automaticEnergyUsageShouldBeOnNow(settings: next) {
-                    strongSelf.energyUsageSettings = next.energyUsageSettings
+                    strongSelf.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
                 } else {
-                    strongSelf.energyUsageSettings = EnergyUsageSettings.default
+                    strongSelf.energyUsageSettings = next.energyUsageSettings
                 }
                 strongSelf.energyUsageAutomaticDisposable.set((automaticEnergyUsageShouldBeOn(settings: next)
                 |> deliverOnMainQueue).start(next: { value in
                     if let strongSelf = self {
                         if value {
-                            strongSelf.energyUsageSettings = next.energyUsageSettings
+                            strongSelf.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
                         } else {
-                            strongSelf.energyUsageSettings = EnergyUsageSettings.default
+                            strongSelf.energyUsageSettings = next.energyUsageSettings
                         }
                     }
                 }))

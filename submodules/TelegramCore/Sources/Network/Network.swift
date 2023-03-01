@@ -432,8 +432,8 @@ public struct NetworkInitializationArguments {
     public let appData: Signal<Data?, NoError>
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
-    public let resolvedDeviceName:[String: String]?
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, resolvedDeviceName:[String: String]?) {
+    public let deviceModelName:String?
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName:String?) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory
@@ -443,7 +443,7 @@ public struct NetworkInitializationArguments {
         self.appData = appData
         self.autolockDeadine = autolockDeadine
         self.encryptionProvider = encryptionProvider
-        self.resolvedDeviceName = resolvedDeviceName
+        self.deviceModelName = deviceModelName
     }
 }
 #if os(iOS)
@@ -458,7 +458,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             let serialization = Serialization()
             
-            var apiEnvironment = MTApiEnvironment(resolvedDeviceName: arguments.resolvedDeviceName)
+            var apiEnvironment = MTApiEnvironment(deviceModelName: arguments.deviceModelName)
             
             apiEnvironment.apiId = arguments.apiId
             apiEnvironment.langPack = arguments.languagesCategory

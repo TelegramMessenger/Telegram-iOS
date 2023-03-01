@@ -283,6 +283,19 @@ public struct EnergyUsageSettings: Codable, Equatable {
         )
     }
     
+    public static var powerSavingDefault: EnergyUsageSettings {
+        return EnergyUsageSettings(
+            activationThreshold: 10,
+            autoplayVideo: false,
+            autoplayGif: false,
+            loopStickers: false,
+            loopEmoji: false,
+            fullTranslucency: false,
+            extendBackgroundWork: false,
+            autodownloadInBackground: false
+        )
+    }
+    
     public var activationThreshold: Int32
     
     public var autoplayVideo: Bool

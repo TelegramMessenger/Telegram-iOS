@@ -235,7 +235,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.scrollingArea = SparseItemGridScrollingArea()
             
             self.cameraActivateAreaNode = AccessibilityAreaNode()
-            self.cameraActivateAreaNode.accessibilityLabel = self.presentationData.strings.MediaPicker_VoiceOver_Camera
+            self.cameraActivateAreaNode.accessibilityLabel = "Camera"
             self.cameraActivateAreaNode.accessibilityTraits = [.button]
             
             super.init()
