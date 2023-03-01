@@ -8,6 +8,7 @@ import ContextUI
 import ChatPresentationInterfaceState
 import ChatMessageBackground
 import ChatControllerInteraction
+import AccountContext
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     private let presentationContext: ChatPresentationContext?
@@ -37,13 +38,13 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationContext = presentationContext
         let theme = presentationInterfaceState.theme
         let strings = presentationInterfaceState.strings
         self.strings = strings
          
-        self.micButton = ChatTextInputMediaRecordingButton(theme: theme, strings: strings, presentController: presentController)
+        self.micButton = ChatTextInputMediaRecordingButton(context: context, theme: theme, strings: strings, presentController: presentController)
         
         self.sendContainerNode = ASDisplayNode()
         self.sendContainerNode.layer.allowsGroupOpacity = true

@@ -440,7 +440,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         return
                     }
                     
-                    if strongSelf.audioLevelView == nil {
+                    if strongSelf.audioLevelView == nil, strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency {
                         let blobFrame = CGRect(origin: CGPoint(), size: CGSize(width: 36.0, height: 36.0)).insetBy(dx: -12.0, dy: -12.0)
                         
                         let audioLevelView = VoiceBlobView(
