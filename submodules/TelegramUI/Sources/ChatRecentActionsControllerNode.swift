@@ -793,7 +793,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         if peer.id == antiSpamBotConfiguration.antiSpamBotId {
             self.dismissAllTooltips()
             
-            self.presentController(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: self.presentationData.strings.Group_AdminLog_AntiSpamTitle, text: self.presentationData.strings.Group_AdminLog_AntiSpamText, customUndoText: nil), elevatedLayout: true, action: { [weak self] action in
+            self.presentController(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: self.presentationData.strings.Group_AdminLog_AntiSpamTitle, text: self.presentationData.strings.Group_AdminLog_AntiSpamText, customUndoText: nil, timeout: nil), elevatedLayout: true, action: { [weak self] action in
                 if let strongSelf = self {
                     if case .info = action {
                         let _ = strongSelf.getNavigationController()?.popViewController(animated: true)
@@ -927,7 +927,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             |> deliverOnMainQueue).start(), forKey: message.id)
                             
                             Queue.mainQueue().after(0.2, {
-                                strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
+                                strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             })
                         }
                     })), at: 0

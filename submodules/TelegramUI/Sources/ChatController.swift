@@ -547,6 +547,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var currentSpeechHolder: SpeechSynthesizerHolder?
     
+    private var powerSavingMonitoringDisposable: Disposable?
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -6016,6 +6018,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.preloadAttachBotIconsDisposables?.dispose()
             self.keepMessageCountersSyncrhonizedDisposable?.dispose()
             self.translationStateDisposable?.dispose()
+            self.powerSavingMonitoringDisposable?.dispose()
         }
         deallocate()
     }
@@ -8680,7 +8683,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if bannedMediaInput {
-                strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil))
+                strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil, timeout: nil))
                 return
             }
                         
@@ -8822,7 +8825,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 switch displayType {
                     case .tooltip:
                         if displayToast {
-                            strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: banDescription, customUndoText: nil))
+                            strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: banDescription, customUndoText: nil, timeout: nil))
                         } else {
                             var rect: CGRect?
                             let isStickers: Bool = subject == .stickers
@@ -8992,7 +8995,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if bannedMediaInput {
-                strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil))
+                strongSelf.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: strongSelf.restrictedSendingContentsText(), customUndoText: nil, timeout: nil))
                 return
             }
             
@@ -11067,6 +11070,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let attachBotStart = self.attachBotStart {
             self.attachBotStart = nil
             self.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
+        }
+        
+        if self.powerSavingMonitoringDisposable == nil {
+            self.powerSavingMonitoringDisposable = (self.context.sharedContext.automaticMediaDownloadSettings
+            |> mapToSignal { settings -> Signal<Bool, NoError> in
+                return automaticEnergyUsageShouldBeOn(settings: settings)
+            }
+            |> distinctUntilChanged).start(next: { [weak self] isPowerSavingEnabled in
+                guard let self else {
+                    return
+                }
+                var previousValueValue: Bool?
+                
+                previousValueValue = ChatListControllerImpl.sharedPreviousPowerSavingEnabled
+                ChatListControllerImpl.sharedPreviousPowerSavingEnabled = isPowerSavingEnabled
+                
+                /*#if DEBUG
+                previousValueValue = false
+                #endif*/
+                
+                if isPowerSavingEnabled != previousValueValue && previousValueValue != nil && isPowerSavingEnabled {
+                    let batteryLevel = UIDevice.current.batteryLevel
+                    if batteryLevel > 0.0 && self.view.window != nil {
+                        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                        let batteryPercentage = Int(batteryLevel * 100.0)
+                        
+                        self.dismissAllUndoControllers()
+                        //TODO:localize
+                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: "Power Saving mode enabled", text: "\(batteryPercentage)% battery remaining.", customUndoText: "Disable", timeout: 5.0), elevatedLayout: false, action: { [weak self] action in
+                            if case .undo = action, let self {
+                                let _ = updateMediaDownloadSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
+                                    var settings = settings
+                                    settings.energyUsageSettings.activationThreshold = 0
+                                    return settings
+                                }).start()
+                            }
+                            return false
+                        }), in: .current)
+                    }
+                }
+            })
         }
     }
     
@@ -14311,12 +14355,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return transformEnqueueMessages(messages, silentPosting: silentPosting)
     }
     
-    private func displayPremiumStickerTooltip(file: TelegramMediaFile, message: Message) {
-        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-        guard !premiumConfiguration.isPremiumDisabled else {
-            return
-        }
-        
+    @discardableResult private func dismissAllUndoControllers() -> UndoOverlayController? {
         var currentOverlayController: UndoOverlayController?
         
         self.window?.forEachController({ controller in
@@ -14330,6 +14369,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             return true
         })
+        
+        return currentOverlayController
+    }
+    
+    private func displayPremiumStickerTooltip(file: TelegramMediaFile, message: Message) {
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+        guard !premiumConfiguration.isPremiumDisabled else {
+            return
+        }
+        
+        let currentOverlayController: UndoOverlayController? = self.dismissAllUndoControllers()
         
         if let currentOverlayController = currentOverlayController {
             if case .sticker = currentOverlayController.content {

@@ -1525,7 +1525,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             self.hapticFeedback?.impact(.medium)
             
             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
-            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                 if case .undo = action {
                     let context = item.context
                     var replaceImpl: ((ViewController) -> Void)?

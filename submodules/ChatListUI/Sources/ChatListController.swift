@@ -1361,7 +1361,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         self.tabContainerNode.presentPremiumTip = { [weak self] in
             if let strongSelf = self {
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                     if case .undo = action {
                         let context = strongSelf.context
                         var replaceImpl: ((ViewController) -> Void)?
@@ -1613,12 +1613,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    private static var sharedPreviousPowerSavingEnabled: Bool?
+    public static var sharedPreviousPowerSavingEnabled: Bool?
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
                 
-        if !self.didAppear {
+        if self.powerSavingMonitoringDisposable == nil {
             self.powerSavingMonitoringDisposable = (self.context.sharedContext.automaticMediaDownloadSettings
             |> mapToSignal { settings -> Signal<Bool, NoError> in
                 return automaticEnergyUsageShouldBeOn(settings: settings)
@@ -1644,7 +1644,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         self.dismissAllUndoControllers()
                         //TODO:localize
-                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: "Power Saving mode enabled", text: "\(batteryPercentage)% battery remaining.", customUndoText: "Disable"), elevatedLayout: false, action: { [weak self] action in
+                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: "Power Saving mode enabled", text: "\(batteryPercentage)% battery remaining.", customUndoText: "Disable", timeout: 5.0), elevatedLayout: false, action: { [weak self] action in
                             if case .undo = action, let self {
                                 let _ = updateMediaDownloadSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
                                     var settings = settings

@@ -498,9 +498,17 @@ private final class SendInviteLinkScreenComponent: Component {
                             controller.dismiss()
                         } else {
                             let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: component.link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
-                            //TODO:localize
+                            let text: String
+                            if component.peers.count == 1 {
+                                text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                            } else if component.peers.count == 2 {
+                                text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), component.peers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                            } else {
+                                text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(component.peers.count - 1)").string
+                            }
+                            
                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: component.context, peers: Array(component.peers.prefix(3)), title: nil, text: "Invite link sent.", customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+                            controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
                             
                             controller.dismiss()
                         }

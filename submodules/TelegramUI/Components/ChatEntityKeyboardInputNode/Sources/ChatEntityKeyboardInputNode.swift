@@ -2008,7 +2008,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         if self.context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            self.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: presentationData.strings.StickerPacksSettings_DynamicOrderOff, text: presentationData.strings.StickerPacksSettings_DynamicOrderOffInfo, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+            self.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: presentationData.strings.StickerPacksSettings_DynamicOrderOff, text: presentationData.strings.StickerPacksSettings_DynamicOrderOffInfo, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     return false
             }), nil)
                 
@@ -2120,7 +2120,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         switch result {
                             case .generic:
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                             case let .limitExceeded(limit, premiumLimit):
                                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                 let text: String
@@ -2129,7 +2129,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 } else {
                                     text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                 }
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     guard let strongSelf = self else {
                                         return false
                                     }

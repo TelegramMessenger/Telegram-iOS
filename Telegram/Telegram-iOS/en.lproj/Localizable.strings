@@ -8952,3 +8952,7 @@ Sorry for the inconvenience.";
 
 "GroupPermission.NotAvailableInDiscussionGroups" = "This permission is not available in discussion groups.";
 "GroupPermission.NotAvailableInGeoGroups" = "This permission is not available in location-based groups.";
+
+"Conversation.ShareLinkTooltip.Chat.One" = "Link shared with **%@**";
+"Conversation.ShareLinkTooltip.TwoChats.One" = "Link shared with **%@** and **%@**";
+"Conversation.ShareLinkTooltip.ManyChats.One" = "Link shared with **%@** and %@ others";

@@ -105,6 +105,8 @@ private final class BadgeNode: ASDisplayNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.textNode)
+        
+        self.isUserInteractionEnabled = false
     }
     
     func updateTheme(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {

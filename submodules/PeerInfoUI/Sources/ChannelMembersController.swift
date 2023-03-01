@@ -804,7 +804,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
         case .notAllowed:
             text = presentationData.strings.PeerInfo_HideMembersLimitedRights
         }
-        controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
     }
     getControllerImpl =  { [weak controller] in
         return controller
