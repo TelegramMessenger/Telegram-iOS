@@ -1685,7 +1685,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var initialDisplayHeader = true
         if hidesHeaders {
             initialDisplayHeader = false
-        } else if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
+        } else if let backgroundHiding, case .always = backgroundHiding {
             initialDisplayHeader = false
         } else {
             if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
@@ -2047,7 +2047,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         let hideBackground: Bool
-        if let backgroundHiding = backgroundHiding {
+        if let backgroundHiding {
             switch backgroundHiding {
                 case .never:
                     hideBackground = false
