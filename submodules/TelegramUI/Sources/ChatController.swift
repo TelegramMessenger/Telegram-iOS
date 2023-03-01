@@ -10735,9 +10735,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if case .media = strongSelf.presentationInterfaceState.inputMode {
                             return false
                         }
-                        
-
-                        
                         return true
                     }
                 }

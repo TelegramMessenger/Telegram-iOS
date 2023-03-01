@@ -41,7 +41,7 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
     let maxValue: CGFloat
     var value: CGFloat = 1.0 {
         didSet {
-            self.updateValue()
+            self.updateValue(transition: .animated(duration: 0.2, curve: .spring))
         }
     }
     
@@ -176,9 +176,9 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
         self.backgroundTextNode.segments = backgroundSegments
         self.foregroundTextNode.segments = foregroundSegments
         
-        let _ = self.dimBackgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
-        let _ = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
-        let _ = self.foregroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
+        let _ = self.dimBackgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
+        let _ = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
+        let _ = self.foregroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
     }
     
     func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
@@ -187,7 +187,6 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
                 
         var backgroundTextSize = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
         backgroundTextSize.width = valueWidth
-        let _ = self.foregroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
         
         return (CGSize(width: height * 3.0, height: height), { size, transition in
             let leftInset: CGFloat = 17.0

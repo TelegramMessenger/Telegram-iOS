@@ -1063,7 +1063,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                     return
                                 }
                                 
-                                if strongSelf.audioLevelView == nil, value > 0.0 {
+                                if strongSelf.audioLevelView == nil, value > 0.0, item.context.sharedContext.energyUsageSettings.fullTranslucency {
                                     let audioLevelView = VoiceBlobView(
                                         frame: blobFrame,
                                         maxLevel: 1.5,
