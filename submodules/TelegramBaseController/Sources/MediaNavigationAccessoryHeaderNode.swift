@@ -155,7 +155,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     private let closeButton: HighlightableButtonNode
     private let actionButton: HighlightTrackingButtonNode
     private let playPauseIconNode: PlayPauseIconNode
-    private let rateButton: RateButton
+    private let rateButton: AudioRateButton
     private let accessibilityAreaNode: AccessibilityAreaNode
     
     private let scrubbingNode: MediaPlayerScrubbingNode
@@ -241,8 +241,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.closeButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 2.0)
         self.closeButton.displaysAsynchronously = false
         
-        self.rateButton = RateButton()
-        
+        self.rateButton = AudioRateButton()
         self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
         self.rateButton.displaysAsynchronously = false
         
@@ -669,20 +668,20 @@ private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage?
     })
 }
 
-private final class RateButton: HighlightableButtonNode {
-    enum Content {
+public final class AudioRateButton: HighlightableButtonNode {
+    public enum Content {
         case image(UIImage?)
     }
 
-    let referenceNode: ContextReferenceContentNode
+    public let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
 
-    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
 
     private let wide: Bool
 
-    init(wide: Bool = false) {
+    public init(wide: Bool = false) {
         self.wide = wide
 
         self.referenceNode = ContextReferenceContentNode()
@@ -723,7 +722,7 @@ private final class RateButton: HighlightableButtonNode {
     }
 
     private var content: Content?
-    func setContent(_ content: Content, animated: Bool = false) {
+    public func setContent(_ content: Content, animated: Bool = false) {
         if animated {
             if let snapshotView = self.referenceNode.view.snapshotContentTree() {
                 snapshotView.frame = self.referenceNode.frame
@@ -761,12 +760,12 @@ private final class RateButton: HighlightableButtonNode {
         }
     }
 
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
     }
 
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: wide ? 32.0 : 22.0, height: 44.0)
     }
 

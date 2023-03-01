@@ -45,6 +45,12 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
+    var getParentController: () -> ViewController? = { return nil } {
+        didSet {
+            self.controlsNode.getParentController = self.getParentController
+        }
+    }
+    
     init(context: AccountContext, chatLocation: ChatLocation, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void, requestSearchByArtist: @escaping (String) -> Void) {
         self.context = context
         self.chatLocation = chatLocation
