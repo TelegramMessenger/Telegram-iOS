@@ -13,6 +13,10 @@ import PhotoResources
 import AppBundle
 import ManagedAnimationNode
 import RangeSet
+import TelegramBaseController
+import ContextUI
+import SliderContextItem
+import UndoUI
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
@@ -73,51 +77,6 @@ private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage?
     })
 }
 
-//private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
-//    return generateImage(CGSize(width: 36.0, height: 16.0), rotatedContext: { size, context in
-//        UIGraphicsPushContext(context)
-//
-//        context.clear(CGRect(origin: CGPoint(), size: size))
-//
-//        let lineWidth = 1.0 + UIScreenPixel
-//        context.setLineWidth(lineWidth)
-//        context.setStrokeColor(color.cgColor)
-//
-//
-//        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: color)
-//
-//        var offset = CGPoint(x: 1.0, y: 0.0)
-//        var width: CGFloat
-//        if rate.count >= 5 {
-//            string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
-//            offset.x += -0.5
-//            width = 33.0
-//        } else if rate.count >= 3 {
-//            if rate == "0.5X" {
-//                string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
-//                offset.x += -0.5
-//            } else {
-//                string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
-//                offset.x += -0.3
-//            }
-//            width = 29.0
-//        } else {
-//            string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
-//            width = 19.0
-//            offset.x += -0.3
-//        }
-//
-//        let path = UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: 0.0, width: width, height: 16.0).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 2.0, height: 2.0))
-//        context.addPath(path.cgPath)
-//        context.strokePath()
-//
-//        let boundingRect = string.boundingRect(with: size, options: [], context: nil)
-//        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + UIScreenPixel + floor((size.height - boundingRect.height) / 2.0)))
-//
-//        UIGraphicsPopContext()
-//    })
-//}
-
 private let digitsSet = CharacterSet(charactersIn: "0123456789")
 private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
     let text: String
@@ -173,7 +132,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
 
 final class OverlayPlayerControlsNode: ASDisplayNode {
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
-    private let postbox: Postbox
+    private let account: Account
     private let engine: TelegramEngine
     private var presentationData: PresentationData
     
@@ -211,7 +170,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private let loopingButton: IconButtonNode
     
     private var currentRate: AudioPlaybackRate?
-    private let rateButton: HighlightableButtonNode
+    private let rateButton: AudioRateButton
     
     let separatorNode: ASDisplayNode
     
@@ -224,6 +183,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     var updateOrder: ((MusicPlaybackSettingsOrder) -> Void)?
     var control: ((SharedMediaPlayerControlAction) -> Void)?
+    
+    var getParentController: () -> ViewController? = { return nil }
     
     private(set) var currentItemId: SharedMediaPlaylistItemId?
     private var displayData: SharedMediaPlaybackDisplayData?
@@ -251,7 +212,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     init(account: Account, engine: TelegramEngine, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
         self.accountManager = accountManager
-        self.postbox = account.postbox
+        self.account = account
         self.engine = engine
         self.presentationData = presentationData
         
@@ -295,7 +256,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.infoNode.isUserInteractionEnabled = false
         self.infoNode.displaysAsynchronously = false
         
-        self.rateButton = HighlightableButtonNode()
+        self.rateButton = AudioRateButton()
         self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
         self.rateButton.displaysAsynchronously = false
         
@@ -500,7 +461,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                             canShare = !isCopyProtected
                             strongSelf.currentFileReference = fileReference
                             if let size = fileReference.media.size {
-                                strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
+                                strongSelf.scrubberNode.bufferingStatus = strongSelf.account.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
                                 |> map { ranges -> (RangeSet<Int64>, Int64) in
                                     return (ranges, size)
                                 }
@@ -593,6 +554,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.descriptionNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
+        }
+        
+        self.rateButton.contextAction = { [weak self] sourceNode, gesture in
+            self?.openRateMenu(sourceNode: sourceNode, gesture: gesture)
         }
         
         self.playPauseButton.circleColor = presentationData.theme.list.controlSecondaryColor.withAlphaComponent(0.35)
@@ -782,9 +747,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if self.currentAlbumArt != albumArt || !self.currentAlbumArtInitialized {
             self.currentAlbumArtInitialized = true
             self.currentAlbumArt = albumArt
-            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
+            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.account.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
             if let largeAlbumArtNode = self.largeAlbumArtNode {
-                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
+                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.account.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
             }
         }
     }
@@ -823,7 +788,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private func updateRateButton(_ playbackBaseRate: AudioPlaybackRate) {
         let rate = self.previousRate ?? playbackBaseRate
-        self.rateButton.setImage(optionsRateImage(rate: rate.stringValue.uppercased(), color: self.presentationData.theme.list.itemSecondaryTextColor), for: .normal)
+        
+        self.rateButton.setContent(.image(optionsRateImage(rate: rate.stringValue.uppercased(), color: self.presentationData.theme.list.itemSecondaryTextColor)))
     }
     
     static let basePanelHeight: CGFloat = 220.0
@@ -877,7 +843,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.largeAlbumArtNode = largeAlbumArtNode
                 self.addSubnode(largeAlbumArtNode)
                 if self.currentAlbumArtInitialized {
-                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
+                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.account.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
                 }
             }
             
@@ -947,7 +913,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         
         let rateRightOffset = timestampLabelWidthForDuration(self.currentDuration)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - rateRightOffset - 28.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset), size: CGSize(width: 24.0, height: 24.0)))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - rateRightOffset - 28.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset - 10.0), size: CGSize(width: 24.0, height: 44.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: panelHeight + 8.0)))
         
@@ -1050,6 +1016,118 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.control?(.setBaseRate(nextRate))
     }
     
+    private func speedList(strings: PresentationStrings) -> [(String, String, AudioPlaybackRate)] {
+        let speedList: [(String, String, AudioPlaybackRate)] = [
+            ("0.5x", "0.5x", .x0_5),
+            (strings.PlaybackSpeed_Normal, "1x", .x1),
+            ("1.5x", "1.5x", .x1_5),
+            ("2x", "2x", .x2)
+        ]
+        return speedList
+    }
+    
+    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType) -> Void) -> Signal<ContextController.Items, NoError> {
+        var presetItems: [ContextMenuItem] = []
+        
+        let previousValue = self.currentRate?.doubleValue ?? 1.0
+        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+            self?.control?(.setBaseRate(AudioPlaybackRate(newValue)))
+            if finished {
+                scheduleTooltip(.sliderCommit(previousValue, newValue))
+            }
+        }), true)
+ 
+        for (text, _, rate) in self.speedList(strings: self.presentationData.strings) {
+            let isSelected = self.currentRate == rate
+            presetItems.append(.action(ContextMenuActionItem(text: text, icon: { theme in
+                if isSelected {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                } else {
+                    return nil
+                }
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.control?(.setBaseRate(rate))
+                self?.presentAudioRateTooltip(baseRate: rate, changeType: .preset)
+            })))
+        }
+
+        return .single(ContextController.Items(content: .twoLists(presetItems, [sliderItem])))
+    }
+    
+    private func openRateMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
+        guard let controller = self.getParentController() else {
+            return
+        }
+        var scheduledTooltip: MediaNavigationAccessoryPanel.ChangeType?
+        let items = self.contextMenuSpeedItems(scheduleTooltip: { change in
+            scheduledTooltip = change
+        })
+        
+        let contextController = ContextController(account: self.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: .single(false))), items: items, gesture: gesture)
+        contextController.dismissed = { [weak self] in
+            if let scheduledTooltip, let self, let rate = self.currentRate {
+                self.presentAudioRateTooltip(baseRate: rate, changeType: scheduledTooltip)
+            }
+        }
+        controller.presentInGlobalOverlay(contextController)
+    }
+    
+    private func presentAudioRateTooltip(baseRate: AudioPlaybackRate, changeType: MediaNavigationAccessoryPanel.ChangeType) {
+        guard let controller = self.getParentController() else {
+            return
+        }
+        
+        let presentationData = self.presentationData
+        let text: String?
+        let rate: CGFloat?
+        if baseRate == .x1 {
+            text = presentationData.strings.Conversation_AudioRateTooltipNormal
+            rate = 1.0
+        } else if baseRate == .x1_5 {
+            text = presentationData.strings.Conversation_AudioRateTooltip15X
+            rate = 1.5
+        } else if baseRate == .x2 {
+            text = presentationData.strings.Conversation_AudioRateTooltipSpeedUp
+            rate = 2.0
+        } else {
+            let value = String(format: "%0.1f", baseRate.doubleValue)
+            text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+            if case let .sliderCommit(previousValue, newValue) = changeType {
+                if newValue > previousValue {
+                    rate = .infinity
+                } else if newValue < previousValue {
+                    rate = -.infinity
+                } else {
+                    rate = nil
+                }
+            } else {
+                rate = nil
+            }
+        }
+        var showTooltip = true
+        if case .sliderChange = changeType {
+            showTooltip = false
+        }
+        if let rate, let text, showTooltip {
+            controller.presentInGlobalOverlay(
+                UndoOverlayController(
+                    presentationData: presentationData,
+                    content: .audioRate(
+                        rate: rate,
+                        text: text
+                    ),
+                    elevatedLayout: false,
+                    animateInAsReplacement: false,
+                    action: { action in
+                        return true
+                    }
+                )
+            )
+        }
+    }
+    
     @objc func albumArtTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let supernode = self.supernode {
@@ -1126,5 +1204,22 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
                         break
                 }
         }
+    }
+}
+
+private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+
+    var shouldBeDismissed: Signal<Bool, NoError>
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode, shouldBeDismissed: Signal<Bool, NoError>) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.shouldBeDismissed = shouldBeDismissed
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

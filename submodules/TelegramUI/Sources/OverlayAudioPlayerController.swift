@@ -120,6 +120,9 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                 strongSelf.dismiss()
             }
         })
+        self.controllerNode.getParentController = { [weak self] in
+            return self
+        }
         
         self.ready.set(self.controllerNode.ready.get())
         
