@@ -2005,6 +2005,17 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             strongSelf.performLayout(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
         })
+        
+        if self.context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            self.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: presentationData.strings.StickerPacksSettings_DynamicOrderOff, text: presentationData.strings.StickerPacksSettings_DynamicOrderOffInfo, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                    return false
+            }), nil)
+                
+            let _ = updateStickerSettingsInteractively(accountManager: self.context.sharedContext.accountManager, {
+                return $0.withUpdatedDynamicPackOrder(false)
+            }).start()
+        }
     }
     
     private func openGifContextMenu(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {

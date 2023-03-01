@@ -3,7 +3,6 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import SceneKit
 import GZip
 import AppBundle
 import LegacyComponents
@@ -50,7 +49,7 @@ class EmojiHeaderComponent: Component {
         return lhs.placeholderColor == rhs.placeholderColor && lhs.accentColor == rhs.accentColor && lhs.fileId == rhs.fileId && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+    final class View: UIView, ComponentTaggedView {
         final class Tag {
         }
         

@@ -36,49 +36,87 @@ private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
 }
 
 private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
-    return generateImage(CGSize(width: 36.0, height: 16.0), rotatedContext: { size, context in
+    let isLarge = "".isEmpty
+    return generateImage(isLarge ? CGSize(width: 30.0, height: 30.0) : CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
 
         context.clear(CGRect(origin: CGPoint(), size: size))
 
-        let lineWidth = 1.0 + UIScreenPixel
-        context.setLineWidth(lineWidth)
-        context.setStrokeColor(color.cgColor)
-        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: isLarge ? "Chat/Context Menu/Playspeed30" : "Chat/Context Menu/Playspeed24"), color: color) {
+            image.draw(at: CGPoint(x: 0.0, y: 0.0))
+        }
 
-        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: color)
+        let string = NSMutableAttributedString(string: rate, font: Font.with(size: isLarge ? 11.0 : 10.0, design: .round, weight: .semibold), textColor: color)
 
         var offset = CGPoint(x: 1.0, y: 0.0)
-        var width: CGFloat
-        if rate.count >= 5 {
-            string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
-            offset.x += -0.5
-            width = 33.0
-        } else if rate.count >= 3 {
-            if rate == "0.5X" {
+        if rate.count >= 3 {
+            if rate == "0.5x" {
                 string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
                 offset.x += -0.5
             } else {
                 string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
                 offset.x += -0.3
             }
-            width = 29.0
         } else {
-            string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
-            width = 19.0
             offset.x += -0.3
         }
-        
-        let path = UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: 0.0, width: width, height: 16.0).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 2.0, height: 2.0))
-        context.addPath(path.cgPath)
-        context.strokePath()
-        
+
+        if !isLarge {
+            offset.x *= 0.5
+            offset.y *= 0.5
+        }
+
         let boundingRect = string.boundingRect(with: size, options: [], context: nil)
-        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + UIScreenPixel + floor((size.height - boundingRect.height) / 2.0)))
+        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + floor((size.height - boundingRect.height) / 2.0)))
 
         UIGraphicsPopContext()
     })
 }
+
+//private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
+//    return generateImage(CGSize(width: 36.0, height: 16.0), rotatedContext: { size, context in
+//        UIGraphicsPushContext(context)
+//
+//        context.clear(CGRect(origin: CGPoint(), size: size))
+//
+//        let lineWidth = 1.0 + UIScreenPixel
+//        context.setLineWidth(lineWidth)
+//        context.setStrokeColor(color.cgColor)
+//
+//
+//        let string = NSMutableAttributedString(string: rate, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: color)
+//
+//        var offset = CGPoint(x: 1.0, y: 0.0)
+//        var width: CGFloat
+//        if rate.count >= 5 {
+//            string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+//            offset.x += -0.5
+//            width = 33.0
+//        } else if rate.count >= 3 {
+//            if rate == "0.5X" {
+//                string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+//                offset.x += -0.5
+//            } else {
+//                string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+//                offset.x += -0.3
+//            }
+//            width = 29.0
+//        } else {
+//            string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+//            width = 19.0
+//            offset.x += -0.3
+//        }
+//
+//        let path = UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - width) / 2.0), y: 0.0, width: width, height: 16.0).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 2.0, height: 2.0))
+//        context.addPath(path.cgPath)
+//        context.strokePath()
+//
+//        let boundingRect = string.boundingRect(with: size, options: [], context: nil)
+//        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + UIScreenPixel + floor((size.height - boundingRect.height) / 2.0)))
+//
+//        UIGraphicsPopContext()
+//    })
+//}
 
 private let digitsSet = CharacterSet(charactersIn: "0123456789")
 private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
@@ -419,16 +457,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.updateLoopButton(value.looping)
                 }
                 
-                let baseRate: AudioPlaybackRate
-                if value.status.baseRate.isEqual(to: 2.0) {
-                    baseRate = .x2
-                } else if value.status.baseRate.isEqual(to: 1.5) {
-                    baseRate = .x1_5
-                } else if value.status.baseRate.isEqual(to: 0.5) {
-                    baseRate = .x0_5
-                } else {
-                    baseRate = .x1
-                }
+                let baseRate = AudioPlaybackRate(value.status.baseRate )
                 if baseRate != strongSelf.currentRate {
                     strongSelf.currentRate = baseRate
                     strongSelf.updateRateButton(baseRate)
@@ -624,8 +653,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.seekTimer = nil
                 if self.wasPlaying {
                     self.control?(.playback(.play))
-                    self.wasPlaying = false
                 }
+                self.previousRate = nil
             default:
                 break
         }
@@ -634,9 +663,11 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     @objc private func seekForwardLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         switch gestureRecognizer.state {
             case .began:
+                self.wasPlaying = !(self.currentIsPaused ?? true)
                 self.forwardButton.isPressing = true
                 self.previousRate = self.currentRate
                 self.seekRate = .x4
+                self.control?(.playback(.play))
                 self.control?(.setBaseRate(self.seekRate))
                 let seekTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
                     if let strongSelf = self {
@@ -659,6 +690,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.control?(.setBaseRate(self.previousRate ?? .x1))
                 self.seekTimer?.invalidate()
                 self.seekTimer = nil
+                if !self.wasPlaying {
+                    self.control?(.playback(.pause))
+                }
+                self.previousRate = nil
             default:
                 break
         }
@@ -786,17 +821,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         }
     }
     
-    private func updateRateButton(_ baseRate: AudioPlaybackRate) {
-        switch baseRate {
-        case .x2:
-            self.rateButton.setImage(optionsRateImage(rate: "2X", color: self.presentationData.theme.list.itemAccentColor), for: [])
-        case .x1_5:
-            self.rateButton.setImage(optionsRateImage(rate: "1.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
-        case .x0_5:
-            self.rateButton.setImage(optionsRateImage(rate: "0.5X", color: self.presentationData.theme.list.itemAccentColor), for: [])
-        default:
-            self.rateButton.setImage(optionsRateImage(rate: "1X", color: self.presentationData.theme.list.itemSecondaryTextColor), for: [])
-        }
+    private func updateRateButton(_ playbackBaseRate: AudioPlaybackRate) {
+        let rate = self.previousRate ?? playbackBaseRate
+        self.rateButton.setImage(optionsRateImage(rate: rate.stringValue.uppercased(), color: self.presentationData.theme.list.itemSecondaryTextColor), for: .normal)
     }
     
     static let basePanelHeight: CGFloat = 220.0

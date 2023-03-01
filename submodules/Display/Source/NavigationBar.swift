@@ -139,7 +139,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 
     private var enableBlur: Bool
 
-    private var effectView: UIVisualEffectView?
+    public var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
 
     private var validLayout: (CGSize, CGFloat)?

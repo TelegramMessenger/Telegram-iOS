@@ -26,8 +26,6 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
             return fetchICloudFileResource(resource: resource)
         } else if let resource = resource as? SecureIdLocalImageResource {
             return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
-        } else if let resource = resource as? EmojiSpriteResource {
-            return fetchEmojiSpriteResource(account: account, resource: resource)
         } else if let resource = resource as? BundleResource {
             return Signal { subscriber in
                 subscriber.putNext(.reset)
