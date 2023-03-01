@@ -839,6 +839,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[347227392] = { return Api.Update.parse_updateGroupCall($0) }
     dict[192428418] = { return Api.Update.parse_updateGroupCallConnection($0) }
     dict[-219423922] = { return Api.Update.parse_updateGroupCallParticipants($0) }
+    dict[-856651050] = { return Api.Update.parse_updateGroupInvitePrivacyForbidden($0) }
     dict[1763610706] = { return Api.Update.parse_updateInlineBotCallbackQuery($0) }
     dict[1442983757] = { return Api.Update.parse_updateLangPack($0) }
     dict[1180041828] = { return Api.Update.parse_updateLangPackTooLong($0) }

@@ -459,10 +459,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
-        }, iconSource: nil, action: { c, _ in
-            c.dismiss(completion: {
+        }, iconSource: nil, action: { _, f in
+            /*c.dismiss(completion: {
                 controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
-            })
+            })*/
+            f(.dismissWithoutContent)
+            controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
         })))
         
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })

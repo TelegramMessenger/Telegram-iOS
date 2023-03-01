@@ -777,6 +777,7 @@ public extension Api {
         case updateGroupCall(chatId: Int64, call: Api.GroupCall)
         case updateGroupCallConnection(flags: Int32, params: Api.DataJSON)
         case updateGroupCallParticipants(call: Api.InputGroupCall, participants: [Api.GroupCallParticipant], version: Int32)
+        case updateGroupInvitePrivacyForbidden(userId: Int64)
         case updateInlineBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, msgId: Api.InputBotInlineMessageID, chatInstance: Int64, data: Buffer?, gameShortName: String?)
         case updateLangPack(difference: Api.LangPackDifference)
         case updateLangPackTooLong(langCode: String)
@@ -1323,6 +1324,12 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     serializeInt32(version, buffer: buffer, boxed: false)
+                    break
+                case .updateGroupInvitePrivacyForbidden(let userId):
+                    if boxed {
+                        buffer.appendInt32(-856651050)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
                     break
                 case .updateInlineBotCallbackQuery(let flags, let queryId, let userId, let msgId, let chatInstance, let data, let gameShortName):
                     if boxed {
@@ -1900,6 +1907,8 @@ public extension Api {
                 return ("updateGroupCallConnection", [("flags", flags as Any), ("params", params as Any)])
                 case .updateGroupCallParticipants(let call, let participants, let version):
                 return ("updateGroupCallParticipants", [("call", call as Any), ("participants", participants as Any), ("version", version as Any)])
+                case .updateGroupInvitePrivacyForbidden(let userId):
+                return ("updateGroupInvitePrivacyForbidden", [("userId", userId as Any)])
                 case .updateInlineBotCallbackQuery(let flags, let queryId, let userId, let msgId, let chatInstance, let data, let gameShortName):
                 return ("updateInlineBotCallbackQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("msgId", msgId as Any), ("chatInstance", chatInstance as Any), ("data", data as Any), ("gameShortName", gameShortName as Any)])
                 case .updateLangPack(let difference):
@@ -3026,6 +3035,17 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateGroupCallParticipants(call: _1!, participants: _2!, version: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateGroupInvitePrivacyForbidden(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateGroupInvitePrivacyForbidden(userId: _1!)
             }
             else {
                 return nil

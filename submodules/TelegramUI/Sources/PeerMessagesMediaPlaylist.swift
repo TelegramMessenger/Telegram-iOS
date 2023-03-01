@@ -355,7 +355,7 @@ private struct PlaybackStack {
 }
 
 final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
-    private let context: AccountContext
+    let context: AccountContext
     private let messagesLocation: PeerMessagesPlaylistLocation
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?
     

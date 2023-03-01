@@ -182,7 +182,7 @@ final class SharedMediaPlayer {
     
     let type: MediaManagerPlayerType
     
-    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool, type: MediaManagerPlayerType) {
+    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool, type: MediaManagerPlayerType, continueInstantVideoLoopAfterFinish: Bool) {
         self.mediaManager = mediaManager
         self.account = account
         self.audioSession = audioSession
@@ -310,7 +310,11 @@ final class SharedMediaPlayer {
                                 case let .audio(player):
                                     player.pause()
                                 case let .instantVideo(node):
-                                    node.setSoundEnabled(false)
+                                    if continueInstantVideoLoopAfterFinish {
+                                        node.setSoundEnabled(false)
+                                    } else {
+                                        node.pause()
+                                    }
                             }
                         }
                         strongSelf.playedToEnd?()

@@ -290,7 +290,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
             }
         }
         
-        if let file = media as? TelegramMediaFile, file.isAnimated {
+        if let file = media as? TelegramMediaFile, file.isAnimated, self.context.sharedContext.energyUsageSettings.autoplayGif {
             if self.videoLayerFrameManager == nil {
                 let sampleBufferLayer: SampleBufferLayer
                 if let current = self.sampleBufferLayer {

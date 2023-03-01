@@ -604,11 +604,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         },
                         tomorrowFormatString: { value in
                             //TODO:localize
-                            return PresentationStrings.FormattedString(string: "at \(value)", ranges: [])
+                            return PresentationStrings.FormattedString(string: "today at \(value)", ranges: [])
                         },
                         todayFormatString: { value in
                             //TODO:localize
-                            return PresentationStrings.FormattedString(string: "at \(value)", ranges: [])
+                            return PresentationStrings.FormattedString(string: "today at \(value)", ranges: [])
                         },
                         yesterdayFormatString: { value in
                             //TODO:localize
