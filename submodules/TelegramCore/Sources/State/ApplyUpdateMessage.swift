@@ -370,7 +370,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                         mapping.append((message, MessageIndex(id: id, timestamp: storeMessage.timestamp), storeMessage))
                     }
                 } else {
-                    assertionFailure()
+                  //  assertionFailure()
                 }
             } else {
                 assertionFailure()
