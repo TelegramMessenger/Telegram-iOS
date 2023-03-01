@@ -595,7 +595,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 100.0))
                 
                 //TODO:localize
-                var text = "read"
+                var text = ""
                 if let timestamp = item.timestamp {
                     let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: false, allowYesterday: true, format: HumanReadableStringFormat(
                         dateFormatString: { value in
@@ -619,12 +619,12 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
                 self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
                 let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth - 18.0, height: 100.0))
-                self.textLabelNode.isHidden = !self.displayReadTimestamps
+                self.textLabelNode.isHidden = !self.displayReadTimestamps && !text.isEmpty
                 
                 let textSpacing: CGFloat = 2.0
                 let contentHeight: CGFloat
                 
-                if self.displayReadTimestamps {
+                if self.displayReadTimestamps && !text.isEmpty {
                     contentHeight = titleSize.height + textSpacing + textSize.height
                 } else {
                     contentHeight = titleSize.height
@@ -642,7 +642,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     let iconSize = CGSize(width: floor(readImage.size.width * fraction), height: floor(readImage.size.height * fraction))
                     self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + 4.0 - UIScreenPixel), size: iconSize)
                 }
-                self.readIconView.isHidden = !self.displayReadTimestamps
+                self.readIconView.isHidden = !self.displayReadTimestamps && !text.isEmpty
                 
                 if let credibilityIconView = self.credibilityIconView, let credibilityIconSize = credibilityIconSize {
                     if let credibilityIconComponentView = credibilityIconView.view {
