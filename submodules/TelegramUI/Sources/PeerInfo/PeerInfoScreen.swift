@@ -841,7 +841,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openPaymentMethod()
     }))*/
     
-    let stickersLabel: String
+    /*let stickersLabel: String
     if let settings = data.globalSettings {
         stickersLabel = settings.unreadTrendingStickerPacks > 0 ? "\(settings.unreadTrendingStickerPacks)" : ""
     } else {
@@ -849,7 +849,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 5, label: .badge(stickersLabel, presentationData.theme.list.itemAccentColor), text: presentationData.strings.ChatSettings_StickersAndReactions, icon: PresentationResourcesSettings.stickers, action: {
         interaction.openSettings(.stickers)
-    }))
+    }))*/
     
     if let settings = data.globalSettings {
         if settings.hasPassport {

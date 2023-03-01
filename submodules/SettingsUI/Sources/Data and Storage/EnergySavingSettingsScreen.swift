@@ -17,8 +17,8 @@ enum ItemType: CaseIterable {
     case loopStickers
     case loopEmoji
     case fullTranslucency
-    case extendBackgroundWork
     case autodownloadInBackground
+    case extendBackgroundWork
     
     var settingsKeyPath: WritableKeyPath<EnergyUsageSettings, Bool> {
         switch self {
@@ -63,7 +63,7 @@ enum ItemType: CaseIterable {
         case .loopEmoji:
             return (
                 "Settings/Power/PowerIconEmoji",
-                "Emoli Animations",
+                "Emoji Animations",
                 "Loop animated emoji in messages, reactions, statuses."
             )
         case .fullTranslucency:
@@ -242,7 +242,7 @@ private func energeSavingSettingsScreenEntries(
     
     entries.append(.itemsHeader)
     for type in ItemType.allCases {
-        entries.append(.item(index: entries.count, type: type, value: settings.energyUsageSettings[keyPath: type.settingsKeyPath], enabled: itemsEnabled))
+        entries.append(.item(index: entries.count, type: type, value: settings.energyUsageSettings[keyPath: type.settingsKeyPath] && itemsEnabled, enabled: itemsEnabled))
     }
     
     return entries

@@ -905,6 +905,35 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateTintColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let current = layer.layerTintColor, current == color.cgColor {
+            completion?(true)
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.layerTintColor = color.cgColor
+            completion?(true)
+        case let .animated(duration, curve):
+            let previousColor: CGColor = layer.layerTintColor ?? UIColor.clear.cgColor
+            layer.layerTintColor = color.cgColor
+            
+            layer.animate(
+                from: previousColor,
+                to: color.cgColor,
+                keyPath: "contentsMultiplyColor",
+                timingFunction: curve.timingFunction,
+                duration: duration,
+                delay: 0.0,
+                mediaTimingFunction: curve.mediaTimingFunction,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
     func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)? = nil) {
         if layer.contentsRect == contentsRect {
             if let completion = completion {

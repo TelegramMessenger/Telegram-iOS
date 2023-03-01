@@ -73,6 +73,7 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
     
     private let batteryImage: UIImage?
     private let batteryBackgroundNode: ASImageNode
+    private let batteryForegroundNode: ASImageNode
     
     private var item: EnergyUsageBatteryLevelItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -96,6 +97,7 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
         
         self.batteryImage = UIImage(bundleImageName: "Settings/UsageBatteryFrame")
         self.batteryBackgroundNode = ASImageNode()
+        self.batteryForegroundNode = ASImageNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -103,12 +105,14 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
         self.addSubnode(self.rightTextNode)
         self.addSubnode(self.centerTextNode)
         self.addSubnode(self.batteryBackgroundNode)
+        self.addSubnode(self.batteryForegroundNode)
     }
     
     override func didLoad() {
         super.didLoad()
         
         let sliderView = TGPhotoEditorSliderView()
+        sliderView.enableEdgeTap = true
         sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 4.0
@@ -223,6 +227,7 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
                         centralMeasureText = "When Below 99%"
                         strongSelf.batteryBackgroundNode.isHidden = false
                     }
+                    strongSelf.batteryForegroundNode.isHidden = strongSelf.batteryBackgroundNode.isHidden
                     strongSelf.centerTextNode.attributedText = NSAttributedString(string: centralText, font: Font.regular(16.0), textColor: item.theme.list.itemPrimaryTextColor)
                     strongSelf.centerMeasureTextNode.attributedText = NSAttributedString(string: centralMeasureText, font: Font.regular(16.0), textColor: item.theme.list.itemPrimaryTextColor)
                     
@@ -254,15 +259,41 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
                                 let contentRect = CGRect(origin: CGPoint(x: 3.0, y: (size.height - 9.0) * 0.5), size: CGSize(width: 20.8, height: 9.0))
                                 context.addPath(UIBezierPath(roundedRect: contentRect, cornerRadius: 2.0).cgPath)
                                 context.clip()
-                                
-                                context.setFillColor(UIColor(rgb: 0xFF3B30).cgColor)
-                                context.addPath(UIBezierPath(roundedRect: CGRect(origin: contentRect.origin, size: CGSize(width: contentRect.width * CGFloat(item.value) / 100.0, height: contentRect.height)), cornerRadius: 1.0).cgPath)
-                                context.fillPath()
                             }
                             
                             UIGraphicsPopContext()
                         })
+                        strongSelf.batteryForegroundNode.image = generateImage(frameImage.size, rotatedContext: { size, context in
+                            UIGraphicsPushContext(context)
+                            
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            
+                            let contentRect = CGRect(origin: CGPoint(x: 3.0, y: (size.height - 9.0) * 0.5), size: CGSize(width: 20.8, height: 9.0))
+                            context.addPath(UIBezierPath(roundedRect: contentRect, cornerRadius: 2.0).cgPath)
+                            context.clip()
+                            
+                            context.setFillColor(UIColor.white.cgColor)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: contentRect.origin, size: CGSize(width: contentRect.width * CGFloat(item.value) / 100.0, height: contentRect.height)), cornerRadius: 1.0).cgPath)
+                            context.fillPath()
+                            
+                            UIGraphicsPopContext()
+                        })
+                        
+                        let batteryColor: UIColor
+                        if item.value <= 20 {
+                            batteryColor = UIColor(rgb: 0xFF3B30)
+                        } else {
+                            batteryColor = item.theme.list.itemSwitchColors.positiveColor
+                        }
+                        
+                        if strongSelf.batteryForegroundNode.layer.layerTintColor == nil {
+                            strongSelf.batteryForegroundNode.layer.layerTintColor = batteryColor.cgColor
+                        } else {
+                            ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateTintColor(layer: strongSelf.batteryForegroundNode.layer, color: batteryColor)
+                        }
+                        
                         strongSelf.batteryBackgroundNode.frame = CGRect(origin: CGPoint(x: centerFrame.minX + centerMeasureTextSize.width + 4.0, y: floor(centerFrame.midY - frameImage.size.height * 0.5)), size: frameImage.size)
+                        strongSelf.batteryForegroundNode.frame = strongSelf.batteryBackgroundNode.frame
                     }
                     
                     if let sliderView = strongSelf.sliderView {
