@@ -10426,6 +10426,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
     |> deliverOnMainQueue).start(next: { [weak parentController] recentIds in
         var createInviteLinkImpl: (() -> Void)?
         var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
+        let _ = confirmationImpl
         var options: [ContactListAdditionalOption] = []
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
@@ -10452,7 +10453,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
         }
         
         let contactsController: ViewController
-        if groupPeer.id.namespace == Namespaces.Peer.CloudGroup {
+        /*if groupPeer.id.namespace == Namespaces.Peer.CloudGroup {
             contactsController = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
                 if let confirmationImpl = confirmationImpl, case let .peer(peer, _, _) = peer {
                     return confirmationImpl(peer.id)
@@ -10461,10 +10462,10 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                 }
             }))
             contactsController.navigationPresentation = .modal
-        } else {
+        } else {*/
             contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: options, filters: [.excludeSelf, .disable(recentIds)]))
             contactsController.navigationPresentation = .modal
-        }
+        //}
         
         confirmationImpl = { [weak contactsController] peerId in
             return context.account.postbox.loadedPeerWithId(peerId)
@@ -10488,7 +10489,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
             }
         }
         
-        let addMember: (ContactListPeer) -> Signal<Void, NoError> = { [weak contactsController] memberPeer -> Signal<Void, NoError> in
+        /*let addMember: (ContactListPeer) -> Signal<Void, NoError> = { [weak contactsController] memberPeer -> Signal<Void, NoError> in
             if case let .peer(selectedPeer, _, _) = memberPeer {
                 let memberId = selectedPeer.id
                 if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
@@ -10642,7 +10643,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
             } else {
                 return .complete()
             }
-        }
+        }*/
         
         let addMembers: ([ContactListPeerId]) -> Signal<[(PeerId, AddChannelMemberError)], NoError> = { members -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
             let memberIds = members.compactMap { contact -> PeerId? in
@@ -10657,16 +10658,49 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
             |> take(1)
             |> deliverOnMainQueue
             |> mapToSignal { view -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
-                if memberIds.count == 1 {
-                    return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberIds[0])
-                    |> map { _ -> [(PeerId, AddChannelMemberError)] in
-                    }
-                    |> then(Signal<[(PeerId, AddChannelMemberError)], AddChannelMemberError>.single([]))
-                    |> `catch` { error -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
-                        return .single([(memberIds[0], error)])
+                if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
+                    if memberIds.count == 1 {
+                        return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberIds[0])
+                        |> map { _ -> [(PeerId, AddChannelMemberError)] in
+                        }
+                        |> then(Signal<[(PeerId, AddChannelMemberError)], AddChannelMemberError>.single([]))
+                        |> `catch` { error -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
+                            return .single([(memberIds[0], error)])
+                        }
+                    } else {
+                        return context.peerChannelMemberCategoriesContextsManager.addMembersAllowPartial(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds)
                     }
                 } else {
-                    return context.peerChannelMemberCategoriesContextsManager.addMembersAllowPartial(engine: context.engine, peerId: groupPeer.id, memberIds: memberIds)
+                    var signals: [Signal<(PeerId, AddChannelMemberError)?, NoError>] = []
+                    for memberId in memberIds {
+                        let signal: Signal<(PeerId, AddChannelMemberError)?, NoError> = context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: memberId)
+                        |> mapError { error -> AddChannelMemberError in
+                            switch error {
+                            case .generic:
+                                return .generic
+                            case .groupFull:
+                                return .limitExceeded
+                            case .privacy:
+                                return .restricted
+                            case .notMutualContact:
+                                return .notMutualContact
+                            case .tooManyChannels:
+                                return .generic
+                            }
+                        }
+                        |> ignoreValues
+                        |> map { _ -> (PeerId, AddChannelMemberError)? in
+                        }
+                        |> then(Signal<(PeerId, AddChannelMemberError)?, AddChannelMemberError>.single(nil))
+                        |> `catch` { error -> Signal<(PeerId, AddChannelMemberError)?, NoError> in
+                            return .single((memberId, error))
+                        }
+                        signals.append(signal)
+                    }
+                    return combineLatest(signals)
+                    |> map { values -> [(PeerId, AddChannelMemberError)] in
+                        return values.compactMap { $0 }
+                    }
                 }
             }
         }
@@ -10677,7 +10711,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
         }
 
         parentController?.push(contactsController)
-        if let contactsController = contactsController as? ContactSelectionController {
+        /*if let contactsController = contactsController as? ContactSelectionController {
             selectAddMemberDisposable.set((contactsController.result
             |> deliverOnMainQueue).start(next: { [weak contactsController] result in
                 guard let (peers, _, _, _, _) = result, let memberPeer = peers.first else {
@@ -10694,7 +10728,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                 selectAddMemberDisposable.set(nil)
                 addMemberDisposable.set(nil)
             }
-        }
+        }*/
         if let contactsController = contactsController as? ContactMultiselectionController {
             selectAddMemberDisposable.set((
                 combineLatest(queue: .mainQueue(),
