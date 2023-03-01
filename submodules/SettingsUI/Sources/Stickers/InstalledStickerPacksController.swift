@@ -1178,7 +1178,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             
             if stickerSettings.dynamicPackOrder {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: presentationData.strings.StickerPacksSettings_DynamicOrderOff, text: presentationData.strings.StickerPacksSettings_DynamicOrderOffInfo, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: presentationData.strings.StickerPacksSettings_DynamicOrderOff, text: presentationData.strings.StickerPacksSettings_DynamicOrderOffInfo, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     return false }), nil)
                 
                 arguments.toggleDynamicPackOrder(false)

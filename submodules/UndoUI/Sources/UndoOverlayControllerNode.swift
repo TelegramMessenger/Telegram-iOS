@@ -840,7 +840,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     }
                 }
-            case let .universal(animation, scale, colors, title, text, customUndoText):
+            case let .universal(animation, scale, colors, title, text, customUndoText, timeout):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -865,7 +865,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if text.contains("](") {
                     isUserInteractionEnabled = true
                 }
-                self.originalRemainingSeconds = isUserInteractionEnabled ? 5 : 3
+                self.originalRemainingSeconds = timeout ?? (isUserInteractionEnabled ? 5 : 3)
             
                 self.textNode.maximumNumberOfLines = 5
                 

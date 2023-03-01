@@ -428,18 +428,26 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 if let sponsorInfo = adAttribute.sponsorInfo {
                     subItems.append(.action(ContextMenuActionItem(text: sponsorInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                         return nil
-                    }, iconSource: nil, action: { c, _ in
+                    }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
                         c.dismiss(completion: {
                             UIPasteboard.general.string = sponsorInfo
+                            
+                            //TODO:localize
+                            let content: UndoOverlayContent = .copy(text: "Text copied")
+                            controllerInteraction?.displayUndo(content)
                         })
                     })))
                 }
                 if let additionalInfo = adAttribute.additionalInfo {
                     subItems.append(.action(ContextMenuActionItem(text: additionalInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                         return nil
-                    }, iconSource: nil, action: { c, _ in
+                    }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
                         c.dismiss(completion: {
                             UIPasteboard.general.string = additionalInfo
+                            
+                            //TODO:localize
+                            let content: UndoOverlayContent = .copy(text: "Text copied")
+                            controllerInteraction?.displayUndo(content)
                         })
                     })))
                 }
@@ -1519,7 +1527,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         Queue.mainQueue().after(0.2) {
                                             switch result {
                                                 case .generic:
-                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
                                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                                     let text: String
@@ -1528,7 +1536,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                     } else {
                                                         text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                                     }
-                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                                         if case .info = action {
                                                             let controller = PremiumIntroScreen(context: context, source: .savedGifs)
                                                             controllerInteraction.navigationController()?.pushViewController(controller)

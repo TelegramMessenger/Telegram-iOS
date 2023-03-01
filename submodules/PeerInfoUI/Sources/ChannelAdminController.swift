@@ -14,6 +14,7 @@ import ItemListAvatarAndNameInfoItem
 import Emoji
 import LocalizedPeerData
 import Markdown
+import SendInviteLinkScreen
 
 private let rankMaxLength: Int32 = 16
 
@@ -975,10 +976,13 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
             TelegramEngine.EngineData.Item.Peer.Peer(id: adminId),
             TelegramEngine.EngineData.Item.Peer.Presence(id: adminId)
+        ),
+        context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)
         )
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, peerInfoData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peerInfoData, exportedInvitation -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let channelPeer = peerInfoData.0.flatMap { $0 }
         let adminPeer = peerInfoData.1.flatMap { $0 }
         let adminPresence = peerInfoData.2
@@ -1010,6 +1014,15 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                     |> deliverOnMainQueue).start(error: { error in
                         updateState { current in
                             return current.withUpdatedUpdating(false)
+                        }
+                        
+                        if let adminPeer, let exportedInvitation, let link = exportedInvitation.link {
+                            let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: [adminPeer])
+                            pushControllerImpl?(inviteScreen)
+                            
+                            dismissImpl?()
+                            
+                            return
                         }
 
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1193,6 +1206,15 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         }
                         updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
                             if case let .addMemberError(addMemberError) = error, let admin = adminPeer {
+                                if let exportedInvitation, let link = exportedInvitation.link {
+                                    let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: [admin])
+                                    pushControllerImpl?(inviteScreen)
+                                    
+                                    dismissImpl?()
+                                    
+                                    return
+                                }
+                                
                                 var text = presentationData.strings.Login_UnknownError
                                 switch addMemberError {
                                     case .tooMuchJoined:

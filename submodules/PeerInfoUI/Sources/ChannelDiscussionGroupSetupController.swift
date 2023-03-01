@@ -318,7 +318,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
             
             if case let .channel(channel) = groupPeer, channel.flags.contains(.isForum) {
                 let text = presentationData.strings.PeerInfo_TopicsLimitedDiscussionGroups
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 return
             }
             

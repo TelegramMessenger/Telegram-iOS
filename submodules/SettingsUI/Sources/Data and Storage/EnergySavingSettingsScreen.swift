@@ -277,7 +277,7 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
             } else {
                 text = "Turn off Power Saving Mode or charge your phone to change these settings."
             }
-            displayTooltipImpl?(.universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: nil, text: text, customUndoText: nil))
+            displayTooltipImpl?(.universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: nil, text: text, customUndoText: nil, timeout: 5.0))
         }
     )
     
