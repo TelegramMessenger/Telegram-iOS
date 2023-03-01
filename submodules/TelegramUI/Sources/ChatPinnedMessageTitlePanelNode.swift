@@ -900,7 +900,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             }
                         })
                     case let .openWebView(url, simple):
-                        controllerInteraction.openWebView(button.title, url, simple, false)
+                        controllerInteraction.openWebView(button.title, url, simple, .generic)
                     case .requestPeer:
                         break
                     }

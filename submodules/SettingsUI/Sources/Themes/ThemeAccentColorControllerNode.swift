@@ -1198,7 +1198,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateFrame(node: self.backgroundContainerNode, frame: CGRect(origin: CGPoint(), size: backgroundSize))
 
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, transition: transition)
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, tile: false, transition: transition)
         
         transition.updatePosition(node: self.backgroundWrapperNode, position: CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
         

@@ -2469,7 +2469,7 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
                 } else {
                     renderSize = CGSize(width: 90.0, height: 90.0)
                 }
-                fullSizeImage = renderPreparedImage(data, renderSize, .clear, UIScreenScale)
+                fullSizeImage = renderPreparedImage(data, renderSize, .clear, UIScreenScale, false)
                 if let image = fullSizeImage {
                     fittedSize = image.size.aspectFitted(arguments.boundingSize)
                 }

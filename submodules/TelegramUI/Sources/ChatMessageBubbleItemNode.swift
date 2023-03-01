@@ -1298,8 +1298,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
             
-            if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
-                needsShareButton = true
+            if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo {
+                if !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
+                    needsShareButton = true
+                } else if author.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(92386307)) {
+                    needsShareButton = true
+                }
             }
             var mayHaveSeparateCommentsButton = false
             if !needsShareButton {

@@ -42,6 +42,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                             }
                         }
                     }))
+                case let .withBotStartPayload(botStart):
+                    if let navigationController = controller?.navigationController as? NavigationController {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botStart: botStart, keepStack: .always))
+                    }
                 default:
                     break
             }

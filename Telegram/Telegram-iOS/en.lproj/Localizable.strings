@@ -8939,3 +8939,16 @@ Sorry for the inconvenience.";
 "ChatList.ClearSavedMessagesConfirmation" = "Are you sure you want to delete all your saved messages?";
 
 "Conversation.Translation.Settings" = "Settings";
+
+"StickerPacksSettings.TrendingStickers" = "Trending Stickers";
+"StickerPacksSettings.MyStickers" = "MY STICKERS";
+
+"StickerPacksSettings.DynamicOrder" = "Dynamic Pack Order";
+"StickerPacksSettings.DynamicOrderInfo" = "Recently used sticker packs will be displayed above the older ones.";
+"StickerPacksSettings.Emoji" = "Emoji";
+
+"StickerPacksSettings.DynamicOrderOff" = "Dynamic Order Off";
+"StickerPacksSettings.DynamicOrderOffInfo" = "Sticker packs will no longer be automatically rearranged every time you use a sticker.";
+
+"GroupPermission.NotAvailableInDiscussionGroups" = "This permission is not available in discussion groups.";
+"GroupPermission.NotAvailableInGeoGroups" = "This permission is not available in location-based groups.";

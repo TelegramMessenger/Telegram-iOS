@@ -199,7 +199,7 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
         let range = self.maxValue - self.minValue
         let location = gestureRecognizer.location(in: gestureRecognizer.view)
-        self.value = max(self.minValue, min(self.maxValue, location.x / range))
+        self.value = max(self.minValue, min(self.maxValue, self.minValue + location.x / self.bounds.width * range))
         self.valueChanged(self.value, true)
     }
     

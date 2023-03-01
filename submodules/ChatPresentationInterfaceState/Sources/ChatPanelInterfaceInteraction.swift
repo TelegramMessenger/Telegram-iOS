@@ -59,6 +59,13 @@ public enum ChatTranslationDisplayType {
     case translated
 }
 
+public enum ChatOpenWebViewSource: Equatable {
+    case generic
+    case menu
+    case inline(bot: EnginePeer)
+    case webApp(botApp: BotApp)
+}
+
 public final class ChatPanelInterfaceInteraction {
     public let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     public let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
@@ -148,7 +155,7 @@ public final class ChatPanelInterfaceInteraction {
     public let openSendAsPeer: (ASDisplayNode, ContextGesture?) -> Void
     public let presentChatRequestAdminInfo: () -> Void
     public let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
-    public let openWebView: (String, String, Bool, Bool) -> Void
+    public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
     public let updateShowWebView: ((Bool) -> Bool) -> Void
     public let insertText: (NSAttributedString) -> Void
     public let backwardsDeleteText: () -> Void
@@ -250,7 +257,7 @@ public final class ChatPanelInterfaceInteraction {
         openSendAsPeer: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         presentChatRequestAdminInfo: @escaping () -> Void,
         displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void,
-        openWebView: @escaping (String, String, Bool, Bool) -> Void,
+        openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
         updateShowWebView: @escaping ((Bool) -> Bool) -> Void,
         insertText: @escaping (NSAttributedString) -> Void,
         backwardsDeleteText: @escaping () -> Void,

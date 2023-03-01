@@ -36,6 +36,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     private let modalPresentation: Bool
     
+    private let coverNode: ASDisplayNode
     private var backgroundCustomNode: ASDisplayNode?
     private let backgroundDimNode: ASDisplayNode
     private let backgroundImageNode: ASImageNode
@@ -69,6 +70,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.biometricsType = biometricsType
         self.arguments = arguments
         self.modalPresentation = modalPresentation
+        
+        self.coverNode = ASDisplayNode()
+        self.coverNode.backgroundColor = .black
         
         self.backgroundImageNode = ASImageNode()
         self.backgroundImageNode.contentMode = .scaleToFill
@@ -140,6 +144,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         }
         
+        self.addSubnode(self.coverNode)
         self.addSubnode(self.backgroundImageNode)
         self.addSubnode(self.backgroundDimNode)
         self.addSubnode(self.iconNode)
@@ -238,20 +243,26 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                     color3 = baseColor.withMultiplied(hue: 1.029, saturation: 0.729, brightness: 1.231)
                     color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
                 }
+                self.coverNode.backgroundColor = color3
                 self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
             case let .gradient(gradient):
+                self.coverNode.backgroundColor = gradient.colors.first.flatMap { UIColor(rgb: $0) }
                 self.background = CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
             case .image, .file:
                 if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
+                    self.coverNode.backgroundColor = .black
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
                     if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
+                        self.coverNode.backgroundColor = file.settings.colors.last.flatMap { UIColor(rgb: $0) }
                         self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
                     } else {
+                        self.coverNode.backgroundColor = self.theme.passcode.backgroundColors.bottomColor
                         self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
                     }
                 }
             default:
+                self.coverNode.backgroundColor = self.theme.passcode.backgroundColors.bottomColor
                 self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
         }
         
@@ -355,6 +366,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func animateIn(iconFrame: CGRect, completion: @escaping () -> Void = {}) {
+        self.coverNode.isHidden = true
+        
         let effect = self.theme.overallDarkAppearance ? UIBlurEffect(style: .dark) : UIBlurEffect(style: .light)
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
@@ -386,6 +399,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.biometricButtonNode.isHidden = true
         
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .slideIn, completion: {
+            self.coverNode.isHidden = false
+            
             self.subtitleNode.isHidden = false
             self.inputFieldNode.isHidden = false
             self.keyboardNode.isHidden = false
@@ -447,6 +462,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.validLayout = layout
         
         self.updateBackground()
+        
+        let maxSide = max(layout.size.width, layout.size.height)
+        let coverSize = CGSize(width: maxSide, height: maxSide)
+        transition.updateFrame(node: self.coverNode, frame: CGRect(origin: CGPoint(x: round((layout.size.width - coverSize.width) / 2.0), y: round((layout.size.height - coverSize.height) / 2.0)), size: coverSize))
             
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
         transition.updateFrame(node: self.backgroundImageNode, frame: bounds)

@@ -393,7 +393,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper)
                         backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
-                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, transition: .immediate)
+                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, tile: false, transition: .immediate)
                     }
 
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)

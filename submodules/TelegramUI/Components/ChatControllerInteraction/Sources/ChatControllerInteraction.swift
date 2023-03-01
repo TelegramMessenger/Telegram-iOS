@@ -165,7 +165,7 @@ public final class ChatControllerInteraction {
     public let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
     public let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     public let openJoinLink: (String) -> Void
-    public let openWebView: (String, String, Bool, Bool) -> Void
+    public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
     public let activateAdAction: (EngineMessage.Id) -> Void
     public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void
     
@@ -277,7 +277,7 @@ public final class ChatControllerInteraction {
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
-        openWebView: @escaping (String, String, Bool, Bool) -> Void,
+        openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
         activateAdAction: @escaping (EngineMessage.Id) -> Void,
         openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,

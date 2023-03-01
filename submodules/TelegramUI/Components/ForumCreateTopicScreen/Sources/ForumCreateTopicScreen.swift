@@ -396,7 +396,7 @@ private final class TopicIconSelectionComponent: Component {
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
-                    isContentInFocus: true,
+                    isContentInFocus: false,
                     containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: 0.0, bottom: 0.0, right: 0.0),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.emojiContent,

@@ -565,8 +565,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             dismissImpl?()
         })
         let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: self.dismissedPromise.get())), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
-        dismissImpl = { [weak contextController] in
-            contextController?.dismiss()
+        dismissImpl = {
+            //contextController?.dismiss()
         }
         self.presentInGlobalOverlay?(contextController)
     }
