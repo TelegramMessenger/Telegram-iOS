@@ -1030,7 +1030,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         return speedList
     }
     
-    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType) -> Void) -> Signal<ContextController.Items, NoError> {
+    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType?) -> Void) -> Signal<ContextController.Items, NoError> {
         var presetItems: [ContextMenuItem] = []
         
         let previousValue = self.currentRate?.doubleValue ?? 1.0
@@ -1051,6 +1051,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     return nil
                 }
             }, action: { [weak self] _, f in
+                scheduleTooltip(nil)
                 f(.default)
                 
                 self?.control?(.setBaseRate(rate))

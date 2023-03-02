@@ -2651,14 +2651,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func readAllInFilter(id: Int32) {
-        guard case let .chatList(groupId) = self.chatListDisplayNode.effectiveContainerNode.location else {
-            return
-        }
         for filter in self.chatListDisplayNode.mainContainerNode.availableFilters {
             if case let .filter(filter) = filter, case let .filter(filterId, _, _, data) = filter, filterId == id {
                 let filterPredicate = chatListFilterPredicate(filter: data)
                 var markItems: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)] = []
-                markItems.append((groupId, filterPredicate))
+                markItems.append((.root, filterPredicate))
                 for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
                     markItems.append((EngineChatList.Group(additionalGroupId), filterPredicate))
                 }
