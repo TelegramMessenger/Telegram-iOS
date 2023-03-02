@@ -86,9 +86,9 @@ public final class TrendingPanePackEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    public func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
+    public func item(context: AccountContext, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: false, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(context: context, theme: self.theme, strings: self.strings, listAppearance: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: false, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info)
@@ -147,14 +147,14 @@ private enum TrendingPaneEntry: Identifiable, Comparable {
         }
     }
     
-    func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
+    func item(context: AccountContext, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         switch self {
         case let .search(theme, strings):
             return PaneSearchBarPlaceholderItem(theme: theme, strings: strings, type: .stickers, activate: {
                 interaction.openSearch()
             })
         case let .pack(pack):
-            return pack.item(account: account, interaction: interaction, grid: grid)
+            return pack.item(context: context, interaction: interaction, grid: grid)
         }
     }
 }
@@ -166,12 +166,12 @@ private struct TrendingPaneTransition {
     let initial: Bool
 }
 
-private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntries: [TrendingPaneEntry], account: Account, interaction: TrendingPaneInteraction, initial: Bool) -> TrendingPaneTransition {
+private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntries: [TrendingPaneEntry], context: AccountContext, interaction: TrendingPaneInteraction, initial: Bool) -> TrendingPaneTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, grid: false), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, grid: false)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, grid: false), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, grid: false)) }
     
     return TrendingPaneTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
@@ -356,7 +356,7 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings, isPane: isPane)
             let previous = previousEntries.swap(entries)
             
-            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: previous == nil)
+            return preparedTransition(from: previous ?? [], to: entries, context: context, interaction: interaction, initial: previous == nil)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             guard let strongSelf = self else {

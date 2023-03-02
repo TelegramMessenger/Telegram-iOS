@@ -12,6 +12,7 @@ import AppBundle
 import PasscodeInputFieldNode
 import MonotonicTime
 import GradientBackground
+import TelegramUIPreferences
 
 private extension CGRect {
     var center: CGPoint {
@@ -60,6 +61,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
+    var energyUsageSettings: EnergyUsageSettings = .default
+    var energyUsageSettingsDisposable: Disposable?
+    
     init(accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
         self.accountManager = accountManager
         self.presentationData = presentationData
@@ -105,7 +109,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.inputFieldNode.append(character)
                 if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
-                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: false, completion: {})
+                    if strongSelf.energyUsageSettings.fullTranslucency {
+                        gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: false, completion: {})
+                    }
                 }
             }
         }
@@ -113,7 +119,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 let _ = strongSelf.inputFieldNode.delete()
                 if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
-                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: true, completion: {})
+                    if strongSelf.energyUsageSettings.fullTranslucency {
+                        gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: true, completion: {})
+                    }
                 }
             }
         }
@@ -158,6 +166,24 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if self.arguments.cancel != nil {
             self.addSubnode(self.cancelButtonNode)
         }
+        
+        self.energyUsageSettingsDisposable = (accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            guard let self else {
+                return
+            }
+            if let mediaAutoDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                if automaticEnergyUsageShouldBeOnNow(settings: mediaAutoDownloadSettings) {
+                    self.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
+                } else {
+                    self.energyUsageSettings = mediaAutoDownloadSettings.energyUsageSettings
+                }
+            }
+        })
+    }
+    
+    deinit {
+        self.energyUsageSettingsDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -183,7 +209,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.hapticFeedback.tap()
         let result = self.inputFieldNode.delete()
         if result, let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-            gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: true, completion: {})
+            if self.energyUsageSettings.fullTranslucency {
+                gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: true, completion: {})
+            }
         }
     }
     
@@ -359,7 +387,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
                 gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: true, backwards: false, completion: {})
+                
+                if self.energyUsageSettings.fullTranslucency {
+                    gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: true, backwards: false, completion: {})
+                }
             }
         }
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .none)
@@ -377,9 +408,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         })
         self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
+        if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode, self.energyUsageSettings.fullTranslucency {
             gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring), extendAnimation: false, backwards: false, completion: {})
+            if self.energyUsageSettings.fullTranslucency {
+                gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring), extendAnimation: false, backwards: false, completion: {})
+            }
             self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         if !iconFrame.isEmpty {
@@ -411,7 +444,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             
             if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: false, backwards: false, completion: {})
+                if self.energyUsageSettings.fullTranslucency {
+                    gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: false, backwards: false, completion: {})
+                }
             }
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()
@@ -454,7 +489,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.hapticFeedback.error()
         
         if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-            gradientNode.animateEvent(transition: .animated(duration: 1.5, curve: .spring), extendAnimation: true, backwards: true, completion: {})
+            if self.energyUsageSettings.fullTranslucency {
+                gradientNode.animateEvent(transition: .animated(duration: 1.5, curve: .spring), extendAnimation: true, backwards: true, completion: {})
+            }
         }
     }
     

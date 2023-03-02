@@ -330,6 +330,7 @@ open class ManagedAnimationNode: ASDisplayNode {
 
 public final class SimpleAnimationNode: ManagedAnimationNode {
     private let stillItem: ManagedAnimationItem
+    private let stillEndItem: ManagedAnimationItem
     private let animationItem: ManagedAnimationItem
     
     public let size: CGSize
@@ -340,6 +341,7 @@ public final class SimpleAnimationNode: ManagedAnimationNode {
         self.size = size
         self.playOnce = playOnce
         self.stillItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors, frames: .range(startFrame: 0, endFrame: 0), duration: 0.01)
+        self.stillEndItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors, frames: .still(.end), duration: 0.01)
         self.animationItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors)
 
         super.init(size: size)
@@ -357,5 +359,10 @@ public final class SimpleAnimationNode: ManagedAnimationNode {
     public func reset() {
         self.didPlay = false
         self.trackTo(item: self.stillItem)
+    }
+    
+    public func seekToEnd() {
+        self.didPlay = false
+        self.trackTo(item: self.stillEndItem)
     }
 }
