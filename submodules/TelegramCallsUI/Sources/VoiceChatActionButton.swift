@@ -130,6 +130,12 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         }
     }
         
+    var animationsEnabled: Bool = true {
+        didSet {
+            self.backgroundNode.animationsEnabled = self.animationsEnabled
+        }
+    }
+    
     init() {
         self.bottomNode = ASDisplayNode()
         self.bottomNode.isUserInteractionEnabled = false
@@ -833,7 +839,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     }
     
     private func playMuteAnimation() {
-        self.maskBlobView.startAnimating()
+        if self.animationsEnabled {
+            self.maskBlobView.startAnimating()
+        }
         self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
@@ -862,7 +870,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskGradientLayer.removeAllAnimations()
         self.updateGlowAndGradientAnimations(type: .connecting, previousType: nil)
         
-        self.maskBlobView.startAnimating()
+        if self.animationsEnabled {
+            self.maskBlobView.startAnimating()
+        }
         self.maskBlobView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
@@ -915,7 +925,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.updateGlowAndGradientAnimations(type: active ? .speaking : .active, previousType: nil)
         
         self.maskBlobView.isHidden = false
-        self.maskBlobView.startAnimating()
+        if self.animationsEnabled {
+            self.maskBlobView.startAnimating()
+        }
         self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
     }
         
@@ -968,7 +980,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 if case .connecting = self.state {
                 } else {
                     self.maskBlobView.isHidden = false
-                    self.maskBlobView.startAnimating()
+                    if self.animationsEnabled {
+                        self.maskBlobView.startAnimating()
+                    }
                     self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
                 }
                 
@@ -1038,7 +1052,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskCircleLayer.animateSpring(from: previousPath as AnyObject, to: largerCirclePath as AnyObject, keyPath: "path", duration: 0.6, initialVelocity: 0.0, damping: 100.0)
         
         self.maskBlobView.isHidden = false
-        self.maskBlobView.startAnimating()
+        if self.animationsEnabled {
+            self.maskBlobView.startAnimating()
+        }
         self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, damping: 100.0)
         
         self.disableGlowAnimations = true
@@ -1046,6 +1062,12 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.maskGradientLayer.animateSpring(from: 0.3 as NSNumber, to: 0.85 as NSNumber, keyPath: "transform.scale", duration: 0.45, completion: { [weak self] _ in
             self?.disableGlowAnimations = false
         })
+    }
+    
+    var animationsEnabled: Bool = true {
+        didSet {
+            self.updateAnimations()
+        }
     }
     
     var isActive = false
@@ -1058,7 +1080,13 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             self.maskBlobView.stopAnimating()
             return
         }
-        self.setupGradientAnimations()
+        
+        if !self.animationsEnabled {
+            self.foregroundGradientLayer.removeAllAnimations()
+            self.maskBlobView.stopAnimating()
+        } else {
+            self.setupGradientAnimations()
+        }
         
         switch self.state {
             case .connecting:
@@ -1093,7 +1121,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                     }
                     self.transition = nil
                 } else {
-                    self.maskBlobView.startAnimating()
+                    if self.animationsEnabled {
+                        self.maskBlobView.startAnimating()
+                    }
                 }
             case .disabled:
                 self.updatedActive?(true)
@@ -1118,7 +1148,9 @@ private final class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                         self.maskProgressLayer.isHidden = true
                         self.maskGradientLayer.isHidden = false
                         self.maskBlobView.isHidden = false
-                        self.maskBlobView.startAnimating()
+                        if self.animationsEnabled {
+                            self.maskBlobView.startAnimating()
+                        }
                         self.maskBlobView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     }
                 }
@@ -1287,12 +1319,12 @@ private final class VoiceBlobView: UIView {
         
         super.init(frame: frame)
 
-        addSubnode(hierarchyTrackingNode)
+        self.addSubnode(self.hierarchyTrackingNode)
         
-        addSubview(bigBlob)
-        addSubview(mediumBlob)
+        self.addSubview(self.bigBlob)
+        self.addSubview(self.mediumBlob)
         
-        displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+        self.displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
 
             if !strongSelf.isCurrentlyInHierarchy {
@@ -1317,29 +1349,29 @@ private final class VoiceBlobView: UIView {
     }
     
     public func setColor(_ color: UIColor) {
-        mediumBlob.setColor(color.withAlphaComponent(0.5))
-        bigBlob.setColor(color.withAlphaComponent(0.21))
+        self.mediumBlob.setColor(color.withAlphaComponent(0.5))
+        self.bigBlob.setColor(color.withAlphaComponent(0.21))
     }
     
     public func updateLevel(_ level: CGFloat, immediately: Bool) {
         let normalizedLevel = min(1, max(level / maxLevel, 0))
         
-        mediumBlob.updateSpeedLevel(to: normalizedLevel)
-        bigBlob.updateSpeedLevel(to: normalizedLevel)
+        self.mediumBlob.updateSpeedLevel(to: normalizedLevel)
+        self.bigBlob.updateSpeedLevel(to: normalizedLevel)
         
-        audioLevel = normalizedLevel
+        self.audioLevel = normalizedLevel
         if immediately {
-            presentationAudioLevel = normalizedLevel
+            self.presentationAudioLevel = normalizedLevel
         }
     }
     
     public func startAnimating() {
-        guard !isAnimating else { return }
-        isAnimating = true
+        guard !self.isAnimating else { return }
+        self.isAnimating = true
         
-        updateBlobsState()
+        self.updateBlobsState()
         
-        displayLinkAnimator?.isPaused = false
+        self.displayLinkAnimator?.isPaused = false
     }
     
     public func stopAnimating() {
@@ -1348,32 +1380,32 @@ private final class VoiceBlobView: UIView {
     
     public func stopAnimating(duration: Double) {
         guard isAnimating else { return }
-        isAnimating = false
+        self.isAnimating = false
         
-        updateBlobsState()
+        self.updateBlobsState()
         
-        displayLinkAnimator?.isPaused = true
+        self.displayLinkAnimator?.isPaused = true
     }
     
     private func updateBlobsState() {
-        if isAnimating {
-            if mediumBlob.frame.size != .zero {
-                mediumBlob.startAnimating()
-                bigBlob.startAnimating()
+        if self.isAnimating {
+            if self.mediumBlob.frame.size != .zero {
+                self.mediumBlob.startAnimating()
+                self.bigBlob.startAnimating()
             }
         } else {
-            mediumBlob.stopAnimating()
-            bigBlob.stopAnimating()
+            self.mediumBlob.stopAnimating()
+            self.bigBlob.stopAnimating()
         }
     }
     
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        mediumBlob.frame = bounds
-        bigBlob.frame = bounds
+        self.mediumBlob.frame = bounds
+        self.bigBlob.frame = bounds
         
-        updateBlobsState()
+        self.updateBlobsState()
     }
 }
 
@@ -1451,10 +1483,6 @@ final class BlobView: UIView {
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         self.speedLevel = max(self.speedLevel, newSpeedLevel)
-        
-//        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
-//            animateToNewShape()
-//        }
     }
     
     func startAnimating() {
@@ -1540,7 +1568,7 @@ final class BlobView: UIView {
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        self.shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         CATransaction.commit()
     }
 }

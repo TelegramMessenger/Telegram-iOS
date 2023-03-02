@@ -1064,6 +1064,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             self.switchCameraButton.isUserInteractionEnabled = false
             self.leaveButton = CallControllerButtonItemNode()
             self.actionButton = VoiceChatActionButton()
+            self.actionButton.animationsEnabled = sharedContext.energyUsageSettings.fullTranslucency
             
             if self.isScheduling {
                 self.cameraButton.alpha = 0.0
