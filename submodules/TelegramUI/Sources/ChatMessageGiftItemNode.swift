@@ -17,6 +17,7 @@ import ReactionSelectionNode
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ChatControllerInteraction
+import ShimmerEffect
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)
@@ -33,6 +34,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
+    private let placeholderNode: StickerShimmerEffectNode
     private let animationNode: AnimatedStickerNode
     
     private let buttonNode: HighlightTrackingButtonNode
@@ -63,6 +65,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    private var animationDisposable: Disposable?
+    private var setupTimestamp: Double?
+    
     required init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -87,8 +92,12 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 17.0
                 
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode.isUserInteractionEnabled = false
+        self.placeholderNode.alpha = 0.75
         
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
+
         self.buttonStarsNode = PremiumStarsNode()
         
         self.buttonTitleNode = TextNode()
@@ -102,11 +111,26 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.placeholderNode)
         self.addSubnode(self.animationNode)
         
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
         self.addSubnode(self.buttonTitleNode)
+        
+        self.animationNode.started = { [weak self] in
+            if let strongSelf = self {
+                let current = CACurrentMediaTime()
+                if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                    if !strongSelf.placeholderNode.alpha.isZero {
+                        strongSelf.animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        strongSelf.removePlaceholder(animated: true)
+                    }
+                } else {
+                    strongSelf.removePlaceholder(animated: false)
+                }
+            }
+        }
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -131,11 +155,26 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.animationDisposable?.dispose()
+    }
+    
     @objc private func buttonPressed() {
         guard let item = self.item else {
             return
         }
         let _ = item.controllerInteraction.openMessage(item.message, .default)
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        self.placeholderNode.alpha = 0.0
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.layer.animateAlpha(from: self.placeholderNode.alpha, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
+        }
     }
                 
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -157,22 +196,13 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                 
                 var duration: String = ""
-                var animationName: String = ""
+                var animationMonths: Int32 = 0
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
                         case let .giftPremium(_, _, months):
                             duration = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
-                            switch months {
-                            case 12:
-                                animationName = "Gift12"
-                            case 6:
-                                animationName = "Gift6"
-                            case 3:
-                                animationName = "Gift3"
-                            default:
-                                animationName = "Gift3"
-                            }
+                            animationMonths = months
                         default:
                             break
                         }
@@ -218,13 +248,39 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             
                 let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + giftSize.height + 18.0)
+                let iconSize = CGSize(width: 160.0, height: 160.0)
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             if strongSelf.item == nil {
                                 strongSelf.animationNode.autoplay = true
-                                strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                                strongSelf.animationDisposable = (item.context.engine.stickers.loadedStickerPack(reference: .premiumGifts, forceActualized: false)
+                                |> deliverOnMainQueue).start(next: { [weak self] pack in
+                                    if let strongSelf = self, case let .result(_, items, _) = pack {
+                                        let animationIndex: Int
+                                        switch animationMonths {
+                                        case 3:
+                                            animationIndex = 0
+                                        case 6:
+                                            animationIndex = 1
+                                        case 12:
+                                            animationIndex = 2
+                                        default:
+                                            animationIndex = 0
+                                        }
+                                        if animationIndex < items.count {
+                                            let file = items[animationIndex].file
+                                            let source = AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+                                            strongSelf.animationNode.setup(source: source, width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
+                                            if let immediateThumbnailData = file.immediateThumbnailData {
+                                                let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                                                let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
+                                                strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: iconSize, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
+                                            }
+                                        }
+                                    }
+                                })
                             }
                             strongSelf.item = item
 
@@ -240,9 +296,11 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.mediaBackgroundNode.update(size: mediaBackgroundFrame.size, transition: .immediate)
                             strongSelf.buttonNode.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
-                            let iconSize = CGSize(width: 160.0, height: 160.0)
-                            strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0), size: iconSize)
+                            let animationNodeFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0), size: iconSize)
+                            strongSelf.animationNode.frame = animationNodeFrame
                             strongSelf.animationNode.updateLayout(size: iconSize)
+                            
+                            strongSelf.placeholderNode.frame = animationNodeFrame
                             
                             let _ = labelApply()
                             let _ = titleApply()
@@ -333,6 +391,8 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             backgroundFrame.origin.y += rect.minY
             mediaBackgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
+        
+        self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
 
         if let backgroundNode = self.backgroundNode {
             var backgroundFrame = backgroundNode.frame
@@ -448,6 +508,10 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode.visibility = isPlaying
+        }
+        
+        if isPlaying && self.setupTimestamp == nil {
+            self.setupTimestamp = CACurrentMediaTime()
         }
         
         if isPlaying {

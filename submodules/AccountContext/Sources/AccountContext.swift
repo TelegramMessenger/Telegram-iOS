@@ -942,7 +942,7 @@ public protocol AccountContext: AnyObject {
 
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
-        return PremiumConfiguration(isPremiumDisabled: true)
+        return PremiumConfiguration(isPremiumDisabled: false)
     }
     
     public let isPremiumDisabled: Bool

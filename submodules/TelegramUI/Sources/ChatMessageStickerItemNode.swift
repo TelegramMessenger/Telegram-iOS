@@ -811,7 +811,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var dateAndStatusFrame = CGRect(origin: CGPoint(x: min(layoutSize.width - dateAndStatusSize.width - 14.0, max(displayLeftInset, updatedImageFrame.maxX - dateOffset.x)), y: updatedImageFrame.maxY - dateOffset.y), size: dateAndStatusSize)
             
             let baseShareButtonSize = CGSize(width: 30.0, height: 60.0)
-            var baseShareButtonFrame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 6.0, y: updatedImageFrame.maxY - 10.0 - baseShareButtonSize.height - 4.0), size: baseShareButtonSize)
+            var baseShareButtonFrame = CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - baseShareButtonSize.width - 6.0 : updatedImageFrame.maxX + 6.0, y: updatedImageFrame.maxY - 10.0 - baseShareButtonSize.height - 4.0), size: baseShareButtonSize)
             if isEmoji && incoming {
                 baseShareButtonFrame.origin.x = dateAndStatusFrame.maxX + 8.0
             }

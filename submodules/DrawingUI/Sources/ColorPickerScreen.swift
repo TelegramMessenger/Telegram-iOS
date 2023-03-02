@@ -2414,12 +2414,19 @@ private final class ColorPickerSheetComponent: CombinedComponent {
 }
 
 class ColorPickerScreen: ViewControllerComponentContainer {
+    private var dismissed: () -> Void
+    
     init(context: AccountContext, initialColor: DrawingColor, updated: @escaping (DrawingColor) -> Void, openEyedropper: @escaping () -> Void, dismissed: @escaping () -> Void = {}) {
+        self.dismissed = dismissed
         super.init(context: context, component: ColorPickerSheetComponent(context: context, initialColor: initialColor, updated: updated, openEyedropper: openEyedropper, dismissed: dismissed), navigationBarAppearance: .none)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.navigationPresentation = .flatModal
+    }
+    
+    deinit {
+        self.dismissed()
     }
     
     required init(coder aDecoder: NSCoder) {

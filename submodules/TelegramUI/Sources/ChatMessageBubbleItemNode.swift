@@ -3329,7 +3329,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
-                var buttonFrame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? currentBackgroundFrame.minX - buttonSize.width : currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 if let shareButtonOffset = shareButtonOffset {
                     buttonFrame.origin.x = shareButtonOffset.x
                     buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
@@ -3350,9 +3351,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
-                var buttonFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 if let shareButtonOffset = shareButtonOffset {
-                    buttonFrame.origin.x = shareButtonOffset.x
+                    if incoming {
+                        buttonFrame.origin.x = shareButtonOffset.x
+                    }
                     buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
                 } else if !disablesComments {
                     buttonFrame.origin.y = buttonFrame.origin.y - (buttonSize.height - 30.0)
