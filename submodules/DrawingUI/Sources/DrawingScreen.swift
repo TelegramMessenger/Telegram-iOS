@@ -1994,6 +1994,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         var drawingView: DrawingView {
             if self._drawingView == nil, let controller = self.controller {
                 self._drawingView = DrawingView(size: controller.size)
+                self._drawingView?.animationsEnabled = self.context.sharedContext.energyUsageSettings.fullTranslucency
                 self._drawingView?.shouldBegin = { [weak self] _ in
                     if let strongSelf = self {
                         if strongSelf._entitiesView?.hasSelection == true {
