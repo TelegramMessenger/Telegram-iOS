@@ -30,6 +30,7 @@ public final class CallViewController: ViewController {
     private var presentationData: PresentationData
 
     private var peerDisposable: Disposable?
+    private let audioLevelDisposable = MetaDisposable()
     private var disposable: Disposable?
     private var callMutedDisposable: Disposable?
     private var audioOutputStateDisposable: Disposable?
@@ -63,31 +64,6 @@ public final class CallViewController: ViewController {
         self.statusBar.ignoreInCall = true
 
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-
-        self.disposable = (call.state
-        |> deliverOnMainQueue).start(next: { [weak self] callState in
-            self?.callStateUpdated(callState)
-        })
-
-        self.callMutedDisposable = (call.isMuted
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.isMuted = value
-                if strongSelf.isNodeLoaded {
-                    strongSelf.callControllerView.isMuted = value
-                }
-            }
-        })
-
-        self.audioOutputStateDisposable = (call.audioOutputState
-        |> deliverOnMainQueue).start(next: { [weak self] state in
-            if let strongSelf = self {
-                strongSelf.audioOutputState = state
-                if strongSelf.isNodeLoaded {
-                    strongSelf.callControllerView.updateAudioOutputs(availableOutputs: state.0, currentOutput: state.1)
-                }
-            }
-        })
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -96,6 +72,7 @@ public final class CallViewController: ViewController {
 
     deinit {
         self.peerDisposable?.dispose()
+        self.audioLevelDisposable.dispose()
         self.disposable?.dispose()
         self.callMutedDisposable?.dispose()
         self.audioOutputStateDisposable?.dispose()
@@ -146,14 +123,6 @@ public final class CallViewController: ViewController {
             self.callControllerView.animateIn()
         }
         self.idleTimerExtensionDisposable.set(self.sharedContext.applicationBindings.pushIdleTimerExtension())
-
-        // TODO: implement
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + DispatchTimeInterval.seconds(5), execute: {
-            print("===============================================VIEWS:==========================================")
-            let rootContainerViewLocal: UIView = self.rootContainerView
-            print(rootContainerViewLocal)
-            print(rootContainerViewLocal.subviews)
-        })
     }
 
     override public func viewDidDisappear(_ animated: Bool) {
@@ -382,6 +351,38 @@ private extension CallViewController {
                 }
             }
         })
+        self.disposable = (call.state
+        |> deliverOnMainQueue).start(next: { [weak self] callState in
+            self?.callStateUpdated(callState)
+        })
+
+        self.callMutedDisposable = (call.isMuted
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isMuted = value
+                if strongSelf.isNodeLoaded {
+                    strongSelf.callControllerView.isMuted = value
+                }
+            }
+        })
+
+        self.audioOutputStateDisposable = (call.audioOutputState
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            if let strongSelf = self {
+                strongSelf.audioOutputState = state
+                if strongSelf.isNodeLoaded {
+                    strongSelf.callControllerView.updateAudioOutputs(availableOutputs: state.0, currentOutput: state.1)
+                }
+            }
+        })
+        self.audioLevelDisposable.set((call.audioLevel
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.callControllerView.updateAudioLevel(CGFloat(value) * 2.0)
+
+        }))
     }
 
     private func callStateUpdated(_ callState: PresentationCallState) {
@@ -389,58 +390,5 @@ private extension CallViewController {
             self.callControllerView.updateCallState(callState)
         }
     }
-
-    //    private var containerTransformationView: UIView! // CallControllerNode: containerTransformationNode: ASDisplayNode
-    //    private var contentContainerView: UIView! // CallControllerNode: containerNode: ASDisplayNode
-    //    private var videoContainerView: UIView! // CallControllerNode: videoContainerNode: PinchSourceContainerNode
-    //    private var backButtonArrowView: UIImageView! // CallControllerNode: backButtonArrowNode: ASImageNode
-    //    private var backButton: UIButton! // CallControllerNode: backButtonNode: HighlightableButtonNode
-
-//    private func setupUI() {
-//        let rootContainerViewLocal = UIView(frame: self.displayNode.view.bounds)
-//        rootContainerView = rootContainerViewLocal
-//        rootContainerViewLocal.translatesAutoresizingMaskIntoConstraints = false
-//        rootContainerViewLocal.backgroundColor = UIColor.clear
-//        displayNode.view.addSubview(rootContainerViewLocal)
-//
-//        let containerTransformationViewLocal = UIView(frame: rootContainerView.bounds)
-//        containerTransformationView = containerTransformationViewLocal
-//        containerTransformationViewLocal.clipsToBounds = true
-//        containerTransformationViewLocal.backgroundColor = UIColor.clear
-//        rootContainerView.addSubview(containerTransformationViewLocal)
-//
-//        let contentContainerViewLocal = UIView(frame: containerTransformationView.bounds)
-//        contentContainerView = contentContainerViewLocal
-//        contentContainerViewLocal.backgroundColor = UIColor.black
-//        containerTransformationView.addSubview(contentContainerViewLocal)
-//
-//        backButtonArrowView = UIImageView(image: nil)
-//        backButtonArrowView.image = NavigationBarTheme.generateBackArrowImage(color: .white)
-//        contentContainerView.addSubview(backButtonArrowView)
-//
-//        backButton = UIButton(frame: CGRectZero)
-//        self.backButton.addTarget(self, action: #selector(self.backPressed), for: .touchUpInside)
-//        self.backButton.setTitle(presentationData.strings.Common_Back, for: .normal)
-////        self.backButton.setTitle(presentationData.strings.Common_Back, with: Font.regular(17.0), with: .white, for: [])
-//        self.backButton.accessibilityLabel = presentationData.strings.Call_VoiceOver_Minimize
-//        self.backButton.accessibilityTraits = [.button]
-////        self.backButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -20.0, bottom: -8.0, right: -8.0)
-////        self.backButtonNode.highligthedChanged = { [weak self] highlighted in
-////            if let strongSelf = self {
-////                if highlighted {
-////                    strongSelf.backButtonNode.layer.removeAnimation(forKey: "opacity")
-////                    strongSelf.backButtonArrowNode.layer.removeAnimation(forKey: "opacity")
-////                    strongSelf.backButtonNode.alpha = 0.4
-////                    strongSelf.backButtonArrowNode.alpha = 0.4
-////                } else {
-////                    strongSelf.backButtonNode.alpha = 1.0
-////                    strongSelf.backButtonArrowNode.alpha = 1.0
-////                    strongSelf.backButtonNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-////                    strongSelf.backButtonArrowNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-////                }
-////            }
-////        }
-//        contentContainerView.addSubview(backButton)
-//    }
 
 }
