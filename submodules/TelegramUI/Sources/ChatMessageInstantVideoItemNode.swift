@@ -204,6 +204,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if (strongSelf.appliedCurrentlyPlaying ?? false) && !strongSelf.interactiveVideoNode.isPlaying {
                     return false
                 }
+                
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                    return false
+                }
+                
                 let action = item.controllerInteraction.canSetupReply(item.message)
                 strongSelf.currentSwipeAction = action
                 if case .none = action {

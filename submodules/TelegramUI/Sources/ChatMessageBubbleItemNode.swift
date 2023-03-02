@@ -1048,6 +1048,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         }
                     }
                 }
+                
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                    return false
+                }
+                
                 let action = item.controllerInteraction.canSetupReply(item.message)
                 strongSelf.currentSwipeAction = action
                 if case .none = action {
