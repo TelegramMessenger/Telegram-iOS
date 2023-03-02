@@ -512,14 +512,16 @@ private final class SendInviteLinkScreenComponent: Component {
                         if self.selectedItems.isEmpty {
                             controller.dismiss()
                         } else if let link = component.link {
+                            let selectedPeers = component.peers.filter { self.selectedItems.contains($0.id) }
+                            
                             let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                             let text: String
-                            if component.peers.count == 1 {
-                                text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                            } else if component.peers.count == 2 {
-                                text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), component.peers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                            if selectedPeers.count == 1 {
+                                text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                            } else if selectedPeers.count == 2 {
+                                text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
                             } else {
-                                text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(component.peers.count - 1)").string
+                                text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
                             }
                             
                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }

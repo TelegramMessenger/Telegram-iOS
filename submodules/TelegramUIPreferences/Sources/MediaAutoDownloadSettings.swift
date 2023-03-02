@@ -270,18 +270,24 @@ public struct EnergyUsageSettings: Codable, Equatable {
         case autodownloadInBackground
     }
     
-    public static var `default`: EnergyUsageSettings {
+    public static let `default`: EnergyUsageSettings = {
+        var length: Int = 4
+        var cpuCount: UInt32 = 0
+        sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
+        
+        let isCapable = cpuCount >= 4
+        
         return EnergyUsageSettings(
             activationThreshold: 15,
             autoplayVideo: true,
             autoplayGif: true,
             loopStickers: true,
-            loopEmoji: true,
-            fullTranslucency: true,
+            loopEmoji: isCapable ? false : true,
+            fullTranslucency: isCapable ? false : true,
             extendBackgroundWork: true,
             autodownloadInBackground: true
         )
-    }
+    }()
     
     public static var powerSavingDefault: EnergyUsageSettings {
         return EnergyUsageSettings(

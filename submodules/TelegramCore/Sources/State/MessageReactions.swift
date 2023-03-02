@@ -433,7 +433,7 @@ public final class EngineMessageReactionListContext {
             self.reaction = reaction
             
             let initialState = EngineMessageReactionListContext.State(message: message, readStats: readStats, reaction: reaction)
-            self.state = InternalState(hasOutgoingReaction: initialState.hasOutgoingReaction, totalCount: initialState.totalCount, items: initialState.items, canLoadMore: true, nextOffset: nil)
+            self.state = InternalState(hasOutgoingReaction: initialState.hasOutgoingReaction, totalCount: initialState.totalCount, items: initialState.items, canLoadMore: initialState.canLoadMore, nextOffset: nil)
             
             if initialState.canLoadMore {
                 self.loadMore()

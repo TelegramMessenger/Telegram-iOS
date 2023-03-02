@@ -637,6 +637,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if hadUpdates {
                     self.activeAccountsValue!.accounts.sort(by: { $0.2 < $1.2 })
                     self.activeAccountsPromise.set(.single(self.activeAccountsValue!))
+                    
+                    self.performAccountSettingsImportIfNecessary()
                 }
                 
                 if self.activeAccountsValue!.primary == nil && self.activeAccountsValue!.currentAuth == nil {
@@ -895,6 +897,37 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callDisposable?.dispose()
         self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
+    }
+    
+    private var didPerformAccountSettingsImport = false
+    private func performAccountSettingsImportIfNecessary() {
+        if self.didPerformAccountSettingsImport {
+            return
+        }
+        if let _ = UserDefaults.standard.value(forKey: "didPerformAccountSettingsImport") {
+            self.didPerformAccountSettingsImport = true
+            return
+        }
+        UserDefaults.standard.set(true as NSNumber, forKey: "didPerformAccountSettingsImport")
+        UserDefaults.standard.synchronize()
+        
+        if let primary = self.activeAccountsValue?.primary {
+            let _ = (primary.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: primary.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, case let .user(user) = peer else {
+                    return
+                }
+                if user.isPremium {
+                    let _ = updateMediaDownloadSettingsInteractively(accountManager: self.accountManager, { settings in
+                        var settings = settings
+                        settings.energyUsageSettings.loopEmoji = true
+                        return settings
+                    }).start()
+                }
+            })
+        }
+        
+        self.didPerformAccountSettingsImport = true
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
