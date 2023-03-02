@@ -493,15 +493,27 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let nextRate: AudioPlaybackRate
         if let rate = self.playbackBaseRate {
             switch rate {
+            case .x0_5, .x2:
+                nextRate = .x1
             case .x1:
                 nextRate = .x1_5
             case .x1_5:
                 nextRate = .x2
             default:
-                nextRate = .x1
+                if rate.doubleValue < 0.5 {
+                    nextRate = .x0_5
+                } else if rate.doubleValue < 1.0 {
+                    nextRate = .x1
+                } else if rate.doubleValue < 1.5 {
+                    nextRate = .x1_5
+                } else if rate.doubleValue < 2.0 {
+                    nextRate = .x2
+                } else {
+                    nextRate = .x1
+                }
             }
         } else {
-            nextRate = .x2
+            nextRate = .x1_5
         }
         self.setRate?(nextRate, .preset)
         
@@ -531,23 +543,27 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         var presetItems: [ContextMenuItem] = []
 
         let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
+        let sliderValuePromise = ValuePromise<Double?>(nil)
         let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
             let newValue = normalizeValue(newValue)
             self?.setRate?(AudioPlaybackRate(newValue), .sliderChange)
+            sliderValuePromise.set(newValue)
             if finished {
                 scheduleTooltip(.sliderCommit(previousValue, newValue))
             }
         }), true)
-               
+        
+        let theme = self.context.sharedContext.currentPresentationData.with { $0 }.theme
         for (text, _, rate) in self.speedList(strings: self.strings) {
             let isSelected = self.playbackBaseRate == rate
-            presetItems.append(.action(ContextMenuActionItem(text: text, icon: { theme in
-                if isSelected {
+            presetItems.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
+            |> map { value in
+                if isSelected && value == nil {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 } else {
                     return nil
                 }
-            }, action: { [weak self] _, f in
+            }), action: { [weak self] _, f in
                 scheduleTooltip(nil)
                 f(.default)
                 
