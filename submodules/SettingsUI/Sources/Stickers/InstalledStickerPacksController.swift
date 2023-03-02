@@ -59,9 +59,8 @@ private final class InstalledStickerPacksControllerArguments {
 }
 
 private enum InstalledStickerPacksSection: Int32 {
-    case settings
     case categories
-    case order
+    case settings
     case stickers
 }
 
@@ -85,8 +84,6 @@ private enum InstalledStickerPacksEntryId: Hashable {
 private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case suggestOptions(PresentationTheme, String, String)
     case largeEmoji(PresentationTheme, String, Bool)
-    case animatedStickers(PresentationTheme, String, Bool)
-    case animatedStickersInfo(PresentationTheme, String)
     case trending(PresentationTheme, String, Int32)
     case archived(PresentationTheme, String, Int32, [ArchivedStickerPackItem]?)
     case masks(PresentationTheme, String)
@@ -101,12 +98,10 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .suggestAnimatedEmoji:
-                return InstalledStickerPacksSection.settings.rawValue
             case .trending, .masks, .emoji, .quickReaction, .archived:
                 return InstalledStickerPacksSection.categories.rawValue
-            case .packOrder, .packOrderInfo:
-                return InstalledStickerPacksSection.order.rawValue
+            case .suggestOptions, .largeEmoji, .suggestAnimatedEmoji, .packOrder, .packOrderInfo:
+                return InstalledStickerPacksSection.settings.rawValue
             case .packsTitle, .pack, .packsInfo:
                 return InstalledStickerPacksSection.stickers.rawValue
         }
@@ -114,36 +109,32 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var stableId: InstalledStickerPacksEntryId {
         switch self {
-            case .suggestOptions:
-                return .index(0)
-            case .largeEmoji:
-                return .index(1)
-            case .animatedStickers:
-                return .index(2)
-            case .animatedStickersInfo:
-                return .index(3)
             case .trending:
-                return .index(4)
+                return .index(0)
             case .archived:
-                return .index(5)
+                return .index(1)
             case .emoji:
-                return .index(6)
+                return .index(2)
             case .masks:
-                return .index(7)
+                return .index(3)
             case .quickReaction:
-                return .index(8)
+                return .index(4)
+            case .suggestOptions:
+                return .index(5)
+            case .largeEmoji:
+                return .index(6)
             case .suggestAnimatedEmoji:
-                return .index(9)
+                return .index(7)
             case .packOrder:
-                return .index(10)
+                return .index(8)
             case .packOrderInfo:
-                return .index(11)
+                return .index(9)
             case .packsTitle:
-                return .index(12)
+                return .index(10)
             case let .pack(_, _, _, info, _, _, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
-                return .index(13)
+                return .index(11)
         }
     }
     
@@ -187,18 +178,6 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }
             case let .archived(lhsTheme, lhsText, lhsCount, _):
                 if case let .archived(rhsTheme, rhsText, rhsCount, _) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .animatedStickers(lhsTheme, lhsText, lhsValue):
-                if case let .animatedStickers(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .animatedStickersInfo(lhsTheme, lhsText):
-                if case let .animatedStickersInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -274,113 +253,99 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     static func <(lhs: InstalledStickerPacksEntry, rhs: InstalledStickerPacksEntry) -> Bool {
         switch lhs {
-            case .suggestOptions:
-                switch rhs {
-                    case .suggestOptions:
-                        return false
-                    default:
-                        return true
-                }
-            case .largeEmoji:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji:
-                        return false
-                    default:
-                        return true
-                }
-            case .animatedStickers:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers:
-                        return false
-                    default:
-                        return true
-                }
-            case .animatedStickersInfo:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo:
-                        return false
-                    default:
-                        return true
-                }
+        case .trending:
+            switch rhs {
             case .trending:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending:
-                        return false
-                    default:
-                        return true
-                }
-            case .archived:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived:
-                        return false
-                    default:
-                        return true
-                }
-            case .masks:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived, .masks:
-                        return false
-                    default:
-                        return true
-                }
-            case .emoji:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived, .masks, .emoji:
-                        return false
-                    default:
-                        return true
-                }
-            case .quickReaction:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived, .masks, .emoji, .quickReaction:
-                        return false
-                    default:
-                        return true
-                }
-            case .packOrder:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived, .masks, .emoji, .quickReaction, .packOrder:
-                    return false
-                default:
-                    return true
+                return false
+            default:
+                return true
             }
-            case .packOrderInfo:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived, .masks, .emoji, .quickReaction, .packOrder, .packOrderInfo:
-                    return false
-                default:
-                    return true
+        case .archived:
+            switch rhs {
+            case .trending, .archived:
+                return false
+            default:
+                return true
             }
-            case .suggestAnimatedEmoji:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .archived, .masks, .emoji, .quickReaction, .packOrder, .packOrderInfo, .suggestAnimatedEmoji:
-                        return false
-                    default:
-                        return true
-                }
-            case .packsTitle:
-                switch rhs {
-                    case .suggestOptions, .largeEmoji, .animatedStickers, .animatedStickersInfo, .trending, .masks, .emoji, .quickReaction, .archived, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .packsTitle:
-                        return false
-                    default:
-                        return true
-                }
-            case let .pack(lhsIndex, _, _, _, _, _, _, _, _, _):
-                switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _, _, _, _):
-                        return lhsIndex < rhsIndex
-                    case .packsInfo:
-                        return true
-                    default:
-                        return false
-                }
+        case .masks:
+            switch rhs {
+            case .trending, .archived, .masks:
+                return false
+            default:
+                return true
+            }
+        case .emoji:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji:
+                return false
+            default:
+                return true
+            }
+        case .quickReaction:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction:
+                return false
+            default:
+                return true
+            }
+        case .suggestOptions:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions:
+                return false
+            default:
+                return true
+            }
+        case .largeEmoji:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji:
+                return false
+            default:
+                return true
+            }
+        case .packOrder:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder:
+                return false
+            default:
+                return true
+            }
+        case .packOrderInfo:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo:
+                return false
+            default:
+                return true
+            }
+        case .suggestAnimatedEmoji:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji:
+                return false
+            default:
+                return true
+            }
+        case .packsTitle:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .packsTitle:
+                return false
+            default:
+                return true
+            }
+        case let .pack(lhsIndex, _, _, _, _, _, _, _, _, _):
+            switch rhs {
+            case let .pack(rhsIndex, _, _, _, _, _, _, _, _, _):
+                return lhsIndex < rhsIndex
             case .packsInfo:
-                switch rhs {
-                    case .packsInfo:
-                        return false
-                    default:
-                        return false
-                }
+                return true
+            default:
+                return false
+            }
+        case .packsInfo:
+            switch rhs {
+            case .packsInfo:
+                return false
+            default:
+                return false
+            }
         }
     }
     
@@ -395,11 +360,6 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleLargeEmoji(value)
                 })
-            case let .animatedStickers(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { _ in
-                })
-            case let .animatedStickersInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .trending(theme, text, count):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Trending")?.precomposed(), title: text, label: count == 0 ? "" : "\(count)", labelStyle: .badge(theme.list.itemAccentColor), sectionId: self.section, style: .blocks, action: {
                     arguments.openFeatured()
@@ -535,6 +495,17 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
     
     switch mode {
     case .general, .modal:
+        if !featured.isEmpty {
+            entries.append(.trending(presentationData.theme, presentationData.strings.StickerPacksSettings_TrendingStickers, Int32(featured.count)))
+        }
+        if let archived = archived, !archived.isEmpty  {
+            entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks, Int32(archived.count), archived))
+        }
+        entries.append(.emoji(presentationData.theme, presentationData.strings.StickerPacksSettings_Emoji, emojiCount))
+        if let quickReaction = quickReaction, let availableReactions = availableReactions {
+            entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReaction, availableReactions))
+        }
+        
         let suggestString: String
         switch stickerSettings.emojiStickerSuggestionMode {
             case .none:
@@ -545,22 +516,7 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
                 suggestString = presentationData.strings.Stickers_SuggestAdded
         }
         entries.append(.suggestOptions(presentationData.theme, presentationData.strings.Stickers_SuggestStickers, suggestString))
-        
         entries.append(.largeEmoji(presentationData.theme, presentationData.strings.Appearance_LargeEmoji, presentationData.largeEmoji))
-                
-        if !featured.isEmpty {
-            entries.append(.trending(presentationData.theme, presentationData.strings.StickerPacksSettings_TrendingStickers, Int32(featured.count)))
-        }
-        if let archived = archived, !archived.isEmpty  {
-            entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks, Int32(archived.count), archived))
-        }
-        
-        entries.append(.emoji(presentationData.theme, presentationData.strings.StickerPacksSettings_Emoji, emojiCount))
-        
-        if let quickReaction = quickReaction, let availableReactions = availableReactions {
-            entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReaction, availableReactions))
-        }
-        
         entries.append(.packOrder(presentationData.theme, presentationData.strings.StickerPacksSettings_DynamicOrder, stickerSettings.dynamicPackOrder))
         entries.append(.packOrderInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_DynamicOrderInfo))
         
