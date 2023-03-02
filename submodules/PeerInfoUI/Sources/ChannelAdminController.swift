@@ -1016,8 +1016,8 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             return current.withUpdatedUpdating(false)
                         }
                         
-                        if let adminPeer, let exportedInvitation, let link = exportedInvitation.link {
-                            let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: [adminPeer])
+                        if let adminPeer {
+                            let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: [adminPeer])
                             pushControllerImpl?(inviteScreen)
                             
                             dismissImpl?()
@@ -1206,8 +1206,8 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         }
                         updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
                             if case let .addMemberError(addMemberError) = error, let admin = adminPeer {
-                                if let exportedInvitation, let link = exportedInvitation.link {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: [admin])
+                                if "".isEmpty {
+                                    let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: [admin])
                                     pushControllerImpl?(inviteScreen)
                                     
                                     dismissImpl?()

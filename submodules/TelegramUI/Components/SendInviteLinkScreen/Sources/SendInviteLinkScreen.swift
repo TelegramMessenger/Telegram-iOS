@@ -20,13 +20,13 @@ private final class SendInviteLinkScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let link: String
+    let link: String?
     let peers: [EnginePeer]
     let peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     
     init(
         context: AccountContext,
-        link: String,
+        link: String?,
         peers: [EnginePeer],
         peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     ) {
@@ -320,14 +320,14 @@ private final class SendInviteLinkScreenComponent: Component {
                 }
                 transition.setFrame(view: leftButtonView, frame: leftButtonFrame)
                 
-                leftButtonView.isHidden = self.selectedItems.isEmpty ? true : false
+                leftButtonView.isHidden = (self.selectedItems.isEmpty || component.link == nil) ? true : false
             }
             
             //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Invite via Link", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: component.link != nil ? "Invite via Link" : "You can't create a link", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
@@ -359,10 +359,18 @@ private final class SendInviteLinkScreenComponent: Component {
             contentHeight += 26.0
             
             let text: String
-            if component.peers.count == 1 {
-                text = "**\(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast))** restricts adding them to groups.\nYou can send them an invite link as message instead."
+            if component.link != nil {
+                if component.peers.count == 1 {
+                    text = "**\(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast))** restricts adding them to groups.\nYou can send them an invite link as message instead."
+                } else {
+                    text = "**\(component.peers.count) users** restrict adding them to groups.\nYou can send them an invite link as message instead."
+                }
             } else {
-                text = "**\(component.peers.count) users** restrict adding them to groups.\nYou can send them an invite link as message instead."
+                if component.peers.count == 1 {
+                    text = "**\(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast))** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links."
+                } else {
+                    text = "**\(component.peers.count) users** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links."
+                }
             }
             
             let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor)
@@ -426,7 +434,7 @@ private final class SendInviteLinkScreenComponent: Component {
                             title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                             peer: peer,
                             presence: component.peerPresences[peer.id],
-                            selectionState: .editing(isSelected: self.selectedItems.contains(peer.id)),
+                            selectionState: component.link == nil ? .none : .editing(isSelected: self.selectedItems.contains(peer.id)),
                             hasNext: i != component.peers.count - 1,
                             action: { [weak self] peer in
                                 guard let self else {
@@ -475,12 +483,19 @@ private final class SendInviteLinkScreenComponent: Component {
             contentHeight += 24.0
             initialContentHeight += 24.0
             
+            let actionButtonTitle: String
+            if component.link != nil {
+                actionButtonTitle = self.selectedItems.isEmpty ? "Skip" : "Send Invite Link"
+            } else {
+                actionButtonTitle = "Close"
+            }
+            
             //TODO:localize
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(SolidRoundedButtonComponent(
-                    title: self.selectedItems.isEmpty ? "Skip" : "Send Invite Link",
-                    badge: self.selectedItems.isEmpty ? nil : "\(self.selectedItems.count)",
+                    title: actionButtonTitle,
+                    badge: (self.selectedItems.isEmpty || component.link == nil) ? nil : "\(self.selectedItems.count)",
                     theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                     font: .bold,
                     fontSize: 17.0,
@@ -496,8 +511,8 @@ private final class SendInviteLinkScreenComponent: Component {
                         }
                         if self.selectedItems.isEmpty {
                             controller.dismiss()
-                        } else {
-                            let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: component.link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+                        } else if let link = component.link {
+                            let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                             let text: String
                             if component.peers.count == 1 {
                                 text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
@@ -510,6 +525,8 @@ private final class SendInviteLinkScreenComponent: Component {
                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                             controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
                             
+                            controller.dismiss()
+                        } else {
                             controller.dismiss()
                         }
                     }
@@ -574,14 +591,14 @@ private final class SendInviteLinkScreenComponent: Component {
 
 public class SendInviteLinkScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let link: String
+    private let link: String?
     private let peers: [EnginePeer]
     
     private var isDismissed: Bool = false
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, link: String, peers: [EnginePeer]) {
+    public init(context: AccountContext, link: String?, peers: [EnginePeer]) {
         self.context = context
         self.link = link
         self.peers = peers

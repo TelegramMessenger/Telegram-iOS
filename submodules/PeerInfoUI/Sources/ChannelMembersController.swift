@@ -547,7 +547,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                 if failedPeerIds.isEmpty {
                     contactsController?.dismiss()
                 } else {
-                    if let exportedInvitation, let link = exportedInvitation.link {
+                    if "".isEmpty {
                         let _ = (context.engine.data.get(
                             EngineDataList(failedPeerIds.compactMap { item -> EnginePeer.Id? in
                                 return item.0
@@ -558,7 +558,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                             if !peers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
                                 var viewControllers = navigationController.viewControllers
                                 if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, link: link, peers: peers)
+                                    let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: peers)
                                     viewControllers.remove(at: index)
                                     viewControllers.append(inviteScreen)
                                     navigationController.setViewControllers(viewControllers, animated: true)

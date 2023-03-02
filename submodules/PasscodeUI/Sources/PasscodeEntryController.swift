@@ -39,6 +39,7 @@ public final class PasscodeEntryController: ViewController {
     
     private let applicationBindings: TelegramApplicationBindings
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
+    private var energyUsageSettings: EnergyUsageSettings?
     private let appLockContext: AppLockContext
     private let presentationDataSignal: Signal<PresentationData, NoError>
     
