@@ -111,6 +111,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var groupCallDisposable: Disposable?
     
     private var callController: CallController?
+    private var callViewController: CallViewController?
     public let hasOngoingCall = ValuePromise<Bool>(false)
     private let callState = Promise<PresentationCallState?>(nil)
     
@@ -661,26 +662,46 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             self.callDisposable = (callManager.currentCallSignal
             |> deliverOnMainQueue).start(next: { [weak self] call in
-                if let strongSelf = self {
-                    if call !== strongSelf.callController?.call {
-                        strongSelf.callController?.dismiss()
-                        strongSelf.callController = nil
-                        strongSelf.hasOngoingCall.set(false)
-                        
-                        if let call = call {
-                            mainWindow.hostView.containerView.endEditing(true)
-                            let callController = CallController(sharedContext: strongSelf, account: call.context.account, call: call, easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
+                guard let strongSelf = self else {
+                    return
+                }
+                if call !== (strongSelf.callViewController?.call ?? strongSelf.callController?.call) {
+                    strongSelf.callController?.dismiss()
+                    strongSelf.callController = nil
+
+                    strongSelf.callViewController?.dismiss()
+                    strongSelf.callViewController = nil
+
+                    strongSelf.hasOngoingCall.set(false)
+
+                    if let call = call {
+                        mainWindow.hostView.containerView.endEditing(true)
+
+                        if call.isVideoPossible && call.isOutgoing && !call.isVideo {
+                            let callViewController = CallViewController(sharedContext: strongSelf,
+                                                                        accountContext: call.context,
+                                                                        account: call.context.account,
+                                                                        call: call,
+                                                                        easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
+                            strongSelf.callViewController = callViewController
+                            strongSelf.mainWindow?.present(callViewController, on: .calls)
+                        } else {
+                            let callController = CallController(sharedContext: strongSelf,
+                                                                account: call.context.account,
+                                                                call: call,
+                                                                easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
                             strongSelf.callController = callController
                             strongSelf.mainWindow?.present(callController, on: .calls)
-                            strongSelf.callState.set(call.state
-                            |> map(Optional.init))
-                            strongSelf.hasOngoingCall.set(true)
-                            setNotificationCall(call)
-                        } else {
-                            strongSelf.callState.set(.single(nil))
-                            strongSelf.hasOngoingCall.set(false)
-                            setNotificationCall(nil)
                         }
+
+                        strongSelf.callState.set(call.state
+                        |> map(Optional.init))
+                        strongSelf.hasOngoingCall.set(true)
+                        setNotificationCall(call)
+                    } else {
+                        strongSelf.callState.set(.single(nil))
+                        strongSelf.hasOngoingCall.set(false)
+                        setNotificationCall(nil)
                     }
                 }
             })
@@ -802,6 +823,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         if groupCallController.view.superview == nil {
                             (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
                         }
+                    }
+                } else if let callViewController = strongSelf.callViewController {
+                    mainWindow.hostView.containerView.endEditing(true)
+                    if callViewController.view.superview == nil {
+                        mainWindow.present(callViewController, on: .calls)
+                    } else {
+                        callViewController.expandFromPipIfPossible()
                     }
                 }
             }
@@ -1119,6 +1147,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
                 (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
+            }
+        } else if let callViewController = self.callViewController {
+            if callViewController.view.superview == nil {
+                mainWindow.hostView.containerView.endEditing(true)
+                mainWindow.present(callViewController, on: .calls)
             }
         }
     }

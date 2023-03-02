@@ -2,11 +2,11 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-private final class ViewControllerTracingNodeView: UITracingLayerView {
+open class ViewControllerTracingNodeView: UITracingLayerView {
     private var inHitTest = false
-    var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
+    open var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    open override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.inHitTest {
             return super.hitTest(point, with: event)
         } else {

@@ -399,6 +399,34 @@ public extension ContainedViewLayoutTransition {
             }
         }
     }
+
+    func updatePosition(view: UIView, position: CGPoint, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if view.center.equalTo(position) {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                view.layer.removeAnimation(forKey: "position")
+                view.center = position
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousPosition: CGPoint
+                if beginWithCurrentState, view.layer.animation(forKey: "position") != nil, let presentation = view.layer.presentation() {
+                    previousPosition = presentation.position
+                } else {
+                    previousPosition = view.center
+                }
+                view.center = position
+                view.layer.animatePosition(from: previousPosition, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            }
+        }
+    }
     
     func updatePosition(layer: CALayer, position: CGPoint, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if layer.position.equalTo(position) && !force {
@@ -568,6 +596,15 @@ public extension ContainedViewLayoutTransition {
                 break
             case let .animated(duration, curve):
                 node.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
+        }
+    }
+
+    func animateOffsetAdditive(view: UIView, offset: CGFloat) {
+        switch self {
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                view.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
         }
     }
     
@@ -759,6 +796,36 @@ public extension ContainedViewLayoutTransition {
             }
             node.alpha = alpha
             node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration, delay: delay, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+
+    func updateAlpha(view: UIView, alpha: CGFloat, beginWithCurrentState: Bool = false, force: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if view.alpha.isEqual(to: alpha) && !force {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+
+        switch self {
+        case .immediate:
+            view.alpha = alpha
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousAlpha: CGFloat
+            if beginWithCurrentState, let presentation = view.layer.presentation() {
+                previousAlpha = CGFloat(presentation.opacity)
+            } else {
+                previousAlpha = view.alpha
+            }
+            view.alpha = alpha
+            view.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration, delay: delay, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -1167,6 +1234,34 @@ public extension ContainedViewLayoutTransition {
         case let .animated(duration, curve):
             node.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
             node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: delay, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+
+    func updateSublayerTransformScale(view: UIView, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        let t = view.layer.sublayerTransform
+        let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+        if currentScale.isEqual(to: scale) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+
+        switch self {
+        case .immediate:
+            view.layer.removeAnimation(forKey: "sublayerTransform")
+            view.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            view.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
+            view.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: view.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: delay, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
                 result in
                 if let completion = completion {
                     completion(result)
