@@ -837,6 +837,7 @@ private final class GroupHeaderLayer: UIView {
         isPremiumLocked: Bool,
         hasClear: Bool,
         embeddedItems: [EmojiPagerContentComponent.Item]?,
+        isStickers: Bool,
         constrainedSize: CGSize,
         insets: UIEdgeInsets,
         cache: AnimationCache,
@@ -1138,6 +1139,7 @@ private final class GroupHeaderLayer: UIView {
                 insets: insets,
                 size: groupEmbeddedViewSize,
                 items: embeddedItems,
+                isStickers: isStickers,
                 cache: cache,
                 renderer: renderer,
                 attemptSynchronousLoad: attemptSynchronousLoad
@@ -1252,6 +1254,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
     private var currentInsets: UIEdgeInsets?
     private var currentSize: CGSize?
     private var items: [EmojiPagerContentComponent.Item]?
+    private var isStickers: Bool = false
     
     private var itemLayout: ItemLayout?
     
@@ -1348,7 +1351,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
                 let itemFrame = itemLayout.frame(at: index)
                 itemLayer.frame = itemFrame
                 
-                itemLayer.isVisibleForAnimations = context.sharedContext.energyUsageSettings.loopEmoji
+                itemLayer.isVisibleForAnimations = self.isStickers ? context.sharedContext.energyUsageSettings.loopStickers : context.sharedContext.energyUsageSettings.loopEmoji
             }
         }
         
@@ -1370,6 +1373,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
         insets: UIEdgeInsets,
         size: CGSize,
         items: [EmojiPagerContentComponent.Item],
+        isStickers: Bool,
         cache: AnimationCache,
         renderer: MultiAnimationRenderer,
         attemptSynchronousLoad: Bool
@@ -1383,6 +1387,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
         self.currentInsets = insets
         self.currentSize = size
         self.items = items
+        self.isStickers = isStickers
         self.cache = cache
         self.renderer = renderer
         
@@ -5368,6 +5373,7 @@ public final class EmojiPagerContentComponent: Component {
                         isPremiumLocked: itemGroup.isPremiumLocked,
                         hasClear: itemGroup.hasClear,
                         embeddedItems: itemGroup.isEmbedded ? itemGroup.items : nil,
+                        isStickers: component.itemLayoutType == .detailed,
                         constrainedSize: CGSize(width: itemLayout.contentSize.width - itemLayout.headerInsets.left - itemLayout.headerInsets.right, height: itemGroupLayout.headerHeight),
                         insets: itemLayout.headerInsets,
                         cache: component.animationCache,
@@ -5801,7 +5807,14 @@ public final class EmojiPagerContentComponent: Component {
                             placeholderView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                         }
                         
-                        itemLayer.isVisibleForAnimations = keyboardChildEnvironment.isContentInFocus && component.context.sharedContext.energyUsageSettings.loopEmoji
+                        let allowPlayback: Bool
+                        if case .detailed = component.itemLayoutType {
+                            allowPlayback = component.context.sharedContext.energyUsageSettings.loopStickers
+                        } else {
+                            allowPlayback = component.context.sharedContext.energyUsageSettings.loopEmoji
+                        }
+                        
+                        itemLayer.isVisibleForAnimations = keyboardChildEnvironment.isContentInFocus && allowPlayback
                     }
                 }
                 if itemGroup.fillWithLoadingPlaceholders {

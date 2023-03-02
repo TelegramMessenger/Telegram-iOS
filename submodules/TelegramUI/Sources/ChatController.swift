@@ -11099,7 +11099,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if case .undo = action, let self {
                                 let _ = updateMediaDownloadSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
                                     var settings = settings
-                                    settings.energyUsageSettings.activationThreshold = 0
+                                    settings.energyUsageSettings.activationThreshold = 4
                                     return settings
                                 }).start()
                             }

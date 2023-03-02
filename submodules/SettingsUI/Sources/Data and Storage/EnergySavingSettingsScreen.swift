@@ -211,7 +211,7 @@ private func energeSavingSettingsScreenEntries(
     let isOn = automaticEnergyUsageShouldBeOnNow(settings: settings)
     
     let allIsOn: Bool?
-    if settings.energyUsageSettings.activationThreshold == 0 || settings.energyUsageSettings.activationThreshold == 100 {
+    if settings.energyUsageSettings.activationThreshold <= 4 || settings.energyUsageSettings.activationThreshold >= 96 {
         allIsOn = nil
     } else {
         allIsOn = isOn
@@ -220,9 +220,9 @@ private func energeSavingSettingsScreenEntries(
     entries.append(.all(settings.energyUsageSettings.activationThreshold))
     
     let allText: String
-    if settings.energyUsageSettings.activationThreshold == 0 {
+    if settings.energyUsageSettings.activationThreshold <= 4 {
         allText = "Don’t disable all resource-intensive processes even when the battery is low."
-    } else if settings.energyUsageSettings.activationThreshold >= 100 {
+    } else if settings.energyUsageSettings.activationThreshold >= 96 {
         allText = "Always disable all resource-intensive processes, regardless of the battery charge level."
     } else {
         allText = "Automatically disable all resource-intensive processes when your battery is below \(settings.energyUsageSettings.activationThreshold)%."
@@ -230,9 +230,9 @@ private func energeSavingSettingsScreenEntries(
     entries.append(.allFooter(allText))
     
     let itemsEnabled: Bool
-    if settings.energyUsageSettings.activationThreshold == 0 {
+    if settings.energyUsageSettings.activationThreshold <= 4 {
         itemsEnabled = true
-    } else if settings.energyUsageSettings.activationThreshold == 100 {
+    } else if settings.energyUsageSettings.activationThreshold >= 96 {
         itemsEnabled = false
     } else if isOn {
         itemsEnabled = false
@@ -258,7 +258,7 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
         updateThreshold: { value in
             let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
                 var settings = settings
-                settings.energyUsageSettings.activationThreshold = max(0, min(100, value))
+                settings.energyUsageSettings.activationThreshold = max(4, min(96, value))
                 return settings
             }).start()
         },
@@ -272,7 +272,7 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
         displayDisabledTooltip: {
             //TODO:localize
             let text: String
-            if context.sharedContext.currentAutomaticMediaDownloadSettings.energyUsageSettings.activationThreshold == 100 {
+            if context.sharedContext.currentAutomaticMediaDownloadSettings.energyUsageSettings.activationThreshold >= 96 {
                 text = "Turn off Power Saving Mode to change these settings."
             } else {
                 text = "Turn off Power Saving Mode or charge your phone to change these settings."
@@ -296,7 +296,7 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
             //TODO:localize
             let controllerState = ItemListControllerState(
                 presentationData: ItemListPresentationData(presentationData),
-                title: .text("Energy Saving"),
+                title: .text("Power Saving"),
                 leftNavigationButton: nil,
                 rightNavigationButton: nil,
                 backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back),

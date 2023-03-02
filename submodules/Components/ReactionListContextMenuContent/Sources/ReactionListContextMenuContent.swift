@@ -94,7 +94,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
             
-            self.titleLabelNode.attributedText = NSAttributedString(string: presentationData.strings.Common_Back, font: Font.regular(17.0), textColor: presentationData.theme.contextMenu.primaryColor)
+            let titleFontSize = presentationData.listsFontSize.baseDisplaySize * 17.0 / 17.0
+            
+            self.titleLabelNode.attributedText = NSAttributedString(string: presentationData.strings.Common_Back, font: Font.regular(titleFontSize), textColor: presentationData.theme.contextMenu.primaryColor)
             let titleSize = self.titleLabelNode.updateLayout(CGSize(width: size.width - sideInset - standardIconWidth, height: 100.0))
             self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset + 36.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
             
@@ -587,7 +589,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.avatarNode.frame = CGRect(origin: CGPoint(x: avatarInset, y: floor((size.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
                 self.avatarNode.setPeer(context: self.context, theme: presentationData.theme, peer: item.peer, synchronousLoad: true)
                 
-                self.titleLabelNode.attributedText = NSAttributedString(string: item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.regular(17.0), textColor: presentationData.theme.contextMenu.primaryColor)
+                let titleFontSize = presentationData.listsFontSize.baseDisplaySize * 17.0 / 17.0
+                
+                self.titleLabelNode.attributedText = NSAttributedString(string: item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.regular(titleFontSize), textColor: presentationData.theme.contextMenu.primaryColor)
                 var maxTextWidth: CGFloat = size.width - avatarInset - avatarSize - avatarSpacing - sideInset - additionalTitleInset
                 if reaction != nil {
                     maxTextWidth -= 32.0
@@ -622,7 +626,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 text = "yesterday at 12:00 PM"
                 #endif*/
                 
-                self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: presentationData.theme.contextMenu.secondaryColor)
+                let textFontSize = presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0
+                
+                self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(textFontSize), textColor: presentationData.theme.contextMenu.secondaryColor)
                 let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth + 16.0, height: 100.0))
                 self.textLabelNode.isHidden = !self.displayReadTimestamps || text.isEmpty
                 
@@ -835,7 +841,15 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             if let size = self.currentSize {
                 var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
-                apparentHeight = max(apparentHeight, self.displayReadTimestamps ? 56.0 : 44.0)
+                
+                let heightFraction: CGFloat
+                if let presentationData = self.presentationData {
+                    heightFraction = presentationData.listsFontSize.baseDisplaySize / 17.0
+                } else {
+                    heightFraction = 1.0
+                }
+                
+                apparentHeight = max(apparentHeight, (self.displayReadTimestamps ? 56.0 : 44.0) * heightFraction)
                 apparentHeight = min(apparentHeight, size.height + 100.0)
                 if self.apparentHeight != apparentHeight {
                     self.apparentHeight = apparentHeight
@@ -852,7 +866,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             guard let presentationData = self.presentationData else {
                 return
             }
-            let itemHeight: CGFloat = self.displayReadTimestamps ? 56.0 : 44.0
+            
+            let heightFraction: CGFloat = presentationData.listsFontSize.baseDisplaySize / 17.0
+            
+            let itemHeight: CGFloat = (self.displayReadTimestamps ? 56.0 : 44.0) * heightFraction
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -180.0)
             
             var validIds = Set<Int>()
@@ -948,7 +965,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         func update(presentationData: PresentationData, constrainedSize: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
-            let itemHeight: CGFloat = self.displayReadTimestamps ? 56.0 : 44.0
+            let heightFraction: CGFloat = presentationData.listsFontSize.baseDisplaySize / 17.0
+            let itemHeight: CGFloat = (self.displayReadTimestamps ? 56.0 : 44.0) * heightFraction
             
             if self.presentationData?.theme !== presentationData.theme {
                 let sideInset: CGFloat = 40.0
