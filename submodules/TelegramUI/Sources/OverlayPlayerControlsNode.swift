@@ -1045,6 +1045,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType?) -> Void) -> Signal<ContextController.Items, NoError> {
         var presetItems: [ContextMenuItem] = []
                 
+        let previousRate = self.currentRate
         let previousValue = self.currentRate?.doubleValue ?? 1.0
         let sliderValuePromise = ValuePromise<Double?>(nil)
         let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
@@ -1071,7 +1072,11 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 f(.default)
                 
                 self?.control?(.setBaseRate(rate))
-                self?.presentAudioRateTooltip(baseRate: rate, changeType: .preset)
+                if let previousRate, previousRate.isPreset {
+                    self?.presentAudioRateTooltip(baseRate: rate, changeType: .preset)
+                } else {
+                    self?.presentAudioRateTooltip(baseRate: rate, changeType: .sliderCommit(previousValue, rate.doubleValue))
+                }
             })))
         }
 

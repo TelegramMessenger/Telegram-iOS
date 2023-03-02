@@ -490,6 +490,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     }
     
     @objc public func rateButtonPressed() {
+        var changeType: MediaNavigationAccessoryPanel.ChangeType = .preset
         let nextRate: AudioPlaybackRate
         if let rate = self.playbackBaseRate {
             switch rate {
@@ -511,11 +512,12 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                 } else {
                     nextRate = .x1
                 }
+                changeType = .sliderCommit(rate.doubleValue, nextRate.doubleValue)
             }
         } else {
             nextRate = .x1_5
         }
-        self.setRate?(nextRate, .preset)
+        self.setRate?(nextRate, changeType)
         
         let frame = self.rateButton.view.convert(self.rateButton.bounds, to: nil)
         
@@ -542,6 +544,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType?) -> Void) -> Signal<ContextController.Items, NoError> {
         var presetItems: [ContextMenuItem] = []
 
+        let previousRate = self.playbackBaseRate
         let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
         let sliderValuePromise = ValuePromise<Double?>(nil)
         let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
@@ -567,7 +570,11 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                 scheduleTooltip(nil)
                 f(.default)
                 
-                self?.setRate?(rate, .preset)
+                if let previousRate, previousRate.isPreset {
+                    self?.setRate?(rate, .preset)
+                } else {
+                    self?.setRate?(rate, .sliderCommit(previousValue, rate.doubleValue))
+                }
             })))
         }
 
