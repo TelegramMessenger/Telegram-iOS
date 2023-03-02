@@ -262,7 +262,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 strongSelf.contentOffsetChanged?(offset)
             }
         }
-        
+           
         self.mainContainerNode?.contentOffsetChanged = { [weak self] offset in
             guard let strongSelf = self else {
                 return
@@ -569,10 +569,19 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 } else {
                     var selectedPeerIds: [PeerId] = []
                     var selectedPeerMap: [PeerId: Peer] = [:]
-                    strongSelf.chatListNode?.updateState { state in
-                        selectedPeerIds = Array(state.selectedPeerIds)
-                        selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
-                        return state
+                    if let mainContainerNode = strongSelf.mainContainerNode {
+                        mainContainerNode.currentItemNode.updateState { state in
+                            selectedPeerIds = Array(state.selectedPeerIds)
+                            selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
+                            return state
+                        }
+                    }
+                    if let chatListNode = strongSelf.chatListNode {
+                        chatListNode.updateState { state in
+                            selectedPeerIds = Array(state.selectedPeerIds)
+                            selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
+                            return state
+                        }
                     }
                     if !selectedPeerIds.isEmpty {
                         var selectedPeers: [Peer] = []
@@ -598,10 +607,21 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 return ContactListNodeGroupSelectionState()
             })
         } else {
-            self.chatListNode?.updateState { state in
-                var state = state
-                state.editing = true
-                return state
+            if let mainContainerNode = self.mainContainerNode {
+                mainContainerNode.currentItemNode.selectionCountChanged = { [weak self] count in
+                    self?.textInputPanelNode?.updateSendButtonEnabled(count > 0, animated: true)
+                }
+                mainContainerNode.currentItemNode.updateState({ state in
+                    var state = state
+                    state.editing = true
+                    return state
+                })
+            } else if let chatListNode = self.chatListNode {
+                chatListNode.updateState { state in
+                    var state = state
+                    state.editing = true
+                    return state
+                }
             }
         }
     }
@@ -691,7 +711,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
                 
         insets.top += navigationBarHeight
-        insets.bottom = max(insets.bottom, cleanInsets.bottom + 44.0)
+        insets.bottom = max(insets.bottom, toolbarHeight)
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
@@ -829,9 +849,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             contactListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             contactListNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
             
-            let contactsInsets = insets
-            
-            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: contactsInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
+            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
         }
         
         if let searchDisplayController = self.searchDisplayController {

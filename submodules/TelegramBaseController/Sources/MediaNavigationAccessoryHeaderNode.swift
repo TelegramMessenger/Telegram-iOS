@@ -527,7 +527,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         return speedList
     }
     
-    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType) -> Void) -> Signal<ContextController.Items, NoError> {
+    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType?) -> Void) -> Signal<ContextController.Items, NoError> {
         var presetItems: [ContextMenuItem] = []
 
         let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
@@ -548,6 +548,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     return nil
                 }
             }, action: { [weak self] _, f in
+                scheduleTooltip(nil)
                 f(.default)
                 
                 self?.setRate?(rate, .preset)

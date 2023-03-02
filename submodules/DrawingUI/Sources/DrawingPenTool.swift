@@ -140,7 +140,7 @@ final class PenTool: DrawingElement {
                 self.start = newStart
             }
             
-            if !element.isEraser && !element.isBlur {
+            if element.hasAnimations {
                 let count = CGFloat(element.segments.count - self.segmentsCount)
                 if count > 0 {
                     let dryingPath = CGMutablePath()
@@ -193,7 +193,7 @@ final class PenTool: DrawingElement {
                 return
             }
             
-            if !element.isEraser && !element.isBlur {
+            if element.hasAnimations {
                 let dryingPath = CGMutablePath()
                 for segment in element.activeSegments {
                     let segmentPath = element.pathForSegment(segment)
@@ -216,7 +216,7 @@ final class PenTool: DrawingElement {
                 context.scaleBy(x: 1.0 / parent.drawScale.width, y: 1.0 / parent.drawScale.height)
                 element.drawSegments(in: context, from: parent.start, to: parent.segmentsCount)
                 
-                if !element.isEraser && !element.isBlur {
+                if element.hasAnimations {
                     element.drawActiveSegments(in: context, strokeWidth: !parent.isActiveDrying ? element.renderLineWidth * parent.dryingFactor : nil)
                 } else {
                     element.drawActiveSegments(in: context, strokeWidth: nil)
@@ -266,6 +266,12 @@ final class PenTool: DrawingElement {
     private var segmentPaths: [Int: CGPath] = [:]
     
     private var useCubicBezier = true
+    
+    private let animationsEnabled: Bool
+    
+    var hasAnimations: Bool {
+        return self.animationsEnabled && !self.isEraser && !self.isBlur
+    }
         
     var isValid: Bool {
         if self.hasArrow {
@@ -284,7 +290,7 @@ final class PenTool: DrawingElement {
         return normalizeDrawingRect(combinedBounds, drawingSize: self.drawingSize)
     }
     
-    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, hasArrow: Bool, isEraser: Bool, isBlur: Bool, blurredImage: UIImage?) {
+    required init(drawingSize: CGSize, color: DrawingColor, lineWidth: CGFloat, hasArrow: Bool, isEraser: Bool, isBlur: Bool, blurredImage: UIImage?, animationsEnabled: Bool) {
         self.uuid = UUID()
         self.drawingSize = drawingSize
         self.color = isEraser || isBlur ? DrawingColor(rgb: 0x000000) : color
@@ -292,6 +298,7 @@ final class PenTool: DrawingElement {
         self.isEraser = isEraser
         self.isBlur = isBlur
         self.blurredImage = blurredImage
+        self.animationsEnabled = animationsEnabled
         
         let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.002)
         let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.07)

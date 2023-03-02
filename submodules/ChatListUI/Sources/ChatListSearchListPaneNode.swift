@@ -170,13 +170,13 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     status = .custom(string: strings.GroupInfo_ParticipantCount(Int32(group.participantCount)), multiline: false, isActive: false, icon: nil)
                 } else if case let .channel(channel) = primaryPeer {
                     if case .group = channel.info {
-                        if let count = peer.subpeerSummary?.count {
+                        if let count = peer.subpeerSummary?.count, count > 0 {
                             status = .custom(string: strings.GroupInfo_ParticipantCount(Int32(count)), multiline: false, isActive: false, icon: nil)
                         } else {
                             status = .custom(string: strings.Group_Status, multiline: false, isActive: false, icon: nil)
                         }
                     } else {
-                        if let count = peer.subpeerSummary?.count {
+                        if let count = peer.subpeerSummary?.count, count > 0 {
                             status = .custom(string: strings.Conversation_StatusSubscribers(Int32(count)), multiline: false, isActive: false, icon: nil)
                         } else {
                             status = .custom(string: strings.Channel_Status, multiline: false, isActive: false, icon: nil)

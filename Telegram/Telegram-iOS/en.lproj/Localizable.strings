@@ -6371,6 +6371,7 @@ Sorry for the inconvenience.";
 
 "StickerPacks.ActionDelete" = "Delete";
 "StickerPacks.ActionArchive" = "Archive";
+"StickerPacks.ActionUnarchive" = "Unarchive";
 "StickerPacks.ActionShare" = "Share";
 
 "StickerPacks.DeleteStickerPacksConfirmation_0" = "Delete %@ Sticker Sets";
@@ -8956,3 +8957,6 @@ Sorry for the inconvenience.";
 "Conversation.ShareLinkTooltip.Chat.One" = "Link shared with **%@**";
 "Conversation.ShareLinkTooltip.TwoChats.One" = "Link shared with **%@** and **%@**";
 "Conversation.ShareLinkTooltip.ManyChats.One" = "Link shared with **%@** and %@ others";
+
+"StickerPacks.UnarchiveStickerPacksConfirmation_1" = "Unarchive %@ Pack";
+"StickerPacks.UnarchiveStickerPacksConfirmation_any" = "Unarchive %@ Packs";
