@@ -627,7 +627,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    func setMessage(_ message: Message, displayInfo: Bool = true, translateToLanguage: String? = nil) {
+    func setMessage(_ message: Message, displayInfo: Bool = true, translateToLanguage: String? = nil, peerIsCopyProtected: Bool = false) {
         self.currentMessage = message
         
         let canDelete: Bool
@@ -709,7 +709,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             canEdit = false
         }
         
-        if message.isCopyProtected() {
+        if message.isCopyProtected() || peerIsCopyProtected {
             canShare = false
             canEdit = false
         }

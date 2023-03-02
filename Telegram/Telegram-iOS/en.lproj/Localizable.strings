@@ -928,6 +928,7 @@
 "Username.InvalidStartsWithNumber" = "Sorry, a username can't start with a number.";
 "Username.InvalidCharacters" = "Sorry, this username is invalid.";
 "Username.InvalidTaken" = "Sorry, this username is already taken.";
+"Username.InvalidValue" = "Sorry, this username is invalid.";
 
 "Username.CheckingUsername" = "Checking username...";
 "Username.UsernameIsAvailable" = "%@ is available.";

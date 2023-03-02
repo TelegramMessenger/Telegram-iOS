@@ -330,7 +330,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                         case .available:
                             statusText = presentationData.strings.Username_UsernameIsAvailable(currentUsername).string
                         case .invalid:
-                            statusText = presentationData.strings.Username_InvalidCharacters
+                            statusText = presentationData.strings.Username_InvalidValue
                         case .taken:
                             statusText = presentationData.strings.Username_InvalidTaken
                         case .purchaseAvailable:
