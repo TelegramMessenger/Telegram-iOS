@@ -2625,30 +2625,31 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
 
-            items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, finished in
+            let sliderValuePromise = ValuePromise<Double?>(nil)
+            items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
                 guard let strongSelf = self else {
                     return
                 }
                 let newValue = normalizeValue(newValue)
                 strongSelf.updatePlaybackRate(newValue)
-                if finished {
-                    //dismiss()
-                }
+                sliderValuePromise.set(newValue)
             }), true))
             
             items.append(.separator)
             
+            let theme = strongSelf.presentationData.theme
             for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 let isSelected = abs(status.baseRate - rate) < 0.01
-                items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
-                    if isSelected {
+                items.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
+                |> map { value in
+                    if isSelected && value == nil {
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                     } else {
                         return nil
                     }
-                }, action: { _, f in
+                }), action: { _, f in
                     f(.default)
-
+                    
                     guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
                         return
                     }
