@@ -1544,8 +1544,8 @@ private extension CallControllerView {
         switch uiState {
         case .ringing: isNewStateAllowed = true
         case .active: isNewStateAllowed =  true
-        case .weakSignal: isNewStateAllowed = state == .ringing || state == .active
-        case .video: isNewStateAllowed =  true
+        case .weakSignal: isNewStateAllowed = true
+        case .video: isNewStateAllowed = !hasVideoNodes
         case .none: isNewStateAllowed = true
         }
         guard isNewStateAllowed else {
