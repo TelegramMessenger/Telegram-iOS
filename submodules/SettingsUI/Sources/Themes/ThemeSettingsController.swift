@@ -334,13 +334,11 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     arguments.selectAppIcon(icon)
                 })
             case .powerSaving:
-                //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: "Animations", label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: presentationData.strings.AppearanceSettings_Animations, label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openPowerSavingSettings()
                 })
             case .stickersAndEmoji:
-                //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: "Stickers and Emoji", label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: presentationData.strings.ChatSettings_StickersAndReactions, label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openStickersAndEmoji()
                 })
             case let .otherHeader(_, text):

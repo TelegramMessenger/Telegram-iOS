@@ -411,8 +411,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         var actions: [ContextMenuItem] = []
         
         if adAttribute.sponsorInfo != nil || adAttribute.additionalInfo != nil {
-            //TODO:localize
-            actions.append(.action(ContextMenuActionItem(text: "Sponsor Info", textColor: .primary, icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfo, textColor: .primary, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { c, _ in
                 var subItems: [ContextMenuItem] = []
@@ -432,8 +431,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         c.dismiss(completion: {
                             UIPasteboard.general.string = sponsorInfo
                             
-                            //TODO:localize
-                            let content: UndoOverlayContent = .copy(text: "Text copied")
+                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
                             controllerInteraction?.displayUndo(content)
                         })
                     })))
@@ -445,8 +443,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         c.dismiss(completion: {
                             UIPasteboard.general.string = additionalInfo
                             
-                            //TODO:localize
-                            let content: UndoOverlayContent = .copy(text: "Text copied")
+                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
                             controllerInteraction?.displayUndo(content)
                         })
                     })))

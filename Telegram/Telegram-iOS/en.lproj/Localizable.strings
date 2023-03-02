@@ -8961,3 +8961,74 @@ Sorry for the inconvenience.";
 
 "StickerPacks.UnarchiveStickerPacksConfirmation_1" = "Unarchive %@ Pack";
 "StickerPacks.UnarchiveStickerPacksConfirmation_any" = "Unarchive %@ Packs";
+
+"PowerSaving.AlertEnabledTitle" = "Power Saving mode enabled";
+"PowerSaving.AlertEnabledText" = "%@% battery remaining.";
+"PowerSaving.AlertEnabledAction" = "Disable";
+
+"Chat.MessageSeenTimestamp.Date" = "%@";
+"Chat.MessageSeenTimestamp.TodayAt" = "today at %@";
+"Chat.MessageSeenTimestamp.YesterdayAt" = "yesterday at %@";
+
+"PowerSavingScreen.OptionAutoplayVideoTitle" = "Autoplay Videos";
+"PowerSavingScreen.OptionAutoplayVideoText" = "Autoplay and loop videos and video messages in chats.";
+
+"PowerSavingScreen.OptionAutoplayGifTitle" = "Autoplay GIFs";
+"PowerSavingScreen.OptionAutoplayGifText" = "Autoplay and loop GIFs in chats and in the keyboard.";
+
+"PowerSavingScreen.OptionAutoplayStickersTitle" = "Sticker Animations";
+"PowerSavingScreen.OptionAutoplayStickersText" = "Loop animated stickers, play full-screen premium effects.";
+
+"PowerSavingScreen.OptionAutoplayEmojiTitle" = "Emoji Animations";
+"PowerSavingScreen.OptionAutoplayEmojiText" = "Loop animated emoji in messages, reactions, statuses.";
+
+"PowerSavingScreen.OptionAutoplayEffectsTitle" = "Interface Effects";
+"PowerSavingScreen.OptionAutoplayEffectsText" = "Various effects and animations that make Telegram look amazing.";
+
+"PowerSavingScreen.OptionBackgroundTitle" = "Extended Background Time";
+"PowerSavingScreen.OptionBackgroundText" = "Update chats faster when switching between apps.";
+
+"PowerSavingScreen.OptionPreloadTitle" = "Preload Media";
+"PowerSavingScreen.OptionPreloadText" = "Start loading media while in the chat list for faster access.";
+
+"PowerSavingScreen.ToggleHeaderEmpty" = "POWER SAVING MODE";
+"PowerSavingScreen.ToggleHeaderOn" = "POWER SAVING MODE (ON)";
+"PowerSavingScreen.ToggleHeaderOff" = "POWER SAVING MODE (OFF)";
+
+"PowerSavingScreen.OptionsHeader" = "RESOURCE-INTENSIVE PROCESSES";
+
+"PowerSavingScreen.OptionChangeAlertAlways" = "Turn off Power Saving Mode to change these settings.";
+"PowerSavingScreen.OptionChangeAlertConditional" = "Turn off Power Saving Mode or charge your phone to change these settings.";
+
+"PowerSavingScreen.Title" = "Power Saving";
+
+"PowerSaving.BatteryLevelLimit.Off" = "Off";
+"PowerSaving.BatteryLevelLimit.On" = "On";
+"PowerSaving.BatteryLevelLimit.AlwaysOn" = "Always On";
+"PowerSaving.BatteryLevelLimit.AlwaysOff" = "Always Off";
+"PowerSaving.BatteryLevelLimit.WhenBelow" = "When Below %@%";
+
+"AppearanceSettings.Animations" = "Animations";
+
+"SendInviteLink.SkipAction" = "Skip";
+"SendInviteLink.InviteTitle" = "Invite via Link";
+"SendInviteLink.LinkUnavailableTitle" = "You can't create a link";
+
+"SendInviteLink.TextAvailableSingleUser" = "**%@** restricts adding them to groups.\nYou can send them an invite link as message instead.";
+"SendInviteLink.TextAvailableMultipleUsers_1" = "**%d user** restrict adding them to groups.\nYou can send them an invite link as message instead.";
+"SendInviteLink.TextAvailableMultipleUsers_any" = "**%d users** restrict adding them to groups.\nYou can send them an invite link as message instead.";
+
+"SendInviteLink.TextUnavailableSingleUser" = "**%@** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links.";
+"SendInviteLink.TextUnavailableMultipleUsers_1" = "**%d user** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links.";
+"SendInviteLink.TextUnavailableMultipleUsers_any" = "**%d users** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links.";
+
+"SendInviteLink.ActionSkip" = "Skip";
+"SendInviteLink.ActionInvite" = "Send Invite Link";
+"SendInviteLink.ActionClose" = "Close";
+
+"Chat.ContextMenu.AdSponsorInfo" = "Sponsor Info";
+"Chat.ContextMenu.AdSponsorInfoCopied" = "Text copied.";
+
+"Settings.PowerSaving" = "Power Saving";
+"Settings.PowerSavingOn" = "On";
+"Settings.PowerSavingOff" = "Off";
