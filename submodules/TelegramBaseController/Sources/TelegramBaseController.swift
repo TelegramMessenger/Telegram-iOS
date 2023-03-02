@@ -699,7 +699,21 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         let text: String?
                         let rate: CGFloat?
-                        if baseRate == .x1 {
+                        if case let .sliderCommit(previousValue, newValue) = changeType {
+                            let value = String(format: "%0.1f", baseRate.doubleValue)
+                            if baseRate == .x1 {
+                                text = presentationData.strings.Conversation_AudioRateTooltipNormal
+                            } else {
+                                text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+                            }
+                            if newValue > previousValue {
+                                rate = .infinity
+                            } else if newValue < previousValue {
+                                rate = -.infinity
+                            } else {
+                                rate = nil
+                            }
+                        } else if baseRate == .x1 {
                             text = presentationData.strings.Conversation_AudioRateTooltipNormal
                             rate = 1.0
                         } else if baseRate == .x1_5 {
@@ -709,19 +723,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             text = presentationData.strings.Conversation_AudioRateTooltipSpeedUp
                             rate = 2.0
                         } else {
-                            let value = String(format: "%0.1f", baseRate.doubleValue)
-                            text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
-                            if case let .sliderCommit(previousValue, newValue) = changeType {
-                                if newValue > previousValue {
-                                    rate = .infinity
-                                } else if newValue < previousValue {
-                                    rate = -.infinity
-                                } else {
-                                    rate = nil
-                                }
-                            } else {
-                                rate = nil
-                            }
+                            text = nil
+                            rate = nil
                         }
                         var showTooltip = true
                         if case .sliderChange = changeType {

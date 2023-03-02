@@ -18,6 +18,10 @@ import ContextUI
 import SliderContextItem
 import UndoUI
 
+private func normalizeValue(_ value: CGFloat) -> CGFloat {
+    return round(value * 10.0) / 10.0
+}
+
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -1031,6 +1035,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let previousValue = self.currentRate?.doubleValue ?? 1.0
         let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+            let newValue = normalizeValue(newValue)
             self?.control?(.setBaseRate(AudioPlaybackRate(newValue)))
             if finished {
                 scheduleTooltip(.sliderCommit(previousValue, newValue))
@@ -1082,7 +1087,21 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         let presentationData = self.presentationData
         let text: String?
         let rate: CGFloat?
-        if baseRate == .x1 {
+        if case let .sliderCommit(previousValue, newValue) = changeType {
+            let value = String(format: "%0.1f", baseRate.doubleValue)
+            if baseRate == .x1 {
+                text = presentationData.strings.Conversation_AudioRateTooltipNormal
+            } else {
+                text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+            }
+            if newValue > previousValue {
+                rate = .infinity
+            } else if newValue < previousValue {
+                rate = -.infinity
+            } else {
+                rate = nil
+            }
+        } else if baseRate == .x1 {
             text = presentationData.strings.Conversation_AudioRateTooltipNormal
             rate = 1.0
         } else if baseRate == .x1_5 {
@@ -1092,19 +1111,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             text = presentationData.strings.Conversation_AudioRateTooltipSpeedUp
             rate = 2.0
         } else {
-            let value = String(format: "%0.1f", baseRate.doubleValue)
-            text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
-            if case let .sliderCommit(previousValue, newValue) = changeType {
-                if newValue > previousValue {
-                    rate = .infinity
-                } else if newValue < previousValue {
-                    rate = -.infinity
-                } else {
-                    rate = nil
-                }
-            } else {
-                rate = nil
-            }
+            text = nil
+            rate = nil
         }
         var showTooltip = true
         if case .sliderChange = changeType {

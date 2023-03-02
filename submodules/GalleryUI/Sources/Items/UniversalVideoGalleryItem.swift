@@ -2629,6 +2629,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 guard let strongSelf = self else {
                     return
                 }
+                let newValue = normalizeValue(newValue)
                 strongSelf.updatePlaybackRate(newValue)
                 if finished {
                     //dismiss()
@@ -2851,4 +2852,8 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
+}
+
+private func normalizeValue(_ value: CGFloat) -> CGFloat {
+    return round(value * 10.0) / 10.0
 }
