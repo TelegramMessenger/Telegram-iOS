@@ -3810,7 +3810,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         } else if contentNode is ChatMessageTextBubbleContentNode, hasFiles {
                             selectAll = false
                         }
-                        tapMessage = contentNode.item?.message
+                        if contentNode is ChatMessageEventLogPreviousMessageContentNode {
+                        } else {
+                            tapMessage = contentNode.item?.message
+                        }
                         let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
                         switch tapAction {
                         case .none, .ignore:
