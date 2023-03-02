@@ -11008,14 +11008,22 @@ private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustom
             let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             
-            if case let .user(user) = self.item.peer, let emojiStatus = user.emojiStatus {
+            var iconContent: EmojiStatusComponent.Content?
+            if case let .user(user) = self.item.peer {
+                if let emojiStatus = user.emojiStatus {
+                    iconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 28.0, height: 28.0), placeholderColor: self.presentationData.theme.list.mediaPlaceholderColor, themeColor: self.presentationData.theme.list.itemAccentColor, loopMode: .forever)
+                } else if user.isPremium {
+                    iconContent = .premium(color: self.presentationData.theme.list.itemAccentColor)
+                }
+            }
+            if let iconContent {
                 let emojiStatusSize = self.emojiStatusView.update(
                     transition: .immediate,
                     component: AnyComponent(EmojiStatusComponent(
                         context: self.item.context,
                         animationCache: self.item.context.animationCache,
                         animationRenderer: self.item.context.animationRenderer,
-                        content: .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 28.0, height: 28.0), placeholderColor: self.presentationData.theme.list.mediaPlaceholderColor, themeColor: self.presentationData.theme.list.itemAccentColor, loopMode: .forever),
+                        content: iconContent,
                         isVisibleForAnimations: true,
                         action: nil
                     )),

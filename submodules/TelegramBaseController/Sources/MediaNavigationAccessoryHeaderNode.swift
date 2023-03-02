@@ -18,6 +18,10 @@ import SliderContextItem
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
 
+private func normalizeValue(_ value: CGFloat) -> CGFloat {
+    return round(value * 10.0) / 10.0
+}
+
 private class MediaHeaderItemNode: ASDisplayNode {
     private let titleNode: TextNode
     private let subtitleNode: TextNode
@@ -527,7 +531,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         var presetItems: [ContextMenuItem] = []
 
         let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
-        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+            let newValue = normalizeValue(newValue)
             self?.setRate?(AudioPlaybackRate(newValue), .sliderChange)
             if finished {
                 scheduleTooltip(.sliderCommit(previousValue, newValue))

@@ -255,6 +255,7 @@ private enum PreferencesKeyValues: Int32 {
     case premiumPromo = 26
     case globalMessageAutoremoveTimeoutSettings = 27
     case accountSpecificCacheStorageSettings = 28
+    case linksConfiguration = 29
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -393,6 +394,12 @@ public struct PreferencesKeys {
     public static let accountSpecificCacheStorageSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.accountSpecificCacheStorageSettings.rawValue)
+        return key
+    }()
+    
+    public static let linksConfiguration: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.linksConfiguration.rawValue)
         return key
     }()
 }

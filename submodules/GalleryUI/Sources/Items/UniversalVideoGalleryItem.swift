@@ -2625,10 +2625,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
 
-            items.append(.custom(SliderContextItem(minValue: 0.5, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, finished in
+            items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, finished in
                 guard let strongSelf = self else {
                     return
                 }
+                let newValue = normalizeValue(newValue)
                 strongSelf.updatePlaybackRate(newValue)
                 if finished {
                     //dismiss()
@@ -2851,4 +2852,8 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
+}
+
+private func normalizeValue(_ value: CGFloat) -> CGFloat {
+    return round(value * 10.0) / 10.0
 }

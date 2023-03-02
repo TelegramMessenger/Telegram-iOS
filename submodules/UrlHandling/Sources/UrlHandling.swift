@@ -925,15 +925,13 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
 
 private struct UrlHandlingConfiguration {
     static var defaultValue: UrlHandlingConfiguration {
-        return UrlHandlingConfiguration(token: nil, domains: [], urlAuthDomains: [])
+        return UrlHandlingConfiguration(domains: [], urlAuthDomains: [])
     }
     
-    public let token: String?
     public let domains: [String]
     public let urlAuthDomains: [String]
     
-    fileprivate init(token: String?, domains: [String], urlAuthDomains: [String]) {
-        self.token = token
+    fileprivate init(domains: [String], urlAuthDomains: [String]) {
         self.domains = domains
         self.urlAuthDomains = urlAuthDomains
     }
@@ -941,11 +939,10 @@ private struct UrlHandlingConfiguration {
     static func with(appConfiguration: AppConfiguration) -> UrlHandlingConfiguration {
         if let data = appConfiguration.data {
             let urlAuthDomains = data["url_auth_domains"] as? [String] ?? []
-            if let token = data["autologin_token"] as? String, let domains = data["autologin_domains"] as? [String] {
-                return UrlHandlingConfiguration(token: token, domains: domains, urlAuthDomains: urlAuthDomains)
+            if let domains = data["autologin_domains"] as? [String] {
+                return UrlHandlingConfiguration(domains: domains, urlAuthDomains: urlAuthDomains)
             }
         }
-        //TODO:loc move to getConfig
         return .defaultValue
     }
 }
@@ -955,8 +952,8 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
     
     return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
     |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
-        return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.App())
-        |> mapToSignal { appConfiguration -> Signal<ResolvedUrl, NoError> in
+        return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.App(), TelegramEngine.EngineData.Item.Configuration.Links())
+        |> mapToSignal { appConfiguration, linksConfiguration -> Signal<ResolvedUrl, NoError> in
             let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
             
             var skipUrlAuth = skipUrlAuth
@@ -978,7 +975,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                 if urlHandlingConfiguration.domains.contains(host), var components = URLComponents(string: url) {
                     components.scheme = "https"
                     var queryItems = components.queryItems ?? []
-                    queryItems.append(URLQueryItem(name: "autologin_token", value: urlHandlingConfiguration.token))
+                    queryItems.append(URLQueryItem(name: "autologin_token", value: linksConfiguration.autologinToken))
                     components.queryItems = queryItems
                     url = components.url?.absoluteString ?? url
                 } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
