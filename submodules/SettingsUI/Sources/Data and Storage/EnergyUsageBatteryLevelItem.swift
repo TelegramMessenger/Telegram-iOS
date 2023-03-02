@@ -59,6 +59,16 @@ class EnergyUsageBatteryLevelItem: ListViewItem, ItemListItem {
     }
 }
 
+private func rescaleBatteryValueToSlider(_ value: CGFloat) -> CGFloat {
+    var result = (value - 0.04) / (0.96 - 0.04)
+    result = max(0.0, min(1.0, result))
+    return result
+}
+
+private func rescaleSliderToBatteryValue(_ value: CGFloat) -> CGFloat {
+    return 0.04 + (0.96 - 0.04) * value
+}
+
 class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -122,7 +132,7 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.displayEdges = true
         if let item = self.item, let params = self.layoutParams {
-            sliderView.value = CGFloat(item.value) / 100.0
+            sliderView.value = rescaleBatteryValueToSlider(CGFloat(item.value) / 100.0)
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.theme.list.itemAccentColor
@@ -214,11 +224,11 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
                     //TODO:localize
                     let centralText: String
                     let centralMeasureText: String
-                    if item.value <= 0 {
+                    if item.value <= 4 {
                         centralText = "Always Off"
                         centralMeasureText = centralText
                         strongSelf.batteryBackgroundNode.isHidden = true
-                    } else if item.value >= 100 {
+                    } else if item.value >= 96 {
                         centralText = "Always On"
                         centralMeasureText = centralText
                         strongSelf.batteryBackgroundNode.isHidden = true
@@ -323,7 +333,7 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
         guard let sliderView = self.sliderView else {
             return
         }
-        self.item?.updated(Int32(sliderView.value * 100.0))
+        self.item?.updated(Int32(rescaleSliderToBatteryValue(sliderView.value) * 100.0))
     }
 }
 

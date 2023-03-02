@@ -506,9 +506,9 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
 }
 
 public func automaticEnergyUsageShouldBeOnNow(settings: MediaAutoDownloadSettings) -> Bool {
-    if settings.energyUsageSettings.activationThreshold == 0 {
+    if settings.energyUsageSettings.activationThreshold <= 4 {
         return false
-    } else if settings.energyUsageSettings.activationThreshold >= 100 {
+    } else if settings.energyUsageSettings.activationThreshold >= 96 {
         return true
     } else {
         let batteryLevel = UIDevice.current.batteryLevel
@@ -521,9 +521,9 @@ public func automaticEnergyUsageShouldBeOnNow(settings: MediaAutoDownloadSetting
 }
 
 public func automaticEnergyUsageShouldBeOn(settings: MediaAutoDownloadSettings) -> Signal<Bool, NoError> {
-    if settings.energyUsageSettings.activationThreshold == 0 {
+    if settings.energyUsageSettings.activationThreshold <= 4 {
         return .single(false)
-    } else if settings.energyUsageSettings.activationThreshold >= 100 {
+    } else if settings.energyUsageSettings.activationThreshold >= 96 {
         return .single(true)
     } else {
         return Signal { subscriber in

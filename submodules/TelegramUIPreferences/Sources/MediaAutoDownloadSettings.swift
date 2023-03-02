@@ -272,7 +272,7 @@ public struct EnergyUsageSettings: Codable, Equatable {
     
     public static var `default`: EnergyUsageSettings {
         return EnergyUsageSettings(
-            activationThreshold: 10,
+            activationThreshold: 15,
             autoplayVideo: true,
             autoplayGif: true,
             loopStickers: true,
@@ -285,7 +285,7 @@ public struct EnergyUsageSettings: Codable, Equatable {
     
     public static var powerSavingDefault: EnergyUsageSettings {
         return EnergyUsageSettings(
-            activationThreshold: 10,
+            activationThreshold: 15,
             autoplayVideo: false,
             autoplayGif: false,
             loopStickers: false,
