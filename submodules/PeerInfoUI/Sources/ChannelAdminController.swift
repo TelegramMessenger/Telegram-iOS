@@ -1009,7 +1009,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 updateState { current in
                     return current.withUpdatedUpdating(true)
                 }
-                if case let .channel(channel) = channelPeer {
+                if let channelPeer, case let .channel(channel) = channelPeer {
                     updateRightsDisposable.set((context.engine.peers.addChannelMember(peerId: peerId, memberId: adminId)
                     |> deliverOnMainQueue).start(error: { error in
                         updateState { current in
@@ -1017,7 +1017,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         }
                         
                         if let adminPeer {
-                            let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: [adminPeer])
+                            let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [adminPeer])
                             pushControllerImpl?(inviteScreen)
                             
                             dismissImpl?()
@@ -1206,8 +1206,8 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         }
                         updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
                             if case let .addMemberError(addMemberError) = error, let admin = adminPeer {
-                                if "".isEmpty {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: [admin])
+                                if let channelPeer {
+                                    let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [admin])
                                     pushControllerImpl?(inviteScreen)
                                     
                                     dismissImpl?()

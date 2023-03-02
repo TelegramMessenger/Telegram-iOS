@@ -512,10 +512,11 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
     
     let arguments = ChannelMembersControllerArguments(context: context, addMember: {
         actionsDisposable.add((combineLatest(
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)),
             peersPromise.get() |> take(1)
         )
-        |> deliverOnMainQueue).start(next: { exportedInvitation, members in
+        |> deliverOnMainQueue).start(next: { chatPeer, exportedInvitation, members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
             let contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: [], filters: [.excludeSelf, .disable(disabledIds)]))
             
@@ -547,7 +548,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                 if failedPeerIds.isEmpty {
                     contactsController?.dismiss()
                 } else {
-                    if "".isEmpty {
+                    if let chatPeer {
                         let _ = (context.engine.data.get(
                             EngineDataList(failedPeerIds.compactMap { item -> EnginePeer.Id? in
                                 return item.0
@@ -558,7 +559,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                             if !peers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
                                 var viewControllers = navigationController.viewControllers
                                 if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: peers)
+                                    let inviteScreen = SendInviteLinkScreen(context: context, peer: chatPeer, link: exportedInvitation?.link, peers: peers)
                                     viewControllers.remove(at: index)
                                     viewControllers.append(inviteScreen)
                                     navigationController.setViewControllers(viewControllers, animated: true)

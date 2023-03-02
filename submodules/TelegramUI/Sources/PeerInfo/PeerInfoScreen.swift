@@ -10782,7 +10782,7 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                                 if !peers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
                                     var viewControllers = navigationController.viewControllers
                                     if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
-                                        let inviteScreen = SendInviteLinkScreen(context: context, link: exportedInvitation?.link, peers: peers)
+                                        let inviteScreen = SendInviteLinkScreen(context: context, peer: EnginePeer(groupPeer), link: exportedInvitation?.link, peers: peers)
                                         viewControllers.remove(at: index)
                                         viewControllers.append(inviteScreen)
                                         navigationController.setViewControllers(viewControllers, animated: true)
