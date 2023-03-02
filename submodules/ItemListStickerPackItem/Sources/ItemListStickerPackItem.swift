@@ -651,41 +651,76 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     
                     let _ = titleApply()
                     let _ = statusApply()
-                    let _ = installApply()
                                         
                     switch item.control {
-                        case .none:
-                            strongSelf.installationActionNode.isHidden = true
-                            strongSelf.installationActionBackgroundNode.isHidden = true
-                            strongSelf.selectionIconNode.isHidden = true
-                        case let .installation(installed):
-                            strongSelf.installationActionBackgroundNode.isHidden = false
-                            strongSelf.installationActionNode.isHidden = false
-                            strongSelf.selectionIconNode.isHidden = true
-                            strongSelf.installationActionNode.isUserInteractionEnabled = !installed
+                    case .none:
+                        strongSelf.installationActionNode.isHidden = true
+                        strongSelf.installationActionBackgroundNode.isHidden = true
+                        strongSelf.selectionIconNode.isHidden = true
+                        let _ = installApply()
+                    case let .installation(installed):
+                        strongSelf.installationActionBackgroundNode.isHidden = false
+                        if let previousControl = currentItem?.control, case .check = previousControl {
+                            strongSelf.installationActionBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            transition.animateTransformScale(node: strongSelf.installationActionBackgroundNode, from: 0.01)
+                            transition.animatePosition(node: strongSelf.installationActionBackgroundNode, from: strongSelf.installationActionBackgroundNode.position.offsetBy(dx: 64.0, dy: 0.0))
+                            
+                            strongSelf.installTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            transition.animateTransformScale(node: strongSelf.installTextNode, from: 0.01)
+                            transition.animatePosition(node: strongSelf.installTextNode, from: strongSelf.installTextNode.position.offsetBy(dx: 64.0, dy: 0.0))
+                        }
+                        strongSelf.installationActionNode.isHidden = false
+                        strongSelf.selectionIconNode.isHidden = true
+                        strongSelf.installationActionNode.isUserInteractionEnabled = !installed
                         
-                            if let backgroundImage = installationBackgroundImage {
-                                strongSelf.installationActionBackgroundNode.image = backgroundImage
+                        if let backgroundImage = installationBackgroundImage {
+                            strongSelf.installationActionBackgroundNode.image = backgroundImage
+                        }
+                        
+                        let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: installWidth, height: layout.contentSize.height))
+                        strongSelf.installationActionNode.frame = installationActionFrame
+                        
+                        let buttonFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: installationActionFrame.minY + floor((installationActionFrame.size.height - 28.0) / 2.0)), size: CGSize(width: installWidth, height: 28.0))
+                        strongSelf.installationActionBackgroundNode.frame = buttonFrame
+                        strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floorToScreenPixels((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floorToScreenPixels((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
+                        let _ = installApply()
+                    case .selection:
+                        strongSelf.installationActionBackgroundNode.isHidden = true
+                        strongSelf.installationActionNode.isHidden = true
+                        strongSelf.selectionIconNode.isHidden = false
+                        if let image = checkImage {
+                            strongSelf.selectionIconNode.image = image
+                            strongSelf.selectionIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        }
+                        let _ = installApply()
+                    case .check:
+                        if let previousControl = currentItem?.control, case .installation = previousControl {
+                            strongSelf.installationActionBackgroundNode.alpha = 0.0
+                            strongSelf.installationActionBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                            strongSelf.installationActionBackgroundNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, completion: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.installationActionBackgroundNode.isHidden = true
+                                    strongSelf.installationActionBackgroundNode.alpha = 1.0
+                                }
+                            })
+                            transition.animatePosition(node: strongSelf.installationActionBackgroundNode, to: CGPoint(x: 64.0, y: 0.0), additive: true)
+                            
+                            if let installTextSnapshot = strongSelf.installTextNode.view.snapshotContentTree() {
+                                installTextSnapshot.frame = strongSelf.installTextNode.frame
+                                strongSelf.installTextNode.view.superview?.addSubview(installTextSnapshot)
+                                installTextSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                                installTextSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                                transition.animatePosition(layer: installTextSnapshot.layer, from: .zero, to: CGPoint(x: 64.0, y: 0.0), additive: true, completion: { [weak installTextSnapshot] _ in
+                                    installTextSnapshot?.removeFromSuperview()
+                                })
                             }
-                        
-                            let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: installWidth, height: layout.contentSize.height))
-                            strongSelf.installationActionNode.frame = installationActionFrame
-                        
-                            let buttonFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: installationActionFrame.minY + floor((installationActionFrame.size.height - 28.0) / 2.0)), size: CGSize(width: installWidth, height: 28.0))
-                            strongSelf.installationActionBackgroundNode.frame = buttonFrame
-                            strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floorToScreenPixels((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floorToScreenPixels((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
-                        case .selection:
-                            strongSelf.installationActionNode.isHidden = true
+                            let _ = installApply()
+                        } else {
                             strongSelf.installationActionBackgroundNode.isHidden = true
-                            strongSelf.selectionIconNode.isHidden = false
-                            if let image = checkImage {
-                                strongSelf.selectionIconNode.image = image
-                                strongSelf.selectionIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
-                            }
-                        case .check:
-                            strongSelf.installationActionNode.isHidden = true
-                            strongSelf.installationActionBackgroundNode.isHidden = true
-                            strongSelf.selectionIconNode.isHidden = true
+                            let _ = installApply()
+                        }
+                        strongSelf.installationActionNode.isHidden = true
+                        strongSelf.selectionIconNode.isHidden = true
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {

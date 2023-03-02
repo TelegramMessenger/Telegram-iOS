@@ -1239,7 +1239,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     return controller
 }
 
-private class StickersToolbarItem: ItemListToolbarItem {
+class StickersToolbarItem: ItemListToolbarItem {
     private let selectedCount: Int32
     
     init(selectedCount: Int32, actions: [Action]) {
