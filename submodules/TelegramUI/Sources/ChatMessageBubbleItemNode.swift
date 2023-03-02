@@ -1048,6 +1048,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         }
                     }
                 }
+                
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                    return false
+                }
+                
                 let action = item.controllerInteraction.canSetupReply(item.message)
                 strongSelf.currentSwipeAction = action
                 if case .none = action {
@@ -3805,7 +3810,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         } else if contentNode is ChatMessageTextBubbleContentNode, hasFiles {
                             selectAll = false
                         }
-                        tapMessage = contentNode.item?.message
+                        if contentNode is ChatMessageEventLogPreviousMessageContentNode {
+                        } else {
+                            tapMessage = contentNode.item?.message
+                        }
                         let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
                         switch tapAction {
                         case .none, .ignore:

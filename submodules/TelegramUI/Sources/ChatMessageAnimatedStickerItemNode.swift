@@ -455,6 +455,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if strongSelf.selectionNode != nil {
                     return false
                 }
+                
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                    return false
+                }
+                
                 let action = item.controllerInteraction.canSetupReply(item.message)
                 strongSelf.currentSwipeAction = action
                 if case .none = action {
