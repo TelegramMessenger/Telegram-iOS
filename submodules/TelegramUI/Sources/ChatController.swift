@@ -3506,10 +3506,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 if !found {
-                    if let _ = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                    var messageId = message.id
+                    if let forwardInfo = message.forwardInfo, let sourceMessageId = forwardInfo.sourceMessageId, case let .replyThread(threadMessage) = strongSelf.chatLocation, threadMessage.isChannelPost {
+                        messageId = sourceMessageId
+                    }
+                    if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(Double(timestamp)))
                     } else {
-                        strongSelf.navigateToMessage(messageLocation: .id(message.id, Double(timestamp)), animated: true, forceInCurrentChat: true)
+                        strongSelf.navigateToMessage(messageLocation: .id(messageId, Double(timestamp)), animated: true, forceInCurrentChat: true)
                     }
                 }
             }
