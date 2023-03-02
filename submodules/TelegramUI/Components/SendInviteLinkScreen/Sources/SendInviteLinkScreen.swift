@@ -600,8 +600,14 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, link: String?, peers: [EnginePeer]) {
+    public init(context: AccountContext, peer: EnginePeer, link: String?, peers: [EnginePeer]) {
         self.context = context
+        
+        var link = link
+        if link == nil, let addressName = peer.addressName {
+            link = "https://t.me/\(addressName)"
+        }
+        
         self.link = link
         self.peers = peers
         
