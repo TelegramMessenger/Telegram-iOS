@@ -2364,12 +2364,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 return
             }
             self.hapticFeedback.impact(.medium)
+            var didDismiss = false
             let colorController = ColorPickerScreen(context: self.context, initialColor: initialColor, updated: { [weak self] color in
                 self?.updateColor.invoke(color)
             }, openEyedropper: { [weak self] in
                 self?.presentEyedropper(dismissed: dismissed)
             }, dismissed: {
-                dismissed()
+                if !didDismiss {
+                    didDismiss = true
+                    dismissed()
+                }
             })
             controller.present(colorController, in: .window(.root))
             self.colorPickerScreen = colorController
