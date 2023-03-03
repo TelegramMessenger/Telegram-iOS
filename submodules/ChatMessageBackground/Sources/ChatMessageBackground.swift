@@ -218,12 +218,13 @@ public class ChatMessageBackground: ASDisplayNode {
         }
         
         let outlineImage: UIImage?
-        
+        var isIncoming = false
         if hasWallpaper {
             switch type {
             case .none:
                 outlineImage = nil
             case let .incoming(mergeType):
+                isIncoming = true
                 switch mergeType {
                 case .None:
                     outlineImage = graphics.chatMessageBackgroundIncomingOutlineImage
@@ -305,9 +306,9 @@ public class ChatMessageBackground: ASDisplayNode {
                 }
             }
         }
-                
+        
         self.imageNode.image = image
-        if highlighted && maskMode, let backdropNode = self.backdropNode, backdropNode.hasImage {
+        if highlighted && maskMode, let backdropNode = self.backdropNode, backdropNode.hasImage && isIncoming {
             self.imageNode.layer.compositingFilter = "overlayBlendMode"
             self.imageNode.alpha = 1.0
             

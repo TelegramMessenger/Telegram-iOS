@@ -168,7 +168,16 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             outgoingBubbleStrokeColor = .clear
         }
         
-        outgoingBubbleHighlightedFill = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.00, saturation: 1.589, brightness: 0.96)
+        if let outgoingBubbleFillColors {
+            let middleBubbleFillColor = outgoingBubbleFillColors[Int(floor(Float(outgoingBubbleFillColors.count - 1) / 2))]
+            if middleBubbleFillColor.lightness < 0.85 {
+                outgoingBubbleHighlightedFill = middleBubbleFillColor.multipliedWith(middleBubbleFillColor).withMultiplied(hue: 1.0, saturation: 0.6, brightness: 1.0)
+            } else if middleBubbleFillColor.lightness > 0.97 {
+                outgoingBubbleHighlightedFill = middleBubbleFillColor.withMultiplied(hue: 1.00, saturation: 2.359, brightness: 0.99)
+            } else {
+                outgoingBubbleHighlightedFill = middleBubbleFillColor.withMultiplied(hue: 1.00, saturation: 1.589, brightness: 0.99)
+            }
+        }
         
         let lightnessColor = UIColor.average(of: bubbleColors.map(UIColor.init(rgb:)))
         if lightnessColor.lightness > 0.705 {
@@ -622,7 +631,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             bubble: PresentationThemeBubbleColor(
                 withWallpaper: PresentationThemeBubbleColorComponents(
                     fill: [UIColor(rgb: 0xe1ffc7)],
-                    highlightedFill: UIColor(rgb: 0xc8ffa6),
+                    highlightedFill: UIColor(rgb: 0xbaff93),
                     stroke: bubbleStrokeColor,
                     shadow: nil,
                     reactionInactiveBackground: UIColor(rgb: 0x2DA32F).withMultipliedAlpha(0.12),
@@ -634,7 +643,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
                 ),
                 withoutWallpaper: PresentationThemeBubbleColorComponents(
                     fill: [UIColor(rgb: 0xe1ffc7)],
-                    highlightedFill: UIColor(rgb: 0xc8ffa6),
+                    highlightedFill: UIColor(rgb: 0xbaff93),
                     stroke: bubbleStrokeColor,
                     shadow: nil,
                     reactionInactiveBackground: UIColor(rgb: 0x2DA32F).withMultipliedAlpha(0.12),

@@ -2726,7 +2726,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if modal {
-            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
             self.navigationItem.setLeftBarButton(cancelItem, animated: false)
             self.navigationPresentation = .modal
         } else {
