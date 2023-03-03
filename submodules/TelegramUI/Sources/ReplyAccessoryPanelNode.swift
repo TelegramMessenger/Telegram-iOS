@@ -34,6 +34,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     private let actionArea: AccessibilityAreaNode
     
+    private let context: AccountContext
     var theme: PresentationTheme
     var strings: PresentationStrings
     
@@ -42,6 +43,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.messageId = messageId
         
+        self.context = context
         self.theme = theme
         self.strings = strings
         
@@ -344,7 +346,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         
         if let textLayout = self.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
             if self.dustNode == nil {
-                let dustNode = InvisibleInkDustNode(textNode: nil)
+                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 self.dustNode = dustNode
                 self.textNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.textNode)
             }

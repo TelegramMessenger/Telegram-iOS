@@ -2289,7 +2289,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         if let start = textInputNode.textView.position(from: beginning, offset: startIndex), let end = textInputNode.textView.position(from: start, offset: endIndex - startIndex), let textRange = textInputNode.textView.textRange(from: start, to: end) {
                             let textRects = textInputNode.textView.selectionRects(for: textRange)
                             for textRect in textRects {
-                                rects.append(textRect.rect.insetBy(dx: 1.0, dy: 1.0).offsetBy(dx: 0.0, dy: 1.0))
+                                if textRect.rect.width > 1.0 && textRect.rect.size.height > 1.0 {
+                                    rects.append(textRect.rect.insetBy(dx: 1.0, dy: 1.0).offsetBy(dx: 0.0, dy: 1.0))
+                                }
                             }
                         }
                     }
@@ -2335,7 +2337,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let current = self.dustNode {
                 dustNode = current
             } else {
-                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
                 dustNode.alpha = self.spoilersRevealed ? 0.0 : 1.0
                 dustNode.isUserInteractionEnabled = false
                 textInputNode.textView.addSubview(dustNode.view)

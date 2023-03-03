@@ -1038,7 +1038,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             if let current = self.dustNode {
                 dustNode = current
             } else {
-                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 dustNode.alpha = self.spoilersRevealed ? 0.0 : 1.0
                 dustNode.isUserInteractionEnabled = false
                 textInputNode.textView.addSubview(dustNode.view)
@@ -1298,7 +1298,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     private func updateOneLineSpoiler() {
         if let textLayout = self.oneLineNode.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
             if self.oneLineDustNode == nil {
-                let oneLineDustNode = InvisibleInkDustNode(textNode: nil)
+                let oneLineDustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 self.oneLineDustNode = oneLineDustNode
                 self.oneLineNode.textNode.supernode?.insertSubnode(oneLineDustNode, aboveSubnode: self.oneLineNode.textNode)
                 

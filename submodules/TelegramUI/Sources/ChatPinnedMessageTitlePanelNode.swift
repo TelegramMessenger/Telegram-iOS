@@ -764,7 +764,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         if let current = strongSelf.dustNode {
                             dustNode = current
                         } else {
-                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode)
+                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency)
                             strongSelf.dustNode = dustNode
                             strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
                         }
