@@ -336,20 +336,25 @@ public enum PatternWallpaperDrawMode {
 }
 
 public struct PatternWallpaperArguments: TransformImageCustomArguments {
+    public enum DisplayMode: Int32 {
+        case aspectFill
+        case aspectFit
+        case halfAspectFill
+    }
     let colors: [UIColor]
     let rotation: Int32?
     let preview: Bool
     let customPatternColor: UIColor?
     let bakePatternAlpha: CGFloat
-    let tile: Bool
+    let displayMode: DisplayMode
     
-    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false, bakePatternAlpha: CGFloat = 1.0, tile: Bool = false) {
+    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false, bakePatternAlpha: CGFloat = 1.0, displayMode: DisplayMode = .aspectFill) {
         self.colors = colors
         self.rotation = rotation
         self.customPatternColor = customPatternColor
         self.preview = preview
         self.bakePatternAlpha = bakePatternAlpha
-        self.tile = tile
+        self.displayMode = displayMode
     }
     
     public func serialized() -> NSArray {
@@ -361,7 +366,7 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
         }
         array.add(NSNumber(value: self.preview))
         array.add(NSNumber(value: Double(self.bakePatternAlpha)))
-        array.add(NSNumber(value: self.tile))
+        array.add(NSNumber(value: self.displayMode.rawValue))
         return array
     }
 }
@@ -542,13 +547,13 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         c.restoreGState()
                     }
 
-                    let tile = customArguments.tile
+                    let displayMode = customArguments.displayMode
                     let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
                         c.clear(CGRect(origin: CGPoint(), size: size))
                         var image: UIImage?
                         if let fullSizeData = fullSizeData {
                             if mode == .screen {
-                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, 1.0, tile)
+                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, 1.0, displayMode != .aspectFill)
                             } else {
                                 image = UIImage(data: fullSizeData)
                             }
@@ -570,10 +575,14 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                             if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
                                 fittedSize.height = arguments.boundingSize.height
                             }
-                            if tile {
-                                fittedSize = fittedSize.aspectFitted(arguments.drawingRect.size)
-                            } else {
+                            switch displayMode {
+                            case .aspectFill:
                                 fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
+                            case .halfAspectFill:
+                                fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
+                                fittedSize = CGSize(width: fittedSize.width * 0.5, height: fittedSize.height * 0.5)
+                            case .aspectFit:
+                                fittedSize = fittedSize.aspectFitted(arguments.drawingRect.size)
                             }
                             
                             c.interpolationQuality = customArguments.preview ? .low : .medium
@@ -611,16 +620,18 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                                 c.restoreGState()
                             }
                             
-                            if tile {
+                            switch displayMode {
+                            case .aspectFit, .halfAspectFill:
                                 var fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
                                 drawTile(fittedRect)
-                                fittedRect = fittedRect.offsetBy(dx: fittedSize.width, dy: 0.0)
-                                drawTile(fittedRect)
-                            } else {
+                                while (fittedRect.maxX < size.width) {
+                                    fittedRect = fittedRect.offsetBy(dx: fittedSize.width, dy: 0.0)
+                                    drawTile(fittedRect)
+                                }
+                            case .aspectFill:
                                 let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
                                 drawTile(fittedRect)
                             }
-                            
                         }
                     })
                     if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {

@@ -389,11 +389,26 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
 
+                    let displayMode: WallpaperDisplayMode
+                    if abs(params.availableHeight - params.width) < 100.0, params.availableHeight > 700.0 {
+                        displayMode = .halfAspectFill
+                    } else {
+                        if backgroundFrame.width > backgroundFrame.height * 4.0 {
+                            if params.availableHeight < 700.0 {
+                                displayMode = .halfAspectFill
+                            } else {
+                                displayMode = .aspectFill
+                            }
+                        } else {
+                            displayMode = .aspectFill
+                        }
+                    }
+                    
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper)
                         backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
-                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, tile: false, transition: .immediate)
+                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }
 
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)

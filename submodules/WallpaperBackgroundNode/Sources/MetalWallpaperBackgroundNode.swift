@@ -138,7 +138,7 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
         
     }
     
-    func updateLayout(size: CGSize, tile: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, displayMode: WallpaperDisplayMode, transition: ContainedViewLayoutTransition) {
         if self.metalLayer.drawableSize != size {
             self.metalLayer.drawableSize = size
             
