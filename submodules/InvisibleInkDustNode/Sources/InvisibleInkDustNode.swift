@@ -6,25 +6,11 @@ import AsyncDisplayKit
 import Display
 import AppBundle
 import LegacyComponents
-import GameplayKit
 
-private struct ArbitraryRandomNumberGenerator : RandomNumberGenerator {
+struct ArbitraryRandomNumberGenerator : RandomNumberGenerator {
     init(seed: Int) { srand48(seed) }
     func next() -> UInt64 { return UInt64(drand48() * Double(UInt64.max)) }
 }
-//    mutating func next() -> UInt64 {
-//        // GKRandom produces values in [INT32_MIN, INT32_MAX] range; hence we need two numbers to produce 64-bit value.
-//        let next1 = UInt64(bitPattern: Int64(gkrandom.nextInt()))
-//        let next2 = UInt64(bitPattern: Int64(gkrandom.nextInt()))
-//        return next1 ^ (next2 << 32)
-//    }
-//
-//    init(seed: UInt64) {
-//        self.gkrandom = GKMersenneTwisterRandomSource(seed: seed)
-//    }
-//
-//    private let gkrandom: GKRandom
-//}
 
 func createEmitterBehavior(type: String) -> NSObject {
     let selector = ["behaviorWith", "Type:"].joined(separator: "")
@@ -323,25 +309,28 @@ public class InvisibleInkDustNode: ASDisplayNode {
             }
             
             print("combining \(CACurrentMediaTime() - start)")
-            
-            var generator = ArbitraryRandomNumberGenerator(seed: 1)
-            let image = generateImage(size, rotatedContext: { size, context in
-                let bounds = CGRect(origin: .zero, size: size)
-                context.clear(bounds)
-                
-                context.setFillColor(color.cgColor)
-                for rect in combinedRects {
-                    if rect.width > 10.0 {
-                        let rate = Int(rect.width * rect.height * 0.25)
-                        for _ in 0 ..< rate {
-                            let location = CGPoint(x: .random(in: rect.minX ..< rect.maxX, using: &generator), y: .random(in: rect.minY ..< rect.maxY, using: &generator))
-                            context.fillEllipse(in: CGRect(origin: location, size: CGSize(width: 1.0, height: 1.0)))
+            Queue.concurrentDefaultQueue().async {
+                var generator = ArbitraryRandomNumberGenerator(seed: 1)
+                let image = generateImage(size, rotatedContext: { size, context in
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.clear(bounds)
+                    
+                    context.setFillColor(color.cgColor)
+                    for rect in combinedRects {
+                        if rect.width > 10.0 {
+                            let rate = Int(rect.width * rect.height * 0.25)
+                            for _ in 0 ..< rate {
+                                let location = CGPoint(x: .random(in: rect.minX ..< rect.maxX, using: &generator), y: .random(in: rect.minY ..< rect.maxY, using: &generator))
+                                context.fillEllipse(in: CGRect(origin: location, size: CGSize(width: 1.0, height: 1.0)))
+                            }
                         }
                     }
+                })
+                Queue.mainQueue().async {
+                    self.staticNode?.image = image
                 }
-            })
+            }
             self.staticNode?.frame = CGRect(origin: CGPoint(), size: size)
-            self.staticNode?.image = image
             
             print("total draw \(CACurrentMediaTime() - start)")
         }

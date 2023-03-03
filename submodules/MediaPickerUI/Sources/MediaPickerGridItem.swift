@@ -25,24 +25,26 @@ final class MediaPickerGridItem: GridItem {
     let content: MediaPickerGridItemContent
     let interaction: MediaPickerInteraction
     let theme: PresentationTheme
+    let enableAnimations: Bool
     
     let section: GridSection? = nil
     
-    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme) {
+    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, enableAnimations: Bool) {
         self.content = content
         self.interaction = interaction
         self.theme = theme
+        self.enableAnimations = enableAnimations
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         switch self.content {
         case let .asset(fetchResult, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
             return node
         case let .media(media, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
             return node
         }
     }
@@ -54,13 +56,13 @@ final class MediaPickerGridItem: GridItem {
                 assertionFailure()
                 return
             }
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
         case let .media(media, index):
             guard let node = node as? MediaPickerGridItemNode else {
                 assertionFailure()
                 return
             }
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
         }
     }
 }
@@ -81,6 +83,8 @@ private let maskImage = generateImage(CGSize(width: 1.0, height: 24.0), opaque: 
 final class MediaPickerGridItemNode: GridItemNode {
     var currentMediaState: (TGMediaSelectableItem, Int)?
     var currentState: (PHFetchResult<PHAsset>, Int)?
+    var enableAnimations: Bool = true
+    
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
     private let gradientNode: ASImageNode
@@ -214,9 +218,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme) {
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
+        self.enableAnimations = enableAnimations
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
@@ -281,9 +286,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
         
-    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme) {
+    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
+        self.enableAnimations = enableAnimations
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
@@ -395,7 +401,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     
         if hasSpoiler {
             if self.spoilerNode == nil {
-                let spoilerNode = SpoilerOverlayNode()
+                let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
                 self.spoilerNode = spoilerNode
                 
@@ -458,12 +464,12 @@ class SpoilerOverlayNode: ASDisplayNode {
     private var maskView: UIView?
     private var maskLayer: CAShapeLayer?
     
-    override init() {
+    init(enableAnimations: Bool) {
         self.blurNode = ASImageNode()
         self.blurNode.displaysAsynchronously = false
         self.blurNode.contentMode = .scaleAspectFill
          
-        self.dustNode = MediaDustNode()
+        self.dustNode = MediaDustNode(enableAnimations: enableAnimations)
         
         super.init()
         
