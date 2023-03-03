@@ -21,7 +21,7 @@ import Postbox
 public enum ChatListNodeMode {
     case chatList
     case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool)
-    case peerType(type: ReplyMarkupButtonRequestPeerType)
+    case peerType(type: [ReplyMarkupButtonRequestPeerType], hasCreate: Bool)
 }
 
 struct ChatListNodeListViewTransition {
@@ -1749,118 +1749,128 @@ public final class ChatListNode: ListView {
                         
                         isEmpty = false
                         return true
-                    case let .peerType(peerType):
+                    case let .peerType(peerTypes, _):
                         if let peer = peer.peer, !peer.isDeleted && peer.id != context.account.peerId {
-                            switch peerType {
-                            case let .user(userType):
-                                if case let .user(user) = peer {
-                                    if let isBot = userType.isBot {
-                                        if isBot != (user.botInfo != nil) {
-                                            return false
-                                        }
-                                    }
-                                    if let isPremium = userType.isPremium {
-                                        if isPremium != user.isPremium {
-                                            return false
-                                        }
-                                    }
-                                    isEmpty = false
-                                    return true
-                                } else {
-                                    return false
+                            var match = false
+                            for peerType in peerTypes {
+                                if match {
+                                    break
                                 }
-                            case let .group(groupType):
-                                if case let .legacyGroup(group) = peer {
-                                    if groupType.isCreator {
-                                        if case .creator = group.role {
-                                        } else {
-                                            return false
-                                        }
-                                    }
-                                    if let isForum = groupType.isForum, isForum {
-                                        return false
-                                    }
-                                    if let hasUsername = groupType.hasUsername, hasUsername {
-                                        return false
-                                    }
-                                    if let userAdminRights = groupType.userAdminRights {
-                                        if case .creator = group.role, userAdminRights.rights.contains(.canBeAnonymous) {
-                                            return false
-                                        } else if case let .admin(rights, _) = group.role {
-                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
-                                                return false
+                                switch peerType {
+                                case let .user(userType):
+                                    if case let .user(user) = peer {
+                                        match = true
+                                        if let isBot = userType.isBot {
+                                            if isBot != (user.botInfo != nil) {
+                                                match = false
                                             }
-                                        } else if case .member = group.role {
-                                            return false
                                         }
-                                    }
-                                    isEmpty = false
-                                    return true
-                                } else if case let .channel(channel) = peer, case .group = channel.info {
-                                    if groupType.isCreator {
-                                        if !channel.flags.contains(.isCreator) {
-                                            return false
-                                        }
-                                    }
-                                    if let isForum = groupType.isForum {
-                                        if isForum != channel.flags.contains(.isForum) {
-                                            return false
-                                        }
-                                    }
-                                    if let hasUsername = groupType.hasUsername {
-                                        if hasUsername != (!(channel.addressName ?? "").isEmpty) {
-                                            return false
-                                        }
-                                    }
-                                    if let userAdminRights = groupType.userAdminRights {
-                                        if channel.flags.contains(.isCreator) {
-                                            if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
-                                                return false
+                                        if let isPremium = userType.isPremium {
+                                            if isPremium != user.isPremium {
+                                                match = false
                                             }
-                                        } else if let rights = channel.adminRights {
-                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
-                                                return false
-                                            }
-                                        } else {
-                                            return false
                                         }
+                                        isEmpty = false
+                                    } else {
+                                        match = false
                                     }
-                                    isEmpty = false
-                                    return true
-                                } else {
-                                    return false
+                                case let .group(groupType):
+                                    if case let .legacyGroup(group) = peer {
+                                        match = true
+                                        if groupType.isCreator {
+                                            if case .creator = group.role {
+                                            } else {
+                                                match = false
+                                            }
+                                        }
+                                        if let isForum = groupType.isForum, isForum {
+                                            match = false
+                                        }
+                                        if let hasUsername = groupType.hasUsername, hasUsername {
+                                            match = false
+                                        }
+                                        if let userAdminRights = groupType.userAdminRights {
+                                            if case .creator = group.role, userAdminRights.rights.contains(.canBeAnonymous) {
+                                                match = false
+                                            } else if case let .admin(rights, _) = group.role {
+                                                if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                    match = false
+                                                }
+                                            } else if case .member = group.role {
+                                                match = false
+                                            }
+                                        }
+                                        isEmpty = false
+                                    } else if case let .channel(channel) = peer, case .group = channel.info {
+                                        match = true
+                                        if groupType.isCreator {
+                                            if !channel.flags.contains(.isCreator) {
+                                                match = false
+                                            }
+                                        }
+                                        if let isForum = groupType.isForum {
+                                            if isForum != channel.flags.contains(.isForum) {
+                                                match = false
+                                            }
+                                        }
+                                        if let hasUsername = groupType.hasUsername {
+                                            if hasUsername != (!(channel.addressName ?? "").isEmpty) {
+                                                match = false
+                                            }
+                                        }
+                                        if let userAdminRights = groupType.userAdminRights {
+                                            if channel.flags.contains(.isCreator) {
+                                                if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                                    match = false
+                                                }
+                                            } else if let rights = channel.adminRights {
+                                                if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                    match = false
+                                                }
+                                            } else {
+                                                match = false
+                                            }
+                                        }
+                                        isEmpty = false
+                                    } else {
+                                        match = false
+                                    }
+                                case let .channel(channelType):
+                                    if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                        match = true
+                                        if channelType.isCreator {
+                                            if !channel.flags.contains(.isCreator) {
+                                                match = false
+                                            }
+                                        }
+                                        if let hasUsername = channelType.hasUsername {
+                                            if hasUsername != (!(channel.addressName ?? "").isEmpty) {
+                                                match = false
+                                            }
+                                        }
+                                        if let userAdminRights = channelType.userAdminRights {
+                                            if channel.flags.contains(.isCreator) {
+                                                if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
+                                                    match = false
+                                                }
+                                            } else if let rights = channel.adminRights {
+                                                if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
+                                                    match = false
+                                                }
+                                            } else {
+                                                match = false
+                                            }
+                                        }
+                                        isEmpty = false
+                                    } else {
+                                        match = false
+                                    }
                                 }
-                            case let .channel(channelType):
-                                if case let .channel(channel) = peer, case .broadcast = channel.info {
-                                    if channelType.isCreator {
-                                        if !channel.flags.contains(.isCreator) {
-                                            return false
-                                        }
-                                    }
-                                    if let hasUsername = channelType.hasUsername {
-                                        if hasUsername != (!(channel.addressName ?? "").isEmpty) {
-                                            return false
-                                        }
-                                    }
-                                    if let userAdminRights = channelType.userAdminRights {
-                                        if channel.flags.contains(.isCreator) {
-                                            if let rights = channel.adminRights, rights.rights.contains(.canBeAnonymous) != userAdminRights.rights.contains(.canBeAnonymous) {
-                                                return false
-                                            }
-                                        } else if let rights = channel.adminRights {
-                                            if rights.rights.intersection(userAdminRights.rights) != userAdminRights.rights {
-                                                return false
-                                            }
-                                        } else {
-                                            return false
-                                        }
-                                    }
-                                    isEmpty = false
+                                if match {
                                     return true
-                                } else {
-                                    return false
                                 }
                             }
+                            return false
                         } else {
                             return false
                         }

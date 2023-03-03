@@ -33,7 +33,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let hasGlobalSearch: Bool
     private let forwardedMessageIds: [EngineMessage.Id]
     private let hasTypeHeaders: Bool
-    private let requestPeerType: ReplyMarkupButtonRequestPeerType?
+    private let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -105,7 +105,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     
-    init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: ReplyMarkupButtonRequestPeerType?, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, hasCreation: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.controller = controller
         self.present = present
@@ -196,7 +196,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         let chatListMode: ChatListNodeMode
         if let requestPeerType = self.requestPeerType {
-            chatListMode = .peerType(type: requestPeerType)
+            chatListMode = .peerType(type: requestPeerType, hasCreate: hasCreation)
         } else {
             chatListMode = .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false)
         }
@@ -731,7 +731,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             mainContainerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: actualNavigationBarHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, insets: insets, isReorderingFilters: false, isEditing: false, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, transition: transition)
         }
         
-        if let requestPeerType = self.requestPeerType {
+        if let requestPeerTypes = self.requestPeerType, let requestPeerType = requestPeerTypes.first {
             if self.isEmpty {
                 self.chatListNode?.isHidden = true
                 self.requirementsBackgroundNode?.isHidden = true

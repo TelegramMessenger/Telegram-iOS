@@ -9032,3 +9032,6 @@ Sorry for the inconvenience.";
 "Settings.PowerSaving" = "Power Saving";
 "Settings.PowerSavingOn" = "On";
 "Settings.PowerSavingOff" = "Off";
+
+"Conversation.BotApp" = "Bot Application";
+"Conversation.OpenBotApp" = "OPEN APP";

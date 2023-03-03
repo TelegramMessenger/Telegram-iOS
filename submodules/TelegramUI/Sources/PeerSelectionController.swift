@@ -63,7 +63,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private let pretendPresentedInModal: Bool
     private let forwardedMessageIds: [EngineMessage.Id]
     private let hasTypeHeaders: Bool
-    private let requestPeerType: ReplyMarkupButtonRequestPeerType?
+    private let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
+    private let hasCreation: Bool
     
     override public var _presentedInModal: Bool {
         get {
@@ -103,6 +104,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.hasTypeHeaders = params.hasTypeHeaders
         self.selectForumThreads = params.selectForumThreads
         self.requestPeerType = params.requestPeerType
+        self.hasCreation = params.hasCreation
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -110,18 +112,22 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.customTitle = params.title
         
-        if let peerType = params.requestPeerType {
-            switch peerType {
-            case let .user(user):
-                if let isBot = user.isBot, isBot {
-                    self.customTitle = self.presentationData.strings.RequestPeer_ChooseBotTitle
-                } else {
-                    self.customTitle = self.presentationData.strings.RequestPeer_ChooseUserTitle
+        if let peerTypes = params.requestPeerType {
+            if peerTypes.count == 1, let peerType = peerTypes.first {
+                switch peerType {
+                case let .user(user):
+                    if let isBot = user.isBot, isBot {
+                        self.customTitle = self.presentationData.strings.RequestPeer_ChooseBotTitle
+                    } else {
+                        self.customTitle = self.presentationData.strings.RequestPeer_ChooseUserTitle
+                    }
+                case .group:
+                    self.customTitle = self.presentationData.strings.RequestPeer_ChooseGroupTitle
+                case .channel:
+                    self.customTitle = self.presentationData.strings.RequestPeer_ChooseChannelTitle
                 }
-            case .group:
-                self.customTitle = self.presentationData.strings.RequestPeer_ChooseGroupTitle
-            case .channel:
-                self.customTitle = self.presentationData.strings.RequestPeer_ChooseChannelTitle
+            } else {
+                self.customTitle = self.presentationData.strings.ChatImport_Title
             }
         }
         
@@ -143,7 +149,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         }
         
         self.presentationDataDisposable = ((params.updatedPresentationData?.signal ?? self.context.sharedContext.presentationData)
-                                           |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
@@ -216,7 +222,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, controller: self, presentationData: self.presentationData, filter: self.filter, forumPeerId: self.forumPeerId, hasFilters: self.hasFilters, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, forwardedMessageIds: self.forwardedMessageIds, hasTypeHeaders: self.hasTypeHeaders, requestPeerType: self.requestPeerType, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, controller: self, presentationData: self.presentationData, filter: self.filter, forumPeerId: self.forumPeerId, hasFilters: self.hasFilters, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, forwardedMessageIds: self.forwardedMessageIds, hasTypeHeaders: self.hasTypeHeaders, requestPeerType: self.requestPeerType, hasCreation: self.hasCreation, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, presentInGlobalOverlay: { [weak self] c, a in
             self?.presentInGlobalOverlay(c, with: a)

@@ -149,6 +149,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         switch entity.type {
                         case .Spoiler, .CustomEmoji:
                             return true
+                        case .Strikethrough:
+                            return true
                         default:
                             return false
                         }
