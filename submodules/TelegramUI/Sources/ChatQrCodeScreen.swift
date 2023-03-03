@@ -1852,7 +1852,14 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.wallpaperBackgroundNode.updateLayout(size: size, tile: false, transition: transition)
+        
+        let displayMode: WallpaperDisplayMode
+        if max(size.width, size.height) > 1000.0 {
+            displayMode = .aspectFit
+        } else {
+            displayMode = .aspectFill
+        }
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: displayMode, transition: transition)
         
         let textLength = self.codeTextNode.attributedText?.string.count ?? 0
         
@@ -2195,7 +2202,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.wallpaperBackgroundNode.updateLayout(size: size, tile: false, transition: transition)
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: transition)
         
         let inset: CGFloat = 24.0
         let contentInset: CGFloat = 16.0
