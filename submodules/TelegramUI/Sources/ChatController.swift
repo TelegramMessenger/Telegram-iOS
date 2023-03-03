@@ -11098,8 +11098,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let batteryPercentage = Int(batteryLevel * 100.0)
                         
                         self.dismissAllUndoControllers()
-                        //TODO:localize
-                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: "Power Saving mode enabled", text: "\(batteryPercentage)% battery remaining.", customUndoText: "Disable", timeout: 5.0), elevatedLayout: false, action: { [weak self] action in
+                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: presentationData.strings.PowerSaving_AlertEnabledTitle, text: presentationData.strings.PowerSaving_AlertEnabledText("\(batteryPercentage)").string, customUndoText: presentationData.strings.PowerSaving_AlertEnabledAction, timeout: 5.0), elevatedLayout: false, action: { [weak self] action in
                             if case .undo = action, let self {
                                 let _ = updateMediaDownloadSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { settings in
                                     var settings = settings

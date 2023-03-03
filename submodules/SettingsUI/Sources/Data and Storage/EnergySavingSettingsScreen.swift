@@ -40,49 +40,48 @@ enum ItemType: CaseIterable {
     }
     
     func title(strings: PresentationStrings) -> (String, String, String) {
-        //TODO:localize
         switch self {
         case .autoplayVideo:
             return (
                 "Settings/Power/PowerIconVideo",
-                "Autoplay Videos",
-                "Autoplay and loop videos and video messages in chats."
+                strings.PowerSavingScreen_OptionAutoplayVideoTitle,
+                strings.PowerSavingScreen_OptionAutoplayVideoText
             )
         case .autoplayGif:
             return (
                 "Settings/Power/PowerIconGif",
-                "Autoplay GIFs",
-                "Autoplay and loop GIFs in chats and in the keyboard."
+                strings.PowerSavingScreen_OptionAutoplayGifTitle,
+                strings.PowerSavingScreen_OptionAutoplayGifText
             )
         case .loopStickers:
             return (
                 "Settings/Power/PowerIconStickers",
-                "Sticker Animations",
-                "Loop animated stickers, play full-screen premium effects."
+                strings.PowerSavingScreen_OptionAutoplayStickersTitle,
+                strings.PowerSavingScreen_OptionAutoplayStickersText
             )
         case .loopEmoji:
             return (
                 "Settings/Power/PowerIconEmoji",
-                "Emoji Animations",
-                "Loop animated emoji in messages, reactions, statuses."
+                strings.PowerSavingScreen_OptionAutoplayEmojiTitle,
+                strings.PowerSavingScreen_OptionAutoplayEmojiText
             )
         case .fullTranslucency:
             return (
                 "Settings/Power/PowerIconEffects",
-                "Interface Effects",
-                "Various effects and animations that make Telegram look amazing."
+                strings.PowerSavingScreen_OptionAutoplayEffectsTitle,
+                strings.PowerSavingScreen_OptionAutoplayEffectsText
             )
         case .extendBackgroundWork:
             return (
                 "Settings/Power/PowerIconBackgroundTime",
-                "Extended Background Time",
-                "Update chats faster when switching between apps."
+                strings.PowerSavingScreen_OptionBackgroundTitle,
+                strings.PowerSavingScreen_OptionBackgroundText
             )
         case .autodownloadInBackground:
             return (
                 "Settings/Power/PowerIconMedia",
-                "Preload Media",
-                "Start loading media while in the chat list for faster access."
+                strings.PowerSavingScreen_OptionPreloadTitle,
+                strings.PowerSavingScreen_OptionPreloadText
             )
         }
     }
@@ -167,13 +166,15 @@ private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
         let arguments = arguments as! EnergeSavingSettingsScreenArguments
         switch self {
         case let .allHeader(value):
-            //TODO:localize
             let text: String
             if let value {
-                let modeValue = value ? "ON" : "OFF"
-                text = "POWER SAVING MODE (\(modeValue))"
+                if value {
+                    text = presentationData.strings.PowerSavingScreen_ToggleHeaderOn
+                } else {
+                    text = presentationData.strings.PowerSavingScreen_ToggleHeaderOff
+                }
             } else {
-                text = "POWER SAVING MODE"
+                text = presentationData.strings.PowerSavingScreen_ToggleHeaderEmpty
             }
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .all(value):
@@ -189,8 +190,7 @@ private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
         case let .allFooter(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case .itemsHeader:
-            //TODO:localize
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "RESOURCE-INTENSIVE PROCESSES", sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.PowerSavingScreen_OptionsHeader, sectionId: self.section)
         case let .item(_, type, value, enabled):
             let (iconName, title, text) = type.title(strings: presentationData.strings)
             return ItemListSwitchItem(presentationData: presentationData, icon: UIImage(bundleImageName: iconName)?.precomposed(), title: title, text: text, value: value, enableInteractiveChanges: true, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
@@ -270,12 +270,11 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
             }).start()
         },
         displayDisabledTooltip: {
-            //TODO:localize
             let text: String
             if context.sharedContext.currentAutomaticMediaDownloadSettings.energyUsageSettings.activationThreshold >= 96 {
-                text = "Turn off Power Saving Mode to change these settings."
+                text = (context.sharedContext.currentPresentationData.with { $0 }).strings.PowerSavingScreen_OptionChangeAlertAlways
             } else {
-                text = "Turn off Power Saving Mode or charge your phone to change these settings."
+                text = (context.sharedContext.currentPresentationData.with { $0 }).strings.PowerSavingScreen_OptionChangeAlertConditional
             }
             displayTooltipImpl?(.universal(animation: "lowbattery_30", scale: 1.0, colors: [:], title: nil, text: text, customUndoText: nil, timeout: 5.0))
         }
@@ -293,10 +292,9 @@ public func energySavingSettingsScreen(context: AccountContext) -> ViewControlle
                 automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
             }
             
-            //TODO:localize
             let controllerState = ItemListControllerState(
                 presentationData: ItemListPresentationData(presentationData),
-                title: .text("Power Saving"),
+                title: .text(presentationData.strings.PowerSavingScreen_Title),
                 leftNavigationButton: nil,
                 rightNavigationButton: nil,
                 backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back),

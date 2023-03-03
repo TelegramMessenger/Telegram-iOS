@@ -217,24 +217,22 @@ class EnergyUsageBatteryLevelItemNode: ListViewItemNode {
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    //TODO:localize
-                    strongSelf.leftTextNode.attributedText = NSAttributedString(string: "Off", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
-                    strongSelf.rightTextNode.attributedText = NSAttributedString(string: "On", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
+                    strongSelf.leftTextNode.attributedText = NSAttributedString(string: item.strings.PowerSaving_BatteryLevelLimit_Off, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
+                    strongSelf.rightTextNode.attributedText = NSAttributedString(string: item.strings.PowerSaving_BatteryLevelLimit_On, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
                     
-                    //TODO:localize
                     let centralText: String
                     let centralMeasureText: String
                     if item.value <= 4 {
-                        centralText = "Always Off"
+                        centralText = item.strings.PowerSaving_BatteryLevelLimit_AlwaysOff
                         centralMeasureText = centralText
                         strongSelf.batteryBackgroundNode.isHidden = true
                     } else if item.value >= 96 {
-                        centralText = "Always On"
+                        centralText = item.strings.PowerSaving_BatteryLevelLimit_AlwaysOn
                         centralMeasureText = centralText
                         strongSelf.batteryBackgroundNode.isHidden = true
                     } else {
-                        centralText = "When Below \(item.value)%"
-                        centralMeasureText = "When Below 99%"
+                        centralText = item.strings.PowerSaving_BatteryLevelLimit_WhenBelow("\(item.value)").string
+                        centralMeasureText = item.strings.PowerSaving_BatteryLevelLimit_WhenBelow("99").string
                         strongSelf.batteryBackgroundNode.isHidden = false
                     }
                     strongSelf.batteryForegroundNode.isHidden = strongSelf.batteryBackgroundNode.isHidden

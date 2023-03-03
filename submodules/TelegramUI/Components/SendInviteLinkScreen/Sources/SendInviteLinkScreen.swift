@@ -298,11 +298,10 @@ private final class SendInviteLinkScreenComponent: Component {
             
             var contentHeight: CGFloat = 0.0
             
-            //TODO:localize
             let leftButtonSize = self.leftButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: "Skip", font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
+                    content: AnyComponent(Text(text: environment.strings.SendInviteLink_SkipAction, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
                     action: { [weak self] in
                         guard let self, let controller = self.environment?.controller() else {
                             return
@@ -323,11 +322,10 @@ private final class SendInviteLinkScreenComponent: Component {
                 leftButtonView.isHidden = (self.selectedItems.isEmpty || component.link == nil) ? true : false
             }
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.link != nil ? "Invite via Link" : "You can't create a link", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: component.link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
@@ -361,15 +359,15 @@ private final class SendInviteLinkScreenComponent: Component {
             let text: String
             if component.link != nil {
                 if component.peers.count == 1 {
-                    text = "**\(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast))** restricts adding them to groups.\nYou can send them an invite link as message instead."
+                    text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
                 } else {
-                    text = "**\(component.peers.count) users** restrict adding them to groups.\nYou can send them an invite link as message instead."
+                    text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
                 }
             } else {
                 if component.peers.count == 1 {
-                    text = "**\(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast))** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links."
+                    text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
                 } else {
-                    text = "**\(component.peers.count) users** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links."
+                    text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
                 }
             }
             
@@ -485,12 +483,11 @@ private final class SendInviteLinkScreenComponent: Component {
             
             let actionButtonTitle: String
             if component.link != nil {
-                actionButtonTitle = self.selectedItems.isEmpty ? "Skip" : "Send Invite Link"
+                actionButtonTitle = self.selectedItems.isEmpty ? environment.strings.SendInviteLink_ActionSkip : environment.strings.SendInviteLink_ActionInvite
             } else {
-                actionButtonTitle = "Close"
+                actionButtonTitle = environment.strings.SendInviteLink_ActionClose
             }
             
-            //TODO:localize
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(SolidRoundedButtonComponent(

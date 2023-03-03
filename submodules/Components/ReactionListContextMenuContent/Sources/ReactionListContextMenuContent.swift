@@ -598,25 +598,20 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
                 let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 100.0))
                 
-                //TODO:localize
                 var text = ""
                 if let timestamp = item.timestamp {
                     let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: false, allowYesterday: true, format: HumanReadableStringFormat(
                         dateFormatString: { value in
-                            //TODO:localize
-                            return PresentationStrings.FormattedString(string: "\(value)", ranges: [])
+                            return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
                         },
                         tomorrowFormatString: { value in
-                            //TODO:localize
-                            return PresentationStrings.FormattedString(string: "today at \(value)", ranges: [])
+                            return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
                         },
                         todayFormatString: { value in
-                            //TODO:localize
-                            return PresentationStrings.FormattedString(string: "today at \(value)", ranges: [])
+                            return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
                         },
                         yesterdayFormatString: { value in
-                            //TODO:localize
-                            return PresentationStrings.FormattedString(string: "yesterday at \(value)", ranges: [])
+                            return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
                         }
                     )).string
                     text = dateText
