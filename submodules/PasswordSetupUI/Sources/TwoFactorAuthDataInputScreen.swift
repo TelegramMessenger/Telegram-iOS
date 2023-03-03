@@ -1081,6 +1081,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
                 self.inputNode.textField.returnKeyType = .next
             }
             if #available(iOS 12.0, *) {
+                #if DEBUG
                 if !confirmation, let phoneNumber {
                     let shadowInputNode = TextFieldNode()
                     shadowInputNode.textField.font = Font.regular(17.0)
@@ -1092,9 +1093,12 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
                     shadowInputNode.textField.textContentType = .username
                     shadowInputNode.textField.text = phoneNumber
                 }
+                #endif
                 
+                #if DEBUG
                 self.inputNode.textField.textContentType = .newPassword
                 self.inputNode.textField.passwordRules = UITextInputPasswordRules(descriptor: "minlength: 8;")
+                #endif
             }
             self.hideButtonNode.isHidden = confirmation
         case .email:

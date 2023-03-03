@@ -31,6 +31,7 @@
 - (void)mtProto:(MTProto *)mtProto protocolErrorReceived:(int32_t)errorCode;
 - (bool)mtProto:(MTProto *)mtProto shouldRequestMessageWithId:(int64_t)responseMessageId inResponseToMessageId:(int64_t)messageId currentTransactionId:(id)currentTransactionId;
 - (void)mtProto:(MTProto *)mtProto updateReceiveProgressForToken:(id)progressToken progress:(float)progress packetLength:(NSInteger)packetLength;
+- (void)mtProtoTransportActivityUpdated:(MTProto *)mtProto;
 
 - (void)mtProtoNetworkAvailabilityChanged:(MTProto *)mtProto isNetworkAvailable:(bool)isNetworkAvailable;
 - (void)mtProtoConnectionStateChanged:(MTProto *)mtProto isConnected:(bool)isConnected;
