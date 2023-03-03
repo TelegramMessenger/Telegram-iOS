@@ -600,7 +600,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 var text = ""
                 if let timestamp = item.timestamp {
-                    let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: false, allowYesterday: true, format: HumanReadableStringFormat(
+                    let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
                         dateFormatString: { value in
                             return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
                         },
