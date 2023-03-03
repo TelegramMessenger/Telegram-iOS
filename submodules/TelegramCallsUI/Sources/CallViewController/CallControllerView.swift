@@ -1750,14 +1750,14 @@ private extension CallControllerView {
         var fullInsets = layout.insets(options: .statusBar)
 
         var cleanInsets = fullInsets
-        cleanInsets.bottom = max(layout.intrinsicInsets.bottom, 20.0) + toastInset
-        cleanInsets.left = 20.0
-        cleanInsets.right = 20.0
+        cleanInsets.bottom = max(layout.intrinsicInsets.bottom, 10.0) + toastInset
+        cleanInsets.left = 10.0
+        cleanInsets.right = 10.0
 
         fullInsets.top += 44.0 + 8.0
-        fullInsets.bottom = buttonsHeight + 22.0 + toastInset
-        fullInsets.left = 20.0
-        fullInsets.right = 20.0
+        fullInsets.bottom = buttonsHeight + 12.0 + toastInset
+        fullInsets.left = 10.0
+        fullInsets.right = 10.0
 
         var insets: UIEdgeInsets = self.isUIHidden ? cleanInsets : fullInsets
 
@@ -1768,19 +1768,19 @@ private extension CallControllerView {
         insets.left = interpolate(from: expandedInset, to: insets.left, value: 1.0 - self.pictureInPictureTransitionFraction)
         insets.right = interpolate(from: expandedInset, to: insets.right, value: 1.0 - self.pictureInPictureTransitionFraction)
 
-        let previewVideoSide = interpolate(from: 300.0, to: 150.0, value: 1.0 - self.pictureInPictureTransitionFraction)
+        let previewVideoSide = interpolate(from: 300.0, to: 240.0, value: 1.0 - self.pictureInPictureTransitionFraction)
         var previewVideoSize = layout.size.aspectFitted(CGSize(width: previewVideoSide, height: previewVideoSide))
         previewVideoSize = CGSize(width: 30.0, height: 45.0).aspectFitted(previewVideoSize)
         if let minimizedVideoNode = self.minimizedVideoNode {
             var aspect = minimizedVideoNode.currentAspect
             var rotationCount = 0
             if minimizedVideoNode === self.outgoingVideoNodeValue {
-                aspect = 3.0 / 4.0
+                aspect = 138.0 / 240.0 //3.0 / 4.0
             } else {
                 if aspect < 1.0 {
-                    aspect = 3.0 / 4.0
+                    aspect = 138.0 / 240.0 //3.0 / 4.0
                 } else {
-                    aspect = 4.0 / 3.0
+                    aspect = 240.0 / 138.0 // 4.0 / 3.0
                 }
 
                 switch minimizedVideoNode.currentOrientation {

@@ -411,7 +411,7 @@ final class CallControllerButtonsView: UIView {
                 )
                 switch type {
                 case .outgoing:
-                    buttonText = ""
+                    buttonText = strings.Call_End
                 case .decline:
                     buttonText = strings.Call_Decline
                 case .end:
