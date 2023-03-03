@@ -100,7 +100,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
-    case enableVoipTcp(Bool)
+    case enableNetworkFramework(Bool)
     case restorePurchases(PresentationTheme)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
@@ -121,7 +121,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
-        case .disableVideoAspectScaling, .enableVoipTcp:
+        case .disableVideoAspectScaling, .enableNetworkFramework:
             return DebugControllerSection.videoExperiments2.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -224,7 +224,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 45 + index
         case .disableVideoAspectScaling:
             return 100
-        case .enableVoipTcp:
+        case .enableNetworkFramework:
             return 101
         case .hostInfo:
             return 102
@@ -1281,15 +1281,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .enableVoipTcp(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Enable VoIP TCP", value: !value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.enableVoipTcp = value
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
+        case let .enableNetworkFramework(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Network X [Restart App]", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                if let context = arguments.context {
+                    let _ = updateNetworkSettingsInteractively(postbox: context.account.postbox, network: context.account.network, { settings in
+                        var settings = settings
+                        settings.useNetworkFramework = value
+                        return settings
+                    }).start()
+                }
             })
         case .restorePurchases:
             return ItemListActionItem(presentationData: presentationData, title: "Restore Purchases", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1397,7 +1397,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
 
     if isMainApp {
         entries.append(.disableVideoAspectScaling(experimentalSettings.disableVideoAspectScaling))
-        entries.append(.enableVoipTcp(experimentalSettings.enableVoipTcp))
+        entries.append(.enableNetworkFramework(networkSettings?.useNetworkFramework ?? false))
     }
 
     if let backupHostOverride = networkSettings?.backupHostOverride {

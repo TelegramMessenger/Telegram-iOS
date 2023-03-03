@@ -2432,7 +2432,7 @@ enum GCDAsyncSocketConfig
 		int result = connect(socketFD, (const struct sockaddr *)[address bytes], (socklen_t)[address length]);
 		if (result == 0)
 		{
-            bool isWifi = false;
+            bool isWifi = true;
             
             struct sockaddr_in addr;
             struct ifaddrs* ifaddr;

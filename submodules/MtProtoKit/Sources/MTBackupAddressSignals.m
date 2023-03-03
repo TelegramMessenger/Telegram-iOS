@@ -280,6 +280,8 @@ static NSString *makeRandomPadding() {
     
     MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization encryptionProvider:currentContext.encryptionProvider apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:false];
     
+    context.makeTcpConnectionInterface = currentContext.makeTcpConnectionInterface;
+    
     NSInteger authTokenMasterDatacenterId = 0;
     NSNumber *requiredAuthToken = nil;
     bool allowUnboundEphemeralKeys = true;
