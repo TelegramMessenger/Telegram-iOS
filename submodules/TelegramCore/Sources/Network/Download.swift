@@ -43,14 +43,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
+    let useRequestTimeoutTimers: Bool
     private let logPrefix = Atomic<String?>(value: nil)
     
     private var shouldKeepConnectionDisposable: Disposable?
     
-    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>) {
+    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>, useRequestTimeoutTimers: Bool) {
         self.datacenterId = datacenterId
         self.isCdn = isCdn
         self.context = context
+        self.useRequestTimeoutTimers = useRequestTimeoutTimers
 
         var requiredAuthToken: Any?
         var authTokenMasterDatacenterId: Int = 0
@@ -203,6 +205,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -254,6 +257,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -301,6 +305,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -342,6 +347,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
@@ -393,6 +399,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {

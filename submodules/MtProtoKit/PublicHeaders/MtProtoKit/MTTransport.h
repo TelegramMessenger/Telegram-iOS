@@ -32,6 +32,8 @@
 - (void)transportDecodeProgressToken:(MTTransport * _Nonnull)transport scheme:(MTTransportScheme * _Nonnull)scheme data:(NSData * _Nonnull)data token:(int64_t)token completion:(void (^ _Nonnull)(int64_t token, id _Nonnull progressToken))completion;
 - (void)transportUpdatedDataReceiveProgress:(MTTransport * _Nonnull)transport progressToken:(id _Nonnull)progressToken packetLength:(NSInteger)packetLength progress:(float)progress;
 
+- (void)transportActivityUpdated:(MTTransport * _Nonnull)transport;
+
 @end
 
 @interface MTTransport : NSObject <MTMessageService>
