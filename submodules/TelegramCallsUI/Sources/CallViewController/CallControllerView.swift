@@ -56,7 +56,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
 
     var isMuted: Bool = false {
         didSet {
-            self.buttonsNode.isMuted = self.isMuted
+            self.buttonsView.isMuted = self.isMuted
             self.updateToastContent()
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -115,7 +115,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
     private let audioLevelView: VoiceBlobView
     private let statusNode: CallControllerStatusView
     private let toastNode: CallControllerToastContainerNode
-    private let buttonsNode: CallControllerButtonsNode
+    private let buttonsView: CallControllerButtonsView
     private var keyPreviewNode: CallControllerKeyPreviewView?
     
     private var debugNode: CallDebugNode?
@@ -210,7 +210,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
 
         self.statusNode = CallControllerStatusView()
         
-        self.buttonsNode = CallControllerButtonsNode(strings: self.presentationData.strings)
+        self.buttonsView = CallControllerButtonsView(strings: self.presentationData.strings)
         self.toastNode = CallControllerToastContainerNode(strings: self.presentationData.strings)
         self.keyButtonNode = CallControllerKeyButton()
         self.keyButtonNode.accessibilityElementsHidden = false
@@ -247,7 +247,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
         self.contentContainerView.addSubview(self.audioLevelView)
         self.contentContainerView.addSubnode(self.avatarNode)
         self.contentContainerView.addSubview(self.statusNode)
-        self.contentContainerView.addSubnode(self.buttonsNode)
+        self.contentContainerView.addSubview(self.buttonsView)
         self.contentContainerView.addSubnode(self.toastNode)
         self.contentContainerView.addSubnode(self.keyButtonNode)
         self.contentContainerView.addSubnode(self.backButtonArrowNode)
@@ -268,12 +268,12 @@ final class CallControllerView: ViewControllerTracingNodeView {
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.addGestureRecognizer(tapRecognizer)
         
-        self.buttonsNode.mute = { [weak self] in
+        self.buttonsView.mute = { [weak self] in
             self?.toggleMute?()
             self?.cancelScheduledUIHiding()
         }
         
-        self.buttonsNode.speaker = { [weak self] in
+        self.buttonsView.speaker = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -281,7 +281,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
             strongSelf.cancelScheduledUIHiding()
         }
                 
-        self.buttonsNode.acceptOrEnd = { [weak self] in
+        self.buttonsView.acceptOrEnd = { [weak self] in
             guard let strongSelf = self, let callState = strongSelf.callState else {
                 return
             }
@@ -298,11 +298,11 @@ final class CallControllerView: ViewControllerTracingNodeView {
             }
         }
         
-        self.buttonsNode.decline = { [weak self] in
+        self.buttonsView.decline = { [weak self] in
             self?.endCall?()
         }
         
-        self.buttonsNode.toggleVideo = { [weak self] in
+        self.buttonsView.toggleVideo = { [weak self] in
             guard let strongSelf = self, let callState = strongSelf.callState else {
                 return
             }
@@ -393,7 +393,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
             }
         }
         
-        self.buttonsNode.rotateCamera = { [weak self] in
+        self.buttonsView.rotateCamera = { [weak self] in
             guard let strongSelf = self, !strongSelf.areUserActionsDisabledNow() else {
                 return
             }
@@ -501,8 +501,8 @@ final class CallControllerView: ViewControllerTracingNodeView {
     // MARK: - Public
     
     func displayCameraTooltip() {
-        guard self.pictureInPictureTransitionFraction.isZero, let location = self.buttonsNode.videoButtonFrame().flatMap({ frame -> CGRect in
-            return self.buttonsNode.view.convert(frame, to: self)
+        guard self.pictureInPictureTransitionFraction.isZero, let location = self.buttonsView.videoButtonFrame().flatMap({ frame -> CGRect in
+            return self.buttonsView.convert(frame, to: self)
         }) else {
             return
         }
@@ -1001,13 +1001,13 @@ final class CallControllerView: ViewControllerTracingNodeView {
         
         let pinchTransitionAlpha: CGFloat = self.isVideoPinched ? 0.0 : 1.0
         
-        let previousVideoButtonFrame = self.buttonsNode.videoButtonFrame().flatMap { frame -> CGRect in
-            return self.buttonsNode.view.convert(frame, to: self)
+        let previousVideoButtonFrame = self.buttonsView.videoButtonFrame().flatMap { frame -> CGRect in
+            return self.buttonsView.convert(frame, to: self)
         }
         
         let buttonsHeight: CGFloat
         if let buttonsMode = self.buttonsMode {
-            buttonsHeight = self.buttonsNode.updateLayout(strings: self.presentationData.strings, mode: buttonsMode, constrainedWidth: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+            buttonsHeight = self.buttonsView.updateLayout(strings: self.presentationData.strings, mode: buttonsMode, constrainedWidth: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
         } else {
             buttonsHeight = 0.0
         }
@@ -1101,8 +1101,8 @@ final class CallControllerView: ViewControllerTracingNodeView {
         transition.updateAlpha(view: self.statusNode, alpha: overlayAlpha)
         
         transition.updateFrame(node: self.toastNode, frame: CGRect(origin: CGPoint(x: 0.0, y: toastOriginY), size: CGSize(width: layout.size.width, height: toastHeight)))
-        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
-        transition.updateAlpha(node: self.buttonsNode, alpha: overlayAlpha)
+        transition.updateFrame(view: self.buttonsView, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        transition.updateAlpha(view: self.buttonsView, alpha: overlayAlpha)
         
         let fullscreenVideoFrame = containerFullScreenFrame
         let previewVideoFrame = self.calculatePreviewVideoRect(layout: layout, navigationHeight: navigationBarHeight)
@@ -1143,8 +1143,8 @@ final class CallControllerView: ViewControllerTracingNodeView {
             if self.animateRequestedVideoOnce {
                 self.animateRequestedVideoOnce = false
                 if expandedVideoNode === self.outgoingVideoNodeValue {
-                    let videoButtonFrame = self.buttonsNode.videoButtonFrame().flatMap { frame -> CGRect in
-                        return self.buttonsNode.view.convert(frame, to: self)
+                    let videoButtonFrame = self.buttonsView.videoButtonFrame().flatMap { frame -> CGRect in
+                        return self.buttonsView.convert(frame, to: self)
                     }
                     
                     if let previousVideoButtonFrame = previousVideoButtonFrame, let videoButtonFrame = videoButtonFrame {
@@ -1559,15 +1559,19 @@ private extension CallControllerView {
             avatarNode.isHidden = false
             audioLevelView.isHidden = false
             audioLevelView.startAnimating()
+            updateAudioLevel(1.0)
         case .active:
             let colors = [UIColor(rgb: 0x53A6DE), UIColor(rgb: 0x398D6F), UIColor(rgb: 0xBAC05D), UIColor(rgb: 0x3C9C8F)]
             self.gradientBackgroundNode.updateColors(colors: colors)
             avatarNode.isHidden = false
             audioLevelView.isHidden = false
             audioLevelView.startAnimating()
+            updateAudioLevel(1.0)
         case .weakSignal:
             let colors = [UIColor(rgb: 0xC94986), UIColor(rgb: 0xFF7E46), UIColor(rgb: 0xB84498), UIColor(rgb: 0xF4992E)]
             self.gradientBackgroundNode.updateColors(colors: colors)
+            audioLevelView.startAnimating()
+            updateAudioLevel(1.0)
         case .video:
             avatarNode.isHidden = true
             audioLevelView.isHidden = true
@@ -1739,7 +1743,7 @@ private extension CallControllerView {
     }
 
     private func calculatePreviewVideoRect(layout: ContainerViewLayout, navigationHeight: CGFloat) -> CGRect {
-        let buttonsHeight: CGFloat = self.buttonsNode.bounds.height
+        let buttonsHeight: CGFloat = self.buttonsView.bounds.height
         let toastHeight: CGFloat = self.toastNode.bounds.height
         let toastInset = (toastHeight > 0.0 ? toastHeight + 22.0 : 0.0)
 

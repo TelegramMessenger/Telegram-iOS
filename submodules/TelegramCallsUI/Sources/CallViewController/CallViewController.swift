@@ -273,6 +273,7 @@ private extension CallViewController {
 
                 Queue.mainQueue().after(0.5, {
                     let window = strongSelf.window
+                    // TODO: implement
                     let controller = callRatingController(sharedContext: strongSelf.sharedContext, account: strongSelf.account, callId: callId, userInitiated: false, isVideo: isVideo, present: { c, a in
                         if let window = window {
                             c.presentationArguments = a
