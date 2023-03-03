@@ -189,11 +189,11 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     var isRevealed = false
     var tapped: () -> Void = {}
     
-    override init() {
+    init(enableAnimations: Bool) {
         self.blurredImageNode = TransformImageNode()
         self.blurredImageNode.contentAnimations = []
          
-        self.dustNode = MediaDustNode()
+        self.dustNode = MediaDustNode(enableAnimations: enableAnimations)
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
@@ -1898,7 +1898,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode()
+                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
                 extendedMediaOverlayNode.tapped = { [weak self] in
                     self?.internallyVisible = true
                     self?.updateVisibility()

@@ -436,12 +436,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 10.0 - imageSize.width, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
         
-        if !textLayout.spoilers.isEmpty, let presentationData = self.item?.context.sharedContext.currentPresentationData.with({ $0 }) {
+        if !textLayout.spoilers.isEmpty, let item = self.item {
+            let presentationData = item.context.sharedContext.currentPresentationData.with({ $0 })
             let dustNode: InvisibleInkDustNode
             if let current = self.dustNode {
                 dustNode = current
             } else {
-                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                 dustNode.isUserInteractionEnabled = false
                 self.dustNode = dustNode
                 self.insertSubnode(dustNode, aboveSubnode: self.textNode.textNode)

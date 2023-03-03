@@ -549,7 +549,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         if let textLayout = self.currentOptionNode.cachedLayout, !textLayout.spoilers.isEmpty {
             if self.dustNode == nil {
-                let dustNode = InvisibleInkDustNode(textNode: nil)
+                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: true)
                 self.dustNode = dustNode
                 self.currentOptionNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.currentOptionNode)
                 

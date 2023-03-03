@@ -2639,13 +2639,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             items.append(.separator)
             
-            let theme = strongSelf.presentationData.theme
             for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                 let isSelected = abs(status.baseRate - rate) < 0.01
                 items.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
                 |> map { value in
                     if isSelected && value == nil {
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
                     } else {
                         return nil
                     }
