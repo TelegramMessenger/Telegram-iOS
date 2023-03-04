@@ -109,7 +109,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
     private var removedExpandedVideoNodeValue: CallVideoView?
     
     private var isRequestingVideo: Bool = false
-    private var animateRequestedVideoOnce: Bool = false
+    private var animateIncomingVideoPreviewContainerOnce: Bool = false
     private var animateOutgoingVideoPreviewContainerOnce: Bool = false
     
     private var hiddenUIForActiveVideoCallOnce: Bool = false
@@ -736,7 +736,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
                                 return
                             }
                             strongSelf.candidateIncomingVideoNodeValue = nil
-                            
+                            strongSelf.animateIncomingVideoPreviewContainerOnce = true
                             strongSelf.incomingVideoNodeValue = incomingVideoNode
                             if let expandedVideoNode = strongSelf.expandedVideoNode {
                                 strongSelf.minimizedVideoNode = expandedVideoNode
@@ -1136,6 +1136,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
         
         var topOffset: CGFloat = layout.safeInsets.top + 174
 
+        let previousAvatarFrame = avatarNode.view.convert(avatarNode.view.bounds, to: self)
         let avatarFrame = CGRect(origin: CGPoint(x: (layout.size.width - avatarNode.bounds.width) / 2.0, y: topOffset),
                                  size: self.avatarNode.bounds.size)
         transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
@@ -1278,16 +1279,11 @@ final class CallControllerView: ViewControllerTracingNodeView {
             
             expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, isOutgoing: expandedVideoNode === self.outgoingVideoView, deviceOrientation: mappedDeviceOrientation, isCompactLayout: isCompactLayout, transition: expandedVideoTransition)
             
-            if self.animateRequestedVideoOnce {
-                self.animateRequestedVideoOnce = false
-                if expandedVideoNode === self.outgoingVideoView {
-                    let videoButtonFrame = self.buttonsView.videoButtonFrame().flatMap { frame -> CGRect in
-                        return self.buttonsView.convert(frame, to: self)
-                    }
-                    
-                    if let previousVideoButtonFrame = previousVideoButtonFrame, let videoButtonFrame = videoButtonFrame {
-                        expandedVideoNode.animateRadialMask(from: previousVideoButtonFrame, to: videoButtonFrame)
-                    }
+            if self.animateIncomingVideoPreviewContainerOnce {
+                self.animateIncomingVideoPreviewContainerOnce = false
+                if expandedVideoNode === self.incomingVideoNodeValue {
+                    let avatarFrame = avatarNode.view.convert(avatarNode.view.bounds, to: self)
+                    expandedVideoNode.animateRadialMask(from: previousAvatarFrame, to: avatarFrame)
                 }
             }
         } else {
