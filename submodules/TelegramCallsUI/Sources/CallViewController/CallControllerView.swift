@@ -2163,7 +2163,7 @@ private extension CallControllerView {
 
 // MARK: - CallVideoView
 
-private final class CallVideoView: UIView, PreviewVideoView {
+private final class CallVideoView: UIView {
 
     private let videoTransformContainer: UIView
     private let videoView: PresentationCallVideoView
