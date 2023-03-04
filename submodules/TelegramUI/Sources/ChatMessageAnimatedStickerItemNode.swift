@@ -638,6 +638,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.emojiString != emojiString {
                 self.emojiString = emojiString
             } else if self.emojiFile?.id != emojiFile?.id {
+                if self.emojiFile != nil {
+                    self.didSetUpAnimationNode = false
+                    item.controllerInteraction.seenOneTimeAnimatedMedia.remove(item.message.id) 
+                }
                 self.emojiFile = emojiFile
                 if let emojiFile = emojiFile {
                     var dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -728,20 +732,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         if let animationNode = self.animationNode as? AnimatedStickerNode {
-            if self.isPlaying != isPlaying {
+            if self.isPlaying != isPlaying || (isPlaying && !self.didSetUpAnimationNode) {
                 self.isPlaying = isPlaying
                 
                 if isPlaying && self.setupTimestamp == nil {
                     self.setupTimestamp = CACurrentMediaTime()
                 }
                 animationNode.visibility = isPlaying
-                
-                /*if self.didSetUpAnimationNode && alreadySeen {
-                    if let emojiFile = self.emojiFile, emojiFile.resource is LocalFileReferenceMediaResource {
-                    } else {
-                        animationNode.seekTo(.start)
-                    }
-                }*/
                 
                 if self.isPlaying && !self.didSetUpAnimationNode {
                     self.didSetUpAnimationNode = true

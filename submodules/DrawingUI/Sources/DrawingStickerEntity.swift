@@ -292,7 +292,6 @@ final class DrawingStickerEntityView: DrawingEntityView {
             let sideSize: CGFloat = size.width
             let boundingSize = CGSize(width: sideSize, height: sideSize)
             
-            
             let imageSize = self.dimensions.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
@@ -317,21 +316,32 @@ final class DrawingStickerEntityView: DrawingEntityView {
         self.bounds = CGRect(origin: .zero, size: self.dimensions.aspectFitted(size))
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
-        var transform = CATransform3DIdentity
+        let staticTransform = CATransform3DMakeScale(self.stickerEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
 
-        if self.stickerEntity.mirrored {
-            transform = CATransform3DRotate(transform, .pi, 0.0, 1.0, 0.0)
-            transform.m34 = -1.0 / self.imageNode.frame.width
-        }
-        
         if animated {
-            UIView.animate(withDuration: 0.25, delay: 0.0) {
-                self.imageNode.transform = transform
-                self.animationNode?.transform = transform
+            let isCurrentlyMirrored = ((self.imageNode.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            var animationSourceTransform = CATransform3DIdentity
+            var animationTargetTransform = CATransform3DIdentity
+            if isCurrentlyMirrored {
+                animationSourceTransform = CATransform3DRotate(animationSourceTransform, .pi, 0.0, 1.0, 0.0)
+                animationSourceTransform.m34 = -1.0 / self.imageNode.frame.width
             }
+            if self.stickerEntity.mirrored {
+                animationTargetTransform = CATransform3DRotate(animationTargetTransform, .pi, 0.0, 1.0, 0.0)
+                animationTargetTransform.m34 = -1.0 / self.imageNode.frame.width
+            }
+            self.imageNode.transform = animationSourceTransform
+            self.animationNode?.transform = animationSourceTransform
+            UIView.animate(withDuration: 0.25, animations: {
+                self.imageNode.transform = animationTargetTransform
+                self.animationNode?.transform = animationTargetTransform
+            }, completion: { finished in
+                self.imageNode.transform = staticTransform
+                self.animationNode?.transform = staticTransform
+            })
         } else {
-            self.imageNode.transform = transform
-            self.animationNode?.transform = transform
+            self.imageNode.transform = staticTransform
+            self.animationNode?.transform = staticTransform
         }
     
         super.update(animated: animated)

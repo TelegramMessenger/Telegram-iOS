@@ -2749,11 +2749,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     tabsIsEmpty = true
                 }
                 
-                var displaySearchFilters = true
-                if chatListView.0.entries.count < 10 {
-                    displaySearchFilters = false
-                }
-                
+                let displaySearchFilters = true
                 if !tabsIsEmpty, let snapshotView = strongSelf.tabContainerNode.view.snapshotView(afterScreenUpdates: false) {
                     snapshotView.frame = strongSelf.tabContainerNode.frame
                     strongSelf.tabContainerNode.view.superview?.addSubview(snapshotView)
