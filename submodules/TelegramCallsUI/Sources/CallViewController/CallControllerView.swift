@@ -1061,33 +1061,15 @@ final class CallControllerView: ViewControllerTracingNodeView {
         
         let backSize = self.backButtonNode.measure(CGSize(width: 320.0, height: 100.0))
         if let image = self.backButtonArrowNode.image {
-            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: 10.0, y: topOriginY + 11.0), size: image.size))
+            transition.updateFrame(node: self.backButtonArrowNode, frame: CGRect(origin: CGPoint(x: 10.0, y: topOriginY + 25.0), size: image.size))
         }
-        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: 29.0, y: topOriginY + 11.0), size: backSize))
+        transition.updateFrame(node: self.backButtonNode, frame: CGRect(origin: CGPoint(x: 29.0, y: topOriginY + 25.0), size: backSize))
         
         transition.updateAlpha(node: self.backButtonArrowNode, alpha: overlayAlpha)
         transition.updateAlpha(node: self.backButtonNode, alpha: overlayAlpha)
         transition.updateAlpha(node: self.toastNode, alpha: toastAlpha)
         
-        var topOffset: CGFloat = layout.safeInsets.top
-        // TODO: implement - some magic here
-//        if layout.metrics.widthClass == .regular && layout.metrics.heightClass == .regular {
-//            if layout.size.height.isEqual(to: 1366.0) {
-//                statusOffset = 160.0
-//            } else {
-//                statusOffset = 120.0
-//            }
-//        } else {
-//            if layout.size.height.isEqual(to: 736.0) {
-//                statusOffset = 80.0
-//            } else if layout.size.width.isEqual(to: 320.0) {
-//                statusOffset = 60.0
-//            } else {
-//                statusOffset = 64.0
-//            }
-//        }
-        
-        topOffset += 174
+        var topOffset: CGFloat = layout.safeInsets.top + 174
 
         let avatarFrame = CGRect(origin: CGPoint(x: (layout.size.width - avatarNode.bounds.width) / 2.0, y: topOffset),
                                  size: self.avatarNode.bounds.size)
@@ -1095,9 +1077,20 @@ final class CallControllerView: ViewControllerTracingNodeView {
         transition.updateFrame(view: self.audioLevelView, frame: avatarFrame)
 
         topOffset += self.avatarNode.bounds.size.height + 40
-        
+
         let statusHeight = self.statusNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
-        transition.updateFrame(view: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
+        let statusFrame: CGRect
+        if hasVideoNodes {
+            let statusDefaultOriginY = layout.safeInsets.top + 45
+            let statusCollapsedOriginY: CGFloat = -20
+            let statusOriginY = interpolate(from: statusCollapsedOriginY, to: statusDefaultOriginY, value: uiDisplayTransition)
+            statusFrame = CGRect(origin: CGPoint(x: 0.0, y: statusOriginY),
+                                 size: CGSize(width: layout.size.width, height: statusHeight))
+        } else {
+            statusFrame = CGRect(origin: CGPoint(x: 0.0, y: topOffset),
+                                 size: CGSize(width: layout.size.width, height: statusHeight))
+        }
+        transition.updateFrame(view: self.statusNode, frame: statusFrame)
         transition.updateAlpha(view: self.statusNode, alpha: overlayAlpha)
         
         transition.updateFrame(node: self.toastNode, frame: CGRect(origin: CGPoint(x: 0.0, y: toastOriginY), size: CGSize(width: layout.size.width, height: toastHeight)))
@@ -1198,7 +1191,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
         }
         
         let keyTextSize = self.keyButtonNode.frame.size
-        transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: topOriginY + 8.0), size: keyTextSize))
+        transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 10.0, y: topOriginY + 21.0), size: keyTextSize))
         transition.updateAlpha(node: self.keyButtonNode, alpha: overlayAlpha)
         
         if let debugNode = self.debugNode {
@@ -1637,7 +1630,6 @@ private extension CallControllerView {
                 self.dimNode.image = image
             }
         }
-        self.statusNode.setVisible(visible || self.keyPreviewNode != nil, transition: transition)
     }
 
     private func maybeScheduleUIHidingForActiveVideoCall() {
@@ -1645,6 +1637,7 @@ private extension CallControllerView {
             return
         }
 
+        // TODO: implement
         let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
             if let strongSelf = self {
                 var updated = false
