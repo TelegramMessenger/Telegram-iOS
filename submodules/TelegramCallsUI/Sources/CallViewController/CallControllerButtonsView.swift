@@ -384,7 +384,7 @@ final class CallControllerButtonsView: UIView {
             if let current = self.buttonNodes[button.button.key] {
                 buttonNode = current
             } else {
-                buttonNode = CallControllerButtonItemNode()
+                buttonNode = CallControllerButtonItemNode(largeButtonSize: buttonSize, useNewIcons: true)
                 self.buttonNodes[button.button.key] = buttonNode
                 self.addSubnode(buttonNode)
                 buttonNode.addTarget(self, action: #selector(self.buttonPressed(_:)), forControlEvents: .touchUpInside)

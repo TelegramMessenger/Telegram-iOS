@@ -73,13 +73,15 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     let textNode: ImmediateTextNode
     
     private let largeButtonSize: CGFloat
+    private let useNewIcons: Bool
     
     private var size: CGSize?
     private(set) var currentContent: Content?
     private(set) var currentText: String = ""
     
-    init(largeButtonSize: CGFloat = 72.0) {
+    init(largeButtonSize: CGFloat = 72.0, useNewIcons: Bool = false) {
         self.largeButtonSize = largeButtonSize
+        self.useNewIcons = useNewIcons
         
         self.wrapperNode = ASDisplayNode()
         self.contentContainer = ASDisplayNode()
@@ -260,27 +262,36 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 case .cameraOff, .cameraOn:
                     image = nil
                 case .camera:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCameraButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallCameraButtonNew" : "Call/CallCameraButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .mute:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallMuteButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallMuteButtonNew" : "Call/CallMuteButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .flipCamera:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSwitchCameraButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallSwitchCameraButtonNew" : "Call/CallSwitchCameraButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .bluetooth:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallBluetoothButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallBluetoothButtonNew" : "Call/CallBluetoothButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .speaker:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallSpeakerButtonNew" : "Call/CallSpeakerButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .airpods:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallAirpodsButtonNew" : "Call/CallAirpodsButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .airpodsPro:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsProButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallAirpodsProButtonNew" : "Call/CallAirpodsProButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .airpodsMax:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsMaxButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallAirpodsProMaxButtonNew" : "Call/CallAirpodsMaxButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .headphones:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallHeadphonesButton"), color: imageColor)
                 case .accept:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: imageColor)
                 case .end:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallEndButton"), color: imageColor)
+                    let bundleImageName = useNewIcons ? "Call/CallDeclineButtonNew" : "Call/CallDeclineButton"
+                    image = generateTintedImage(image: UIImage(bundleImageName: bundleImageName), color: imageColor)
                 case .cancel:
                     image = generateImage(CGSize(width: 28.0, height: 28.0), opaque: false, rotatedContext: { size, context in
                         let bounds = CGRect(origin: CGPoint(), size: size)
