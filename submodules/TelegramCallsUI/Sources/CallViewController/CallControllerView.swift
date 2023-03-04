@@ -5,6 +5,7 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
+import SolidRoundedButtonNode
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -34,6 +35,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
         case active
         case weakSignal
         case video
+        case videoPreview
     }
 
     private enum PictureInPictureGestureState {
@@ -86,9 +88,15 @@ final class CallControllerView: ViewControllerTracingNodeView {
     
     private var candidateIncomingVideoNodeValue: CallVideoView?
     private var incomingVideoNodeValue: CallVideoView?
+    private var outgoingVideoView: CallVideoView?
+    private var outgoingVideoPreviewContainer: UIView?
+    private var removedOutgoingVideoPreviewContainer: UIView?
+    private var candidateOutgoingVideoPreviewView: CallVideoView?
+    private var outgoingVideoPreviewView: CallVideoView?
+    private var cancelOutgoingVideoPreviewButtonNode: HighlightableButtonNode?
+    private var doneOutgoingVideoPreviewButton: SolidRoundedButtonNode?
+
     private var incomingVideoViewRequested: Bool = false
-    private var candidateOutgoingVideoNodeValue: CallVideoView?
-    private var outgoingVideoNodeValue: CallVideoView?
     private var outgoingVideoViewRequested: Bool = false
     
     private var removedMinimizedVideoNodeValue: CallVideoView?
@@ -96,6 +104,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
     
     private var isRequestingVideo: Bool = false
     private var animateRequestedVideoOnce: Bool = false
+    private var animateOutgoingVideoPreviewViewOnce: Bool = false
     
     private var hiddenUIForActiveVideoCallOnce: Bool = false
     private var hideUIForActiveVideoCallTimer: SwiftSignalKit.Timer?
@@ -318,7 +327,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
 
                 if isScreencastActive {
                     (strongSelf.call as! PresentationCallImpl).disableScreencast()
-                } else if strongSelf.outgoingVideoNodeValue == nil {
+                } else if strongSelf.outgoingVideoView == nil && strongSelf.outgoingVideoPreviewContainer == nil {
                     DeviceAccess.authorizeAccess(to: .camera(.videoCall), onlyCheck: true, presentationData: strongSelf.presentationData, present: { [weak self] c, a in
                         if let strongSelf = self {
                             strongSelf.present?(c)
@@ -329,57 +338,129 @@ final class CallControllerView: ViewControllerTracingNodeView {
                         guard let strongSelf = self, ready else {
                             return
                         }
-                        let proceed = {
-                            strongSelf.displayedCameraConfirmation = true
-                            switch callState.videoState {
-                            case .inactive:
-                                strongSelf.isRequestingVideo = true
-                                strongSelf.updateButtonsMode()
-                            default:
-                                break
-                            }
-                            strongSelf.call.requestVideo()
-                        }
-                        
-                        strongSelf.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
+                        let delayUntilInitialized = strongSelf.isRequestingVideo
+                        strongSelf.call.makeOutgoingVideoView(completion: { [weak self] (presentationCallVideoView) in
                             guard let strongSelf = self else {
                                 return
                             }
-                            
-                            if let outgoingVideoView = outgoingVideoView {
-                                outgoingVideoView.view.backgroundColor = .black
-                                outgoingVideoView.view.clipsToBounds = true
-                                
-                                var updateLayoutImpl: ((ContainerViewLayout, CGFloat) -> Void)?
-                                
-                                let outgoingVideoNode = CallVideoView(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: {
-                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
+
+                            if let presentationCallVideoViewActual = presentationCallVideoView {
+                                presentationCallVideoViewActual.view.backgroundColor = .black
+                                presentationCallVideoViewActual.view.clipsToBounds = true
+
+                                let applyNode: () -> Void = {
+                                    guard let strongSelf = self,
+                                          let outgoingVideoPreviewViewActual = strongSelf.candidateOutgoingVideoPreviewView else {
                                         return
                                     }
-                                    updateLayoutImpl?(layout, navigationBarHeight)
-                                }, orientationUpdated: {
-                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
-                                        return
+                                    let outgoingVideoPreviewContainer = UIView()
+                                    strongSelf.outgoingVideoPreviewContainer = outgoingVideoPreviewContainer
+                                    strongSelf.contentContainerView.addSubview(outgoingVideoPreviewContainer)
+
+                                    strongSelf.candidateOutgoingVideoPreviewView = nil
+                                    strongSelf.animateOutgoingVideoPreviewViewOnce = true
+                                    strongSelf.outgoingVideoPreviewView = outgoingVideoPreviewViewActual
+                                    outgoingVideoPreviewContainer.addSubview(outgoingVideoPreviewViewActual)
+
+                                    let cancelOutgoingVideoPreviewButtonNode = HighlightableButtonNode()
+                                    strongSelf.cancelOutgoingVideoPreviewButtonNode = cancelOutgoingVideoPreviewButtonNode
+                                    cancelOutgoingVideoPreviewButtonNode.setTitle(presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: .white, for: [])
+                                    cancelOutgoingVideoPreviewButtonNode.accessibilityLabel = presentationData.strings.Call_VoiceOver_Minimize
+                                    cancelOutgoingVideoPreviewButtonNode.accessibilityTraits = [.button]
+                                    cancelOutgoingVideoPreviewButtonNode.hitTestSlop = UIEdgeInsets(top: -8.0, left: -20.0, bottom: -8.0, right: -8.0)
+                                    cancelOutgoingVideoPreviewButtonNode.highligthedChanged = { [weak self] highlighted in
+                                        if let strongSelf = self, let buttonNode = strongSelf.cancelOutgoingVideoPreviewButtonNode {
+                                            if highlighted {
+                                                buttonNode.layer.removeAnimation(forKey: "opacity")
+                                                buttonNode.alpha = 0.4
+                                            } else {
+                                                buttonNode.alpha = 1.0
+                                                buttonNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                            }
+                                        }
                                     }
-                                    updateLayoutImpl?(layout, navigationBarHeight)
-                                }, isFlippedUpdated: { _ in
-                                    guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout else {
-                                        return
+                                    cancelOutgoingVideoPreviewButtonNode.addTarget(self,
+                                                                                   action: #selector(strongSelf.cancelOutgoingVideoPreviewPressed),
+                                                                                   forControlEvents: .touchUpInside)
+                                    outgoingVideoPreviewContainer.addSubnode(cancelOutgoingVideoPreviewButtonNode)
+
+                                    let theme = SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0xffffff),
+                                                                        foregroundColor: UIColor(rgb: 0x4f5352))
+                                    let doneOutgoingVideoPreviewButton = SolidRoundedButtonNode(theme: theme,
+                                                                                                font: .bold,
+                                                                                                height: 48.0,
+                                                                                                cornerRadius: 24.0,
+                                                                                                gloss: false)
+                                    strongSelf.doneOutgoingVideoPreviewButton = doneOutgoingVideoPreviewButton
+                                    doneOutgoingVideoPreviewButton.title = presentationData.strings.VoiceChat_VideoPreviewContinue
+                                    outgoingVideoPreviewContainer.addSubnode(doneOutgoingVideoPreviewButton)
+                                    doneOutgoingVideoPreviewButton.pressed = { [weak self] in
+                                        guard let strongSelf = self, let outgoingVideoPreviewView = strongSelf.outgoingVideoPreviewView else {
+                                            return
+                                        }
+                                        strongSelf.outgoingVideoPreviewContainer?.removeFromSuperview()
+                                        strongSelf.outgoingVideoPreviewContainer = nil
+                                        strongSelf.outgoingVideoView = outgoingVideoPreviewView
+                                        if let expandedVideoNode = strongSelf.expandedVideoNode {
+                                            strongSelf.minimizedVideoNode = outgoingVideoPreviewView
+                                            strongSelf.videoContainerNode.contentView.insertSubview(outgoingVideoPreviewView, aboveSubview: expandedVideoNode)
+                                        } else {
+                                            strongSelf.expandedVideoNode = outgoingVideoPreviewView
+                                            strongSelf.videoContainerNode.contentView.addSubview(outgoingVideoPreviewView)
+                                        }
+                                        strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
+
+                                        strongSelf.updateDimVisibility()
+                                        strongSelf.maybeScheduleUIHidingForActiveVideoCall()
+
+                                        if strongSelf.hasVideoNodes {
+                                            strongSelf.setUIState(.video)
+                                        }
+
+                                        strongSelf.displayedCameraConfirmation = true
+                                        switch callState.videoState {
+                                        case .inactive:
+                                            strongSelf.isRequestingVideo = true
+                                            strongSelf.updateButtonsMode()
+                                        default:
+                                            break
+                                        }
+                                        strongSelf.call.requestVideo()
                                     }
-                                    updateLayoutImpl?(layout, navigationBarHeight)
-                                })
-                                
-                                let controller = VoiceChatCameraPreviewViewController(sharedContext: strongSelf.sharedContext, cameraNode: outgoingVideoNode, shareCamera: { _, _ in
-                                    proceed()
-                                }, switchCamera: { [weak self] in
-                                    Queue.mainQueue().after(0.1) {
-                                        self?.call.switchVideoCamera()
-                                    }
-                                })
-                                strongSelf.present?(controller)
-                                
-                                updateLayoutImpl = { [weak controller] layout, navigationBarHeight in
-                                    controller?.containerLayoutUpdated(layout, transition: .immediate)
+
+                                    strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
+
+                                    strongSelf.setUIState(.videoPreview)
+                                }
+
+                                let outgoingVideoPreviewView = CallVideoView(
+                                    videoView: presentationCallVideoViewActual,
+                                    disabledText: nil,
+                                    assumeReadyAfterTimeout: true,
+                                    isReadyUpdated: {
+                                        if delayUntilInitialized {
+                                            Queue.mainQueue().after(0.4, {
+                                                applyNode()
+                                            })
+                                        }
+                                    }, orientationUpdated: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                        }
+                                    }, isFlippedUpdated: { videoNode in
+                                        guard let _ = self else {
+                                            return
+                                        }
+                                    })
+
+                                strongSelf.candidateOutgoingVideoPreviewView = outgoingVideoPreviewView
+                                strongSelf.setupAudioOutputs()
+
+                                if !delayUntilInitialized {
+                                    applyNode()
                                 }
                             }
                         })
@@ -398,11 +479,11 @@ final class CallControllerView: ViewControllerTracingNodeView {
                 return
             }
             strongSelf.disableActionsUntilTimestamp = CACurrentMediaTime() + 1.0
-            if let outgoingVideoNode = strongSelf.outgoingVideoNodeValue {
+            if let outgoingVideoNode = strongSelf.outgoingVideoView {
                 outgoingVideoNode.flip(withBackground: outgoingVideoNode !== strongSelf.minimizedVideoNode)
             }
             strongSelf.call.switchVideoCamera()
-            if let _ = strongSelf.outgoingVideoNodeValue {
+            if let _ = strongSelf.outgoingVideoView {
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
@@ -645,11 +726,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
                         self.expandedVideoNode = minimizedVideoNode
                         self.minimizedVideoNode = nil
                     }
-                    if hasVideoNodes {
-                        setUIState(.video)
-                    } else {
-                        setUIState(.active)
-                    }
+                    setUIState(hasVideoNodes ? .video : .active)
                 }
                 self.incomingVideoNodeValue = nil
                 self.incomingVideoViewRequested = false
@@ -660,99 +737,19 @@ final class CallControllerView: ViewControllerTracingNodeView {
         case .active(false), .paused(false):
             if !self.outgoingVideoViewRequested {
                 self.outgoingVideoViewRequested = true
-                let delayUntilInitialized = self.isRequestingVideo
-                self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    if let outgoingVideoView = outgoingVideoView {
-                        outgoingVideoView.view.backgroundColor = .black
-                        outgoingVideoView.view.clipsToBounds = true
-                        
-                        let applyNode: () -> Void = {
-                            guard let strongSelf = self, let outgoingVideoNode = strongSelf.candidateOutgoingVideoNodeValue else {
-                                return
-                            }
-                            strongSelf.candidateOutgoingVideoNodeValue = nil
-                            
-                            if strongSelf.isRequestingVideo {
-                                strongSelf.isRequestingVideo = false
-                                strongSelf.animateRequestedVideoOnce = true
-                            }
-                            
-                            strongSelf.outgoingVideoNodeValue = outgoingVideoNode
-                            if let expandedVideoNode = strongSelf.expandedVideoNode {
-                                strongSelf.minimizedVideoNode = outgoingVideoNode
-                                strongSelf.videoContainerNode.contentView.insertSubview(outgoingVideoNode, aboveSubview: expandedVideoNode)
-                            } else {
-                                strongSelf.expandedVideoNode = outgoingVideoNode
-                                strongSelf.videoContainerNode.contentView.addSubview(outgoingVideoNode)
-                            }
-                            strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
-                            
-                            strongSelf.updateDimVisibility()
-                            strongSelf.maybeScheduleUIHidingForActiveVideoCall()
-
-                            if strongSelf.hasVideoNodes {
-                                strongSelf.setUIState(.video)
-                            }
-                        }
-                        
-                        let outgoingVideoNode = CallVideoView(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: {
-                            if delayUntilInitialized {
-                                Queue.mainQueue().after(0.4, {
-                                    applyNode()
-                                })
-                            }
-                        }, orientationUpdated: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                            }
-                        }, isFlippedUpdated: { videoNode in
-                            guard let _ = self else {
-                                return
-                            }
-                            /*if videoNode === strongSelf.minimizedVideoNode, let tempView = videoNode.view.snapshotView(afterScreenUpdates: true) {
-                                videoNode.view.superview?.insertSubview(tempView, aboveSubview: videoNode.view)
-                                videoNode.view.frame = videoNode.frame
-                                let transitionOptions: UIView.AnimationOptions = [.transitionFlipFromRight, .showHideTransitionViews]
-
-                                UIView.transition(with: tempView, duration: 1.0, options: transitionOptions, animations: {
-                                    tempView.isHidden = true
-                                }, completion: { [weak tempView] _ in
-                                    tempView?.removeFromSuperview()
-                                })
-
-                                videoNode.view.isHidden = true
-                                UIView.transition(with: videoNode.view, duration: 1.0, options: transitionOptions, animations: {
-                                    videoNode.view.isHidden = false
-                                })
-                            }*/
-                        })
-                        
-                        strongSelf.candidateOutgoingVideoNodeValue = outgoingVideoNode
-                        strongSelf.setupAudioOutputs()
-                        
-                        if !delayUntilInitialized {
-                            applyNode()
-                        }
-                    }
-                })
+                self.isRequestingVideo = false
+                self.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
             }
+
         default:
-            self.candidateOutgoingVideoNodeValue = nil
-            if let outgoingVideoNodeValue = self.outgoingVideoNodeValue {
-                if self.minimizedVideoNode == outgoingVideoNodeValue {
+            if let outgoingVideoView = self.outgoingVideoView {
+                if self.minimizedVideoNode == outgoingVideoView {
                     self.minimizedVideoNode = nil
-                    self.removedMinimizedVideoNodeValue = outgoingVideoNodeValue
+                    self.removedMinimizedVideoNodeValue = outgoingVideoView
                 }
-                if self.expandedVideoNode == self.outgoingVideoNodeValue {
+                if self.expandedVideoNode == self.outgoingVideoView {
                     self.expandedVideoNode = nil
-                    self.removedExpandedVideoNodeValue = outgoingVideoNodeValue
+                    self.removedExpandedVideoNodeValue = outgoingVideoView
                     
                     if let minimizedVideoNode = self.minimizedVideoNode {
                         self.expandedVideoNode = minimizedVideoNode
@@ -764,7 +761,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
                         setUIState(.active)
                     }
                 }
-                self.outgoingVideoNodeValue = nil
+                self.outgoingVideoView = nil
                 self.outgoingVideoViewRequested = false
             }
         }
@@ -1112,6 +1109,62 @@ final class CallControllerView: ViewControllerTracingNodeView {
                 removedMinimizedVideoNodeValue.removeFromSuperview()
             }
         }
+
+        if let container = outgoingVideoPreviewContainer {
+            transition.updateFrame(view: container, frame: CGRect(origin: CGPoint(), size: layout.size))
+
+            if let cancelOutgoingVideoPreviewButtonNodeActual = cancelOutgoingVideoPreviewButtonNode {
+                let transition: ContainedViewLayoutTransition = .immediate
+                let size = cancelOutgoingVideoPreviewButtonNodeActual.measure(CGSize(width: 320.0, height: 100.0))
+                transition.updateAlpha(node: cancelOutgoingVideoPreviewButtonNodeActual, alpha: 1.0)
+                transition.updateFrame(node: cancelOutgoingVideoPreviewButtonNodeActual,
+                                       frame: CGRect(origin: CGPoint(x: 29.0, y: topOriginY + 25.0), size: size))
+            }
+
+            if let doneOutgoingVideoPreviewButtonActual = doneOutgoingVideoPreviewButton {
+                let transition: ContainedViewLayoutTransition = .immediate
+                let buttonInset: CGFloat = 16.0
+                let buttonMaxWidth: CGFloat = 360.0
+                let buttonWidth = min(buttonMaxWidth, layout.size.width - buttonInset * 2.0)
+                let doneButtonHeight = doneOutgoingVideoPreviewButtonActual.updateLayout(width: buttonWidth, transition: transition)
+                transition.updateFrame(node: doneOutgoingVideoPreviewButtonActual, frame: CGRect(x: floorToScreenPixels((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
+            }
+
+            if let outgoingVideoPreviewViewActual = outgoingVideoPreviewView {
+                var outgoingVideoPreviewVideoTransition: ContainedViewLayoutTransition = transition
+                if outgoingVideoPreviewViewActual.frame.isEmpty {
+                    outgoingVideoPreviewVideoTransition = .immediate
+                }
+                outgoingVideoPreviewVideoTransition.updateAlpha(view: outgoingVideoPreviewViewActual, alpha: 1.0)
+                outgoingVideoPreviewVideoTransition.updateFrame(view: outgoingVideoPreviewViewActual, frame: fullscreenVideoFrame)
+                outgoingVideoPreviewViewActual.updateLayout(size: outgoingVideoPreviewViewActual.frame.size,
+                                                            cornerRadius: 0.0,
+                                                            isOutgoing: true,
+                                                            deviceOrientation: mappedDeviceOrientation,
+                                                            isCompactLayout: isCompactLayout,
+                                                            transition: outgoingVideoPreviewVideoTransition)
+            }
+            if animateOutgoingVideoPreviewViewOnce {
+                animateOutgoingVideoPreviewViewOnce = false
+                let videoButtonFrame = self.buttonsView.videoButtonFrame().flatMap { frame -> CGRect in
+                    return self.buttonsView.convert(frame, to: self)
+                }
+                if let previousVideoButtonFrame = previousVideoButtonFrame, let videoButtonFrame = videoButtonFrame {
+                    animateRadialMask(view: container, from: previousVideoButtonFrame, to: videoButtonFrame)
+                }
+            }
+        } else if let removedOutgoingVideoPreviewContainerActual = self.removedOutgoingVideoPreviewContainer {
+            self.removedOutgoingVideoPreviewContainer = nil
+
+            if transition.isAnimated {
+                removedOutgoingVideoPreviewContainerActual.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
+                removedOutgoingVideoPreviewContainerActual.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak removedOutgoingVideoPreviewContainerActual] _ in
+                    removedOutgoingVideoPreviewContainerActual?.removeFromSuperview()
+                })
+            } else {
+                removedOutgoingVideoPreviewContainerActual.removeFromSuperview()
+            }
+        }
         
         if let expandedVideoNode = self.expandedVideoNode {
             transition.updateAlpha(view: expandedVideoNode, alpha: 1.0)
@@ -1131,11 +1184,11 @@ final class CallControllerView: ViewControllerTracingNodeView {
                 expandedVideoTransition.updateFrame(view: expandedVideoNode, frame: fullscreenVideoFrame)
             }
             
-            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, isOutgoing: expandedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: mappedDeviceOrientation, isCompactLayout: isCompactLayout, transition: expandedVideoTransition)
+            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, isOutgoing: expandedVideoNode === self.outgoingVideoView, deviceOrientation: mappedDeviceOrientation, isCompactLayout: isCompactLayout, transition: expandedVideoTransition)
             
             if self.animateRequestedVideoOnce {
                 self.animateRequestedVideoOnce = false
-                if expandedVideoNode === self.outgoingVideoNodeValue {
+                if expandedVideoNode === self.outgoingVideoView {
                     let videoButtonFrame = self.buttonsView.videoButtonFrame().flatMap { frame -> CGRect in
                         return self.buttonsView.convert(frame, to: self)
                     }
@@ -1181,7 +1234,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
                     self.animationForExpandedVideoSnapshotView = nil
                 }
                 minimizedVideoTransition.updateFrame(view: minimizedVideoNode, frame: previewVideoFrame)
-                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: mappedDeviceOrientation, isCompactLayout: layout.metrics.widthClass == .compact, transition: minimizedVideoTransition)
+                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoView, deviceOrientation: mappedDeviceOrientation, isCompactLayout: layout.metrics.widthClass == .compact, transition: minimizedVideoTransition)
                 if transition.isAnimated && didAppear {
                     minimizedVideoNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }
@@ -1280,6 +1333,18 @@ private extension CallControllerView {
         } else {
             self.back?()
         }
+    }
+
+    @objc func cancelOutgoingVideoPreviewPressed() {
+        guard let outgoingVideoPreviewContainerActual = outgoingVideoPreviewContainer else {
+            return
+        }
+        removedOutgoingVideoPreviewContainer = outgoingVideoPreviewContainerActual
+        outgoingVideoPreviewContainer = nil
+        if let (layout, navigationBarHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+        }
+        setUIState(hasVideoNodes ? .video : .active)
     }
 
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -1515,17 +1580,22 @@ private extension CallControllerView {
 private extension CallControllerView {
 
     private func setupAudioOutputs() {
-        if self.outgoingVideoNodeValue != nil || self.incomingVideoNodeValue != nil || self.candidateOutgoingVideoNodeValue != nil || self.candidateIncomingVideoNodeValue != nil {
-            if let audioOutputState = self.audioOutputState, let currentOutput = audioOutputState.currentOutput {
-                switch currentOutput {
-                case .headphones, .speaker:
-                    break
-                case let .port(port) where port.type == .bluetooth || port.type == .wired:
-                    break
-                default:
-                    self.setCurrentAudioOutput?(.speaker)
-                }
-            }
+        guard self.outgoingVideoView != nil ||
+                self.incomingVideoNodeValue != nil ||
+                self.candidateIncomingVideoNodeValue != nil ||
+                self.outgoingVideoPreviewView != nil ||
+                self.candidateOutgoingVideoPreviewView != nil,
+              let audioOutputState = self.audioOutputState,
+              let currentOutput = audioOutputState.currentOutput else {
+            return
+        }
+        switch currentOutput {
+        case .headphones, .speaker:
+            break
+        case let .port(port) where port.type == .bluetooth || port.type == .wired:
+            break
+        default:
+            self.setCurrentAudioOutput?(.speaker)
         }
     }
 
@@ -1538,7 +1608,8 @@ private extension CallControllerView {
         case .ringing: isNewStateAllowed = true
         case .active: isNewStateAllowed =  true
         case .weakSignal: isNewStateAllowed = true
-        case .video: isNewStateAllowed = !hasVideoNodes
+        case .video: isNewStateAllowed = !hasVideoNodes || (state == .video && outgoingVideoView == nil)
+        case .videoPreview: isNewStateAllowed = outgoingVideoPreviewView == nil || state == .video
         case .none: isNewStateAllowed = true
         }
         guard isNewStateAllowed else {
@@ -1566,6 +1637,10 @@ private extension CallControllerView {
             audioLevelView.startAnimating()
             updateAudioLevel(1.0)
         case .video:
+            avatarNode.isHidden = true
+            audioLevelView.isHidden = true
+            audioLevelView.stopAnimating(duration: 0.5)
+        case .videoPreview:
             avatarNode.isHidden = true
             audioLevelView.isHidden = true
             audioLevelView.stopAnimating(duration: 0.5)
@@ -1612,7 +1687,7 @@ private extension CallControllerView {
         }
 
         var visible = true
-        if case .active = callState.state, self.incomingVideoNodeValue != nil || self.outgoingVideoNodeValue != nil {
+        if case .active = callState.state, self.incomingVideoNodeValue != nil || self.outgoingVideoView != nil {
             visible = false
         }
 
@@ -1633,7 +1708,7 @@ private extension CallControllerView {
     }
 
     private func maybeScheduleUIHidingForActiveVideoCall() {
-        guard let callState = self.callState, case .active = callState.state, self.incomingVideoNodeValue != nil && self.outgoingVideoNodeValue != nil, !self.hiddenUIForActiveVideoCallOnce && self.keyPreviewNode == nil else {
+        guard let callState = self.callState, case .active = callState.state, self.incomingVideoNodeValue != nil && self.outgoingVideoView != nil, !self.hiddenUIForActiveVideoCallOnce && self.keyPreviewNode == nil else {
             return
         }
 
@@ -1696,7 +1771,7 @@ private extension CallControllerView {
                 mode = .none
             }
         }
-        var mappedVideoState = CallControllerButtonsMode.VideoState(isAvailable: false, isCameraActive: self.outgoingVideoNodeValue != nil, isScreencastActive: false, canChangeStatus: false, hasVideo: self.outgoingVideoNodeValue != nil || self.incomingVideoNodeValue != nil, isInitializingCamera: self.isRequestingVideo)
+        var mappedVideoState = CallControllerButtonsMode.VideoState(isAvailable: false, isCameraActive: self.outgoingVideoView != nil, isScreencastActive: false, canChangeStatus: false, hasVideo: self.outgoingVideoView != nil || self.incomingVideoNodeValue != nil, isInitializingCamera: self.isRequestingVideo)
         switch callState.videoState {
         case .notAvailable:
             break
@@ -1767,7 +1842,7 @@ private extension CallControllerView {
         if let minimizedVideoNode = self.minimizedVideoNode {
             var aspect = minimizedVideoNode.currentAspect
             var rotationCount = 0
-            if minimizedVideoNode === self.outgoingVideoNodeValue {
+            if minimizedVideoNode === self.outgoingVideoView {
                 aspect = 138.0 / 240.0 //3.0 / 4.0
             } else {
                 if aspect < 1.0 {
@@ -1954,6 +2029,42 @@ private extension CallControllerView {
 
     private func areUserActionsDisabledNow() -> Bool {
         return CACurrentMediaTime() < self.disableActionsUntilTimestamp
+    }
+
+    private func animateRadialMask(view: UIView, from fromRect: CGRect, to toRect: CGRect) {
+        let maskLayer = CAShapeLayer()
+        maskLayer.frame = fromRect
+
+        let path = CGMutablePath()
+        path.addEllipse(in: CGRect(origin: CGPoint(), size: fromRect.size))
+        maskLayer.path = path
+
+        view.layer.mask = maskLayer
+
+        let topLeft = CGPoint(x: 0.0, y: 0.0)
+        let topRight = CGPoint(x: view.bounds.width, y: 0.0)
+        let bottomLeft = CGPoint(x: 0.0, y: view.bounds.height)
+        let bottomRight = CGPoint(x: view.bounds.width, y: view.bounds.height)
+
+        func distance(_ v1: CGPoint, _ v2: CGPoint) -> CGFloat {
+            let dx = v1.x - v2.x
+            let dy = v1.y - v2.y
+            return sqrt(dx * dx + dy * dy)
+        }
+
+        var maxRadius = distance(toRect.center, topLeft)
+        maxRadius = max(maxRadius, distance(toRect.center, topRight))
+        maxRadius = max(maxRadius, distance(toRect.center, bottomLeft))
+        maxRadius = max(maxRadius, distance(toRect.center, bottomRight))
+        maxRadius = ceil(maxRadius)
+
+        let targetFrame = CGRect(origin: CGPoint(x: toRect.center.x - maxRadius, y: toRect.center.y - maxRadius), size: CGSize(width: maxRadius * 2.0, height: maxRadius * 2.0))
+
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+        transition.updatePosition(layer: maskLayer, position: targetFrame.center)
+        transition.updateTransformScale(layer: maskLayer, scale: maxRadius * 2.0 / fromRect.width, completion: { [weak view] _ in
+            view?.layer.mask = nil
+        })
     }
 
 }
