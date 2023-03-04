@@ -144,7 +144,7 @@ private class VoiceChatCameraPreviewViewControllerView: ViewControllerTracingNod
     private let placeholderTextNode: ImmediateTextNode
     private let placeholderIconNode: ASImageNode
     
-    private var wheelNode: WheelControlNode
+    private var wheelNode: WheelControlNodeNew
     private var selectedTabIndex: Int = 1
     private var containerLayout: (ContainerViewLayout, CGFloat)?
 
@@ -223,8 +223,8 @@ private class VoiceChatCameraPreviewViewControllerView: ViewControllerTracingNod
         self.placeholderIconNode.alpha = 0.0
         self.placeholderIconNode.contentMode = .scaleAspectFit
         self.placeholderIconNode.displaysAsynchronously = false
-        
-        self.wheelNode = WheelControlNode(items: [WheelControlNode.Item(title: UIDevice.current.model == "iPad" ? self.presentationData.strings.VoiceChat_VideoPreviewTabletScreen : self.presentationData.strings.VoiceChat_VideoPreviewPhoneScreen), WheelControlNode.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewFrontCamera), WheelControlNode.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewBackCamera)], selectedIndex: self.selectedTabIndex)
+
+        self.wheelNode = WheelControlNodeNew(items: [WheelControlNodeNew.Item(title: UIDevice.current.model == "iPad" ? self.presentationData.strings.VoiceChat_VideoPreviewTabletScreen : self.presentationData.strings.VoiceChat_VideoPreviewPhoneScreen), WheelControlNodeNew.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewFrontCamera), WheelControlNodeNew.Item(title: self.presentationData.strings.VoiceChat_VideoPreviewBackCamera)], selectedIndex: self.selectedTabIndex)
         
         super.init(frame: CGRect.zero)
         
@@ -526,7 +526,7 @@ private class VoiceChatCameraPreviewViewControllerView: ViewControllerTracingNod
 private let textFont = Font.with(size: 14.0, design: .camera, weight: .regular)
 private let selectedTextFont = Font.with(size: 14.0, design: .camera, weight: .semibold)
 
-private class WheelControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
+final class WheelControlNodeNew: ASDisplayNode, UIGestureRecognizerDelegate {
     struct Item: Equatable {
         public let title: String
         

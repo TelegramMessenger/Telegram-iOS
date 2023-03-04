@@ -13,6 +13,7 @@ import TelegramAudio
 import AccountContext
 import LocalizedPeerData
 import PhotoResources
+import ReplayKit
 import CallsEmoji
 import TooltipUI
 import AlertUI
@@ -94,7 +95,12 @@ final class CallControllerView: ViewControllerTracingNodeView {
     private var candidateOutgoingVideoPreviewView: CallVideoView?
     private var outgoingVideoPreviewView: CallVideoView?
     private var cancelOutgoingVideoPreviewButtonNode: HighlightableButtonNode?
-    private var doneOutgoingVideoPreviewButton: SolidRoundedButtonNode?
+    private var outgoingVideoPreviewDoneButton: SolidRoundedButtonNode?
+    private var outgoingVideoPreviewWheelNode: WheelControlNodeNew?
+    private var outgoingVideoPreviewBroadcastPickerView: UIView?
+
+    private var outgoingVideoPreviewPlaceholderTextNode: ImmediateTextNode?
+    private var outgoingVideoPreviewPlaceholderIconNode: ASImageNode?
 
     private var incomingVideoViewRequested: Bool = false
     private var outgoingVideoViewRequested: Bool = false
@@ -104,7 +110,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
     
     private var isRequestingVideo: Bool = false
     private var animateRequestedVideoOnce: Bool = false
-    private var animateOutgoingVideoPreviewViewOnce: Bool = false
+    private var animateOutgoingVideoPreviewContainerOnce: Bool = false
     
     private var hiddenUIForActiveVideoCallOnce: Bool = false
     private var hideUIForActiveVideoCallTimer: SwiftSignalKit.Timer?
@@ -156,6 +162,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
     private var deviceOrientation: UIDeviceOrientation = .portrait
     private var orientationDidChangeObserver: NSObjectProtocol?
     private var currentRequestedAspect: CGFloat?
+    private var outgoingVideoPreviewWheelSelectedTabIndex: Int = 1
 
     private var hasVideoNodes: Bool {
         return self.expandedVideoNode != nil || self.minimizedVideoNode != nil
@@ -358,7 +365,7 @@ final class CallControllerView: ViewControllerTracingNodeView {
                                     strongSelf.contentContainerView.addSubview(outgoingVideoPreviewContainer)
 
                                     strongSelf.candidateOutgoingVideoPreviewView = nil
-                                    strongSelf.animateOutgoingVideoPreviewViewOnce = true
+                                    strongSelf.animateOutgoingVideoPreviewContainerOnce = true
                                     strongSelf.outgoingVideoPreviewView = outgoingVideoPreviewViewActual
                                     outgoingVideoPreviewContainer.addSubview(outgoingVideoPreviewViewActual)
 
@@ -386,15 +393,15 @@ final class CallControllerView: ViewControllerTracingNodeView {
 
                                     let theme = SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0xffffff),
                                                                         foregroundColor: UIColor(rgb: 0x4f5352))
-                                    let doneOutgoingVideoPreviewButton = SolidRoundedButtonNode(theme: theme,
+                                    let outgoingVideoPreviewDoneButton = SolidRoundedButtonNode(theme: theme,
                                                                                                 font: .bold,
-                                                                                                height: 48.0,
-                                                                                                cornerRadius: 24.0,
+                                                                                                height: 50.0,
+                                                                                                cornerRadius: 10.0,
                                                                                                 gloss: false)
-                                    strongSelf.doneOutgoingVideoPreviewButton = doneOutgoingVideoPreviewButton
-                                    doneOutgoingVideoPreviewButton.title = presentationData.strings.VoiceChat_VideoPreviewContinue
-                                    outgoingVideoPreviewContainer.addSubnode(doneOutgoingVideoPreviewButton)
-                                    doneOutgoingVideoPreviewButton.pressed = { [weak self] in
+                                    strongSelf.outgoingVideoPreviewDoneButton = outgoingVideoPreviewDoneButton
+                                    outgoingVideoPreviewDoneButton.title = presentationData.strings.VoiceChat_VideoPreviewContinue
+                                    outgoingVideoPreviewContainer.addSubnode(outgoingVideoPreviewDoneButton)
+                                    outgoingVideoPreviewDoneButton.pressed = { [weak self] in
                                         guard let strongSelf = self, let outgoingVideoPreviewView = strongSelf.outgoingVideoPreviewView else {
                                             return
                                         }
@@ -427,6 +434,67 @@ final class CallControllerView: ViewControllerTracingNodeView {
                                         }
                                         strongSelf.call.requestVideo()
                                     }
+
+                                    strongSelf.outgoingVideoPreviewWheelSelectedTabIndex = 1
+                                    let wheelNode = WheelControlNodeNew(items: [WheelControlNodeNew.Item(title: UIDevice.current.model == "iPad" ? strongSelf.presentationData.strings.VoiceChat_VideoPreviewTabletScreen : strongSelf.presentationData.strings.VoiceChat_VideoPreviewPhoneScreen), WheelControlNodeNew.Item(title: strongSelf.presentationData.strings.VoiceChat_VideoPreviewFrontCamera), WheelControlNodeNew.Item(title: strongSelf.presentationData.strings.VoiceChat_VideoPreviewBackCamera)], selectedIndex: strongSelf.outgoingVideoPreviewWheelSelectedTabIndex)
+                                    strongSelf.outgoingVideoPreviewWheelNode = wheelNode
+                                    wheelNode.selectedIndexChanged = { [weak self] index in
+                                        if let strongSelf = self {
+                                            if (index == 1 && strongSelf.outgoingVideoPreviewWheelSelectedTabIndex == 2) || (index == 2 && strongSelf.outgoingVideoPreviewWheelSelectedTabIndex == 1) {
+                                                Queue.mainQueue().after(0.1) {
+                                                    strongSelf.call.switchVideoCamera()
+                                                }
+                                                strongSelf.outgoingVideoPreviewView?.flip(withBackground: false)
+                                            }
+                                            if index == 0 && [1, 2].contains(strongSelf.outgoingVideoPreviewWheelSelectedTabIndex) {
+                                                strongSelf.outgoingVideoPreviewBroadcastPickerView?.isHidden = false
+                                                strongSelf.outgoingVideoPreviewView?.updateIsBlurred(isBlurred: true, light: false, animated: true)
+                                                let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+                                                if let placeholderTextNode = strongSelf.outgoingVideoPreviewPlaceholderTextNode {
+                                                    transition.updateAlpha(node: placeholderTextNode, alpha: 1.0)
+                                                }
+                                                if let placeholderIconNode = strongSelf.outgoingVideoPreviewPlaceholderIconNode {
+                                                    transition.updateAlpha(node: placeholderIconNode, alpha: 1.0)
+                                                }
+                                            } else if [1, 2].contains(index) && strongSelf.outgoingVideoPreviewWheelSelectedTabIndex == 0 {
+                                                strongSelf.outgoingVideoPreviewBroadcastPickerView?.isHidden = true
+                                                strongSelf.outgoingVideoPreviewView?.updateIsBlurred(isBlurred: false, light: false, animated: true)
+                                                let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+                                                if let placeholderTextNode = strongSelf.outgoingVideoPreviewPlaceholderTextNode {
+                                                    transition.updateAlpha(node: placeholderTextNode, alpha: 0.0)
+                                                }
+                                                if let placeholderIconNode = strongSelf.outgoingVideoPreviewPlaceholderIconNode {
+                                                    transition.updateAlpha(node: placeholderIconNode, alpha: 0.0)
+                                                }
+                                            }
+                                            strongSelf.outgoingVideoPreviewWheelSelectedTabIndex = index
+                                        }
+                                    }
+                                    outgoingVideoPreviewContainer.addSubnode(wheelNode)
+
+                                    if #available(iOS 12.0, *) {
+                                        let broadcastPickerView = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 50, height: 52.0))
+                                        broadcastPickerView.alpha = 0.02
+                                        broadcastPickerView.isHidden = true
+                                        broadcastPickerView.preferredExtension = "\(strongSelf.sharedContext.applicationBindings.appBundleId).BroadcastUpload"
+                                        broadcastPickerView.showsMicrophoneButton = false
+                                        strongSelf.outgoingVideoPreviewBroadcastPickerView = broadcastPickerView
+                                        outgoingVideoPreviewContainer.addSubview(broadcastPickerView)
+                                    }
+
+                                    let outgoingVideoPreviewPlaceholderTextNode = ImmediateTextNode()
+                                    strongSelf.outgoingVideoPreviewPlaceholderTextNode = outgoingVideoPreviewPlaceholderTextNode
+                                    outgoingVideoPreviewPlaceholderTextNode.alpha = 0.0
+                                    outgoingVideoPreviewPlaceholderTextNode.maximumNumberOfLines = 3
+                                    outgoingVideoPreviewPlaceholderTextNode.textAlignment = .center
+                                    outgoingVideoPreviewContainer.addSubnode(outgoingVideoPreviewPlaceholderTextNode)
+
+                                    let outgoingVideoPreviewPlaceholderIconNode = ASImageNode()
+                                    strongSelf.outgoingVideoPreviewPlaceholderIconNode = outgoingVideoPreviewPlaceholderIconNode
+                                    outgoingVideoPreviewPlaceholderIconNode.alpha = 0.0
+                                    outgoingVideoPreviewPlaceholderIconNode.contentMode = .scaleAspectFit
+                                    outgoingVideoPreviewPlaceholderIconNode.displaysAsynchronously = false
+                                    outgoingVideoPreviewContainer.addSubnode(outgoingVideoPreviewPlaceholderIconNode)
 
                                     strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
 
@@ -1121,13 +1189,37 @@ final class CallControllerView: ViewControllerTracingNodeView {
                                        frame: CGRect(origin: CGPoint(x: 29.0, y: topOriginY + 25.0), size: size))
             }
 
-            if let doneOutgoingVideoPreviewButtonActual = doneOutgoingVideoPreviewButton {
+            if let outgoingVideoPreviewDoneButtonActual = outgoingVideoPreviewDoneButton,
+               let wheelNode = outgoingVideoPreviewWheelNode {
                 let transition: ContainedViewLayoutTransition = .immediate
                 let buttonInset: CGFloat = 16.0
                 let buttonMaxWidth: CGFloat = 360.0
                 let buttonWidth = min(buttonMaxWidth, layout.size.width - buttonInset * 2.0)
-                let doneButtonHeight = doneOutgoingVideoPreviewButtonActual.updateLayout(width: buttonWidth, transition: transition)
-                transition.updateFrame(node: doneOutgoingVideoPreviewButtonActual, frame: CGRect(x: floorToScreenPixels((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
+                let doneButtonHeight = outgoingVideoPreviewDoneButtonActual.updateLayout(width: buttonWidth, transition: transition)
+                transition.updateFrame(node: outgoingVideoPreviewDoneButtonActual, frame: CGRect(x: floorToScreenPixels((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
+                outgoingVideoPreviewBroadcastPickerView?.frame = outgoingVideoPreviewDoneButtonActual.frame
+
+                let wheelFrame = CGRect(origin: CGPoint(x: 16.0, y: layout.size.height - layout.intrinsicInsets.bottom - doneButtonHeight - buttonInset - 36.0 - 20.0), size: CGSize(width: layout.size.width - 32.0, height: 36.0))
+                wheelNode.updateLayout(size: wheelFrame.size, transition: transition)
+                transition.updateFrame(node: wheelNode, frame: wheelFrame)
+            }
+
+            if let placeholderTextNode = outgoingVideoPreviewPlaceholderTextNode,
+               let placeholderIconNode = outgoingVideoPreviewPlaceholderIconNode {
+                let isTablet: Bool
+                if case .regular = layout.metrics.widthClass {
+                    isTablet = true
+                } else {
+                    isTablet = false
+                }
+                placeholderTextNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_VideoPreviewShareScreenInfo, font: Font.semibold(16.0), textColor: .white)
+                placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: isTablet ? "Call/ScreenShareTablet" : "Call/ScreenSharePhone"), color: .white)
+
+                let placeholderTextSize = placeholderTextNode.updateLayout(CGSize(width: layout.size.width - 80.0, height: 100.0))
+                transition.updateFrame(node: placeholderTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - placeholderTextSize.width) / 2.0), y: floorToScreenPixels(layout.size.height / 2.0) + 10.0), size: placeholderTextSize))
+                if let imageSize = placeholderIconNode.image?.size {
+                    transition.updateFrame(node: placeholderIconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: floorToScreenPixels(layout.size.height / 2.0) - imageSize.height - 8.0), size: imageSize))
+                }
             }
 
             if let outgoingVideoPreviewViewActual = outgoingVideoPreviewView {
@@ -1144,8 +1236,8 @@ final class CallControllerView: ViewControllerTracingNodeView {
                                                             isCompactLayout: isCompactLayout,
                                                             transition: outgoingVideoPreviewVideoTransition)
             }
-            if animateOutgoingVideoPreviewViewOnce {
-                animateOutgoingVideoPreviewViewOnce = false
+            if animateOutgoingVideoPreviewContainerOnce {
+                animateOutgoingVideoPreviewContainerOnce = false
                 let videoButtonFrame = self.buttonsView.videoButtonFrame().flatMap { frame -> CGRect in
                     return self.buttonsView.convert(frame, to: self)
                 }
@@ -1609,7 +1701,7 @@ private extension CallControllerView {
         case .active: isNewStateAllowed =  true
         case .weakSignal: isNewStateAllowed = true
         case .video: isNewStateAllowed = !hasVideoNodes || (state == .video && outgoingVideoView == nil)
-        case .videoPreview: isNewStateAllowed = outgoingVideoPreviewView == nil || state == .video
+        case .videoPreview: isNewStateAllowed = outgoingVideoPreviewContainer == nil || state == .video
         case .none: isNewStateAllowed = true
         }
         guard isNewStateAllowed else {
