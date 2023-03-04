@@ -621,13 +621,14 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 text = "yesterday at 12:00 PM"
                 #endif*/
                 
-                let textFontSize = presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0
+                let textFontFraction = presentationData.listsFontSize.baseDisplaySize / 17.0
+                let textFontSize = floor(textFontFraction * 15.0)
                 
                 self.textLabelNode.attributedText = NSAttributedString(string: text, font: Font.regular(textFontSize), textColor: presentationData.theme.contextMenu.secondaryColor)
                 let textSize = self.textLabelNode.updateLayout(CGSize(width: maxTextWidth + 16.0, height: 100.0))
                 self.textLabelNode.isHidden = !self.displayReadTimestamps || text.isEmpty
                 
-                let textSpacing: CGFloat = 2.0
+                let textSpacing: CGFloat = floor(textFontFraction * 2.0)
                 let contentHeight: CGFloat
                 
                 if self.displayReadTimestamps && !text.isEmpty {
@@ -640,13 +641,13 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 let titleFrame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: contentY), size: titleSize)
                 self.titleLabelNode.frame = titleFrame
                 
-                let textFrame = CGRect(origin: CGPoint(x: titleFrame.minX + 18.0, y: titleFrame.maxY + textSpacing), size: textSize)
+                let textFrame = CGRect(origin: CGPoint(x: titleFrame.minX + floor(textFontFraction * 18.0), y: titleFrame.maxY + textSpacing), size: textSize)
                 self.textLabelNode.frame = textFrame
                 if let readImage = self.readIconView.image {
                     self.readIconView.tintColor = presentationData.theme.contextMenu.secondaryColor
-                    let fraction: CGFloat = 1.0
+                    let fraction: CGFloat = textFontFraction
                     let iconSize = CGSize(width: floor(readImage.size.width * fraction), height: floor(readImage.size.height * fraction))
-                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + 4.0 - UIScreenPixel), size: iconSize)
+                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + floor(textFontFraction * 4.0) - UIScreenPixel), size: iconSize)
                 }
                 self.readIconView.isHidden = !self.displayReadTimestamps || text.isEmpty
                 
@@ -662,7 +663,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     credibilityIconView.view?.removeFromSuperview()
                 }
                 
-                let reactionSize = CGSize(width: 22.0, height: 22.0)
+                let reactionSize = CGSize(width: floor(textFontFraction * 22.0), height: floor(textFontFraction * 22.0))
                 self.iconFrame = CGRect(origin: CGPoint(x: size.width - 32.0 - floor((32.0 - reactionSize.width) / 2.0), y: floor((size.height - reactionSize.height) / 2.0)), size: reactionSize)
                 
                 if let reactionLayer = self.reactionLayer, var iconFrame = self.iconFrame {
