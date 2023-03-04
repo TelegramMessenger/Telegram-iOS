@@ -619,8 +619,16 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func setFile(context: AccountContext, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
-            if let largestSize = fileReference.media.dimensions {
-                let displaySize = largestSize.cgSize.dividedByScreenScale()
+            if var largestSize = fileReference.media.dimensions {
+                var displaySize = largestSize.cgSize.dividedByScreenScale()
+                if let previewDimensions = largestImageRepresentation(fileReference.media.previewRepresentations)?.dimensions {
+                    let previewAspect = CGFloat(previewDimensions.width) / CGFloat(previewDimensions.height)
+                    let aspect = displaySize.width / displaySize.height
+                    if abs(previewAspect - 1.0 / aspect) < 0.1 {
+                        displaySize = CGSize(width: displaySize.height, height: displaySize.width)
+                        largestSize = PixelDimensions(width: largestSize.height, height: largestSize.width)
+                    }
+                }
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 
                 /*if largestSize.width > 2600 || largestSize.height > 2600 {
