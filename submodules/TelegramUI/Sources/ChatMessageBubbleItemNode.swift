@@ -325,7 +325,7 @@ private func mapVisibility(_ visibility: ListViewItemNodeVisibility, boundsSize:
         subRect.origin.x = 0.0
         subRect.size.width = 10000.0
         
-        subRect.origin.y = boundsSize.height - insets.top - (subRect.origin.y + subRect.height)
+        subRect.origin.y = boundsSize.height - insets.bottom - (subRect.origin.y + subRect.height)
         
         let contentNodeFrame = contentNode.frame
         if contentNodeFrame.intersects(subRect) {
