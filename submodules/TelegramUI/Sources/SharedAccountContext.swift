@@ -663,8 +663,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
                     if call !== strongSelf.callController?.call {
-                        strongSelf.callController?.dismiss()
-                        strongSelf.callController = nil
+                        if strongSelf.callController?.presentedCallRating == false {
+                            strongSelf.callController?.dismiss()
+                            strongSelf.callController = nil
+                        }
+                        
                         strongSelf.hasOngoingCall.set(false)
                         
                         if let call = call {
@@ -1613,12 +1616,14 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var nearbyPeerDistance: Int32?
         var reactionSourceMessageId: MessageId?
         var callMessages: [Message] = []
+        var callsDate: Date?
         var hintGroupInCommon: PeerId?
         switch mode {
         case let .nearbyPeer(distance):
             nearbyPeerDistance = distance
-        case let .calls(messages):
+        case let .calls(messages, date):
             callMessages = messages
+            callsDate = date
         case .generic:
             break
         case let .group(id):
@@ -1628,7 +1633,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         case .forumTopic:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon, callsDate: callsDate)
     } else if peer is TelegramSecretChat {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     }

@@ -66,7 +66,7 @@ public final class CallController: ViewController {
     private var callMutedDisposable: Disposable?
     private var isMuted = false
     
-    private var presentedCallRating = false
+    public var presentedCallRating = false
     
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
@@ -135,11 +135,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        if self.call.isVideoPossible {
-            self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
-        } else {
-            self.displayNode = LegacyCallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
-        }
+        self.displayNode = NewCallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in
@@ -234,21 +230,6 @@ public final class CallController: ViewController {
         self.controllerNode.presentCallRating = { [weak self] callId, isVideo in
             if let strongSelf = self, !strongSelf.presentedCallRating {
                 strongSelf.presentedCallRating = true
-                
-                Queue.mainQueue().after(0.5, {
-                    let window = strongSelf.window
-                    let controller = callRatingController(sharedContext: strongSelf.sharedContext, account: strongSelf.account, callId: callId, userInitiated: false, isVideo: isVideo, present: { c, a in
-                        if let window = window {
-                            c.presentationArguments = a
-                            window.present(c, on: .root, blockInteraction: false, completion: {})
-                        }
-                    }, push: { [weak self] c in
-                        if let strongSelf = self {
-                            strongSelf.push(c)
-                        }
-                    })
-                    strongSelf.present(controller, in: .window(.root))
-                })
             }
         }
         
