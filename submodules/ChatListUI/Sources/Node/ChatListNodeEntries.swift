@@ -683,14 +683,16 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))
                     index += 1
                 }
-            } else if case let .peerType(type) = mode, !result.isEmpty {
-                switch type {
-                case .group:
-                    result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewGroup, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
-                case .channel:
-                    result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewChannel, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
-                default:
-                    break
+            } else if case let .peerType(types, hasCreate) = mode, !result.isEmpty && hasCreate {
+                for type in types {
+                    switch type {
+                    case .group:
+                        result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewGroup, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
+                    case .channel:
+                        result.append(.AdditionalCategory(index: 0, id: 0, title: state.presentationData.strings.RequestPeer_CreateNewChannel, image: PresentationResourcesItemList.createGroupIcon(state.presentationData.theme), appearance: .action, selected: false, presentationData: state.presentationData))
+                    default:
+                        break
+                    }
                 }
             }
         }

@@ -627,11 +627,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.animateTransitionIn()
                 case "web_app_switch_inline_query":
                     if controller.isInline, let json, let query = json["query"] as? String {
-                        controller.dismiss()
                         if let chatTypes = json["chat_types"] as? [String], !chatTypes.isEmpty {
-                            controller.requestSwitchInline(query, .user(.init(isBot: nil, isPremium: nil)))
+                            var requestPeerTypes: [ReplyMarkupButtonRequestPeerType] = []
+                            for type in chatTypes {
+                                switch type {
+                                case "users":
+                                    requestPeerTypes.append(.user(ReplyMarkupButtonRequestPeerType.User(isBot: false, isPremium: nil)))
+                                case "bots":
+                                    requestPeerTypes.append(.user(ReplyMarkupButtonRequestPeerType.User(isBot: true, isPremium: nil)))
+                                case "groups":
+                                    requestPeerTypes.append(.group(ReplyMarkupButtonRequestPeerType.Group(isCreator: false, hasUsername: nil, isForum: nil, botParticipant: false, userAdminRights: nil, botAdminRights: nil)))
+                                case "channels":
+                                    requestPeerTypes.append(.channel(ReplyMarkupButtonRequestPeerType.Channel(isCreator: false, hasUsername: nil, userAdminRights: nil, botAdminRights: nil)))
+                                default:
+                                    break
+                                }
+                            }
+                            controller.requestSwitchInline(query, requestPeerTypes, { [weak controller] in
+                                controller?.dismiss()
+                            })
                         } else {
-                            controller.requestSwitchInline(query, nil)
+                            controller.dismiss()
+                            controller.requestSwitchInline(query, nil, {})
                         }
                     }
                 case "web_app_data_send":
@@ -1054,7 +1071,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var openUrl: (String) -> Void = { _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
-    public var requestSwitchInline: (String, ReplyMarkupButtonRequestPeerType?) -> Void = { _, _ in }
+    public var requestSwitchInline: (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?, threadId: Int64?) {
         self.context = context
@@ -1349,7 +1366,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, requestSwitchInline: @escaping (String, ReplyMarkupButtonRequestPeerType?) -> Void = { _, _ in }, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, hasTextInput: false, makeEntityInputView: {
         return nil
     })

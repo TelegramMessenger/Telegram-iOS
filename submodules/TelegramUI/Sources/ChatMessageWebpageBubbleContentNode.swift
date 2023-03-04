@@ -318,6 +318,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             title = item.presentationData.strings.Conversation_Theme
                             text = nil
                             actionTitle = item.presentationData.strings.Conversation_ViewTheme
+                        case "telegram_botapp":
+                            title = item.presentationData.strings.Conversation_BotApp
+                            actionTitle = item.presentationData.strings.Conversation_OpenBotApp
                         default:
                             break
                     }

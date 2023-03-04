@@ -3524,17 +3524,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let _ = strongSelf.presentationInterfaceState.recordedMediaPreview {
                             strongSelf.sendMediaRecording(scheduleTime: time)
                         } else {
-                            strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: time, completion: { [weak self] in
+                            strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: time) { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
+                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
                                     })
                                     
                                     if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
                                         strongSelf.openScheduledMessages()
                                     }
                                 }
-                            })
+                            }
                         }
                     }
                 })
@@ -4148,12 +4148,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, isInline: isInline, isSimple: true)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
-                        }, requestSwitchInline: { [weak self] query, chatTypes in
+                        }, requestSwitchInline: { [weak self] query, chatTypes, completion in
                             if let strongSelf = self {
-                                if let _ = chatTypes {
-                                    let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: nil, hasContactSelector: false))
+                                if let chatTypes {
+                                    let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
                                     controller.peerSelected = { [weak self, weak controller] peer, _ in
                                         if let strongSelf = self {
+                                            completion()
                                             controller?.dismiss()
                                             strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)")
                                         }
@@ -4255,9 +4256,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let context = self.context
             let peerId = self.chatLocation.peerId
             var createNewGroupImpl: (() -> Void)?
-            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: peerType, hasContactSelector: false, createNewGroup: {
+            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: [peerType], hasContactSelector: false, createNewGroup: {
                 createNewGroupImpl?()
-            }))
+            }, hasCreation: true))
             
             let presentConfirmation: (String, Bool, @escaping () -> Void) -> Void = { [weak self] peerName, isChannel, completion in
                 guard let strongSelf = self else {
@@ -17980,6 +17981,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var sendWhenOnlineAvailable = false
             if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case .present = presence.status {
                 sendWhenOnlineAvailable = true
+            }
+            if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                sendWhenOnlineAvailable = false
             }
             
             let mode: ChatScheduleTimeControllerMode

@@ -1835,7 +1835,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             switch entity.type {
                             case .Spoiler, .CustomEmoji:
                                 return true
-                            case .Strikethrough, .Italic, .Bold:
+                            case .Strikethrough, .Underline, .Italic, .Bold:
                                 return true
                             default:
                                 return false

@@ -182,7 +182,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                     
                 let entities = messageEntities.filter { entity in
-                    if case .Spoiler = entity.type {
+                    if case .Strikethrough = entity.type {
+                        return true
+                    } else if case .Spoiler = entity.type {
                         return true
                     } else if case .CustomEmoji = entity.type {
                         return true
