@@ -6739,7 +6739,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let isTopReplyThreadMessageShown: Signal<Bool, NoError> = self.chatDisplayNode.historyNode.isTopReplyThreadMessageShown.get()
         |> distinctUntilChanged
         
-        let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = self.topPinnedMessageSignal(latest: false)
+        let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+        if let subject = self.subject {
+            switch subject {
+            case .forwardedMessages, .pinnedMessages, .scheduledMessages:
+                topPinnedMessage = .single(nil)
+            default:
+                topPinnedMessage = self.topPinnedMessageSignal(latest: false)
+            }
+        } else {
+            topPinnedMessage = self.topPinnedMessageSignal(latest: false)
+        }
         
         if let peerId = self.chatLocation.peerId {
             self.themeEmoticonPromise.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peerId)))

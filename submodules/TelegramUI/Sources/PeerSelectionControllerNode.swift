@@ -203,11 +203,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
        
         if hasFilters {
             self.mainContainerNode = ChatListContainerNode(context: context, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
-                //filterBecameEmpty?(filter)
             }, filterEmptyAction: { _ in
-                //filterEmptyAction?(filter)
             }, secondaryEmptyAction: {
-                
             })
             self.chatListNode = nil
         } else {
@@ -498,9 +495,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             return nil
         }, statuses: nil)
         
-        if let mainContainerNode = self.mainContainerNode {
-            self.readyValue.set(mainContainerNode.ready)
-        }
         if let chatListNode = self.chatListNode {
             self.readyValue.set(chatListNode.ready)
         }
@@ -603,6 +597,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.contactListActive {
+            self.contactListNode?.multipleSelection = true
             self.contactListNode?.updateSelectionState({ _ in
                 return ContactListNodeGroupSelectionState()
             })
@@ -893,7 +888,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                         var updated = false
                         var count = 0
-                        strongSelf.chatListNode?.updateState { state in
+                        
+                        let chatListNode: ChatListNode?
+                        if let mainContainerNode = strongSelf.mainContainerNode {
+                            chatListNode = mainContainerNode.currentItemNode
+                        } else {
+                            chatListNode = strongSelf.chatListNode
+                        }
+                        
+                        chatListNode?.updateState { state in
                             if state.editing {
                                 updated = true
                                 var state = state

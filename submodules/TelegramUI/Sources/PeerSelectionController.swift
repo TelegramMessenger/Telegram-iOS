@@ -172,6 +172,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         }
         
         if params.hasFilters {
+            self._ready.set(.never())
+            
             self.tabContainerNode = ChatListFilterTabContainerNode()
             self.navigationBar?.setSecondaryContentNode(self.tabContainerNode, animated: false)
             self.reloadFilters()
@@ -339,7 +341,9 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.displayNodeDidLoad()
         
-        self._ready.set(self.peerSelectionNode.ready)
+        if !self.hasFilters {
+            self._ready.set(self.peerSelectionNode.ready)
+        }
     }
     
     public override func viewDidAppear(_ animated: Bool) {
@@ -490,21 +494,22 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             }
             strongSelf.peerSelectionNode.mainContainerNode?.updateAvailableFilters(availableFilters, limit: filtersLimit)
             
-//            if isPremium == nil && items.isEmpty {
-//                strongSelf.ready.set(strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.ready)
-//            } else if !strongSelf.initializedFilters {
-//                if selectedEntryId != strongSelf.chatListDisplayNode.mainContainerNode.currentItemFilter {
-//                    strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: selectedEntryId, animated: false, completion: { [weak self] in
-//                        if let strongSelf = self {
-//                            strongSelf.ready.set(strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.ready)
-//                        }
-//                    })
-//                } else {
-//                    strongSelf.ready.set(strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.ready)
-//                }
-//                strongSelf.initializedFilters = true
-//            }
-            strongSelf.initializedFilters = true
+            if let mainContainerNode = strongSelf.peerSelectionNode.mainContainerNode {
+                if isPremium == nil && items.isEmpty {
+                    strongSelf.ready.set(mainContainerNode.currentItemNode.ready)
+                } else if !strongSelf.initializedFilters {
+                    if selectedEntryId != mainContainerNode.currentItemFilter {
+                        mainContainerNode.switchToFilter(id: selectedEntryId, animated: false, completion: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.ready.set(mainContainerNode.currentItemNode.ready)
+                            }
+                        })
+                    } else {
+                        strongSelf.ready.set(mainContainerNode.currentItemNode.ready)
+                    }
+                    strongSelf.initializedFilters = true
+                }
+            }
             
             let isEmpty = resolvedItems.count <= 1
             

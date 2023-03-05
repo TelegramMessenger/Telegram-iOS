@@ -928,7 +928,6 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
             let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 3.0), size: CGSize(width: selectedFrame.width, height: 3.0))
             if wasAdded {
                 self.selectedLineNode.frame = lineFrame
-                self.selectedLineNode.alpha = 0.0
             } else {
                 transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
             }
