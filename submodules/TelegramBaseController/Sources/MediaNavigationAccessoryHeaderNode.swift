@@ -213,6 +213,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         }
     }
     
+    private weak var tooltipController: TooltipScreen?
     private let dismissedPromise = ValuePromise<Bool>(false)
     
     public init(context: AccountContext, presentationData: PresentationData) {
@@ -424,6 +425,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             return
         }
         
+        self.tooltipController?.dismiss()
         self.dismissedPromise.set(true)
 
         transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
@@ -434,7 +436,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
         
-        let inset: CGFloat = 40.0 + leftInset
+        let inset: CGFloat = 45.0 + leftInset
         let constrainedSize = CGSize(width: size.width - inset * 2.0, height: size.height)
         let (titleString, subtitleString, rateButtonHidden) = self.currentItemNode.updateLayout(size: constrainedSize, leftInset: leftInset, rightInset: rightInset, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, playbackItem: self.playbackItems?.0, transition: transition)
         self.accessibilityAreaNode.accessibilityLabel = "\(titleString?.string ?? ""). \(subtitleString?.string ?? "")"
@@ -474,7 +476,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 30.0, height: minHeight)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 33.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 27.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
         
         transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
@@ -524,9 +526,11 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let _ = (ApplicationSpecificNotice.incrementAudioRateOptionsTip(accountManager: self.context.sharedContext.accountManager)
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self, let controller = strongSelf.getController?(), value == 2 {
-                controller.present(TooltipScreen(account: strongSelf.context.account, text: strongSelf.strings.Conversation_AudioRateOptionsTooltip, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 0.0, dy: 4.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                let tooltipController = TooltipScreen(account: strongSelf.context.account, text: strongSelf.strings.Conversation_AudioRateOptionsTooltip, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 0.0, dy: 4.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
                     return .dismiss(consume: false)
-                }), in: .window(.root))
+                })
+                controller.present(tooltipController, in: .window(.root))
+                strongSelf.tooltipController = tooltipController
             }
         })
     }

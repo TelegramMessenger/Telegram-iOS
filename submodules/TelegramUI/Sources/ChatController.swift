@@ -1511,13 +1511,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     availableReactions: availableReactions,
                     animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
                     animationRenderer: strongSelf.controllerInteraction!.presentationContext.animationRenderer,
-                    message: EngineMessage(message), reaction: value, readStats: nil, back: nil, openPeer: { peer in
+                    message: EngineMessage(message), reaction: value, readStats: nil, back: nil, openPeer: { peer, hasReaction in
                     dismissController?({
                         guard let strongSelf = self else {
                             return
                         }
                         
-                        strongSelf.openPeer(peer: peer, navigation: .default, fromMessage: MessageReference(message), fromReactionMessageId: message.id)
+                        strongSelf.openPeer(peer: peer, navigation: .default, fromMessage: MessageReference(message), fromReactionMessageId: hasReaction ? message.id : nil)
                     })
                 })))
                 

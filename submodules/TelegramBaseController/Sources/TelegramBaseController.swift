@@ -88,6 +88,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     private var dismissingPanel: ASDisplayNode?
     
+    private weak var audioRateTooltipController: UndoOverlayController?
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var playlistPreloadDisposable: Disposable?
@@ -648,6 +650,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
                     self.mediaAccessoryPanel = nil
                     self.dismissingPanel = mediaAccessoryPanel
+                    self.audioRateTooltipController?.dismissWithCommitAction()
                     mediaAccessoryPanel.animateOut(transition: transition, completion: { [weak self, weak mediaAccessoryPanel] in
                         mediaAccessoryPanel?.removeFromSupernode()
                         if let strongSelf = self, strongSelf.dismissingPanel === mediaAccessoryPanel {
@@ -731,21 +734,20 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             showTooltip = false
                         }
                         if let rate, let text, showTooltip {
-                            strongSelf.present(
-                                UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .audioRate(
-                                        rate: rate,
-                                        text: text
-                                    ),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: hasTooltip,
-                                    action: { action in
-                                        return true
-                                    }
+                            let controller = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .audioRate(
+                                    rate: rate,
+                                    text: text
                                 ),
-                                in: .current
+                                elevatedLayout: false,
+                                animateInAsReplacement: hasTooltip,
+                                action: { action in
+                                    return true
+                                }
                             )
+                            strongSelf.audioRateTooltipController = controller
+                            strongSelf.present(controller, in: .current)
                         }
                     })
                 }
@@ -867,6 +869,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         } else if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
             self.mediaAccessoryPanel = nil
             self.dismissingPanel = mediaAccessoryPanel
+            self.audioRateTooltipController?.dismissWithCommitAction()
             mediaAccessoryPanel.animateOut(transition: transition, completion: { [weak self, weak mediaAccessoryPanel] in
                 mediaAccessoryPanel?.removeFromSupernode()
                 if let strongSelf = self, strongSelf.dismissingPanel === mediaAccessoryPanel {

@@ -157,7 +157,8 @@ private final class ItemNode: ASDisplayNode {
         self.containerNode.addSubnode(self.extractedContainerNode)
         self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
         self.addSubnode(self.containerNode)
-            
+        
+        self.buttonNode.isExclusiveTouch = true
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.containerNode.activated = { [weak self] gesture, _ in
@@ -185,7 +186,7 @@ private final class ItemNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
-        
+
         self.pointerInteraction = PointerInteraction(view: self.containerNode.view, customInteractionView: nil, style: .insetRectangle(-10.0, 4.0))
     }
     

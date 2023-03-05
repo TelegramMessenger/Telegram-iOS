@@ -740,7 +740,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         let reaction: MessageReaction.Reaction?
         private let requestUpdate: (ReactionsTabNode, ContainedViewLayoutTransition) -> Void
         private let requestUpdateApparentHeight: (ReactionsTabNode, ContainedViewLayoutTransition) -> Void
-        private let openPeer: (EnginePeer) -> Void
+        private let openPeer: (EnginePeer, Bool) -> Void
         
         private var hasMore: Bool = false
         
@@ -773,7 +773,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             readStats: MessageReadStats?,
             requestUpdate: @escaping (ReactionsTabNode, ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ReactionsTabNode, ContainedViewLayoutTransition) -> Void,
-            openPeer: @escaping (EnginePeer) -> Void
+            openPeer: @escaping (EnginePeer, Bool) -> Void
         ) {
             self.context = context
             self.displayReadTimestamps = displayReadTimestamps
@@ -888,7 +888,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             let openPeer = self.openPeer
                             let peer = item.peer
                             itemNode = ItemNode(context: self.context, displayReadTimestamps: self.displayReadTimestamps, availableReactions: self.availableReactions, animationCache: self.animationCache, animationRenderer: self.animationRenderer, action: {
-                                openPeer(peer)
+                                openPeer(peer, item.reaction != nil)
                             })
                             self.itemNodes[index] = itemNode
                             self.scrollNode.addSubnode(itemNode)
@@ -1060,7 +1060,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         private var interactiveTransitionState: InteractiveTransitionState?
         
-        private let openPeer: (EnginePeer) -> Void
+        private let openPeer: (EnginePeer, Bool) -> Void
         
         private(set) var apparentHeight: CGFloat = 0.0
         
@@ -1076,7 +1076,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
             back: (() -> Void)?,
-            openPeer: @escaping (EnginePeer) -> Void
+            openPeer: @escaping (EnginePeer, Bool) -> Void
         ) {
             self.context = context
             self.displayReadTimestamps = displayReadTimestamps
@@ -1426,7 +1426,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     let reaction: MessageReaction.Reaction?
     let readStats: MessageReadStats?
     let back: (() -> Void)?
-    let openPeer: (EnginePeer) -> Void
+    let openPeer: (EnginePeer, Bool) -> Void
     
     public init(
         context: AccountContext,
@@ -1438,7 +1438,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         reaction: MessageReaction.Reaction?,
         readStats: MessageReadStats?,
         back: (() -> Void)?,
-        openPeer: @escaping (EnginePeer) -> Void
+        openPeer: @escaping (EnginePeer, Bool) -> Void
     ) {
         self.context = context
         self.displayReadTimestamps = displayReadTimestamps

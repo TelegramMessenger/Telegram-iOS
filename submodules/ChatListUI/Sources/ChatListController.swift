@@ -414,6 +414,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: placeholder, compactPlaceholder: compactPlaceholder, activate: { [weak self] in
+                self?.chatListDisplayNode.mainContainerNode.currentItemNode.cancelTracking()
                 self?.activateSearch(filter: isForum ? .topics : .chats)
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
