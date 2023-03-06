@@ -1184,7 +1184,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 let _ = strongSelf.sendSticker?(file, sourceView, sourceRect)
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
+            return inputNodeInteraction.previewedStickerPackItemFile?.id == item.file.id
         })
         
         self._ready.set(.single(Void()))

@@ -283,6 +283,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     var canSendTextMessages = true
     
     var accessoryItems: [ChatTextInputAccessoryItem] = []
+    
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
         var extendedSearchLayout = false
         loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
@@ -334,6 +335,13 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
+                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
+                
+                if isTextEmpty, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium &&                     !chatPresentationInterfaceState.premiumGiftOptions.isEmpty {
+                    accessoryItems.append(.gift)
+                }
+                
                 var extendedSearchLayout = false
                 loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
                     if case let .contextRequestResult(peer, _) = result, peer != nil {
@@ -351,11 +359,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         }
                     }
                 }
-                
-                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
-                
-                let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
-                
+                   
                 if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages && !hasForward {
                     accessoryItems.append(.scheduledMessages)
                 }
@@ -375,7 +379,6 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         stickersEnabled = false
                     }
                 }
-                
                 
                 if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands && !hasForward {
                     accessoryItems.append(.commands)

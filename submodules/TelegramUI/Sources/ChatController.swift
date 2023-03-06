@@ -6903,6 +6903,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var slowmodeState: ChatSlowmodeState?
                     var activeGroupCallInfo: ChatActiveGroupCallInfo?
                     var inviteRequestsPending: Int32?
+                    var premiumGiftOptions: [CachedPremiumGiftOption] = []
                     if let cachedData = cachedData as? CachedChannelData {
                         pinnedMessageId = cachedData.pinnedMessageId
                         if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
@@ -6922,6 +6923,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         callsPrivate = cachedData.callsPrivate
                         pinnedMessageId = cachedData.pinnedMessageId
                         voiceMessagesAvailable = cachedData.voiceMessagesAvailable
+                        premiumGiftOptions = cachedData.premiumGiftOptions
                     } else if let cachedData = cachedData as? CachedGroupData {
                         pinnedMessageId = cachedData.pinnedMessageId
                         if let activeCall = cachedData.activeCall {
@@ -7065,6 +7067,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             .updatedCustomEmojiAvailable(customEmojiAvailable)
                             .updatedThreadData(threadData)
                             .updatedIsGeneralThreadClosed(isGeneralThreadClosed)
+                            .updatedPremiumGiftOptions(premiumGiftOptions)
                             .updatedTitlePanelContext({ context in
                                 if pinnedMessageId != nil {
                                     if !context.contains(where: {
@@ -7481,7 +7484,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.oldPresentAttachmentMenu(editMediaOptions: options, editMediaReference: originalMediaReference)
                 })
             } else {
-                strongSelf.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil)
+                strongSelf.presentAttachmentMenu(subject: .default)
             }
         }
         self.chatDisplayNode.paste = { [weak self] data in
@@ -9793,7 +9796,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
+                var hasEntityKeyboard = false
+                if case .media = strongSelf.presentationInterfaceState.inputMode {
+                    hasEntityKeyboard = true
+                }
+                
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.supportedOrientations = previousSupportedOrientations
                     }
@@ -10239,6 +10247,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     return true
             }), in: .current)
+        }, openPremiumGift: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.presentAttachmentPremiumGift()
         }, requestLayout: { [weak self] transition in
             if let strongSelf = self, let layout = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout, transition: transition)
@@ -12543,7 +12556,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public func presentAttachmentBot(botId: PeerId, payload: String?, justInstalled: Bool) {
         self.attachmentController?.dismiss(animated: true, completion: nil)
-        self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil, botId: botId, botPayload: payload, botJustInstalled: justInstalled)
+        self.presentAttachmentMenu(subject: .bot(id: botId, payload: payload, justInstalled: justInstalled))
     }
     
     public func presentBotApp(botApp: BotApp, payload: String?) {
@@ -12621,7 +12634,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?, botId: PeerId? = nil, botPayload: String? = nil, botJustInstalled: Bool = false) {
+    private func presentAttachmentPremiumGift() {
+        self.presentAttachmentMenu(subject: .gift)
+    }
+    
+    private enum AttachMenuSubject {
+        case `default`
+        case edit(mediaOptions: MessageMediaEditingOptions, mediaReference: AnyMediaReference)
+        case bot(id: PeerId, payload: String?, justInstalled: Bool)
+        case gift
+    }
+    //editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?, botId: PeerId? = nil, botPayload: String? = nil, botJustInstalled: Bool = false
+    private func presentAttachmentMenu(subject: AttachMenuSubject) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -12715,28 +12739,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             |> map { attachMenuBots in
                 var buttons = availableButtons
                 var allButtons = availableButtons
-                
                 var initialButton: AttachmentButtonType?
-                if botId == nil {
+                switch subject {
+                case .default:
                     initialButton = .gallery
-                }
-                
-                for bot in attachMenuBots.reversed() {
-                    var peerType = peerType
-                    if bot.peer.id == peer.id {
-                        peerType.insert(.sameBot)
-                        peerType.remove(.bot)
-                    }
-                    
-                    let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
-                    if !bot.peerTypes.intersection(peerType).isEmpty {
-                        buttons.insert(button, at: 1)
-                        
-                        if initialButton == nil && bot.peer.id == botId {
-                            initialButton = button
+                case .edit:
+                    break
+                case .gift:
+                    initialButton = .gift
+                case let .bot(botId, _, _):
+                    for bot in attachMenuBots.reversed() {
+                        var peerType = peerType
+                        if bot.peer.id == peer.id {
+                            peerType.insert(.sameBot)
+                            peerType.remove(.bot)
                         }
+                        let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                        if !bot.peerTypes.intersection(peerType).isEmpty {
+                            buttons.insert(button, at: 1)
+                            
+                            if initialButton == nil && bot.peer.id == botId {
+                                initialButton = button
+                            }
+                        }
+                        allButtons.insert(button, at: 1)
                     }
-                    allButtons.insert(button, at: 1)
                 }
                 return (buttons, allButtons, initialButton)
             }
@@ -12749,15 +12776,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         
+        let premiumGiftOptions: [CachedPremiumGiftOption]
+        if let user = peer as? TelegramUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) && !user.isPremium {
+            premiumGiftOptions = self.presentationInterfaceState.premiumGiftOptions
+        } else {
+            premiumGiftOptions = []
+        }
+        
         let _ = combineLatest(queue: Queue.mainQueue(), buttons, dataSettings).start(next: { [weak self] buttonsAndInitialButton, dataSettings in
             guard let strongSelf = self else {
                 return
             }
             
-            let (buttons, allButtons, initialButton) = buttonsAndInitialButton
+            var (buttons, allButtons, initialButton) = buttonsAndInitialButton
+            if !premiumGiftOptions.isEmpty {
+                buttons.insert(.gift, at: 1)
+            }
             
             guard let initialButton = initialButton else {
-                if let botId = botId {
+                if case let .bot(botId, botPayload, botJustInstalled) = subject {
                     if let button = allButtons.first(where: { button in
                         if case let .app(botPeer, _, _) = button, botPeer.id == botId {
                             return true
@@ -12857,7 +12894,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages([message]))
-                        |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                 |> deliverOnMainQueue).start(next: { [weak self] _ in
                             if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                                 strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                             }
@@ -12882,7 +12919,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         selfPeerId = strongSelf.context.account.peerId
                     }
                     let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: selfPeerId))
-                    |> deliverOnMainQueue).start(next: { [weak self] selfPeer in
+                             |> deliverOnMainQueue).start(next: { [weak self] selfPeer in
                         guard let strongSelf = self, let selfPeer = selfPeer else {
                             return
                         }
@@ -12918,7 +12955,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     contactsController.navigationPresentation = .modal
                     completion(contactsController, contactsController.mediaPickerContext)
                     strongSelf.controllerNavigationDisposable.set((contactsController.result
-                    |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                                                   |> deliverOnMainQueue).start(next: { [weak self] peers in
                         if let strongSelf = self, let (peers, _, silent, scheduleTime, text) = peers {
                             var textEnqueueMessage: EnqueueMessage?
                             if let text = text, text.length > 0 {
@@ -12937,24 +12974,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 for peer in peers {
                                     var media: TelegramMediaContact?
                                     switch peer {
-                                        case let .peer(contact, _, _):
-                                            guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
-                                                continue
-                                            }
-                                            let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-                                            
-                                            let phone = contactData.basicData.phoneNumbers[0].value
-                                            media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: contact.id, vCardData: nil)
-                                        case let .deviceContact(_, basicData):
-                                            guard !basicData.phoneNumbers.isEmpty else {
-                                                continue
-                                            }
-                                            let contactData = DeviceContactExtendedData(basicData: basicData, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-                                            
-                                            let phone = contactData.basicData.phoneNumbers[0].value
-                                            media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: nil)
+                                    case let .peer(contact, _, _):
+                                        guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
+                                            continue
+                                        }
+                                        let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
+                                        
+                                        let phone = contactData.basicData.phoneNumbers[0].value
+                                        media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: contact.id, vCardData: nil)
+                                    case let .deviceContact(_, basicData):
+                                        guard !basicData.phoneNumbers.isEmpty else {
+                                            continue
+                                        }
+                                        let contactData = DeviceContactExtendedData(basicData: basicData, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
+                                        
+                                        let phone = contactData.basicData.phoneNumbers[0].value
+                                        media = TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: nil)
                                     }
-
+                                    
                                     if let media = media {
                                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -12974,45 +13011,45 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else if let peer = peers.first {
                                 let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
                                 switch peer {
-                                    case let .peer(contact, _, _):
-                                        guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
-                                            return
-                                        }
-                                        let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-                                        let context = strongSelf.context
-                                        dataSignal = (strongSelf.context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
-                                        |> take(1)
-                                        |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
-                                            var stableId: String?
-                                            let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
-                                            outer: for (id, data) in basicData {
-                                                for phoneNumber in data.phoneNumbers {
-                                                    if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
-                                                        stableId = id
-                                                        break outer
-                                                    }
-                                                }
-                                            }
-                                            
-                                            if let stableId = stableId {
-                                                return (context.sharedContext.contactDataManager?.extendedData(stableId: stableId) ?? .single(nil))
-                                                |> take(1)
-                                                |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
-                                                    return (contact, extendedData)
-                                                }
-                                            } else {
-                                                return .single((contact, contactData))
+                                case let .peer(contact, _, _):
+                                    guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
+                                        return
+                                    }
+                                    let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName ?? "", lastName: contact.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
+                                    let context = strongSelf.context
+                                    dataSignal = (strongSelf.context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
+                                    |> take(1)
+                                    |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
+                                        var stableId: String?
+                                        let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
+                                    outer: for (id, data) in basicData {
+                                        for phoneNumber in data.phoneNumbers {
+                                            if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
+                                                stableId = id
+                                                break outer
                                             }
                                         }
-                                    case let .deviceContact(id, _):
-                                        dataSignal = (strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
-                                        |> take(1)
-                                        |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
-                                            return (nil, extendedData)
+                                    }
+                                        
+                                        if let stableId = stableId {
+                                            return (context.sharedContext.contactDataManager?.extendedData(stableId: stableId) ?? .single(nil))
+                                            |> take(1)
+                                            |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
+                                                return (contact, extendedData)
+                                            }
+                                        } else {
+                                            return .single((contact, contactData))
                                         }
+                                    }
+                                case let .deviceContact(id, _):
+                                    dataSignal = (strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
+                                    |> take(1)
+                                    |> map { extendedData -> (Peer?,  DeviceContactExtendedData?) in
+                                        return (nil, extendedData)
+                                    }
                                 }
                                 strongSelf.controllerNavigationDisposable.set((dataSignal
-                                |> deliverOnMainQueue).start(next: { peerAndContactData in
+                                                                               |> deliverOnMainQueue).start(next: { peerAndContactData in
                                     if let strongSelf = self, let contactData = peerAndContactData.1, contactData.basicData.phoneNumbers.count != 0 {
                                         if contactData.isPrimitive {
                                             let phone = contactData.basicData.phoneNumbers[0].value
@@ -13072,8 +13109,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let controller = strongSelf.configurePollCreation()
                     completion(controller, controller?.mediaPickerContext)
                     strongSelf.controllerNavigationDisposable.set(nil)
+                case .gift:
+                    let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
+                    if !premiumGiftOptions.isEmpty {
+                        let controller = PremiumGiftScreen(context: context, peerId: peer.id, options: premiumGiftOptions, source: .attachMenu, pushController: { [weak self] c in
+                            if let strongSelf = self {
+                                strongSelf.push(c)
+                            }
+                        }, completion: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.hintPlayNextOutgoingGift()
+                                strongSelf.attachmentController?.dismiss(animated: true)
+                            }
+                        })
+                        completion(controller, controller.mediaPickerContext)
+                        strongSelf.controllerNavigationDisposable.set(nil)
+                    }
                 case let .app(bot, botName, _):
-                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: botPayload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, isInline: false, isSimple: false)
+                    var payload: String?
+                    if case let .bot(_, botPayload, _) = subject {
+                        payload = botPayload
+                    }
+                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, isInline: false, isSimple: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId, threadId: strongSelf.chatLocation.threadId)
                     controller.openUrl = { [weak self] url in
@@ -16399,7 +16456,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedBotStartPayload(botStart.payload)
                         })
                     case .withAttachBot:
-                        self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil)
+                        self.presentAttachmentMenu(subject: .default)
                     default:
                         break
                 }

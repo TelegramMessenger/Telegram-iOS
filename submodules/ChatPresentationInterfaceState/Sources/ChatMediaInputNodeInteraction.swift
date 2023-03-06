@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import StickerPeekUI
+import TelegramCore
 import TelegramUIPreferences
 
 public struct ChatInterfaceStickerSettings: Equatable {
@@ -37,7 +37,7 @@ public final class ChatMediaInputNodeInteraction {
     public var highlightedStickerItemCollectionId: ItemCollectionId?
     public var highlightedItemCollectionId: ItemCollectionId?
     public var highlightedGifMode: ChatMediaInputGifMode = .recent
-    public var previewedStickerPackItem: StickerPreviewPeekItem?
+    public var previewedStickerPackItemFile: TelegramMediaFile?
     public var appearanceTransition: CGFloat = 1.0
     public var displayStickerPlaceholder = true
     public var displayStickerPackManageControls = true

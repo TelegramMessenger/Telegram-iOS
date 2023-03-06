@@ -20,6 +20,7 @@ public enum AttachmentButtonType: Equatable {
     case contact
     case poll
     case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case gift
     case standalone
     
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
@@ -56,6 +57,12 @@ public enum AttachmentButtonType: Equatable {
                 }
             case let .app(lhsPeer, lhsTitle, lhsIcons):
                 if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                    return true
+                } else {
+                    return false
+                }
+            case .gift:
+                if case .gift = rhs {
                     return true
                 } else {
                     return false
@@ -427,6 +434,16 @@ public class AttachmentController: ViewController {
                 if case let .app(bot, _, _) = controller.initialButton {
                     if let index = controller.buttons.firstIndex(where: {
                         if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        self.panel.updateSelectedIndex(index)
+                    }
+                } else if controller.initialButton != .standalone {
+                    if let index = controller.buttons.firstIndex(where: {
+                        if $0 == controller.initialButton {
                             return true
                         } else {
                             return false

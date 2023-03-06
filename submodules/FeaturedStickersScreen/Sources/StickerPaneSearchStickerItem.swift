@@ -231,7 +231,7 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
     public func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
-            isPreviewing = interaction.previewedStickerPackItem == .found(item)
+            isPreviewing = interaction.previewedStickerPackItemFile?.id == item.file.id
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

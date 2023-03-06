@@ -456,7 +456,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
+            
+            var hasEntityKeyboard = false
+            if case .media = strongSelf.presentationInterfaceState.inputMode {
+                hasEntityKeyboard = true
+            }
+            
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
             }, sendMessage: { [weak textInputPanelNode] silently in
                 textInputPanelNode?.sendMessage(silently ? .silent : .generic)
             }, schedule: { [weak textInputPanelNode] in
@@ -490,6 +496,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, changeTranslationLanguage: { _ in
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
+        }, openPremiumGift: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil

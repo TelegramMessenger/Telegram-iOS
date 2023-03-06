@@ -9035,3 +9035,9 @@ Sorry for the inconvenience.";
 
 "Conversation.BotApp" = "Bot Application";
 "Conversation.OpenBotApp" = "OPEN APP";
+
+"Attachment.Gift" = "Gift";
+
+"Premium.Gift.TitleShort" = "Telegram Premium";
+
+"VoiceOver.GiftPremium" = "Gift Telegram Premium";

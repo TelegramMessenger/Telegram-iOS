@@ -19,11 +19,27 @@ import InAppPurchaseManager
 import ConfettiEffect
 import TextFormat
 import UniversalMediaPlayer
+import AttachmentUI
+
+public enum PremiumGiftSource: Equatable {
+    case profile
+    case attachMenu
+    
+    var identifier: String? {
+        switch self {
+        case .profile:
+            return "profile"
+        case .attachMenu:
+            return "attach"
+        }
+    }
+}
 
 private final class PremiumGiftScreenContentComponent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
+    let source: PremiumGiftSource
     let peer: EnginePeer?
     let products: [PremiumGiftProduct]?
     let selectedProductId: String?
@@ -32,8 +48,9 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     let selectProduct: (String) -> Void
     let buy: () -> Void
     
-    init(context: AccountContext, peer: EnginePeer?, products: [PremiumGiftProduct]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumGiftSource, peer: EnginePeer?, products: [PremiumGiftProduct]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
         self.context = context
+        self.source = source
         self.peer = peer
         self.products = products
         self.selectedProductId = selectedProductId
@@ -44,6 +61,9 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     
     static func ==(lhs: PremiumGiftScreenContentComponent, rhs: PremiumGiftScreenContentComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.source != rhs.source {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -71,7 +91,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         
         var price: String?
         
-        init(context: AccountContext) {
+        init(context: AccountContext, source: PremiumGiftSource) {
             self.context = context
             
             super.init()
@@ -86,25 +106,25 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                     strongSelf.promoConfiguration = promoConfiguration
                     strongSelf.updated(transition: .immediate)
                     
-//                    if let identifier = source.identifier {
-//                        var jsonString: String = "{"
-//                        jsonString += "\"source\": \"\(identifier)\","
-//
-//                        jsonString += "\"data\": {\"premium_promo_order\":["
-//                        var isFirst = true
-//                        for perk in strongSelf.configuration.perks {
-//                            if !isFirst {
-//                                jsonString += ","
-//                            }
-//                            isFirst = false
-//                            jsonString += "\"\(perk.identifier)\""
-//                        }
-//                        jsonString += "]}}"
-//
-//                        if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
-//                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
-//                        }
-//                    }
+                    if let identifier = source.identifier {
+                        var jsonString: String = "{"
+                        jsonString += "\"source\": \"\(identifier)\","
+
+                        jsonString += "\"data\": {\"premium_promo_order\":["
+                        var isFirst = true
+                        for perk in strongSelf.configuration.perks {
+                            if !isFirst {
+                                jsonString += ","
+                            }
+                            isFirst = false
+                            jsonString += "\"\(perk.identifier)\""
+                        }
+                        jsonString += "]}}"
+
+                        if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
+                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                        }
+                    }
                     
                     for (_, video) in promoConfiguration.videos {
                         strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
@@ -142,7 +162,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context)
+        return State(context: self.context, source: self.source)
     }
         
     static var body: Body {
@@ -410,21 +430,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             controller?.dismiss(animated: true, completion: nil)
                         }
                         
-//                        let controller = PremiumDemoScreen(
-//                            context: accountContext,
-//                            subject: demoSubject,
-//                            source: .gift(state?.price),
-//                            order: state?.configuration.perks,
-//                            action: {
-//                                buy()
-//                            }
-//                        )
-//                        controller.disposed = {
-////                            updateIsFocused(false)
-//                        }
-//                        present(controller)
-////                        updateIsFocused(true)
-                        
                         addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
                     }
                 ))
@@ -485,16 +490,36 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     let context: AccountContext
     let peerId: PeerId
     let options: [CachedPremiumGiftOption]
+    let source: PremiumGiftSource
+    let buttonStatePromise: Promise<AttachmentMainButtonState?>
+    let buttonAction: ActionSlot<Void>
     let updateInProgress: (Bool) -> Void
+    let updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: (Int32) -> Void
     
-    init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption], updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping (Int32) -> Void) {
+    init(
+        context: AccountContext,
+        peerId: PeerId,
+        options: [CachedPremiumGiftOption],
+        source: PremiumGiftSource,
+        buttonStatePromise: Promise<AttachmentMainButtonState?>,
+        buttonAction: ActionSlot<Void>,
+        updateInProgress: @escaping (Bool) -> Void,
+        updateTabBarAlpha: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void,
+        present: @escaping (ViewController) -> Void,
+        push: @escaping (ViewController) -> Void,
+        completion: @escaping (Int32) -> Void)
+    {
         self.context = context
         self.peerId = peerId
         self.options = options
+        self.source = source
+        self.buttonStatePromise = buttonStatePromise
+        self.buttonAction = buttonAction
         self.updateInProgress = updateInProgress
+        self.updateTabBarAlpha = updateTabBarAlpha
         self.present = present
         self.push = push
         self.completion = completion
@@ -510,6 +535,9 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         if lhs.options != rhs.options {
             return false
         }
+        if lhs.source != rhs.source {
+            return false
+        }
         return true
     }
     
@@ -517,6 +545,9 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         private let context: AccountContext
         private let peerId: PeerId
         private let options: [CachedPremiumGiftOption]
+        private let source: PremiumGiftSource
+        private let buttonStatePromise: Promise<AttachmentMainButtonState?>
+        private let buttonAction: ActionSlot<Void>
         private let updateInProgress: (Bool) -> Void
         private let present: (ViewController) -> Void
         private let completion: (Int32) -> Void
@@ -526,7 +557,11 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         
         var hasIdleAnimations = true
         
-        var inProgress = false
+        var inProgress = false {
+            didSet {
+                self.updateButton()
+            }
+        }
         
         var peer: EnginePeer?
         var products: [PremiumGiftProduct]?
@@ -536,10 +571,23 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         private var paymentDisposable = MetaDisposable()
         private var activationDisposable = MetaDisposable()
         
-        init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption], updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping (Int32) -> Void) {
+        init(
+            context: AccountContext,
+            peerId: PeerId,
+            options: [CachedPremiumGiftOption],
+            source: PremiumGiftSource,
+            buttonStatePromise: Promise<AttachmentMainButtonState?>,
+            buttonAction: ActionSlot<Void>,
+            updateInProgress: @escaping (Bool) -> Void,
+            present: @escaping (ViewController) -> Void,
+            completion: @escaping (Int32) -> Void)
+        {
             self.context = context
             self.peerId = peerId
             self.options = options
+            self.source = source
+            self.buttonAction = buttonAction
+            self.buttonStatePromise = buttonStatePromise
             self.updateInProgress = updateInProgress
             self.present = present
             self.completion = completion
@@ -567,12 +615,16 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                     }
 
                     strongSelf.products = gifts
-                    if strongSelf.selectedProductId == nil {
+                    if strongSelf.selectedProductId == nil && strongSelf.source != .attachMenu {
                         strongSelf.selectedProductId = strongSelf.products?.first?.id
                     }
                     strongSelf.peer = peer
                     strongSelf.updated(transition: .immediate)
                 }
+            })
+            
+            self.buttonAction.connect({ [weak self] in
+                self?.buy()
             })
         }
         
@@ -584,7 +636,25 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         
         func selectProduct(id: String) {
             self.selectedProductId = id
+            self.updateButton()
+            
             self.updated(transition: .immediate)
+        }
+        
+        private func updateButton() {
+            guard self.source == .attachMenu else {
+                return
+            }
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let price: String?
+            if let products = self.products, let selectedProductId = self.selectedProductId, let product = products.first(where: { $0.id == selectedProductId }) {
+                price = product.price
+            } else {
+                price = nil
+            }
+            let buttonText = presentationData.strings.Premium_Gift_GiftSubscription(price ?? "—").string
+            self.buttonStatePromise.set(.single(AttachmentMainButtonState(text: buttonText, background: .premium, textColor: .white, isVisible: true, progress: self.inProgress ? .center : .none, isEnabled: true)))
         }
         
         func buy() {
@@ -667,7 +737,17 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, peerId: self.peerId, options: self.options, updateInProgress: self.updateInProgress, present: self.present, completion: self.completion)
+        return State(
+            context: self.context,
+            peerId: self.peerId,
+            options: self.options,
+            source: self.source,
+            buttonStatePromise: self.buttonStatePromise,
+            buttonAction: self.buttonAction,
+            updateInProgress: self.updateInProgress,
+            present: self.present,
+            completion: self.completion
+        )
     }
     
     static var body: Body {
@@ -677,6 +757,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
+        let secondaryTitle = Child(MultilineTextComponent.self)
         let bottomPanel = Child(BlurredBackgroundComponent.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
@@ -719,9 +800,20 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             
+            let secondaryTitle = secondaryTitle.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: environment.strings.Premium_Gift_TitleShort, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    horizontalAlignment: .center,
+                    truncationType: .end,
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
             let bottomPanelPadding: CGFloat = 12.0
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
-            let bottomPanelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset
+            let bottomPanelHeight: CGFloat = context.component.source == .attachMenu ? environment.safeInsets.bottom : bottomPanelPadding + 50.0 + bottomInset
            
             let topInset: CGFloat = environment.navigationHeight - 56.0
             
@@ -733,6 +825,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(PremiumGiftScreenContentComponent(
                         context: context.component.context,
+                        source: context.component.source,
                         peer: state.peer,
                         products: state.products,
                         selectedProductId: state.selectedProductId,
@@ -780,7 +873,8 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 titleOffset = topContentOffset
                 let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
                 titleScale = 1.0 - fraction * 0.36
-                titleAlpha = 1.0
+                
+                titleAlpha = 1.0 - min(1.0, fraction * 1.1)
             } else {
                 topPanelAlpha = 0.0
                 titleScale = 1.0
@@ -818,6 +912,12 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 .scale(titleScale)
                 .opacity(titleAlpha)
             )
+            
+            context.add(secondaryTitle
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
+                .scale(titleScale)
+                .opacity(max(0.0, 1.0 - titleAlpha * 1.8))
+            )
                                 
             let price: String?
             if let products = state.products, let selectedProductId = state.selectedProductId, let product = products.first(where: { $0.id == selectedProductId }) {
@@ -826,47 +926,6 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 price = nil
             }
             
-            let sideInset: CGFloat = 16.0
-            let button = button.update(
-                component: SolidRoundedButtonComponent(
-                    title: environment.strings.Premium_Gift_GiftSubscription(price ?? "—").string,
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: UIColor(rgb: 0x8878ff),
-                        backgroundColors: [
-                            UIColor(rgb: 0x0077ff),
-                            UIColor(rgb: 0x6b93ff),
-                            UIColor(rgb: 0x8878ff),
-                            UIColor(rgb: 0xe46ace)
-                        ],
-                        foregroundColor: .white
-                    ),
-                    height: 50.0,
-                    cornerRadius: 11.0,
-                    gloss: true,
-                    isLoading: state.inProgress,
-                    action: {
-                        state.buy()
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 50.0),
-                transition: context.transition)
-                           
-            let bottomPanel = bottomPanel.update(
-                component: BlurredBackgroundComponent(
-                    color: environment.theme.rootController.tabBar.backgroundColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: bottomPanelPadding + button.size.height + bottomInset),
-                transition: context.transition
-            )
-            
-            let bottomSeparator = bottomSeparator.update(
-                component: Rectangle(
-                    color: environment.theme.rootController.tabBar.separatorColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
-                transition: context.transition
-            )
-            
             let bottomPanelAlpha: CGFloat
             if let bottomContentOffset = state.bottomContentOffset {
                 bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
@@ -874,24 +933,69 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 bottomPanelAlpha = 1.0
             }
             
-            context.add(bottomPanel
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
-                .opacity(bottomPanelAlpha)
-            )
-            context.add(bottomSeparator
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
-                .opacity(bottomPanelAlpha)
-            )
-            context.add(button
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height + bottomPanelPadding + button.size.height / 2.0))
-            )
+            if context.component.source == .attachMenu {
+                context.component.updateTabBarAlpha(bottomPanelAlpha, .immediate)
+            } else {
+                let sideInset: CGFloat = 16.0
+                let button = button.update(
+                    component: SolidRoundedButtonComponent(
+                        title: environment.strings.Premium_Gift_GiftSubscription(price ?? "—").string,
+                        theme: SolidRoundedButtonComponent.Theme(
+                            backgroundColor: UIColor(rgb: 0x8878ff),
+                            backgroundColors: [
+                                UIColor(rgb: 0x0077ff),
+                                UIColor(rgb: 0x6b93ff),
+                                UIColor(rgb: 0x8878ff),
+                                UIColor(rgb: 0xe46ace)
+                            ],
+                            foregroundColor: .white
+                        ),
+                        height: 50.0,
+                        cornerRadius: 11.0,
+                        gloss: true,
+                        isLoading: state.inProgress,
+                        action: {
+                            state.buy()
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 50.0),
+                    transition: context.transition)
+                             
+                let bottomPanel = bottomPanel.update(
+                    component: BlurredBackgroundComponent(
+                        color: environment.theme.rootController.tabBar.backgroundColor
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width, height: bottomPanelPadding + button.size.height + bottomInset),
+                    transition: context.transition
+                )
+                
+                let bottomSeparator = bottomSeparator.update(
+                    component: Rectangle(
+                        color: environment.theme.rootController.tabBar.separatorColor
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
+                    transition: context.transition
+                )
+            
+                context.add(bottomPanel
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
+                    .opacity(bottomPanelAlpha)
+                )
+                context.add(bottomSeparator
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
+                    .opacity(bottomPanelAlpha)
+                )
+                context.add(button
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height + bottomPanelPadding + button.size.height / 2.0))
+                )
+            }
             
             return context.availableSize
         }
     }
 }
 
-public final class PremiumGiftScreen: ViewControllerComponentContainer {
+public final class PremiumGiftScreen: ViewControllerComponentContainer, AttachmentContainable {
     fileprivate let context: AccountContext
     
     private var didSetReady = false
@@ -904,22 +1008,32 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
-    public init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption]) {
+    fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
+    private let mainButtonActionSlot = ActionSlot<Void>()
+    
+    public init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption], source: PremiumGiftSource, pushController: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
+        var presentImpl: ((ViewController) -> Void)?
         var pushImpl: ((ViewController) -> Void)?
-//        var presentImpl: ((ViewController) -> Void)?
         var completionImpl: ((Int32) -> Void)?
+        var updateTabBarAlphaImpl: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
         super.init(context: context, component: PremiumGiftScreenComponent(
             context: context,
             peerId: peerId,
             options: options,
+            source: source,
+            buttonStatePromise: self.mainButtonStatePromise,
+            buttonAction: self.mainButtonActionSlot,
             updateInProgress: { inProgress in
                 updateInProgressImpl?(inProgress)
             },
+            updateTabBarAlpha: { alpha, transition in
+                updateTabBarAlphaImpl?(alpha, transition)
+            },
             present: { c in
-                pushImpl?(c)
+                presentImpl?(c)
             },
             push: { c in
                 pushImpl?(c)
@@ -943,29 +1057,20 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
             }
         }
                 
-        pushImpl = { [weak self] c in
-            self?.push(c)
+        presentImpl = { [weak self] c in
+            self?.present(c, in: .window(.root))
         }
         
-        completionImpl = { [weak self] duration in
-            if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                var controllers = navigationController.viewControllers
-                controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
-                var foundController = false
-                for controller in controllers.reversed() {
-                    if let chatController = controller as? ChatController, case .peer(id: peerId) = chatController.chatLocation {
-                        chatController.hintPlayNextOutgoingGift()
-                        foundController = true
-                        break
-                    }
-                }
-                if !foundController {
-                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
-                    chatController.hintPlayNextOutgoingGift()
-                    controllers.append(chatController)
-                }
-                navigationController.setViewControllers(controllers, animated: true)
-            }
+        pushImpl = { c in
+            pushController(c)
+        }
+        
+        completionImpl = { _ in
+            completion()
+        }
+        
+        updateTabBarAlphaImpl = { [weak self] alpha, transition in
+            self?.updateTabBarAlpha(alpha, transition)
         }
     }
     
@@ -988,5 +1093,57 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
                 self._ready.set(.single(true))
             }
         }
+    }
+    
+    @objc fileprivate func mainButtonPressed() {
+        self.mainButtonActionSlot.invoke(Void())
+    }
+    
+    public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        return PremiumGiftContext(controller: self)
+    }
+}
+
+private final class PremiumGiftContext: AttachmentMediaPickerContext {
+    private weak var controller: PremiumGiftScreen?
+    
+    var selectionCount: Signal<Int, NoError> {
+        return .single(0)
+    }
+    
+    var caption: Signal<NSAttributedString?, NoError> {
+        return .single(nil)
+    }
+    
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
+    }
+    
+    init(controller: PremiumGiftScreen) {
+        self.controller = controller
+    }
+            
+    func setCaption(_ caption: NSAttributedString) {
+    }
+    
+    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    }
+    
+    func schedule() {
+    }
+    
+    func mainButtonAction() {
+        self.controller?.mainButtonPressed()
     }
 }
