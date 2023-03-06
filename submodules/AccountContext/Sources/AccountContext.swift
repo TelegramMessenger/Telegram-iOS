@@ -826,6 +826,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
+    func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, action: @escaping () -> Void) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
         
@@ -883,6 +884,14 @@ public enum PremiumDemoSubject {
     case animatedEmoji
     case emojiStatus
     case translation
+}
+
+public enum PremiumLimitSubject {
+    case folders
+    case chatsPerFolder
+    case pins
+    case files
+    case accounts
 }
 
 public protocol ComposeController: ViewController {

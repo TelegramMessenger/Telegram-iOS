@@ -175,7 +175,6 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             self._ready.set(.never())
             
             self.tabContainerNode = ChatListFilterTabContainerNode()
-            self.navigationBar?.setSecondaryContentNode(self.tabContainerNode, animated: false)
             self.reloadFilters()
             
             self.peerSelectionNode.mainContainerNode?.currentItemFilterUpdated = { [weak self] filter, fraction, transition, force in
@@ -194,12 +193,24 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 strongSelf.tabContainerNode?.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: tabContainerData.0, selectedFilter: filter, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: tabContainerData.2, transitionFraction: fraction, presentationData: strongSelf.presentationData, transition: transition)
             }
             
-            self.tabContainerNode?.tabSelected = { [weak self] id, _ in
+            self.tabContainerNode?.tabSelected = { [weak self] id, isDisabled in
                 guard let strongSelf = self else {
                     return
                 }
-                
-                strongSelf.selectTab(id: id)
+                if isDisabled {
+                    let context = strongSelf.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.tabContainerNode?.filtersCount ?? 0, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    strongSelf.push(controller)
+                } else {
+                    strongSelf.selectTab(id: id)
+                }
             }
         }
     }

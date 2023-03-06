@@ -501,7 +501,7 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
         }
     }
     
-    var filtersCount: Int32 {
+    public var filtersCount: Int32 {
         if let (_, _, filters, _, _, _, _, _, _, _) = self.currentParams {
             let filters = filters.filter { filter in
                 if case .all = filter {

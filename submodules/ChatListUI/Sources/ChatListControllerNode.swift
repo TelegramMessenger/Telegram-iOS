@@ -696,7 +696,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
-    var displayFilterLimit: (() -> Void)?
+    public var displayFilterLimit: (() -> Void)?
     
     public init(context: AccountContext, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList, previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
@@ -814,6 +814,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 let translation = recognizer.translation(in: self.view)
                 var transitionFraction = translation.x / layout.size.width
                 
+                var transition: ContainedViewLayoutTransition = .immediate
+                
                 func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
                     let bandedOffset = offset - bandingStart
                     let range: CGFloat = 600.0
@@ -832,9 +834,11 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     
                     if let filtersLimit = self.filtersLimit, selectedIndex >= filtersLimit - 1 {
                         transitionFraction = 0.0
+                        self.transitionFractionOffset = 0.0
                         recognizer.isEnabled = false
                         recognizer.isEnabled = true
                         
+                        transition = .animated(duration: 0.45, curve: .spring)
                         self.displayFilterLimit?()
                     }
                 }
@@ -848,7 +852,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     }
                 }
                 self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
-                self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, .immediate, false)
+                self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
             }
         case .cancelled, .ended:
             if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout, let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {

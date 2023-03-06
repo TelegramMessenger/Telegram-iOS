@@ -285,6 +285,20 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if let mainContainerNode = self.mainContainerNode {
+            mainContainerNode.displayFilterLimit = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.controller?.tabContainerNode?.filtersCount ?? 0, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                strongSelf.controller?.push(controller)
+            }
             self.addSubnode(mainContainerNode)
         }
         if let chatListNode = self.chatListNode {
