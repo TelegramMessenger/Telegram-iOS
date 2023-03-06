@@ -1648,7 +1648,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadingNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
         
         if let loadingPlaceholderNode = self.loadingPlaceholderNode {
-            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
+            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, metrics: layout.metrics, transition: transition)
             loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }
         
