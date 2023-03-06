@@ -122,7 +122,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         jsonString += "]}}"
 
                         if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
-                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium_gift.promo_screen_show", data: json)
                         }
                     }
                     
@@ -430,7 +430,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             controller?.dismiss(animated: true, completion: nil)
                         }
                         
-                        addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
+                        addAppLogEvent(postbox: accountContext.account.postbox, type: "premium_gift.promo_screen_tap", data: ["item": perk.identifier])
                     }
                 ))
                 i += 1
@@ -668,7 +668,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             let (currency, amount) = product.storeProduct.priceCurrencyAndAmount
             let duration = product.months
                         
-//            addAppLogEvent(postbox: self.context.account.postbox, type: "premium.promo_screen_accept")
+            addAppLogEvent(postbox: self.context.account.postbox, type: "premium_gift.promo_screen_accept")
 
             self.inProgress = true
             self.updateInProgress(true)
@@ -714,7 +714,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                                 }
                                 
                                 if let errorText = errorText {
-//                                    addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                    addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium_gift.promo_screen_fail")
                                     
                                     let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                                     strongSelf.present(alertController)

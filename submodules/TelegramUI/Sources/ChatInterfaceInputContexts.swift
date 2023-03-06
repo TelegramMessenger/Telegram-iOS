@@ -338,7 +338,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
                 let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
                 
-                if isTextEmpty, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium &&                     !chatPresentationInterfaceState.premiumGiftOptions.isEmpty {
+                if case .scheduledMessages = chatPresentationInterfaceState.subject {
+                } else if isTextEmpty, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium &&                     !chatPresentationInterfaceState.premiumGiftOptions.isEmpty {
                     accessoryItems.append(.gift)
                 }
                 
@@ -366,7 +367,6 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     
                 var stickersEnabled = true
                 var stickersAreEmoji = !isTextEmpty
-                
                 if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                     if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
                         accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
