@@ -889,7 +889,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                     isVisible: starIsVisible,
                     hasIdleAnimations: state.hasIdleAnimations
                 ),
-                availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )
         
