@@ -433,7 +433,9 @@ public struct NetworkInitializationArguments {
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
     public let deviceModelName:String?
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName:String?) {
+    public let useBetaFeatures: Bool
+    
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory
@@ -444,6 +446,7 @@ public struct NetworkInitializationArguments {
         self.autolockDeadine = autolockDeadine
         self.encryptionProvider = encryptionProvider
         self.deviceModelName = deviceModelName
+        self.useBetaFeatures = useBetaFeatures
     }
 }
 #if os(iOS)
@@ -494,10 +497,21 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
             
-            if let networkSettings = networkSettings, networkSettings.useNetworkFramework {
-                if #available(iOS 12.0, *) {
-                    context.makeTcpConnectionInterface = { delegate, delegateQueue in
-                        return NetworkFrameworkTcpConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
+            if let networkSettings = networkSettings {
+                let useNetworkFramework: Bool
+                if let customValue = networkSettings.useNetworkFramework {
+                    useNetworkFramework = customValue
+                } else if arguments.useBetaFeatures {
+                    useNetworkFramework = true
+                } else {
+                    useNetworkFramework = false
+                }
+                
+                if useNetworkFramework {
+                    if #available(iOS 12.0, *) {
+                        context.makeTcpConnectionInterface = { delegate, delegateQueue in
+                            return NetworkFrameworkTcpConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
+                        }
                     }
                 }
             }
@@ -589,7 +603,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers)
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures)
             appDataUpdatedImpl = { [weak network] data in
                 guard let data = data else {
                     return
@@ -720,6 +734,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     private let useRequestTimeoutTimers: Bool
+    public let useBetaFeatures: Bool
     
     private let appDataDisposable: Disposable
     
@@ -763,7 +778,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool) {
         self.encryptionProvider = encryptionProvider
         
         self.queue = queue
@@ -777,6 +792,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.appDataDisposable = appDataDisposable
         self.basePath = basePath
         self.useRequestTimeoutTimers = useRequestTimeoutTimers
+        self.useBetaFeatures = useBetaFeatures
         
         super.init()
         
