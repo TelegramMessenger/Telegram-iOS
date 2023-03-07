@@ -1531,7 +1531,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
                 
         self.containerNode = ASDisplayNode()
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         
         self.codeBackgroundNode = ASDisplayNode()
         self.codeBackgroundNode.backgroundColor = .white
@@ -2022,7 +2022,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         
         self.containerNode = ASDisplayNode()
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundImageNode = ASImageNode()

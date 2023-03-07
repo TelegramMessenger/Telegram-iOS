@@ -572,7 +572,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         default:
             break
         }
-        self.chatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: useSharedAnimationPhase, useExperimentalImplementation: self.context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.chatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: useSharedAnimationPhase)
         self.wallpaperReady.set(self.chatBackgroundNode.isReady)
         
         var locationBroadcastPanelSource: LocationBroadcastPanelSource

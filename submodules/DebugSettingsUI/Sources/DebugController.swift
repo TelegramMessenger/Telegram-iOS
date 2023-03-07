@@ -90,7 +90,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case experimentalCompatibility(Bool)
     case enableDebugDataDisplay(Bool)
     case acceleratedStickers(Bool)
-    case experimentalBackground(Bool)
     case inlineForums(Bool)
     case localTranscription(Bool)
     case enableReactionOverrides(Bool)
@@ -117,7 +116,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetTranslationStates, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetTranslationStates, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -202,8 +201,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 34
         case .acceleratedStickers:
             return 35
-        case .experimentalBackground:
-            return 36
         case .inlineForums:
             return 37
         case .localTranscription:
@@ -1181,16 +1178,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .experimentalBackground(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Background Experiment", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.experimentalBackground = value
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
-            })
         case let .inlineForums(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Inline Forums", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1371,7 +1358,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
         entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
-        entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
         entries.append(.inlineForums(experimentalSettings.inlineForums))
         entries.append(.localTranscription(experimentalSettings.localTranscription))
         if case .internal = sharedContext.applicationBindings.appBuildType {
