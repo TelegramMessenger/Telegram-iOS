@@ -2880,7 +2880,12 @@ final class StorageUsageScreenComponent: Component {
                 let totalSize = aggregatedData.selectedSize
                 
                 let _ = (component.context.engine.resources.clearStorage(peerId: component.peer?.id, categories: mappedCategories, includeMessages: aggregatedData.clearIncludeMessages, excludeMessages: aggregatedData.clearExcludeMessages)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
+                |> deliverOnMainQueue).start(next: { [weak self] progress in
+                    guard let self else {
+                        return
+                    }
+                    self.updateClearProgress(progress: progress)
+                }, completed: { [weak self] in
                     guard let self, let _ = self.component else {
                         return
                     }
@@ -2921,39 +2926,45 @@ final class StorageUsageScreenComponent: Component {
                     self.isClearing = true
                     self.state?.updated(transition: .immediate)
                     
+                    var totalSize: Int64 = 0
+                    
+                    let contextStats = aggregatedData.contextStats
+                    
+                    for category in aggregatedData.selectedCategories {
+                        let mappedCategory: StorageUsageStats.CategoryKey
+                        switch category {
+                        case .photos:
+                            mappedCategory = .photos
+                        case .videos:
+                            mappedCategory = .videos
+                        case .files:
+                            mappedCategory = .files
+                        case .music:
+                            mappedCategory = .music
+                        case .other:
+                            continue
+                        case .stickers:
+                            mappedCategory = .stickers
+                        case .avatars:
+                            mappedCategory = .avatars
+                        case .misc:
+                            mappedCategory = .misc
+                        }
+                        
+                        if let value = contextStats.categories[mappedCategory] {
+                            totalSize += value.size
+                        }
+                    }
+                    
                     let _ = (component.context.engine.resources.clearStorage(peerId: component.peer?.id, categories: mappedCategories, includeMessages: [], excludeMessages: [])
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        guard let self, let _ = self.component, let aggregatedData = self.aggregatedData else {
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        guard let self else {
                             return
                         }
-                        var totalSize: Int64 = 0
-                        
-                        let contextStats = aggregatedData.contextStats
-                        
-                        for category in aggregatedData.selectedCategories {
-                            let mappedCategory: StorageUsageStats.CategoryKey
-                            switch category {
-                            case .photos:
-                                mappedCategory = .photos
-                            case .videos:
-                                mappedCategory = .videos
-                            case .files:
-                                mappedCategory = .files
-                            case .music:
-                                mappedCategory = .music
-                            case .other:
-                                continue
-                            case .stickers:
-                                mappedCategory = .stickers
-                            case .avatars:
-                                mappedCategory = .avatars
-                            case .misc:
-                                mappedCategory = .misc
-                            }
-                            
-                            if let value = contextStats.categories[mappedCategory] {
-                                totalSize += value.size
-                            }
+                        self.updateClearProgress(progress: progress)
+                    }, completed: { [weak self] in
+                        guard let self else {
+                            return
                         }
                         
                         self.reloadStats(firstTime: false, completion: { [weak self] in
@@ -2994,7 +3005,12 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     let _ = (component.context.engine.resources.clearStorage(peerIds: aggregatedData.selectionState.selectedPeers, includeMessages: includeMessages, excludeMessages: excludeMessages)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        guard let self else {
+                            return
+                        }
+                        self.updateClearProgress(progress: progress)
+                    }, completed: { [weak self] in
                         guard let self else {
                             return
                         }
@@ -3009,6 +3025,12 @@ final class StorageUsageScreenComponent: Component {
                         })
                     })
                 }
+            }
+        }
+        
+        private func updateClearProgress(progress: Float) {
+            if let clearingNode = self.clearingNode {
+                clearingNode.setProgress(progress)
             }
         }
         
@@ -3507,8 +3529,8 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         self.addSubnode(self.animationNode)
         self.addSubnode(self.progressTextNode)
         self.addSubnode(self.descriptionTextNode)
-        //self.addSubnode(self.progressBackgroundNode)
-        //self.addSubnode(self.progressForegroundNode)
+        self.addSubnode(self.progressBackgroundNode)
+        self.addSubnode(self.progressForegroundNode)
     }
     
     deinit {
@@ -3525,7 +3547,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
     }
     
     private var progress: Float = 0.0
-    private func setProgress(_ progress: Float) {
+    func setProgress(_ progress: Float) {
         self.progress = progress
         
         if let size = self.validLayout {
@@ -3562,8 +3584,10 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         self.descriptionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_KeepOpenedDescription, font: Font.regular(15.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
         let descriptionTextSize = self.descriptionTextNode.updateLayout(CGSize(width: size.width - inset * 3.0, height: size.height))
         var descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: animationFrame.maxY + 52.0), size: descriptionTextSize)
+        
+        let progressText: String = "\(Int(self.progress * 100.0))%"
        
-        self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_NoProgress, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.progressTextNode.attributedText = NSAttributedString(string: progressText, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         let progressTextSize = self.progressTextNode.updateLayout(size)
         var progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
         
