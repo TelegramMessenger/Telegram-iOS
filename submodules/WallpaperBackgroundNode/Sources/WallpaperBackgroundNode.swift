@@ -827,12 +827,12 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             
             let incomingBackgroundPortalSourceView = PortalSourceView()
             self.incomingBackgroundPortalSourceView = incomingBackgroundPortalSourceView
-            incomingBackgroundPortalSourceView.alpha = 0.0001
+            incomingBackgroundPortalSourceView.alpha = 0.00001
             self.view.addSubview(incomingBackgroundPortalSourceView)
             
             let outgoingBackgroundPortalSourceView = PortalSourceView()
             self.outgoingBackgroundPortalSourceView = outgoingBackgroundPortalSourceView
-            outgoingBackgroundPortalSourceView.alpha = 0.0001
+            outgoingBackgroundPortalSourceView.alpha = 0.00001
             self.view.addSubview(outgoingBackgroundPortalSourceView)
         }
         
@@ -1423,6 +1423,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             return nil
         }
         
+        #if DEBUG && false
         var sourceView: PortalSourceView?
         switch type {
         case .free:
@@ -1441,6 +1442,11 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
             return node
         }
+        #else
+        let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
+        node.updateContents()
+        return node
+        #endif
     }
     
     func makeFreeBackground() -> PortalView? {
