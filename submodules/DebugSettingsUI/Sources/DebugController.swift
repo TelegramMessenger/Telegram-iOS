@@ -48,6 +48,7 @@ private enum DebugControllerSection: Int32 {
     case logs
     case logging
     case experiments
+    case translation
     case videoExperiments
     case videoExperiments2
     case info
@@ -67,12 +68,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
     case redactSensitiveData(PresentationTheme, Bool)
-    case enableRaiseToSpeak(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
-    case resetTranslationStates(PresentationTheme)
     case resetNotifications
     case crash(PresentationTheme)
     case resetData(PresentationTheme)
@@ -102,6 +101,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case disableVideoAspectScaling(Bool)
     case enableNetworkFramework(Bool)
     case restorePurchases(PresentationTheme)
+    case logTranslationRecognition(Bool)
+    case resetTranslationStates
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -115,10 +116,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
-        case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
+        case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetTranslationStates, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
+        case .logTranslationRecognition, .resetTranslationStates:
+            return DebugControllerSection.translation.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
         case .disableVideoAspectScaling, .enableNetworkFramework:
@@ -156,8 +159,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 11
         case .redactSensitiveData:
             return 12
-        case .enableRaiseToSpeak:
-            return 13
         case .keepChatNavigationStack:
             return 14
         case .skipReadHistory:
@@ -166,8 +167,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 16
         case .clearTips:
             return 17
-        case .resetTranslationStates:
-            return 18
         case .resetNotifications:
             return 19
         case .crash:
@@ -212,16 +211,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 39
         case .restorePurchases:
             return 40
-        case .playerEmbedding:
+        case .logTranslationRecognition:
             return 41
-        case .playlistPlayback:
+        case .resetTranslationStates:
             return 42
-        case .enableQuickReactionSwitch:
+        case .playerEmbedding:
             return 43
-        case .voiceConference:
+        case .playlistPlayback:
             return 44
+        case .enableQuickReactionSwitch:
+            return 45
+        case .voiceConference:
+            return 46
         case let .preferredVideoCodec(index, _, _, _):
-            return 45 + index
+            return 47 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -903,12 +906,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     $0.withUpdatedRedactSensitiveData(value)
                 }).start()
             })
-        case let .enableRaiseToSpeak(_, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = updateMediaInputSettingsInteractively(accountManager: arguments.sharedContext.accountManager, {
-                    $0.withUpdatedEnableRaiseToSpeak(value)
-                }).start()
-            })
         case let .keepChatNavigationStack(_, value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -946,6 +943,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
 
                     let _ = context.engine.peers.unmarkChatListFeaturedFiltersAsSeen()
                 }
+            })
+        case let .logTranslationRecognition(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Log Language Recognition", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.logLanguageRecognition = value
+                    return settings
+                }).start()
             })
         case .resetTranslationStates:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Translation States", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1342,7 +1347,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
 
     if isMainApp {
-        entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
         entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
         #if DEBUG
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
@@ -1351,7 +1355,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     if isMainApp {
         entries.append(.clearTips(presentationData.theme))
-        entries.append(.resetTranslationStates(presentationData.theme))
         entries.append(.resetNotifications)
     }
     entries.append(.crash(presentationData.theme))
@@ -1378,6 +1381,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }
         entries.append(.restorePurchases(presentationData.theme))
+        
+        entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
+        entries.append(.resetTranslationStates)
+        
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
