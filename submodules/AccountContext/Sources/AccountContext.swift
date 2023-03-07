@@ -826,6 +826,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
+    func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, action: @escaping () -> Void) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
         
@@ -885,6 +886,14 @@ public enum PremiumDemoSubject {
     case translation
 }
 
+public enum PremiumLimitSubject {
+    case folders
+    case chatsPerFolder
+    case pins
+    case files
+    case accounts
+}
+
 public protocol ComposeController: ViewController {
 }
 
@@ -942,18 +951,26 @@ public protocol AccountContext: AnyObject {
 
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
-        return PremiumConfiguration(isPremiumDisabled: false)
+        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false)
     }
     
     public let isPremiumDisabled: Bool
+    public let showPremiumGiftInAttachMenu: Bool
+    public let showPremiumGiftInTextField: Bool
     
-    fileprivate init(isPremiumDisabled: Bool) {
+    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool) {
         self.isPremiumDisabled = isPremiumDisabled
+        self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
+        self.showPremiumGiftInTextField = showPremiumGiftInTextField
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
-        if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
-            return PremiumConfiguration(isPremiumDisabled: value)
+        if let data = appConfiguration.data {
+            return PremiumConfiguration(
+                isPremiumDisabled: data["premium_purchase_blocked"] as? Bool ?? false,
+                showPremiumGiftInAttachMenu: data["premium_gift_attach_menu_icon"] as? Bool ?? false,
+                showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? false
+            )
         } else {
             return .defaultValue
         }

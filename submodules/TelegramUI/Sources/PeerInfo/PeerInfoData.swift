@@ -1068,8 +1068,8 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
             case .admin:
                 switch member {
                 case let .legacyGroupMember(_, _, invitedBy, _):
+                    result.insert(.restrict)
                     if invitedBy == accountPeerId {
-                        result.insert(.restrict)
                         result.insert(.promote)
                     }
                 case .channelMember:

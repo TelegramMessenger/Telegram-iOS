@@ -17,6 +17,7 @@ import AnimatedStickerComponent
 import SemanticStatusNode
 import MediaResources
 import MultilineTextComponent
+import ShimmerEffect
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -195,6 +196,9 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
+            case .gift:
+                name = strings.Attachment_Gift
+                imageName = "Chat/Attach Menu/Gift"
             case let .app(peer, appName, appIcons):
                 botPeer = peer
                 name = appName
@@ -371,42 +375,64 @@ private final class LoadingProgressNode: ASDisplayNode {
 }
 
 public struct AttachmentMainButtonState {
+    public enum Background {
+        case color(UIColor)
+        case premium
+    }
+    
+    public enum Progress: Equatable {
+        case none
+        case side
+        case center
+    }
+    
     public let text: String?
-    public let backgroundColor: UIColor
+    public let background: Background
     public let textColor: UIColor
     public let isVisible: Bool
-    public let isLoading: Bool
+    public let progress: Progress
     public let isEnabled: Bool
     
     public init(
         text: String?,
-        backgroundColor: UIColor,
+        background: Background,
         textColor: UIColor,
         isVisible: Bool,
-        isLoading: Bool,
+        progress: Progress,
         isEnabled: Bool
     ) {
         self.text = text
-        self.backgroundColor = backgroundColor
+        self.background = background
         self.textColor = textColor
         self.isVisible = isVisible
-        self.isLoading = isLoading
+        self.progress = progress
         self.isEnabled = isEnabled
     }
     
     static var initial: AttachmentMainButtonState {
-        return AttachmentMainButtonState(text: nil, backgroundColor: .clear, textColor: .clear, isVisible: false, isLoading: false, isEnabled: false)
+        return AttachmentMainButtonState(text: nil, background: .color(.clear), textColor: .clear, isVisible: false, progress: .none, isEnabled: false)
     }
 }
 
 private final class MainButtonNode: HighlightTrackingButtonNode {
     private var state: AttachmentMainButtonState
+    private var size: CGSize?
     
+    private let backgroundAnimationNode: ASImageNode
     fileprivate let textNode: ImmediateTextNode
     private let statusNode: SemanticStatusNode
+    private var progressNode: ASImageNode?
         
+    private var shimmerView: ShimmerEffectForegroundView?
+    private var borderView: UIView?
+    private var borderMaskView: UIView?
+    private var borderShimmerView: ShimmerEffectForegroundView?
+    
     override init(pointerStyle: PointerStyle? = nil) {
         self.state = AttachmentMainButtonState.initial
+        
+        self.backgroundAnimationNode = ASImageNode()
+        self.backgroundAnimationNode.displaysAsynchronously = false
         
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
@@ -415,7 +441,10 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         self.statusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
         
         super.init(pointerStyle: pointerStyle)
+        
+        self.clipsToBounds = true
                 
+        self.addSubnode(self.backgroundAnimationNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.statusNode)
         
@@ -441,10 +470,176 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         }
     }
     
+    public func transitionToProgress() {
+        guard self.progressNode == nil, let size = self.size else {
+            return
+        }
+        
+        self.isUserInteractionEnabled = false
+        
+        let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+        rotationAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+        rotationAnimation.duration = 1.0
+        rotationAnimation.fromValue = NSNumber(value: Float(0.0))
+        rotationAnimation.toValue = NSNumber(value: Float.pi * 2.0)
+        rotationAnimation.repeatCount = Float.infinity
+        rotationAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+        rotationAnimation.beginTime = 1.0
+        
+        let buttonOffset: CGFloat = 0.0
+        let buttonWidth = size.width
+        
+        let progressNode = ASImageNode()
+        
+        let diameter: CGFloat = size.height - 22.0
+        let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(buttonOffset + (buttonWidth - diameter) / 2.0), y: floorToScreenPixels((size.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
+        progressNode.frame = progressFrame
+        progressNode.image = generateIndefiniteActivityIndicatorImage(color: .white, diameter: diameter, lineWidth: 3.0)
+            
+        self.addSubnode(progressNode)
+ 
+        progressNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        progressNode.layer.add(rotationAnimation, forKey: "progressRotation")
+        self.progressNode = progressNode
+        
+        self.textNode.alpha = 0.0
+        self.textNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        
+        self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+    }
+    
+    public func transitionFromProgress() {
+        guard let progressNode = self.progressNode else {
+            return
+        }
+        self.progressNode = nil
+        
+        progressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak progressNode, weak self] _ in
+            progressNode?.removeFromSupernode()
+            self?.isUserInteractionEnabled = true
+        })
+        
+        self.textNode.alpha = 1.0
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.shimmerView?.layer.removeAllAnimations()
+        self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.borderShimmerView?.layer.removeAllAnimations()
+        self.borderShimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    private func setupShimmering() {
+        if case .premium = self.state.background {
+            if self.shimmerView == nil {
+                let shimmerView = ShimmerEffectForegroundView()
+                shimmerView.isUserInteractionEnabled = false
+                self.shimmerView = shimmerView
+                
+                shimmerView.layer.cornerRadius = 12.0
+                if #available(iOS 13.0, *) {
+                    shimmerView.layer.cornerCurve = .continuous
+                }
+                
+                let borderView = UIView()
+                borderView.isUserInteractionEnabled = false
+                self.borderView = borderView
+                
+                let borderMaskView = UIView()
+                borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
+                borderMaskView.layer.borderColor = UIColor.white.cgColor
+                borderMaskView.layer.cornerRadius = 12.0
+                borderView.mask = borderMaskView
+                self.borderMaskView = borderMaskView
+                
+                let borderShimmerView = ShimmerEffectForegroundView()
+                self.borderShimmerView = borderShimmerView
+                borderView.addSubview(borderShimmerView)
+                
+                self.view.addSubview(shimmerView)
+                self.view.addSubview(borderView)
+                
+                self.updateShimmerParameters()
+                
+                if let size = self.size {
+                    self.updateLayout(size: size, state: state, transition: .immediate)
+                }
+            }
+        } else if self.shimmerView != nil {
+            self.shimmerView?.removeFromSuperview()
+            self.borderView?.removeFromSuperview()
+            self.borderMaskView?.removeFromSuperview()
+            self.borderShimmerView?.removeFromSuperview()
+            
+            self.shimmerView = nil
+            self.borderView = nil
+            self.borderMaskView = nil
+            self.borderShimmerView = nil
+        }
+    }
+    
+    func updateShimmerParameters() {
+        guard let shimmerView = self.shimmerView, let borderShimmerView = self.borderShimmerView else {
+            return
+        }
+        
+        let color = UIColor.white
+        let alpha: CGFloat
+        let borderAlpha: CGFloat
+        let compositingFilter: String?
+        if color.lightness > 0.5 {
+            alpha = 0.5
+            borderAlpha = 0.75
+            compositingFilter = "overlayBlendMode"
+        } else {
+            alpha = 0.2
+            borderAlpha = 0.3
+            compositingFilter = nil
+        }
+        
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
+        
+        shimmerView.layer.compositingFilter = compositingFilter
+        borderShimmerView.layer.compositingFilter = compositingFilter
+    }
+    
+    private func setupGradientAnimations() {
+        if let _ = self.backgroundAnimationNode.layer.animation(forKey: "movement") {
+        } else {
+            let offset = (self.backgroundAnimationNode.frame.width - self.frame.width) / 2.0
+            let previousValue = self.backgroundAnimationNode.position.x
+            var newValue: CGFloat = offset
+            if offset - previousValue < self.backgroundAnimationNode.frame.width * 0.25 {
+                newValue -= self.backgroundAnimationNode.frame.width * 0.35
+            }
+            self.backgroundAnimationNode.position = CGPoint(x: newValue, y: self.backgroundAnimationNode.bounds.size.height / 2.0)
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "position.x")
+            animation.duration = 4.5
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            
+            CATransaction.setCompletionBlock { [weak self] in
+                self?.setupGradientAnimations()
+            }
+
+            self.backgroundAnimationNode.layer.add(animation, forKey: "movement")
+            CATransaction.commit()
+        }
+    }
+    
     func updateLayout(size: CGSize, state: AttachmentMainButtonState, transition: ContainedViewLayoutTransition) {
+        let previousState = self.state
         self.state = state
+        self.size = size
         
         self.isUserInteractionEnabled = state.isVisible
+        
+        self.setupShimmering()
         
         if let text = state.text {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(17.0), textColor: state.textColor)
@@ -452,13 +647,61 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
             let textSize = self.textNode.updateLayout(size)
             self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
             
-            self.backgroundColor = state.backgroundColor
+            switch state.background {
+            case let .color(backgroundColor):
+                self.backgroundAnimationNode.image = nil
+                self.backgroundAnimationNode.layer.removeAllAnimations()
+                self.backgroundColor = backgroundColor
+            case .premium:
+                if self.backgroundAnimationNode.image == nil {
+                    let backgroundColors = [
+                        UIColor(rgb: 0x0077ff),
+                        UIColor(rgb: 0x6b93ff),
+                        UIColor(rgb: 0x8878ff),
+                        UIColor(rgb: 0xe46ace)
+                    ]
+                    var locations: [CGFloat] = []
+                    let delta = 1.0 / CGFloat(backgroundColors.count - 1)
+                    for i in 0 ..< backgroundColors.count {
+                        locations.append(delta * CGFloat(i))
+                    }
+                    self.backgroundAnimationNode.image = generateGradientImage(size: CGSize(width: 200.0, height: 50.0), colors: backgroundColors, locations: locations, direction: .horizontal)
+                    
+                    self.backgroundAnimationNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width * 2.4, height: size.height))
+                    if self.backgroundAnimationNode.layer.animation(forKey: "movement") == nil {
+                        self.backgroundAnimationNode.position = CGPoint(x: size.width * 2.4 / 2.0 - self.backgroundAnimationNode.frame.width * 0.35, y: size.height / 2.0)
+                    }
+                    self.setupGradientAnimations()
+                }
+                self.backgroundColor = UIColor(rgb: 0x8878ff)
+            }
+        }
+        
+        if previousState.progress != state.progress {
+            if state.progress == .center {
+                self.transitionToProgress()
+            } else {
+                self.transitionFromProgress()
+            }
+        }
+        
+        if let shimmerView = self.shimmerView, let borderView = self.borderView, let borderMaskView = self.borderMaskView, let borderShimmerView = self.borderShimmerView {
+            let buttonFrame = CGRect(origin: .zero, size: size)
+            let buttonWidth = size.width
+            let buttonHeight = size.height
+            transition.updateFrame(view: shimmerView, frame: buttonFrame)
+            transition.updateFrame(view: borderView, frame: buttonFrame)
+            transition.updateFrame(view: borderMaskView, frame: buttonFrame)
+            transition.updateFrame(view: borderShimmerView, frame: buttonFrame)
+            
+            shimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: buttonWidth * 4.0, y: 0.0), size: size), within: CGSize(width: buttonWidth * 9.0, height: buttonHeight))
+            borderShimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: buttonWidth * 4.0, y: 0.0), size: size), within: CGSize(width: buttonWidth * 9.0, height: buttonHeight))
         }
         
         let statusSize = CGSize(width: 20.0, height: 20.0)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: size.width - statusSize.width - 15.0, y: floorToScreenPixels((size.height - statusSize.height) / 2.0)), size: statusSize))
         
-        self.statusNode.transitionToState(state.isLoading ? .progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)) : .none)
+        self.statusNode.transitionToState(state.progress == .side ? .progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)) : .none)
     }
 }
 
@@ -685,7 +928,13 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, completion: {
+            
+            var hasEntityKeyboard = false
+            if case .media = strongSelf.presentationInterfaceState.inputMode {
+                hasEntityKeyboard = true
+            }
+            
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, completion: {
             }, sendMessage: { [weak textInputPanelNode] silently in
                 textInputPanelNode?.sendMessage(silently ? .silent : .generic)
             }, schedule: { [weak textInputPanelNode] in
@@ -719,6 +968,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, changeTranslationLanguage: { _ in
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
+        }, openPremiumGift: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil
@@ -908,6 +1158,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 accessibilityTitle = self.presentationData.strings.Attachment_Contact
             case .poll:
                 accessibilityTitle = self.presentationData.strings.Attachment_Poll
+            case .gift:
+                accessibilityTitle = self.presentationData.strings.Attachment_Gift
             case let .app(_, appName, _):
                 accessibilityTitle = appName
             case .standalone:
@@ -980,7 +1232,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     func updateMainButtonState(_ mainButtonState: AttachmentMainButtonState?) {
         var currentButtonState = self.mainButtonState
         if mainButtonState == nil {
-            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, backgroundColor: currentButtonState.backgroundColor, textColor: currentButtonState.textColor, isVisible: false, isLoading: false, isEnabled: currentButtonState.isEnabled)
+            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, background: currentButtonState.background, textColor: currentButtonState.textColor, isVisible: false, progress: .none, isEnabled: currentButtonState.isEnabled)
         }
         self.mainButtonState = mainButtonState ?? currentButtonState
     }

@@ -2284,7 +2284,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             } else {
@@ -2294,7 +2294,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             }
@@ -2557,17 +2557,6 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
                 .opacity(titleAlpha)
-//                .update(Transition.Update { _, view, _ in
-//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-//                        view.superview?.addSubview(snapshot)
-//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-//                            snapshot?.removeFromSuperview()
-//                        })
-//                        snapshot.frame = view.frame
-//                        transition.animateAlpha(view: view, from: 0.0, to: titleAlpha)
-//                    }
-//                })
             )
             
             context.add(secondaryTitle

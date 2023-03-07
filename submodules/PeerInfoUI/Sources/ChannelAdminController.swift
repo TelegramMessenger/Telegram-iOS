@@ -752,10 +752,14 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
         } else {
             if case let .user(adminPeer) = adminPeer, adminPeer.botInfo != nil, invite {
                 if let initialParticipant = initialParticipant, case let .member(_, _, adminRights, _, _) = initialParticipant, adminRights != nil {
-                    
                 } else {
                     entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
                 }
+            }
+            
+            var accountIsCreator = false
+            if case .creator = group.role {
+                accountIsCreator = true
             }
             
             if !invite || state.adminRights {
@@ -785,12 +789,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 } else {
                     currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
                 }
-                
-                var accountIsCreator = false
-                if case .creator = group.role {
-                    accountIsCreator = true
-                }
-            
+                            
                 var index = 0
                 for right in rightsOrder {
                     if accountUserRightsFlags.contains(right) {
@@ -813,8 +812,16 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
             }
             
-            if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, admin.id != accountPeerId, adminInfo != nil {
-                entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
+            if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, admin.id != accountPeerId, let adminInfo {
+                var canDismiss = false
+                if accountIsCreator {
+                    canDismiss = true
+                } else if adminInfo.promotedBy == accountPeerId || adminInfo.canBeEditedByAccountPeer {
+                    canDismiss = true
+                }
+                if canDismiss {
+                    entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
+                }
             }
         }
     }

@@ -203,11 +203,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
        
         if hasFilters {
             self.mainContainerNode = ChatListContainerNode(context: context, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
-                //filterBecameEmpty?(filter)
             }, filterEmptyAction: { _ in
-                //filterEmptyAction?(filter)
             }, secondaryEmptyAction: {
-                
             })
             self.chatListNode = nil
         } else {
@@ -288,6 +285,20 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if let mainContainerNode = self.mainContainerNode {
+            mainContainerNode.displayFilterLimit = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.controller?.tabContainerNode?.filtersCount ?? 0, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                strongSelf.controller?.push(controller)
+            }
             self.addSubnode(mainContainerNode)
         }
         if let chatListNode = self.chatListNode {
@@ -459,7 +470,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
+            
+            var hasEntityKeyboard = false
+            if case .media = strongSelf.presentationInterfaceState.inputMode {
+                hasEntityKeyboard = true
+            }
+            
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
             }, sendMessage: { [weak textInputPanelNode] silently in
                 textInputPanelNode?.sendMessage(silently ? .silent : .generic)
             }, schedule: { [weak textInputPanelNode] in
@@ -493,14 +510,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, changeTranslationLanguage: { _ in
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
+        }, openPremiumGift: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)
         
-        if let mainContainerNode = self.mainContainerNode {
-            self.readyValue.set(mainContainerNode.ready)
-        }
         if let chatListNode = self.chatListNode {
             self.readyValue.set(chatListNode.ready)
         }
@@ -603,6 +618,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.contactListActive {
+            self.contactListNode?.multipleSelection = true
             self.contactListNode?.updateSelectionState({ _ in
                 return ContactListNodeGroupSelectionState()
             })
@@ -893,7 +909,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                         var updated = false
                         var count = 0
-                        strongSelf.chatListNode?.updateState { state in
+                        
+                        let chatListNode: ChatListNode?
+                        if let mainContainerNode = strongSelf.mainContainerNode {
+                            chatListNode = mainContainerNode.currentItemNode
+                        } else {
+                            chatListNode = strongSelf.chatListNode
+                        }
+                        
+                        chatListNode?.updateState { state in
                             if state.editing {
                                 updated = true
                                 var state = state

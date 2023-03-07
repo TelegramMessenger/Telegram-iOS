@@ -164,6 +164,7 @@ public final class ChatPanelInterfaceInteraction {
     public let changeTranslationLanguage: (String) -> Void
     public let addDoNotTranslateLanguage: (String) -> Void
     public let hideTranslationPanel: () -> Void
+    public let openPremiumGift: () -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -266,6 +267,7 @@ public final class ChatPanelInterfaceInteraction {
         changeTranslationLanguage: @escaping (String) -> Void,
         addDoNotTranslateLanguage:  @escaping (String) -> Void,
         hideTranslationPanel:  @escaping () -> Void,
+        openPremiumGift: @escaping () -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
@@ -367,6 +369,7 @@ public final class ChatPanelInterfaceInteraction {
         self.changeTranslationLanguage = changeTranslationLanguage
         self.addDoNotTranslateLanguage = addDoNotTranslateLanguage
         self.hideTranslationPanel = hideTranslationPanel
+        self.openPremiumGift = openPremiumGift
         self.requestLayout = requestLayout
 
         self.chatController = chatController
@@ -476,6 +479,7 @@ public final class ChatPanelInterfaceInteraction {
         }, changeTranslationLanguage: { _ in
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
+        }, openPremiumGift: {
         }, requestLayout: { _ in
         }, chatController: {
             return nil

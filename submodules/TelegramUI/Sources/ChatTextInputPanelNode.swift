@@ -153,12 +153,14 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 }
             case .scheduledMessages:
                 return (PresentationResourcesChat.chatInputTextFieldScheduleImage(theme), nil, strings.VoiceOver_ScheduledMessages, 1.0, UIEdgeInsets())
+            case .gift:
+                return (PresentationResourcesChat.chatInputTextFieldGiftImage(theme), nil, strings.VoiceOver_GiftPremium, 1.0, UIEdgeInsets())
         }
     }
     
     private static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
-        case .input, .botInput, .silentPost, .commands, .scheduledMessages:
+        case .input, .botInput, .silentPost, .commands, .scheduledMessages, .gift:
             return 32.0
         case let .messageAutoremoveTimeout(timeout):
             var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)
@@ -3778,6 +3780,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.interfaceInteraction?.setupMessageAutoremoveTimeout()
                 case .scheduledMessages:
                     self.interfaceInteraction?.openScheduledMessages()
+                case .gift:
+                    self.interfaceInteraction?.openPremiumGift()
                 }
                 break
             }

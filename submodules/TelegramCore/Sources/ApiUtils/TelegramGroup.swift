@@ -14,6 +14,13 @@ public extension TelegramGroup {
     func hasPermission(_ permission: Permission) -> Bool {
         switch permission {
         case .sendSomething:
+            switch self.role {
+            case .creator, .admin:
+                return true
+            default:
+                break
+            }
+            
             let flags: TelegramChatBannedRightsFlags = [
                 .banSendText,
                 .banSendInstantVideos,
@@ -25,7 +32,6 @@ public extension TelegramGroup {
                 .banSendFiles,
                 .banSendInline
             ]
-            
             if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.intersection(flags) == flags {
                 return false
             }

@@ -157,7 +157,8 @@ private final class ItemNode: ASDisplayNode {
         self.containerNode.addSubnode(self.extractedContainerNode)
         self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
         self.addSubnode(self.containerNode)
-            
+        
+        self.buttonNode.isExclusiveTouch = true
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.containerNode.activated = { [weak self] gesture, _ in
@@ -185,7 +186,7 @@ private final class ItemNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
-        
+
         self.pointerInteraction = PointerInteraction(view: self.containerNode.view, customInteractionView: nil, style: .insetRectangle(-10.0, 4.0))
     }
     
@@ -500,7 +501,7 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
         }
     }
     
-    var filtersCount: Int32 {
+    public var filtersCount: Int32 {
         if let (_, _, filters, _, _, _, _, _, _, _) = self.currentParams {
             let filters = filters.filter { filter in
                 if case .all = filter {
@@ -927,7 +928,6 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
             let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 3.0), size: CGSize(width: selectedFrame.width, height: 3.0))
             if wasAdded {
                 self.selectedLineNode.frame = lineFrame
-                self.selectedLineNode.alpha = 0.0
             } else {
                 transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
             }

@@ -177,7 +177,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.strings = strings
         
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
-            return inputNodeInteraction?.previewedStickerPackItem == .pack(item.file)
+            return inputNodeInteraction?.previewedStickerPackItemFile?.id == item.file.id
         }, isPane: false)
         
         self.gridNode = GridNode()
@@ -315,7 +315,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil, [])
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
+            return inputNodeInteraction.previewedStickerPackItemFile?.id == item.file.id
         })
         
         self._ready.set(self.trendingPane.ready)

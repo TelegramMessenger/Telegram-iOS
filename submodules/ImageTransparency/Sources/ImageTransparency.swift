@@ -29,17 +29,31 @@ private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)?
     }
     assert(error == kvImageNoError)
     
-    let histogramBins: [[vImagePixelCount]] = (0...3).map { _ in
-        return [vImagePixelCount](repeating: 0, count: 256)
+    var histogramBinZero = [vImagePixelCount](repeating: 0, count: 256)
+    var histogramBinOne = [vImagePixelCount](repeating: 0, count: 256)
+    var histogramBinTwo = [vImagePixelCount](repeating: 0, count: 256)
+    var histogramBinThree = [vImagePixelCount](repeating: 0, count: 256)
+    
+    histogramBinZero.withUnsafeMutableBufferPointer { zeroPtr in
+        histogramBinOne.withUnsafeMutableBufferPointer { onePtr in
+            histogramBinTwo.withUnsafeMutableBufferPointer { twoPtr in
+                histogramBinThree.withUnsafeMutableBufferPointer { threePtr in
+                    var histogramBins = [zeroPtr.baseAddress, onePtr.baseAddress, twoPtr.baseAddress, threePtr.baseAddress]
+                    histogramBins.withUnsafeMutableBufferPointer { histogramBinsPtr in
+                        let error = vImageHistogramCalculation_ARGB8888(
+                            &sourceBuffer,
+                            histogramBinsPtr.baseAddress!,
+                            noFlags
+                        )
+                        assert(error == kvImageNoError)
+                    }
+                }
+            }
+        }
     }
-    var mutableHistogram: [UnsafeMutablePointer<vImagePixelCount>?] = histogramBins.map {
-        return UnsafeMutablePointer<vImagePixelCount>(mutating: $0)
-    }
-    error = vImageHistogramCalculation_ARGB8888(&sourceBuffer, &mutableHistogram, noFlags)
-    assert(error == kvImageNoError)
     
     let alphaBinIndex = [.last, .premultipliedLast].contains(cgImage.alphaInfo) ? 3 : 0
-    return (histogramBins, alphaBinIndex)
+    return ([histogramBinZero, histogramBinOne, histogramBinTwo, histogramBinThree], alphaBinIndex)
 }
 
 public func imageHasTransparency(_ cgImage: CGImage) -> Bool {

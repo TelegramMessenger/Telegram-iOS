@@ -1657,6 +1657,23 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
     
+    public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, action: @escaping () -> Void) -> ViewController {
+        let mappedSubject: PremiumLimitScreen.Subject
+        switch subject {
+        case .folders:
+            mappedSubject = .folders
+        case .chatsPerFolder:
+            mappedSubject =  .chatsPerFolder
+        case .pins:
+            mappedSubject =  .pins
+        case .files:
+            mappedSubject =  .files
+        case .accounts:
+            mappedSubject =  .accounts
+        }
+        return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, action: action)
+    }
+    
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }

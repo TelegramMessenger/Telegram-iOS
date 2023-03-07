@@ -4,7 +4,7 @@ import Network
 import MtProtoKit
 import SwiftSignalKit
 
-@available(iOS 12.0, *)
+@available(iOS 12.0, macOS 10.14, *)
 final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInterface {
     private final class Impl {
         private let queue: Queue

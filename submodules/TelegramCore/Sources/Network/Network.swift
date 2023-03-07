@@ -508,7 +508,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 }
                 
                 if useNetworkFramework {
-                    if #available(iOS 12.0, *) {
+                    if #available(iOS 12.0, macOS 10.14, *) {
                         context.makeTcpConnectionInterface = { delegate, delegateQueue in
                             return NetworkFrameworkTcpConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
                         }

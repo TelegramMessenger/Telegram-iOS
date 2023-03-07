@@ -1800,9 +1800,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             back: { [weak c] in
                                 c?.popItems()
                             },
-                            openPeer: { [weak c] peer in
+                            openPeer: { [weak c] peer, hasReaction in
                                 c?.dismiss(completion: {
-                                    controllerInteraction.openPeer(peer, .default, MessageReference(message), .reaction)
+                                    controllerInteraction.openPeer(peer, .default, MessageReference(message), hasReaction ? .reaction : .default)
                                 })
                             }
                         )), tip: tip)))

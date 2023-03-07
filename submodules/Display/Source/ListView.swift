@@ -1362,6 +1362,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.ignoreScrollingEvents = wasIgnoringScrollingEvents
     }
     
+    public func cancelTracking() {
+        self.scroller.panGestureRecognizer.isEnabled = false
+        self.scroller.panGestureRecognizer.isEnabled = true
+    }
+    
     private func updateTopItemOverscrollBackground(transition: ContainedViewLayoutTransition) {
         if let value = self.keepTopItemOverscrollBackground {
             var applyTransition = transition

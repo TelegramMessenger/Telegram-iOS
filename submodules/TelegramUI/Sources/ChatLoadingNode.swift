@@ -152,7 +152,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    private var validLayout: (CGSize, UIEdgeInsets)?
+    private var validLayout: (CGSize, UIEdgeInsets, LayoutMetrics)?
     
     init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
         self.context = context
@@ -280,7 +280,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     }
         
     func animateOut(_ historyNode: ChatHistoryNode, completion: @escaping () -> Void = {}) {
-        guard let listNode = historyNode as? ListView, let (size, _) = self.validLayout else {
+        guard let listNode = historyNode as? ListView, let (size, _, _) = self.validLayout else {
             return
         }
         
@@ -408,14 +408,14 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         if self.chatType != chatType {
             self.chatType = chatType
-            if let (size, insets) = self.validLayout {
-                self.updateLayout(size: size, insets: insets, transition: .immediate)
+            if let (size, insets, metrics) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, metrics: metrics, transition: .immediate)
             }
         }
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, insets)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, insets, metrics)
         
         let bounds = CGRect(origin: .zero, size: size)
                 
@@ -435,22 +435,27 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         let shortHeight: CGFloat = 71.0
         let tallHeight: CGFloat = 93.0
+        
+        var width = size.width
+        if case .regular = metrics.widthClass, abs(size.width - size.height) < 0.2 * size.height {
+            width *= 0.7
+        }
 
         let dimensions: [CGSize] = [
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight)
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.69 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.36 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.69 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight)
         ].map {
             if self.chatType == .channel {
                 return CGSize(width: floor($0.width * 1.3), height: floor($0.height * 1.8))
