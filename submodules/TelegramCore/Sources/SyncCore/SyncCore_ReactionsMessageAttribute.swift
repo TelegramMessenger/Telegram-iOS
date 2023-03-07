@@ -119,12 +119,14 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         public var isLarge: Bool
         public var isUnseen: Bool
         public var peerId: PeerId
+        public var timestamp: Int32?
         
-        public init(value: MessageReaction.Reaction, isLarge: Bool, isUnseen: Bool, peerId: PeerId) {
+        public init(value: MessageReaction.Reaction, isLarge: Bool, isUnseen: Bool, peerId: PeerId, timestamp: Int32?) {
             self.value = value
             self.isLarge = isLarge
             self.isUnseen = isUnseen
             self.peerId = peerId
+            self.timestamp = timestamp
         }
         
         public init(decoder: PostboxDecoder) {
@@ -136,6 +138,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
             self.isUnseen = decoder.decodeInt32ForKey("u", orElse: 0) != 0
             self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+            self.timestamp = decoder.decodeOptionalInt32ForKey("ts")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
@@ -148,6 +151,11 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
             encoder.encodeInt32(self.isUnseen ? 1 : 0, forKey: "u")
             encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+            if let timestamp = self.timestamp {
+                encoder.encodeInt32(timestamp, forKey: "ts")
+            } else {
+                encoder.encodeNil(forKey: "ts")
+            }
         }
     }
     

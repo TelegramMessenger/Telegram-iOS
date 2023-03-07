@@ -338,7 +338,7 @@ public extension EngineMessageReactionListContext.State {
             for recentPeer in reactionsAttribute.recentPeers {
                 if let peer = message.peers[recentPeer.peerId] {
                     if reaction == nil || recentPeer.value == reaction {
-                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value, timestamp: readStats?.readTimestamps[peer.id]))
+                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value, timestamp: recentPeer.timestamp ?? readStats?.readTimestamps[peer.id]))
                     }
                 }
             }
@@ -507,9 +507,9 @@ public final class EngineMessageReactionListContext {
                             var items: [EngineMessageReactionListContext.Item] = []
                             for reaction in reactions {
                                 switch reaction {
-                                case let .messagePeerReaction(_, peer, reaction):
+                                case let .messagePeerReaction(_, peer, date, reaction):
                                     if let peer = transaction.getPeer(peer.peerId), let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: nil))
+                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: date))
                                     }
                                 }
                             }
