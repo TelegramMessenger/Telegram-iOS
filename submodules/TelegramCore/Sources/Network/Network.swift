@@ -495,7 +495,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
             
             if let networkSettings = networkSettings, networkSettings.useNetworkFramework {
-                if #available(iOS 12.0, *) {
+                if #available(iOS 12.0, macOS 10.14, *) {
                     context.makeTcpConnectionInterface = { delegate, delegateQueue in
                         return NetworkFrameworkTcpConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
                     }
