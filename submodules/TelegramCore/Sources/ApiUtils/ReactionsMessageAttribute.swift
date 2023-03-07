@@ -22,7 +22,8 @@ extension ReactionsMessageAttribute {
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.compactMap { recentReaction -> ReactionsMessageAttribute.RecentPeer? in
                     switch recentReaction {
-                    case let .messagePeerReaction(flags, peerId, reaction):
+                    case let .messagePeerReaction(flags, peerId, date, reaction):
+                        let _ = date
                         let isLarge = (flags & (1 << 0)) != 0
                         let isUnseen = (flags & (1 << 1)) != 0
                         if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
@@ -184,7 +185,8 @@ extension ReactionsMessageAttribute {
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.compactMap { recentReaction -> ReactionsMessageAttribute.RecentPeer? in
                     switch recentReaction {
-                    case let .messagePeerReaction(flags, peerId, reaction):
+                    case let .messagePeerReaction(flags, peerId, date, reaction):
+                        let _ = date
                         let isLarge = (flags & (1 << 0)) != 0
                         let isUnseen = (flags & (1 << 1)) != 0
                         if let reaction = MessageReaction.Reaction(apiReaction: reaction) {

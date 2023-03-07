@@ -201,6 +201,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let psaAcknowledgementNamespace: Int32 = 6
     private static let botGameNoticeNamespace: Int32 = 7
     private static let peerInviteRequestsNamespace: Int32 = 8
+    private static let dismissedPremiumGiftNamespace: Int32 = 9
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -216,6 +217,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func irrelevantPeerGeoNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: peerReportNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func dismissedPremiumGiftNotice(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedPremiumGiftNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
     
     static func forcedPasswordSetup() -> NoticeEntryKey {
@@ -1290,6 +1295,33 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.audioRateOptionsTip(), entry)
+            }
+            return previousValue
+        }
+    }
+    
+    public static func dismissedPremiumGiftSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId))
+        |> map { view -> Int32 in
+            if let value = view.value?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementDismissedPremiumGiftSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, count: Int32 = 1) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId))?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += count
+            
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId), entry)
             }
             return previousValue
         }

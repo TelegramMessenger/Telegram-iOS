@@ -526,7 +526,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private var translationStateDisposable: Disposable?
-
+    private var premiumGiftSuggestionDisposable: Disposable?
+    
     private var nextChannelToReadDisposable: Disposable?
     private var offerNextChannelToRead = false
     
@@ -6023,6 +6024,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.preloadAttachBotIconsDisposables?.dispose()
             self.keepMessageCountersSyncrhonizedDisposable?.dispose()
             self.translationStateDisposable?.dispose()
+            self.premiumGiftSuggestionDisposable?.dispose()
             self.powerSavingMonitoringDisposable?.dispose()
         }
         deallocate()
@@ -6826,6 +6828,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if case .standard(previewing: true) = self.presentationInterfaceState.mode {
                 
             } else if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
+                self.premiumGiftSuggestionDisposable = (ApplicationSpecificNotice.dismissedPremiumGiftSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] counter in
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
+                            return state.updatedSuggestPremiumGift(counter == 0)
+                        })
+                    }
+                })
+                
                 var baseLanguageCode = self.presentationData.strings.baseLanguageCode
                 if baseLanguageCode.contains("-") {
                     baseLanguageCode = baseLanguageCode.components(separatedBy: "-").first ?? baseLanguageCode
@@ -10248,10 +10259,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return true
             }), in: .current)
         }, openPremiumGift: { [weak self] in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                 return
             }
             strongSelf.presentAttachmentPremiumGift()
+            let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId).start()
         }, requestLayout: { [weak self] transition in
             if let strongSelf = self, let layout = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout, transition: transition)
@@ -12776,8 +12788,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
         let premiumGiftOptions: [CachedPremiumGiftOption]
-        if let user = peer as? TelegramUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) && !user.isPremium {
+        if !premiumConfiguration.isPremiumDisabled && premiumConfiguration.showPremiumGiftInAttachMenu, let user = peer as? TelegramUser, !user.isPremium && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
             premiumGiftOptions = self.presentationInterfaceState.premiumGiftOptions
         } else {
             premiumGiftOptions = []
@@ -13124,6 +13137,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                         completion(controller, controller.mediaPickerContext)
                         strongSelf.controllerNavigationDisposable.set(nil)
+                        
+                        let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: context.sharedContext.accountManager, peerId: peer.id).start()
                     }
                 case let .app(bot, botName, _):
                     var payload: String?

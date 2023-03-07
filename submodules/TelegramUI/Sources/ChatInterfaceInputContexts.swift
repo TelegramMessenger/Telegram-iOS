@@ -338,9 +338,14 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
                 let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
                 
+                
                 if case .scheduledMessages = chatPresentationInterfaceState.subject {
-                } else if isTextEmpty, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium &&                     !chatPresentationInterfaceState.premiumGiftOptions.isEmpty {
-                    accessoryItems.append(.gift)
+                } else {
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                    let giftIsEnabled = !premiumConfiguration.isPremiumDisabled && premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField
+                    if isTextEmpty, giftIsEnabled, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium && !chatPresentationInterfaceState.premiumGiftOptions.isEmpty && chatPresentationInterfaceState.suggestPremiumGift {
+                        accessoryItems.append(.gift)
+                    }
                 }
                 
                 var extendedSearchLayout = false

@@ -1,15 +1,16 @@
 public extension Api {
     enum MessagePeerReaction: TypeConstructorDescription {
-        case messagePeerReaction(flags: Int32, peerId: Api.Peer, reaction: Api.Reaction)
+        case messagePeerReaction(flags: Int32, peerId: Api.Peer, date: Int32, reaction: Api.Reaction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messagePeerReaction(let flags, let peerId, let reaction):
+                case .messagePeerReaction(let flags, let peerId, let date, let reaction):
                     if boxed {
-                        buffer.appendInt32(-1319698788)
+                        buffer.appendInt32(-1938180548)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peerId.serialize(buffer, true)
+                    serializeInt32(date, buffer: buffer, boxed: false)
                     reaction.serialize(buffer, true)
                     break
     }
@@ -17,8 +18,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messagePeerReaction(let flags, let peerId, let reaction):
-                return ("messagePeerReaction", [("flags", flags as Any), ("peerId", peerId as Any), ("reaction", reaction as Any)])
+                case .messagePeerReaction(let flags, let peerId, let date, let reaction):
+                return ("messagePeerReaction", [("flags", flags as Any), ("peerId", peerId as Any), ("date", date as Any), ("reaction", reaction as Any)])
     }
     }
     
@@ -29,15 +30,18 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _3: Api.Reaction?
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.Reaction?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
+                _4 = Api.parse(reader, signature: signature) as? Api.Reaction
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessagePeerReaction.messagePeerReaction(flags: _1!, peerId: _2!, reaction: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessagePeerReaction.messagePeerReaction(flags: _1!, peerId: _2!, date: _3!, reaction: _4!)
             }
             else {
                 return nil
