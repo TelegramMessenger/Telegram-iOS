@@ -433,7 +433,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         let containerFrame: CGRect
         let clipFrame: CGRect
         let containerScale: CGFloat
-        if layout.metrics.widthClass == .compact {
+        if case .compact = layout.metrics.widthClass {
             self.clipNode.clipsToBounds = true
             
             if isLandscape {

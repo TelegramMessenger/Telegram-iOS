@@ -287,9 +287,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 return
             }
             self.staticParams = (size, color, lineRects)
-            
-            let  start = CACurrentMediaTime()
-            
+
             var combinedRect: CGRect?
             var combinedRects: [CGRect] = []
             for rect in lineRects {
@@ -308,7 +306,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 combinedRects.append(combinedRect.insetBy(dx: 0.0, dy: -1.0))
             }
             
-            print("combining \(CACurrentMediaTime() - start)")
             Queue.concurrentDefaultQueue().async {
                 var generator = ArbitraryRandomNumberGenerator(seed: 1)
                 let image = generateImage(size, rotatedContext: { size, context in
@@ -331,8 +328,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 }
             }
             self.staticNode?.frame = CGRect(origin: CGPoint(), size: size)
-            
-            print("total draw \(CACurrentMediaTime() - start)")
         }
     }
     

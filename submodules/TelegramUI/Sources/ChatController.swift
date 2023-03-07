@@ -4670,9 +4670,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
+                let hasPeerInfo: Signal<Bool, NoError>
+                if peerId == context.account.peerId {
+                    hasPeerInfo = .single(true)
+                    |> then(
+                        hasAvailablePeerInfoMediaPanes(context: context, peerId: peerId)
+                    )
+                } else {
+                    hasPeerInfo = .single(true)
+                }
                                   
-                self.titleDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, displayedCountSignal, subtitleTextSignal, self.presentationInterfaceStatePromise.get())
-                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, presentationInterfaceState in
+                self.titleDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, displayedCountSignal, subtitleTextSignal, self.presentationInterfaceStatePromise.get(), hasPeerInfo)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, presentationInterfaceState, hasPeerInfo in
                     if let strongSelf = self {
                         var isScheduledMessages = false
                         if case .scheduledMessages = presentationInterfaceState.subject {
@@ -4723,7 +4732,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case .pinnedMessages = presentationInterfaceState.subject {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
                                 } else {
-                                    strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil)
+                                    strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil, isEnabled: hasPeerInfo)
                                     let imageOverride: AvatarNodeImageOverride?
                                     if strongSelf.context.account.peerId == peer.id {
                                         imageOverride = .savedMessagesIcon
@@ -5278,7 +5287,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let threadInfo = messageAndTopic.threadData?.info {
-                            strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: peerIsMuted, customMessageCount: messageAndTopic.messageCount == 0 ? nil : messageAndTopic.messageCount)
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: peerIsMuted, customMessageCount: messageAndTopic.messageCount == 0 ? nil : messageAndTopic.messageCount, isEnabled: true)
                             
                             let avatarContent: EmojiStatusComponent.Content
                             if strongSelf.chatLocation.threadId == 1 {
