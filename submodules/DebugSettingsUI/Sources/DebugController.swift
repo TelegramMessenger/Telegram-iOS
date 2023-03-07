@@ -117,7 +117,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
