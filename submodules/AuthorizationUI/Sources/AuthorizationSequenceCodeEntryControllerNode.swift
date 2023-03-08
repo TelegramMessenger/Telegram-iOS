@@ -430,7 +430,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             codeLength = Int(length)
         case let .sms(length):
             codeLength = Int(length)
-        case let .email(_, length, _, _, _):
+        case let .email(_, length, _, _, _, _):
             codeLength = Int(length)
         case let .fragment(_, length):
             codeLength = Int(length)
@@ -624,7 +624,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     codeLength = length
                 case let .sms(length):
                     codeLength = length
-                case let .email(_, length, _, _, _):
+                case let .email(_, length, _, _, _, _):
                     codeLength = length
                 case let .fragment(_, length):
                     codeLength = length

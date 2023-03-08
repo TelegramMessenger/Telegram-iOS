@@ -314,7 +314,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             authorizationCode = .phoneCode(code)
                     }
                     
-                    if case let .email(_, _, _, _, setup) = type, setup, case let .emailVerification(emailCode) = authorizationCode {
+                    if case let .email(_, _, _, _, setup, _) = type, setup, case let .emailVerification(emailCode) = authorizationCode {
                         strongSelf.actionDisposable.set(((verifyLoginEmailSetup(account: strongSelf.account, code: emailCode))
                         |> deliverOnMainQueue).start(error: { error in
                             Queue.mainQueue().async {
