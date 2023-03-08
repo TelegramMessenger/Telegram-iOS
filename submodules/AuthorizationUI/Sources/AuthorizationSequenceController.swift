@@ -302,6 +302,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
+            controller.resetEmail = {
+                
+            }
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -314,7 +317,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             authorizationCode = .phoneCode(code)
                     }
                     
-                    if case let .email(_, _, _, _, setup) = type, setup, case let .emailVerification(emailCode) = authorizationCode {
+                    if case let .email(_, _, _, _, _, setup) = type, setup, case let .emailVerification(emailCode) = authorizationCode {
                         strongSelf.actionDisposable.set(((verifyLoginEmailSetup(account: strongSelf.account, code: emailCode))
                         |> deliverOnMainQueue).start(error: { error in
                             Queue.mainQueue().async {

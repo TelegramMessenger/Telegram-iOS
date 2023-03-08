@@ -390,7 +390,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
         
-        self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
+        self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.2)
         
         addStickerPackImpl = { [weak self] info, items in
             guard let strongSelf = self else {
@@ -1764,6 +1764,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
 public final class StickerPackScreenImpl: ViewController {
     private let context: AccountContext
     fileprivate var presentationData: PresentationData
+    private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
     private let stickerPacks: [StickerPackReference]
@@ -1807,6 +1808,7 @@ public final class StickerPackScreenImpl: ViewController {
     ) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        self.updatedPresentationData = updatedPresentationData
         self.stickerPacks = stickerPacks
         self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
@@ -1919,9 +1921,13 @@ public final class StickerPackScreenImpl: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if let peer = peer, let parentNavigationController = strongSelf.parentNavigationController {
-                    strongSelf.dismiss()
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), animated: true))
+                if let peer {
+                    if let parentNavigationController = strongSelf.parentNavigationController {
+                        strongSelf.dismiss()
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), animated: true))
+                    }
+                } else {
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             }))
         })

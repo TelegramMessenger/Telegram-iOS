@@ -27,7 +27,7 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         return parseMarkdownIntoAttributedString(strings.Login_CodeSentCallText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .emailSetupRequired:
         return NSAttributedString(string: "", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
-    case let .email(emailPattern, _, _, _, _):
+    case let .email(emailPattern, _, _, _, _, _):
         let mutableString = NSAttributedString(string: strings.Login_EnterCodeEmailText(email ?? emailPattern).string, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center).mutableCopy() as! NSMutableAttributedString
         
         let string = mutableString.string
