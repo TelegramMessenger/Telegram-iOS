@@ -117,6 +117,8 @@ func _internal_updateChannelOwnership(account: Account, accountStateManager: Acc
                             return .invalidPassword
                         } else if error.errorDescription == "PASSWORD_MISSING" {
                             return .twoStepAuthMissing
+                        } else if error.errorDescription == "CHANNELS_ADMIN_PUBLIC_TOO_MUCH" {
+                            return .userPublicChannelsTooMuch
                         } else if error.errorDescription.hasPrefix("PASSWORD_TOO_FRESH_") {
                             let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "PASSWORD_TOO_FRESH_".count)...])
                             if let value = Int32(timeout) {
