@@ -18,7 +18,7 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case call(length: Int32)
     case flashCall(pattern: String)
     case missedCall(numberPrefix: String, length: Int32)
-    case email(emailPattern: String, length: Int32, nextPhoneLoginDate: Int32?, appleSignInAllowed: Bool, setup: Bool)
+    case email(emailPattern: String, length: Int32, resetAvailablePeriod: Int32?, resetPendingDate: Int32?, appleSignInAllowed: Bool, setup: Bool)
     case emailSetupRequired(appleSignInAllowed: Bool)
     case fragment(url: String, length: Int32)
     case firebase(pushTimeout: Int32?, length: Int32)
@@ -36,7 +36,7 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
             case SentAuthorizationCodeTypeValue.missedCall.rawValue:
                 self = .missedCall(numberPrefix: decoder.decodeStringForKey("n", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.email.rawValue:
-                self = .email(emailPattern: decoder.decodeStringForKey("e", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0), nextPhoneLoginDate: decoder.decodeOptionalInt32ForKey("d"), appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0, setup: decoder.decodeInt32ForKey("s", orElse: 0) != 0)
+                self = .email(emailPattern: decoder.decodeStringForKey("e", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0), resetAvailablePeriod: decoder.decodeOptionalInt32ForKey("ra"), resetPendingDate: decoder.decodeOptionalInt32ForKey("rp"), appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0, setup: decoder.decodeInt32ForKey("s", orElse: 0) != 0)
             case SentAuthorizationCodeTypeValue.emailSetupRequired.rawValue:
                 self = .emailSetupRequired(appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0)
             case SentAuthorizationCodeTypeValue.fragment.rawValue:
@@ -66,14 +66,19 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
             encoder.encodeInt32(SentAuthorizationCodeTypeValue.missedCall.rawValue, forKey: "v")
             encoder.encodeString(numberPrefix, forKey: "n")
             encoder.encodeInt32(length, forKey: "l")
-        case let .email(emailPattern, length, nextPhoneLoginDate, appleSignInAllowed, setup):
+        case let .email(emailPattern, length, resetAvailablePeriod, resetPendingDate, appleSignInAllowed, setup):
             encoder.encodeInt32(SentAuthorizationCodeTypeValue.email.rawValue, forKey: "v")
             encoder.encodeString(emailPattern, forKey: "e")
             encoder.encodeInt32(length, forKey: "l")
-            if let nextPhoneLoginDate = nextPhoneLoginDate {
-                encoder.encodeInt32(nextPhoneLoginDate, forKey: "d")
+            if let resetAvailablePeriod = resetAvailablePeriod {
+                encoder.encodeInt32(resetAvailablePeriod, forKey: "ra")
             } else {
-                encoder.encodeNil(forKey: "d")
+                encoder.encodeNil(forKey: "ra")
+            }
+            if let resetPendingDate = resetPendingDate {
+                encoder.encodeInt32(resetPendingDate, forKey: "rp")
+            } else {
+                encoder.encodeNil(forKey: "rp")
             }
             encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
             encoder.encodeInt32(setup ? 1 : 0, forKey: "s")
