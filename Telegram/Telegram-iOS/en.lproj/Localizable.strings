@@ -9041,3 +9041,14 @@ Sorry for the inconvenience.";
 "Premium.Gift.TitleShort" = "Telegram Premium";
 
 "VoiceOver.GiftPremium" = "Gift Telegram Premium";
+
+"Login.Email.CantAccess" = "Can't access this email?";
+"Login.Email.ResetTitle" = "Reset Email";
+"Login.Email.ResetText" = "You can change your login email if you are logged into Telegram from another device. Otherwise, if you don't have access to email %@, you can reset this email with an SMS code in 7 days.";
+"Login.Email.Reset" = "Reset";
+"Login.Email.ResetNowViaSMS" = "Reset now via SMS";
+"Login.Email.WillBeResetIn" = "Email will be reset in %@";
+"Login.Email.PremiumRequiredTitle" = "Telegram Premium Required";
+"Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code. You can ask a friend to a gift a Premium subscription for your account %@";
+
+"ChatList.StartMessaging" = "Select a chat to start messaging";
