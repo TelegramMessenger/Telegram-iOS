@@ -1787,6 +1787,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         if let stats, !stats.readTimestamps.isEmpty {
                             displayReadTimestamps = true
                         }
+                        let tempState = EngineMessageReactionListContext.State(message: EngineMessage(message), readStats: stats, reaction: nil)
+                        var allItemsHaveTimestamp = true
+                        for item in tempState.items {
+                            if item.timestamp == nil {
+                                allItemsHaveTimestamp = false
+                            }
+                        }
+                        if allItemsHaveTimestamp {
+                            displayReadTimestamps = true
+                        }
                         
                         c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(
                             context: context,
