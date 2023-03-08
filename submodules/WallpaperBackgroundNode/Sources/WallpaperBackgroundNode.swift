@@ -602,6 +602,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             super.init()
             
             self.view.addSubview(portalView.view)
+            self.clipsToBounds = true
         }
 
         deinit {
@@ -818,7 +819,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         if #available(iOS 12.0, *) {
             let blurredBackgroundPortalSourceView = PortalSourceView()
             self.blurredBackgroundPortalSourceView = blurredBackgroundPortalSourceView
-            blurredBackgroundPortalSourceView.alpha = 0.0001
+            blurredBackgroundPortalSourceView.alpha = 0.0
             self.view.addSubview(blurredBackgroundPortalSourceView)
             
             let blurredBackgroundContentView = UIImageView()
@@ -827,12 +828,12 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             
             let incomingBackgroundPortalSourceView = PortalSourceView()
             self.incomingBackgroundPortalSourceView = incomingBackgroundPortalSourceView
-            incomingBackgroundPortalSourceView.alpha = 0.00001
+            incomingBackgroundPortalSourceView.alpha = 0.0
             self.view.addSubview(incomingBackgroundPortalSourceView)
             
             let outgoingBackgroundPortalSourceView = PortalSourceView()
             self.outgoingBackgroundPortalSourceView = outgoingBackgroundPortalSourceView
-            outgoingBackgroundPortalSourceView.alpha = 0.00001
+            outgoingBackgroundPortalSourceView.alpha = 0.0
             self.view.addSubview(outgoingBackgroundPortalSourceView)
         }
         
@@ -1423,7 +1424,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             return nil
         }
         
-        #if DEBUG && false
+        #if true
         var sourceView: PortalSourceView?
         switch type {
         case .free:

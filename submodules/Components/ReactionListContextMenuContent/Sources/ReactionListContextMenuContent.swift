@@ -353,6 +353,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     }
     
     private static let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
+    private static let reactionIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReactionIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
     
     private final class ReactionsTabNode: ASDisplayNode, UIScrollViewDelegate {
         private final class ItemNode: HighlightTrackingButtonNode {
@@ -643,6 +644,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 let textFrame = CGRect(origin: CGPoint(x: titleFrame.minX + floor(textFontFraction * 18.0), y: titleFrame.maxY + textSpacing), size: textSize)
                 self.textLabelNode.frame = textFrame
+                
+                self.readIconView.image = item.timestampIsReaction ? ReactionListContextMenuContent.reactionIconImage : ReactionListContextMenuContent.readIconImage
+                
                 if let readImage = self.readIconView.image {
                     self.readIconView.tintColor = presentationData.theme.contextMenu.secondaryColor
                     let fraction: CGFloat = textFontFraction
@@ -694,7 +698,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     for peer in readStats.peers {
                         if !existingPeers.contains(peer.id) {
                             existingPeers.insert(peer.id)
-                            mergedItems.append(EngineMessageReactionListContext.Item(peer: peer, reaction: nil, timestamp: readStats.readTimestamps[peer.id]))
+                            mergedItems.append(EngineMessageReactionListContext.Item(peer: peer, reaction: nil, timestamp: readStats.readTimestamps[peer.id], timestampIsReaction: false))
                         }
                     }
                 }

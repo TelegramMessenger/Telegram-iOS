@@ -2629,11 +2629,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
             let sliderValuePromise = ValuePromise<Double?>(nil)
             items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
                     return
                 }
                 let newValue = normalizeValue(newValue)
-                strongSelf.updatePlaybackRate(newValue)
+                videoNode.setBaseRate(newValue)
+                if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(newValue)
+                }
                 sliderValuePromise.set(newValue)
             }), true))
             
@@ -2656,7 +2659,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
 
                     videoNode.setBaseRate(rate)
-
                     if let controller = strongSelf.galleryController() as? GalleryController {
                         controller.updateSharedPlaybackRate(rate)
                     }
