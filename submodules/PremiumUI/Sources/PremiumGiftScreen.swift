@@ -416,11 +416,19 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .translation
                         }
                         
+                        let buttonText: String
+                        if let price = state?.price {
+                            buttonText = strings.Premium_Gift_GiftSubscription(price).string
+                        } else {
+                            buttonText = strings.Common_OK
+                        }
                         var dismissImpl: (() -> Void)?
-                        let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .gift(state?.price), order: state?.configuration.perks, buttonText: strings.Premium_Gift_GiftSubscription(state?.price ?? "–").string, isPremium: false)
-                        controller.action = {
+                        let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .gift(state?.price), order: state?.configuration.perks, buttonText: buttonText, isPremium: false)
+                        controller.action = { [weak state] in
                             dismissImpl?()
-                            buy()
+                            if let _ = state?.price {
+                                buy()
+                            }
                         }
                         controller.disposed = {
 //                                updateIsFocused(false)

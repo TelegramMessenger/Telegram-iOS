@@ -379,7 +379,7 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
     }
 }
 
-func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
         var includeResourceIds = Set<MediaResourceId>()
@@ -435,7 +435,9 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                     resourceIds.append(MediaResourceId(value))
                 }
             }
-            let _ = mediaBox.removeCachedResources(resourceIds).start(completed: {
+            let _ = mediaBox.removeCachedResources(resourceIds).start(next: { progress in
+                subscriber.putNext(progress)
+            }, completed: {
                 if peerId == nil && categories.contains(.misc) {
                     let additionalPaths: [String] = [
                         "cache",
@@ -469,7 +471,7 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
     }
 }
 
-func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Never, NoError> {
+func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
         var includeResourceIds = Set<MediaResourceId>()
@@ -496,12 +498,15 @@ func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, inclu
         
         mediaBox.storageBox.remove(peerIds: peerIds, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
+            
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {
                     resourceIds.append(MediaResourceId(value))
                 }
             }
-            let _ = mediaBox.removeCachedResources(resourceIds).start(completed: {
+            let _ = mediaBox.removeCachedResources(resourceIds).start(next: { progress in
+                subscriber.putNext(progress)
+            }, completed: {
                 subscriber.putCompletion()
             })
         })

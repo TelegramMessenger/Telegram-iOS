@@ -338,7 +338,7 @@ public extension EngineMessageReactionListContext.State {
             for recentPeer in reactionsAttribute.recentPeers {
                 if let peer = message.peers[recentPeer.peerId] {
                     if reaction == nil || recentPeer.value == reaction {
-                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value, timestamp: readStats?.readTimestamps[peer.id]))
+                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value, timestamp: recentPeer.timestamp ?? readStats?.readTimestamps[peer.id]))
                     }
                 }
             }

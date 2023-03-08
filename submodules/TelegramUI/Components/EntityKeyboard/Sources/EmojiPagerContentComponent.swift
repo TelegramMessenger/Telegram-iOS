@@ -2222,7 +2222,7 @@ private final class EmptySearchResultsView: UIView {
 }
 
 public protocol EmojiContentPeekBehavior: AnyObject {
-    func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?)
+    func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, CALayer, TelegramMediaFile)?)
 }
 
 public final class EmojiPagerContentComponent: Component {

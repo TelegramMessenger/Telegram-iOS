@@ -1838,7 +1838,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     strongSelf.reorderItems(category: category, items: items)
                 },
                 makeSearchContainerNode: { [weak self, weak controllerInteraction] content in
-                    guard let controllerInteraction = controllerInteraction else {
+                    guard let self, let controllerInteraction = controllerInteraction else {
                         return nil
                     }
 
@@ -1860,9 +1860,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         mode: mappedMode,
                         trendingGifsPromise: trendingGifsPromise,
                         cancel: {
-                        }
+                        },
+                        peekBehavior: self.emojiInputInteraction?.peekBehavior
                     )
-                    searchContainerNode.openGifContextMenu = { item, sourceNode, sourceRect, gesture, isSaved in
+                    searchContainerNode.openGifContextMenu = { [weak self] item, sourceNode, sourceRect, gesture, isSaved in
                         guard let self else {
                             return
                         }
@@ -2502,7 +2503,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         self.present = present
     }
     
-    public func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?) {
+    public func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, CALayer, TelegramMediaFile)?) {
         self.viewRecords = self.viewRecords.filter({ $0.view != nil })
         
         let viewRecord = self.viewRecords.first(where: { $0.view === view })

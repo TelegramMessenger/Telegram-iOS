@@ -15,6 +15,46 @@ import AppBundle
 import DatePickerNode
 import DebugSettingsUI
 import TabBarUI
+import WallpaperBackgroundNode
+import ChatPresentationInterfaceState
+
+private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
+    private var presentationData: PresentationData
+    private var presentationInterfaceState: ChatPresentationInterfaceState
+    
+    let wallpaperBackgroundNode: WallpaperBackgroundNode
+    let emptyNode: ChatEmptyNode
+    
+    init(context: AccountContext) {
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: context.account.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
+        
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: true)
+        self.emptyNode = ChatEmptyNode(context: context, interaction: nil)
+        
+        super.init()
+        
+        self.addSubnode(self.wallpaperBackgroundNode)
+        self.addSubnode(self.emptyNode)
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.presentationInterfaceState.limitsConfiguration, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.presentationInterfaceState.accountPeerId, mode: .standard(previewing: false), chatLocation: self.presentationInterfaceState.chatLocation, subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
+        
+        self.wallpaperBackgroundNode.update(wallpaper: presentationData.chatWallpaper)
+    }
+    
+    func updateLayout(size: CGSize, needsTiling: Bool, transition: ContainedViewLayoutTransition) {
+        let contentBounds = CGRect(origin: .zero, size: size)
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: needsTiling ? .aspectFit : .aspectFill, transition: transition)
+        transition.updateFrame(node: self.wallpaperBackgroundNode, frame: contentBounds)
+        
+        self.emptyNode.updateLayout(interfaceState: self.presentationInterfaceState, subject: .detailsPlaceholder, loadingNode: nil, backgroundNode: self.wallpaperBackgroundNode, size: contentBounds.size, insets: .zero, transition: transition)
+        transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: .zero, size: size))
+        self.emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
+    }
+}
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -30,6 +70,8 @@ public final class TelegramRootController: NavigationController {
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
     
+    private var detailsPlaceholderNode: DetailsChatPlaceholderNode?
+    
     private var applicationInFocusDisposable: Disposable?
         
     public init(context: AccountContext) {
@@ -37,33 +79,13 @@ public final class TelegramRootController: NavigationController {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let navigationDetailsBackgroundMode: NavigationEmptyDetailsBackgoundMode?
-        switch presentationData.chatWallpaper {
-        case .color:
-            let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
-            navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
-        default:
-            let image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-            navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
-        }
-        
-        super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme), backgroundDetailsMode: navigationDetailsBackgroundMode)
+        super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                if presentationData.chatWallpaper != strongSelf.presentationData.chatWallpaper {
-                    let navigationDetailsBackgroundMode: NavigationEmptyDetailsBackgoundMode?
-                    switch presentationData.chatWallpaper {
-                        case .color:
-                            let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
-                            navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
-                        default:
-                            navigationDetailsBackgroundMode = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, knockoutMode: strongSelf.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper).flatMap(NavigationEmptyDetailsBackgoundMode.wallpaper)
-                    }
-                    strongSelf.updateBackgroundDetailsMode(navigationDetailsBackgroundMode, transition: .immediate)
-                }
-
+                strongSelf.detailsPlaceholderNode?.updatePresentationData(presentationData)
+                
                 let previousTheme = strongSelf.presentationData.theme
                 strongSelf.presentationData = presentationData
                 if previousTheme !== presentationData.theme {
@@ -90,6 +112,32 @@ public final class TelegramRootController: NavigationController {
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let needsRootWallpaperBackgroundNode: Bool
+        if case .regular = layout.metrics.widthClass {
+            needsRootWallpaperBackgroundNode = true
+        } else {
+            needsRootWallpaperBackgroundNode = false
+        }
+        
+        if needsRootWallpaperBackgroundNode {
+            let detailsPlaceholderNode: DetailsChatPlaceholderNode
+            if let current = self.detailsPlaceholderNode {
+                detailsPlaceholderNode = current
+            } else {
+                detailsPlaceholderNode = DetailsChatPlaceholderNode(context: self.context)
+                detailsPlaceholderNode.wallpaperBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper)
+                self.detailsPlaceholderNode = detailsPlaceholderNode
+            }
+            self.updateDetailsPlaceholderNode(detailsPlaceholderNode)
+        } else if let _ = self.detailsPlaceholderNode {
+            self.detailsPlaceholderNode = nil
+            self.updateDetailsPlaceholderNode(nil)
+        }
+    
+        super.containerLayoutUpdated(layout, transition: transition)
     }
     
     public func addRootControllers(showCallsTab: Bool) {

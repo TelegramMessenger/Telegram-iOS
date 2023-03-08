@@ -257,6 +257,18 @@ private enum PeerInfoScreenInputData: Equatable {
     case group(groupId: PeerId)
 }
 
+public func hasAvailablePeerInfoMediaPanes(context: AccountContext, peerId: PeerId) -> Signal<Bool, NoError> {
+    let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+    return peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: .peer(id: peerId), chatLocationContextHolder: chatLocationContextHolder)
+    |> map { panes -> Bool in
+        if let panes {
+            return !panes.isEmpty
+        } else {
+            return false
+        }
+    }
+}
+
 private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<[PeerInfoPaneKey]?, NoError> {
     let tags: [(MessageTags, PeerInfoPaneKey)] = [
         (.photoOrVideo, .media),

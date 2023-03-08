@@ -1732,9 +1732,14 @@ public final class MediaBox {
                     return
                 }
                 
+                var lastReportValue = 0
+                
                 let reportProgress: (Int) -> Void = { count in
-                    Queue.mainQueue().async {
-                        subscriber.putNext(min(1.0, Float(count) / Float(totalCount)))
+                    let currentProgress = min(1.0, Float(count) / Float(totalCount))
+                    let currentInteger = Int(currentProgress * 100.0)
+                    if lastReportValue != currentInteger {
+                        lastReportValue = currentInteger
+                        subscriber.putNext(currentProgress)
                     }
                 }
                 
@@ -1781,6 +1786,7 @@ public final class MediaBox {
                     self.didRemoveResourcesPipe.putNext(Void())
                 }
                 
+                subscriber.putNext(1.0)
                 subscriber.putCompletion()
             }
             return EmptyDisposable

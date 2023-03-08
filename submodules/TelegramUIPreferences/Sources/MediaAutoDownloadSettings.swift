@@ -282,8 +282,8 @@ public struct EnergyUsageSettings: Codable, Equatable {
             autoplayVideo: true,
             autoplayGif: true,
             loopStickers: true,
-            loopEmoji: isCapable ? false : true,
-            fullTranslucency: isCapable ? false : true,
+            loopEmoji: isCapable,
+            fullTranslucency: isCapable,
             extendBackgroundWork: true,
             autodownloadInBackground: true
         )
