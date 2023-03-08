@@ -33,6 +33,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let nextOptionTitleNode: ImmediateTextNode
     private let nextOptionButtonNode: HighlightableButtonNode
     
+    private let resetNode: HighlightableButtonNode
+    
     private let dividerNode: AuthorizationDividerNode
     private var signInWithAppleButton: UIControl?
     private let proceedNode: SolidRoundedButtonNode
@@ -73,6 +75,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var requestNextOption: (() -> Void)?
     var requestAnotherOption: (() -> Void)?
     var updateNextEnabled: ((Bool) -> Void)?
+    var reset: (() -> Void)?
     
     var inProgress: Bool = false {
         didSet {
@@ -151,6 +154,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.errorTextNode.displaysAsynchronously = false
         self.errorTextNode.textAlignment = .center
         
+        self.resetNode = HighlightableButtonNode()
+        self.resetNode.displaysAsynchronously = false
+        self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.Login_Email_CantAccess, font: Font.regular(17.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
+        self.resetNode.isHidden = true
+        
         self.dividerNode = AuthorizationDividerNode(theme: self.theme, strings: self.strings)
         
         if #available(iOS 13.0, *) {
@@ -181,6 +189,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.currentOptionInfoNode)
         self.addSubnode(self.nextOptionButtonNode)
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.resetNode)
         self.addSubnode(self.dividerNode)
         self.addSubnode(self.errorTextNode)
         self.addSubnode(self.proceedNode)
@@ -225,6 +234,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self?.proceedPressed()
         }
         self.signInWithAppleButton?.addTarget(self, action: #selector(self.signInWithApplePressed), for: .touchUpInside)
+        self.resetNode.addTarget(self, action: #selector(self.resetPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -408,6 +418,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
         let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
         let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
+        let resetSize = self.resetNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
         
         let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
         let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
@@ -430,7 +441,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             codeLength = Int(length)
         case let .sms(length):
             codeLength = Int(length)
-        case let .email(_, length, _, _, _):
+        case let .email(_, length, _, _, _, _):
             codeLength = Int(length)
         case let .fragment(_, length):
             codeLength = Int(length)
@@ -503,7 +514,19 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
-                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 104.0, maxValue: 104.0)))
+                var canReset = false
+                if case let .email(_, _, resetPeriod, _, _, setup) = codeType, !setup && resetPeriod != nil {
+                    canReset = true
+                }
+                
+                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: canReset ? 0.0 : 104.0, maxValue: canReset ? 0.0 : 104.0)))
+                
+                if canReset {
+                    self.resetNode.isHidden = false
+                    items.append(AuthorizationLayoutItem(node: self.resetNode, size: resetSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 36.0, maxValue: 36.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 104.0, maxValue: 104.0)))
+                } else {
+                    self.resetNode.isHidden = true
+                }
 
                 let inset: CGFloat = 24.0
                 if case .fragment = codeType {
@@ -624,7 +647,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     codeLength = length
                 case let .sms(length):
                     codeLength = length
-                case let .email(_, length, _, _, _):
+                case let .email(_, length, _, _, _, _):
                     codeLength = length
                 case let .fragment(_, length):
                     codeLength = length
@@ -672,5 +695,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     @objc func signInWithApplePressed() {
         self.signInWithApple?()
+    }
+    
+    @objc func resetPressed() {
+        self.reset?()
     }
 }

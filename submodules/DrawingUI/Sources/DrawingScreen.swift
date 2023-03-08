@@ -417,7 +417,7 @@ private final class BlurredGradientComponent: Component {
                 self.gradientMask.image = generateGradientImage(
                     size: CGSize(width: 1.0, height: availableSize.height),
                     colors: [UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 0.0)],
-                    locations: component.position == .top ? [0.0, 0.5, 1.0] : [1.0, 0.5, 0.0],
+                    locations: component.position == .top ? [0.0, 0.8, 1.0] : [1.0, 0.5, 0.0],
                     direction: .vertical
                 )
                 
@@ -1063,7 +1063,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     position: .top,
                     tag: topGradientTag
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: topInset + 10.0),
+                availableSize: CGSize(width: context.availableSize.width, height: topInset + 15.0),
                 transition: .immediate
             )
             context.add(topGradient
