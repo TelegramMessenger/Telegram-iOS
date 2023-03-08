@@ -47,7 +47,7 @@ public enum ChatHistoryListDisplayHeaders {
 
 public enum ChatHistoryListMode: Equatable {
     case bubbles
-    case list(search: Bool, reversed: Bool, displayHeaders: ChatHistoryListDisplayHeaders, hintLinks: Bool, isGlobalSearch: Bool)
+    case list(search: Bool, reversed: Bool, reverseGroups: Bool, displayHeaders: ChatHistoryListDisplayHeaders, hintLinks: Bool, isGlobalSearch: Bool)
 }
 
 enum ChatHistoryViewScrollPosition {
@@ -224,7 +224,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 switch mode {
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
-                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                    case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
                         case .none:
@@ -269,7 +269,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 switch mode {
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
-                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                    case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
                         case .none:
@@ -1216,10 +1216,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 var updatedScrollPosition = scrollPosition
                 
                 var reverse = false
+                var reverseGroups = false
                 var includeSearchEntry = false
-                if case let .list(search, reverseValue, _, _, _) = mode {
+                if case let .list(search, reverseValue, reverseGroupsValue, _, _, _) = mode {
                     includeSearchEntry = search
                     reverse = reverseValue
+                    reverseGroups = reverseGroupsValue
                 }
                 
                 var isCopyProtectionEnabled: Bool =  data.initialData?.peer?.isCopyProtectionEnabled ?? false
@@ -1265,6 +1267,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     includeSearchEntry: includeSearchEntry && tagMask != nil,
                     reverse: reverse,
                     groupMessages: mode == .bubbles,
+                    reverseGroupedMessages: reverseGroups,
                     selectedMessages: selectedMessages,
                     presentationData: chatPresentationData,
                     historyAppearsCleared: historyAppearsCleared,
@@ -3465,7 +3468,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 switch self.mode {
                                     case .bubbles:
                                         item = ChatMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
-                                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                                    case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                                         let displayHeader: Bool
                                         switch displayHeaders {
                                         case .none:
@@ -3521,7 +3524,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 switch self.mode {
                                     case .bubbles:
                                         item = ChatMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
-                                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                                    case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                                         let displayHeader: Bool
                                         switch displayHeaders {
                                         case .none:

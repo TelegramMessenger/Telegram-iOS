@@ -264,10 +264,23 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                             let message = view.entries[index + 1].message
                             return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
                         } else {
+                            var nextGroupingKey: Int64?
                             for i in (0 ..< index).reversed() {
-                                if view.entries[i].message.groupingKey != currentGroupKey {
-                                    let message = view.entries[i].message
-                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                if let nextGroupingKey {
+                                    if view.entries[i].message.groupingKey != nextGroupingKey {
+                                        let message = view.entries[i + 1].message
+                                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i + 1].index), true)
+                                    } else if i == 0 {
+                                        let message = view.entries[i].message
+                                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                    }
+                                } else if view.entries[i].message.groupingKey != currentGroupKey {
+                                    if let groupingKey = view.entries[i].message.groupingKey {
+                                        nextGroupingKey = groupingKey
+                                    } else {
+                                        let message = view.entries[i].message
+                                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                    }
                                 }
                             }
                         }
