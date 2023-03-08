@@ -508,9 +508,8 @@ public final class EngineMessageReactionListContext {
                             for reaction in reactions {
                                 switch reaction {
                                 case let .messagePeerReaction(_, peer, date, reaction):
-                                    let _ = date
                                     if let peer = transaction.getPeer(peer.peerId), let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: nil))
+                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: date))
                                     }
                                 }
                             }
