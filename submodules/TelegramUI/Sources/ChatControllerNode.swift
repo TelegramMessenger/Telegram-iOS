@@ -336,7 +336,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputContextOverTextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
         var source: ChatHistoryListSource
-        if case let .forwardedMessages(messageIds, options) = subject {
+        if case let .forwardedMessages(_, messageIds, options) = subject {
             let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId), options)
             |> map { messages, accountPeer, options -> ([Message], Int32, Bool) in
                 var messages = messages

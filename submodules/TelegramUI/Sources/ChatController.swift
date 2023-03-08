@@ -4606,7 +4606,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return message?.totalCount
                     }
                     |> distinctUntilChanged
-                } else if case let .forwardedMessages(messageIds, options) = subject {
+                } else if case let .forwardedMessages(peerIds, messageIds, options) = subject {
                     displayedCountSignal = self.presentationInterfaceStatePromise.get()
                     |> map { state -> Int? in
                         if let selectionState = state.interfaceState.selectionState {
@@ -4617,50 +4617,71 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     |> distinctUntilChanged
                     
-                    subtitleTextSignal = combineLatest(self.presentationInterfaceStatePromise.get(), options, displayedCountSignal)
-                    |> map { state, options, count in
-                        if let peer = state.renderedPeer?.chatMainPeer {
-                            if let peer = peer as? TelegramUser {
-                                let displayName = EnginePeer(peer).compactDisplayTitle
-                                if count == 1 {
-                                    if options.hideNames {
-                                        return state.strings.Conversation_ForwardOptions_UserMessageForwardHidden(displayName).string
+                    let peers = self.context.account.postbox.multiplePeersView(peerIds)
+                    |> take(1)
+                    
+                    let presentationData = self.presentationData
+                    subtitleTextSignal = combineLatest(peers, options, displayedCountSignal)
+                    |> map { peersView, options, count in
+                        let peers = peersView.peers.values
+                        if !peers.isEmpty {
+                            if peers.count == 1, let peer = peers.first {
+                                if let peer = peer as? TelegramUser {
+                                    let displayName = EnginePeer(peer).compactDisplayTitle
+                                    if count == 1 {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardHidden(displayName).string
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardVisible(displayName).string
+                                        }
                                     } else {
-                                        return state.strings.Conversation_ForwardOptions_UserMessageForwardVisible(displayName).string
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardHidden(displayName).string
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardVisible(displayName).string
+                                        }
+                                    }
+                                } else if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                    if count == 1 {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardVisible
+                                        }
+                                    } else {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardVisible
+                                        }
                                     }
                                 } else {
-                                    if options.hideNames {
-                                        return state.strings.Conversation_ForwardOptions_UserMessagesForwardHidden(displayName).string
+                                    if count == 1 {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardVisible
+                                        }
                                     } else {
-                                        return state.strings.Conversation_ForwardOptions_UserMessagesForwardVisible(displayName).string
-                                    }
-                                }
-                            } else if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                if count == 1 {
-                                    if options.hideNames {
-                                        return state.strings.Conversation_ForwardOptions_ChannelMessageForwardHidden
-                                    } else {
-                                        return state.strings.Conversation_ForwardOptions_ChannelMessageForwardVisible
-                                    }
-                                } else {
-                                    if options.hideNames {
-                                        return state.strings.Conversation_ForwardOptions_ChannelMessagesForwardHidden
-                                    } else {
-                                        return state.strings.Conversation_ForwardOptions_ChannelMessagesForwardVisible
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardVisible
+                                        }
                                     }
                                 }
                             } else {
                                 if count == 1 {
                                     if options.hideNames {
-                                        return state.strings.Conversation_ForwardOptions_GroupMessageForwardHidden
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardHidden
                                     } else {
-                                        return state.strings.Conversation_ForwardOptions_GroupMessageForwardVisible
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardVisible
                                     }
                                 } else {
                                     if options.hideNames {
-                                        return state.strings.Conversation_ForwardOptions_GroupMessagesForwardHidden
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardHidden
                                     } else {
-                                        return state.strings.Conversation_ForwardOptions_GroupMessagesForwardVisible
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardVisible
                                     }
                                 }
                             }
@@ -5948,6 +5969,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatTitleView?.networkState = state
             }
         })
+        
+        if case let .forwardedMessages(_, messageIds, _) = self.subject, messageIds.count > 1 {
+            self.updateChatPresentationInterfaceState(interactive: false, { state in
+                return state.updatedInterfaceState({ $0.withUpdatedSelectedMessages(messageIds) })
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -8100,7 +8127,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> distinctUntilChanged
                 }
                 
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .forwardedMessages(ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .forwardedMessages(peerIds: [peerId], ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
                 
                 let messageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
@@ -8132,7 +8159,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if !uniquePeerIds.contains(author.id) {
                                 uniquePeerIds.insert(author.id)
                             }
-                            
                             if message.id.peerId == accountPeerId && message.forwardInfo == nil {
                             } else {
                                 hasNotOwnMessages = true
@@ -10633,12 +10659,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }))
             }
-        }
-        
-        if case let .forwardedMessages(messageIds, _) = self.subject, messageIds.count > 1 {
-            self.updateChatPresentationInterfaceState(interactive: false, { state in
-                return state.updatedInterfaceState({ $0.withUpdatedSelectedMessages(messageIds) })
-            })
         }
         
         self.displayNodeDidLoad()
@@ -18511,7 +18531,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     let sourceRect: CGRect?
     
     let navigationController: NavigationController? = nil
-    
+
     let passthroughTouches: Bool
     
     init(controller: ViewController, sourceNode: ASDisplayNode?, sourceRect: CGRect? = nil, passthroughTouches: Bool) {
