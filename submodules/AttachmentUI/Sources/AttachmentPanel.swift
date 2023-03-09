@@ -925,7 +925,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 return
             }
             textInputPanelNode.loadTextInputNodeIfNeeded()
-            guard let textInputNode = textInputPanelNode.textInputNode else {
+            guard let textInputNode = textInputPanelNode.textInputNode, let peerId = chatLocation.peerId else {
                 return
             }
             
@@ -933,15 +933,36 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             if case .media = strongSelf.presentationInterfaceState.inputMode {
                 hasEntityKeyboard = true
             }
-            
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, completion: {
-            }, sendMessage: { [weak textInputPanelNode] silently in
-                textInputPanelNode?.sendMessage(silently ? .silent : .generic)
-            }, schedule: { [weak textInputPanelNode] in
-                textInputPanelNode?.sendMessage(.schedule)
+            let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
+                    return
+                }
+                var sendWhenOnlineAvailable = false
+                if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case .present = presence.status {
+                    sendWhenOnlineAvailable = true
+                }
+                if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                    sendWhenOnlineAvailable = false
+                }
+                
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, canSendWhenOnline: sendWhenOnlineAvailable, completion: {
+                }, sendMessage: { [weak textInputPanelNode] mode in
+                    switch mode {
+                    case .generic:
+                        textInputPanelNode?.sendMessage(.generic)
+                    case .silently:
+                        textInputPanelNode?.sendMessage(.silent)
+                    case .whenOnline:
+                        textInputPanelNode?.sendMessage(.whenOnline)
+                    }
+                }, schedule: { [weak textInputPanelNode] in
+                    textInputPanelNode?.sendMessage(.schedule)
+                })
+                controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
+                strongSelf.presentInGlobalOverlay(controller)
             })
-            controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
-            strongSelf.presentInGlobalOverlay(controller)
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in

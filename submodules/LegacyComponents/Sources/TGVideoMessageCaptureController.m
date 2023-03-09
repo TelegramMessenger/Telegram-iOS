@@ -776,7 +776,7 @@ typedef enum
         [_generator impactOccurred];
     }
     
-    TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:_context isDark:self.pallete.isDark sendButtonFrame:[_controlsView convertRect:[_controlsView frameForSendButton] toView:nil] canSendSilently:_canSendSilently canSchedule:_canSchedule reminder:_reminder hasTimer:false];
+    TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:_context isDark:self.pallete.isDark sendButtonFrame:[_controlsView convertRect:[_controlsView frameForSendButton] toView:nil] canSendSilently:_canSendSilently canSendWhenOnline:false canSchedule:_canSchedule reminder:_reminder hasTimer:false];
     __weak TGVideoMessageCaptureController *weakSelf = self;
     controller.send = ^{
         __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
@@ -796,6 +796,17 @@ typedef enum
         }
         
         [strongSelf finishWithURL:strongSelf->_url dimensions:CGSizeMake(240.0f, 240.0f) duration:strongSelf->_duration liveUploadData:strongSelf->_liveUploadData thumbnailImage:strongSelf->_thumbnailImage isSilent:true scheduleTimestamp:0];
+        
+        _automaticDismiss = true;
+        [strongSelf dismiss:false];
+    };
+    controller.sendWhenOnline = ^{
+        __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
+        
+        [strongSelf finishWithURL:strongSelf->_url dimensions:CGSizeMake(240.0f, 240.0f) duration:strongSelf->_duration liveUploadData:strongSelf->_liveUploadData thumbnailImage:strongSelf->_thumbnailImage isSilent:false scheduleTimestamp:0x7ffffffe];
         
         _automaticDismiss = true;
         [strongSelf dismiss:false];

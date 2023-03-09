@@ -430,6 +430,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var searchResultsTooltipController: TooltipController?
     private weak var messageTooltipController: TooltipController?
     private weak var videoUnmuteTooltipController: TooltipController?
+    private var didDisplayVideoUnmuteTooltip = false
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
     private weak var mediaRestrictedTooltipController: TooltipController?
@@ -8986,14 +8987,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, displayVideoUnmuteTip: { [weak self] location in
-            guard let strongSelf = self, let layout = strongSelf.validLayout, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
+            guard let strongSelf = self, !strongSelf.didDisplayVideoUnmuteTooltip, let layout = strongSelf.validLayout, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
-            
             if let location = location, location.y < strongSelf.navigationLayout(layout: layout).navigationFrame.maxY {
                 return
             }
-            
             let icon: UIImage?
             if layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland {
                 icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
@@ -9001,6 +9000,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
             }
             if let location = location, let icon = icon {
+                strongSelf.didDisplayVideoUnmuteTooltip = true
                 strongSelf.videoUnmuteTooltipController?.dismiss()
                 let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                 strongSelf.videoUnmuteTooltipController = tooltipController
@@ -9832,7 +9832,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
         }, displaySendMessageOptions: { [weak self] node, gesture in
-            if let strongSelf = self, let textInputNode = strongSelf.chatDisplayNode.textInputNode(), let layout = strongSelf.validLayout {
+            if let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let textInputNode = strongSelf.chatDisplayNode.textInputNode(), let layout = strongSelf.validLayout {
                 let previousSupportedOrientations = strongSelf.supportedOrientations
                 if layout.size.width > layout.size.height {
                     strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
@@ -9847,26 +9847,55 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasEntityKeyboard = true
                 }
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.supportedOrientations = previousSupportedOrientations
+                let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                    guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
+                        return
                     }
-                }, sendMessage: { [weak self] silently in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.sendCurrentMessage(silently)
+                    var sendWhenOnlineAvailable = false
+                    if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case .present = presence.status {
+                        sendWhenOnlineAvailable = true
                     }
-                }, schedule: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.scheduleCurrentMessage()
+                    if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                        sendWhenOnlineAvailable = false
+                    }
+                    
+                    let controller = ChatSendMessageActionSheetController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.supportedOrientations = previousSupportedOrientations
+                        }
+                    }, sendMessage: { [weak self] mode in
+                        if let strongSelf = self {
+                            switch mode {
+                            case .generic:
+                                strongSelf.controllerInteraction?.sendCurrentMessage(false)
+                            case .silently:
+                                strongSelf.controllerInteraction?.sendCurrentMessage(true)
+                            case .whenOnline:
+                                strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp) { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
+                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                        })
+                                        strongSelf.openScheduledMessages()
+                                    }
+                                }
+                            }
+                        }
+                    }, schedule: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.controllerInteraction?.scheduleCurrentMessage()
+                        }
+                    })
+                    controller.emojiViewProvider = strongSelf.chatDisplayNode.textInputPanelNode?.emojiViewProvider
+                    strongSelf.sendMessageActionsController = controller
+                    if layout.isNonExclusive {
+                        strongSelf.present(controller, in: .window(.root))
+                    } else {
+                        strongSelf.presentInGlobalOverlay(controller, with: nil)
                     }
                 })
-                controller.emojiViewProvider = strongSelf.chatDisplayNode.textInputPanelNode?.emojiViewProvider
-                strongSelf.sendMessageActionsController = controller
-                if layout.isNonExclusive {
-                    strongSelf.present(controller, in: .window(.root))
-                } else {
-                    strongSelf.presentInGlobalOverlay(controller, with: nil)
-                }
             }
         }, openScheduledMessages: { [weak self] in
             if let strongSelf = self {
@@ -16331,6 +16360,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 commit(transformedMessages)
                             }
                         })
+                    case .whenOnline:
+                        let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: false, scheduleTime: scheduleWhenOnlineTimestamp)
+                        commit(transformedMessages)
                 }
             }
             controller.peerSelected = { [weak self, weak controller] peer, threadId in
@@ -17340,7 +17372,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
         session.loadObjects(ofClass: UIImage.self) { [weak self] imageItems in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, !imageItems.isEmpty else {
                 return
             }
             let images = imageItems as! [UIImage]

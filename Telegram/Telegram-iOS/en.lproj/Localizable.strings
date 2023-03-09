@@ -9057,3 +9057,5 @@ Sorry for the inconvenience.";
 "Conversation.ForwardOptions.RecipientsMessageForwardHidden" = "Recipients won't see that it was forwarded";
 "Conversation.ForwardOptions.RecipientsMessagesForwardVisible" = "Recipients will see they were forwarded";
 "Conversation.ForwardOptions.RecipientsMessagesForwardHidden" = "Recipients won't see they were forwarded";
+
+"Conversation.SendMessage.SendWhenOnline" = "Send When Online";

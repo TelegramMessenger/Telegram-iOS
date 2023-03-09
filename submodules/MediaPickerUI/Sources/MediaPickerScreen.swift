@@ -1758,8 +1758,8 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-        self.interaction?.sendSelected(nil, silently, nil, true, {})
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+        self.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, {})
     }
     
     func schedule() {
