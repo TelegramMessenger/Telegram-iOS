@@ -225,7 +225,7 @@ private func energeSavingSettingsScreenEntries(
     } else if settings.energyUsageSettings.activationThreshold >= 96 {
         allText = presentationData.strings.PowerSaving_AllDescriptionAlways
     } else {
-        allText = presentationData.strings.PowerSaving_AllDescriptionLimit("\(settings.energyUsageSettings.activationThreshold)")
+        allText = presentationData.strings.PowerSaving_AllDescriptionLimit("\(settings.energyUsageSettings.activationThreshold)").string
     }
     entries.append(.allFooter(allText))
     
