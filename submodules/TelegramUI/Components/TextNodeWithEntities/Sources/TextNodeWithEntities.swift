@@ -8,6 +8,7 @@ import AccountContext
 import AnimationCache
 import MultiAnimationRenderer
 import TelegramCore
+import InvisibleInkDustNode
 
 private extension CGRect {
     var center: CGPoint {
@@ -287,12 +288,15 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var textStroke: (UIColor, CGFloat)?
     public var cutout: TextNodeCutout?
     public var displaySpoilers = false
+    public var displaySpoilerEffect = true
+    public var spoilerColor: UIColor = .black
     
     private var enableLooping: Bool = true
     
     public var arguments: TextNodeWithEntities.Arguments?
     
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
+    private var dustNode: InvisibleInkDustNode?
     
     public var visibility: Bool = false {
         didSet {
@@ -337,7 +341,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var linkHighlightColor: UIColor?
     
     public var trailingLineWidth: CGFloat?
-    
+
     var constrainedSize: CGSize?
     
     public var highlightAttributeAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? {
@@ -378,9 +382,12 @@ public class ImmediateTextNodeWithEntities: TextNode {
         
         let _ = apply()
         
+        var enableAnimations = true
         if let arguments = self.arguments {
             self.updateInlineStickers(context: arguments.context, cache: arguments.cache, renderer: arguments.renderer, textLayout: layout, placeholderColor: arguments.placeholderColor)
+            enableAnimations = arguments.context.sharedContext.energyUsageSettings.fullTranslucency
         }
+        self.updateSpoilers(enableAnimations: enableAnimations, textLayout: layout)
         
         if layout.numberOfLines > 1 {
             self.trailingLineWidth = layout.trailingLineWidth
@@ -440,6 +447,25 @@ public class ImmediateTextNodeWithEntities: TextNode {
         }
         for key in removeKeys {
             self.inlineStickerItemLayers.removeValue(forKey: key)
+        }
+    }
+    
+    private func updateSpoilers(enableAnimations: Bool, textLayout: TextNodeLayout) {
+        if !textLayout.spoilers.isEmpty && self.displaySpoilerEffect {
+            if self.dustNode == nil {
+                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: enableAnimations)
+                self.dustNode = dustNode
+                self.addSubnode(dustNode)
+                
+            }
+            if let dustNode = self.dustNode {
+                let textFrame = CGRect(origin: .zero, size: textLayout.size)
+                dustNode.update(size: textFrame.size, color: self.spoilerColor, textColor: self.spoilerColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            }
+        } else if let dustNode = self.dustNode {
+            self.dustNode = nil
+            dustNode.removeFromSupernode()
         }
     }
     
