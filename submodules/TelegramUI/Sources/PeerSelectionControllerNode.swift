@@ -21,6 +21,7 @@ import MultiAnimationRenderer
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
+import ContextUI
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -36,13 +37,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
+    private let  presentationInterfaceStatePromise = ValuePromise<ChatPresentationInterfaceState>()
+    
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
-    var inProgress: Bool = false {
-        didSet {
-            
-        }
-    }
+    var inProgress: Bool = false
     
     var navigationBar: NavigationBar?
     
@@ -125,7 +124,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
         
-        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds) }
+        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds).withUpdatedForwardOptionsState(ChatInterfaceForwardOptionsState(hideNames: false, hideCaptions: false, unhideNamesOnCaptionChange: false)) }
+        self.presentationInterfaceStatePromise.set(self.presentationInterfaceState)
         
         if let _ = self.requestPeerType {
             self.requirementsBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
@@ -346,7 +346,190 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState($0.forwardOptionsState) }) })
             }
-        }, presentForwardOptions: { _ in
+        }, presentForwardOptions: { [weak self] sourceNode in
+            guard let strongSelf = self else  {
+                return
+            }
+
+            let presentationData = strongSelf.presentationData
+            
+            let peerIds = strongSelf.selectedPeers.0.map { $0.id }
+            
+            let forwardOptions: Signal<ChatControllerSubject.ForwardOptions, NoError>
+            forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
+            |> map { state -> ChatControllerSubject.ForwardOptions in
+                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
+            }
+            |> distinctUntilChanged
+
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.context.account.peerId), subject: .forwardedMessages(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
+            chatController.canReadHistory.set(false)
+            
+            let messageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+            let messagesCount: Signal<Int, NoError>
+            if let chatController = chatController as? ChatControllerImpl, messageIds.count > 1 {
+                messagesCount = .single(messageIds.count)
+                |> then(
+                    chatController.presentationInterfaceStatePromise.get()
+                    |> map { state -> Int in
+                        return state.interfaceState.selectionState?.selectedIds.count ?? 1
+                    }
+                )
+            } else {
+                messagesCount = .single(1)
+            }
+            
+            let accountPeerId = strongSelf.context.account.peerId
+            let items = combineLatest(forwardOptions, strongSelf.context.account.postbox.messagesAtIds(messageIds), messagesCount)
+            |> map { forwardOptions, messages, messagesCount -> [ContextMenuItem] in
+                var items: [ContextMenuItem] = []
+                
+                var hasCaptions = false
+                var uniquePeerIds = Set<PeerId>()
+                
+                var hasOther = false
+                var hasNotOwnMessages = false
+                for message in messages {
+                    if let author = message.effectiveAuthor {
+                        if !uniquePeerIds.contains(author.id) {
+                            uniquePeerIds.insert(author.id)
+                        }
+                        if message.id.peerId == accountPeerId && message.forwardInfo == nil {
+                        } else {
+                            hasNotOwnMessages = true
+                        }
+                    }
+                    
+                    var isDice = false
+                    var isMusic = false
+                    for media in message.media {
+                        if let media = media as? TelegramMediaFile, media.isMusic {
+                            isMusic = true
+                        } else if media is TelegramMediaDice {
+                            isDice = true
+                        } else {
+                            if !message.text.isEmpty {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    hasCaptions = true
+                                }
+                            }
+                        }
+                    }
+                    if !isDice && !isMusic {
+                        hasOther = true
+                    }
+                }
+                
+                let canHideNames = hasNotOwnMessages && hasOther
+                
+                let hideNames = forwardOptions.hideNames
+                let hideCaptions = forwardOptions.hideCaptions
+                
+                if !"".isEmpty { // check if seecret chat
+                } else {
+                    if canHideNames {
+                        items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
+                            if hideNames {
+                                return nil
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideNames = false
+                                updated.hideCaptions = false
+                                updated.unhideNamesOnCaptionChange = false
+                                return updated
+                            })
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
+                            if hideNames {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return nil
+                            }
+                        }, action: { _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideNames = true
+                                updated.unhideNamesOnCaptionChange = false
+                                return updated
+                            })
+                        })))
+                        
+                        items.append(.separator)
+                    }
+                    
+                    if hasCaptions {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowCaption, icon: { theme in
+                            if hideCaptions {
+                                return nil
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideCaptions = false
+                                if updated.unhideNamesOnCaptionChange {
+                                    updated.unhideNamesOnCaptionChange = false
+                                    updated.hideNames = false
+                                }
+                                return updated
+                            })
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
+                            if hideCaptions {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return nil
+                            }
+                        }, action: { _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideCaptions = true
+                                if !updated.hideNames {
+                                    updated.hideNames = true
+                                    updated.unhideNamesOnCaptionChange = true
+                                }
+                                return updated
+                            })
+                        })))
+                        
+                        items.append(.separator)
+                    }
+                }
+                
+                items.append(.action(ContextMenuActionItem(text: messagesCount == 1 ? presentationData.strings.Conversation_ForwardOptions_SendMessage : presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak chatController] c, f in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
+                        var forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                        forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
+                    }
+                    strongSelf.textInputPanelNode?.sendMessage(.generic)
+
+                    f(.default)
+                })))
+                
+                return items
+            }
+
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
+            contextController.dismissedForCancel = { [weak chatController] in
+                if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
+                    var forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                    forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
+                }
+            }
+            contextController.immediateItemsTransitionAnimation = true
+            strongSelf.controller?.presentInGlobalOverlay(contextController)
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {
@@ -536,6 +719,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         let updateInputTextState = self.presentationInterfaceState.interfaceState.effectiveInputState != presentationInterfaceState.interfaceState.effectiveInputState
         
         self.presentationInterfaceState = presentationInterfaceState
+        self.presentationInterfaceStatePromise.set(presentationInterfaceState)
         
         if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
             textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
@@ -543,6 +727,46 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         if let (layout, navigationBarHeight, actualNavigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: transition)
+        }
+    }
+    
+    private var selectedPeers: ([Peer], [PeerId: Peer]) {
+        if self.contactListActive {
+            let selectedContactPeers = self.contactListNode?.selectedPeers ?? []
+
+            var selectedPeers: [Peer] = []
+            var selectedPeerMap: [PeerId: Peer] = [:]
+            for contactPeer in selectedContactPeers {
+                if case let .peer(peer, _, _) = contactPeer {
+                    selectedPeers.append(peer)
+                    selectedPeerMap[peer.id] = peer
+                }
+            }
+            return (selectedPeers, selectedPeerMap)
+        } else {
+            var selectedPeerIds: [PeerId] = []
+            var selectedPeerMap: [PeerId: Peer] = [:]
+            if let mainContainerNode = self.mainContainerNode {
+                mainContainerNode.currentItemNode.updateState { state in
+                    selectedPeerIds = Array(state.selectedPeerIds)
+                    selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
+                    return state
+                }
+            }
+            if let chatListNode = self.chatListNode {
+                chatListNode.updateState { state in
+                    selectedPeerIds = Array(state.selectedPeerIds)
+                    selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
+                    return state
+                }
+            }
+            var selectedPeers: [Peer] = []
+            for peerId in selectedPeerIds {
+                if let peer = selectedPeerMap[peerId] {
+                    selectedPeers.append(peer)
+                }
+            }
+            return (selectedPeers, selectedPeerMap)
         }
     }
     
@@ -566,47 +790,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
                 let forwardOptionsState = strongSelf.presentationInterfaceState.interfaceState.forwardOptionsState
                 
-                if strongSelf.contactListActive {
-                    strongSelf.contactListNode?.multipleSelection = true
-                    let selectedContactPeers = strongSelf.contactListNode?.selectedPeers ?? []
-
-                    var selectedPeers: [Peer] = []
-                    var selectedPeerMap: [PeerId: Peer] = [:]
-                    for contactPeer in selectedContactPeers {
-                        if case let .peer(peer, _, _) = contactPeer {
-                            selectedPeers.append(peer)
-                            selectedPeerMap[peer.id] = peer
-                        }
-                    }
-                    if !selectedPeers.isEmpty {
-                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
-                    }
-                } else {
-                    var selectedPeerIds: [PeerId] = []
-                    var selectedPeerMap: [PeerId: Peer] = [:]
-                    if let mainContainerNode = strongSelf.mainContainerNode {
-                        mainContainerNode.currentItemNode.updateState { state in
-                            selectedPeerIds = Array(state.selectedPeerIds)
-                            selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
-                            return state
-                        }
-                    }
-                    if let chatListNode = strongSelf.chatListNode {
-                        chatListNode.updateState { state in
-                            selectedPeerIds = Array(state.selectedPeerIds)
-                            selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
-                            return state
-                        }
-                    }
-                    if !selectedPeerIds.isEmpty {
-                        var selectedPeers: [Peer] = []
-                        for peerId in selectedPeerIds {
-                            if let peer = selectedPeerMap[peerId] {
-                                selectedPeers.append(peer)
-                            }
-                        }
-                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
-                    }
+                let (selectedPeers, selectedPeerMap) = strongSelf.selectedPeers
+                if !selectedPeers.isEmpty {
+                    strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
                 }
             }
             self.addSubnode(textInputPanelNode)
@@ -1424,5 +1610,37 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
         return nil
     } else {
         return String(lines.joined(separator: "\n"))
+    }
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    let sourceRect: CGRect?
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?, sourceRect: CGRect? = nil, passthroughTouches: Bool) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.sourceRect = sourceRect
+        self.passthroughTouches = passthroughTouches
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode.view, sourceRect ?? sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
     }
 }

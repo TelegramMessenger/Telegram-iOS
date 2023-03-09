@@ -9056,3 +9056,8 @@ Sorry for the inconvenience.";
 "Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code. You can ask a friend to a gift a Premium subscription for your account %@";
 
 "ChatList.StartMessaging" = "Select a chat to start messaging";
+
+"Conversation.ForwardOptions.RecipientsMessageForwardVisible" = "Recipients will see that it was forwarded";
+"Conversation.ForwardOptions.RecipientsMessageForwardHidden" = "Recipients won't see that it was forwarded";
+"Conversation.ForwardOptions.RecipientsMessagesForwardVisible" = "Recipients will see they were forwarded";
+"Conversation.ForwardOptions.RecipientsMessagesForwardHidden" = "Recipients won't see they were forwarded";
