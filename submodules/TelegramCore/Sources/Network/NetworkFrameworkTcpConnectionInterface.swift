@@ -231,43 +231,50 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                 self.processReadRequests()
             } else {
                 connection.receive(minimumIncompleteLength: requestChunkLength, maximumLength: requestChunkLength, completion: { [weak self] data, context, isComplete, error in
-                    guard let self = self, let currentReadRequest = self.currentReadRequest else {
-                        return
-                    }
-                    if let data = data {
-                        self.networkUsageManager?.addIncomingBytes(UInt(data.count), interface: self.currentInterfaceIsWifi ? MTNetworkUsageManagerInterfaceOther : MTNetworkUsageManagerInterfaceWWAN)
-                        
-                        if data.count != 0 && data.count <= currentReadRequest.request.length - currentReadRequest.readyLength {
-                            currentReadRequest.data.withUnsafeMutableBytes { currentBuffer in
-                                guard let currentBytes = currentBuffer.assumingMemoryBound(to: UInt8.self).baseAddress else {
-                                    return
-                                }
-                                data.copyBytes(to: currentBytes.advanced(by: currentReadRequest.readyLength), count: data.count)
-                            }
-                            currentReadRequest.readyLength += data.count
-                            
-                            let tag = currentReadRequest.request.tag
-                            let readCount = data.count
-                            weak var delegate = self.delegate
-                            self.delegateQueue.async {
-                                if let delegate = delegate {
-                                    delegate.connectionInterfaceDidReadPartialData(ofLength: UInt(readCount), tag: tag)
-                                }
-                            }
-                            
-                            self.processCurrentRead()
-                        } else {
-                            self.cancelWithError(error: error)
-                        }
-                        
-                        if isComplete && data.count == 0 {
-                            self.cancelWithError(error: nil)
-                        }
-                    } else {
-                        self.cancelWithError(error: error)
-                    }
+                    self?.readWithBytes(data: data, isComplete: isComplete, error: error)
                 })
             }
+        }
+        
+        private func readWithBytes(data: Data?, isComplete: Bool, error: Error?) {
+            guard let currentReadRequest = self.currentReadRequest else {
+                return
+            }
+            if let data = data {
+                self.networkUsageManager?.addIncomingBytes(UInt(data.count), interface: self.currentInterfaceIsWifi ? MTNetworkUsageManagerInterfaceOther : MTNetworkUsageManagerInterfaceWWAN)
+        
+                if data.count != 0 && data.count <= currentReadRequest.request.length - currentReadRequest.readyLength {
+                    
+                    
+                    currentReadRequest.data.withUnsafeMutableBytes { currentBuffer in
+                        guard let currentBytes = currentBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                            return
+                        }
+                        data.copyBytes(to: currentBytes.advanced(by: currentReadRequest.readyLength), count: data.count)
+                    }
+                    currentReadRequest.readyLength += data.count
+
+                    let tag = currentReadRequest.request.tag
+                    let readCount = data.count
+                    weak var delegate = self.delegate
+                    self.delegateQueue.async {
+                        if let delegate = delegate {
+                            delegate.connectionInterfaceDidReadPartialData(ofLength: UInt(readCount), tag: tag)
+                        }
+                    }
+
+                    self.processCurrentRead()
+                } else {
+                    self.cancelWithError(error: error)
+                }
+        
+                if isComplete && data.count == 0 {
+                    self.cancelWithError(error: nil)
+                }
+            } else {
+                self.cancelWithError(error: error)
+            }
+
         }
         
         private func cancelWithError(error: Error?) {
