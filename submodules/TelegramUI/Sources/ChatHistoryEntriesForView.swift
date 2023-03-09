@@ -15,6 +15,7 @@ func chatHistoryEntriesForView(
     includeSearchEntry: Bool,
     reverse: Bool,
     groupMessages: Bool,
+    reverseGroupedMessages: Bool,
     selectedMessages: Set<MessageId>?,
     presentationData: ChatPresentationData,
     historyAppearsCleared: Bool,
@@ -154,9 +155,18 @@ func chatHistoryEntriesForView(
             }
         }
     
-        if groupMessages {
+        if groupMessages || reverseGroupedMessages {
             if !groupBucket.isEmpty && message.groupInfo != groupBucket[0].0.groupInfo {
-                entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                if reverseGroupedMessages {
+                    groupBucket.reverse()
+                }
+                if groupMessages {
+                    entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                } else {
+                    for (message, isRead, selection, attributes, location) in groupBucket {
+                        entries.append(.MessageEntry(message, presentationData, isRead, location, selection, attributes))
+                    }
+                }
                 groupBucket.removeAll()
             }
             if let _ = message.groupInfo {
@@ -188,8 +198,17 @@ func chatHistoryEntriesForView(
     }
     
     if !groupBucket.isEmpty {
-        assert(groupMessages)
-        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+        assert(groupMessages || reverseGroupedMessages)
+        if reverseGroupedMessages {
+            groupBucket.reverse()
+        }
+        if groupMessages {
+            entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+        } else {
+            for (message, isRead, selection, attributes, location) in groupBucket {
+                entries.append(.MessageEntry(message, presentationData, isRead, location, selection, attributes))
+            }
+        }
     }
     
     if let maybeJoinMessage = joinMessage, !view.holeLater {

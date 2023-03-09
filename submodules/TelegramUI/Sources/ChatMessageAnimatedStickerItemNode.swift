@@ -640,7 +640,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             } else if self.emojiFile?.id != emojiFile?.id {
                 if self.emojiFile != nil {
                     self.didSetUpAnimationNode = false
-                    item.controllerInteraction.seenOneTimeAnimatedMedia.remove(item.message.id) 
+                    item.controllerInteraction.seenOneTimeAnimatedMedia.remove(item.message.id)
+                    
+                    self.animationNode?.removeFromSupernode()
+                    self.animationNode = nil
+                    
+                    self.contextSourceNode.contentNode.insertSubnode(self.placeholderNode, aboveSubnode: self.imageNode)
+                    
+                    self.setupNode(item: item)
                 }
                 self.emojiFile = emojiFile
                 if let emojiFile = emojiFile {
