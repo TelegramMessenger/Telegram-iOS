@@ -78,7 +78,8 @@ func chatHistoryEntriesForView(
             associatedThreadInfo: nil
         )
     }
-            
+    
+    var existingGroupStableIds: [UInt32] = []
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)] = []
     var count = 0
     loop: for entry in view.entries {
@@ -161,7 +162,11 @@ func chatHistoryEntriesForView(
                     groupBucket.reverse()
                 }
                 if groupMessages {
-                    entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                    let groupStableId = groupBucket[0].0.groupInfo!.stableId
+                    if !existingGroupStableIds.contains(groupStableId) {
+                        existingGroupStableIds.append(groupStableId)
+                        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                    }
                 } else {
                     for (message, isRead, selection, attributes, location) in groupBucket {
                         entries.append(.MessageEntry(message, presentationData, isRead, location, selection, attributes))
@@ -203,7 +208,11 @@ func chatHistoryEntriesForView(
             groupBucket.reverse()
         }
         if groupMessages {
-            entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+            let groupStableId = groupBucket[0].0.groupInfo!.stableId
+            if !existingGroupStableIds.contains(groupStableId) {
+                existingGroupStableIds.append(groupStableId)
+                entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+            }
         } else {
             for (message, isRead, selection, attributes, location) in groupBucket {
                 entries.append(.MessageEntry(message, presentationData, isRead, location, selection, attributes))
