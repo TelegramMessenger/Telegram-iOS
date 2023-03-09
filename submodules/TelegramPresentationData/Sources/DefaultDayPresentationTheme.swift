@@ -1049,6 +1049,10 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
 }
 
+public let legacyBuiltinWallpaperGradientColors: [UIColor] = [
+    UIColor(rgb: 0xd6e2ee)
+]
+
 public let defaultBuiltinWallpaperGradientColors: [UIColor] = [
     UIColor(rgb: 0xdbddbb),
     UIColor(rgb: 0x6ba587),
@@ -1075,6 +1079,15 @@ public extension BuiltinWallpaperData {
         fileAccessHash: 2106033778341319685,
         datacenterId: 4,
         fileSize: 183832
+    )
+    static let legacy = BuiltinWallpaperData(
+        wallpaperId: 5911458201550716931,
+        wallpaperAccessHash: -5164387148619674119,
+        slug: "Ye7DfT2kCVIKAAAAhzXfrkdOjxs",
+        fileId: 5911315028815907420,
+        fileAccessHash: 5205407890340371688,
+        datacenterId: 2,
+        fileSize: 71715
     )
     static let variant1 = BuiltinWallpaperData(
         wallpaperId: 5784984711902265347,
@@ -1206,6 +1219,7 @@ public extension BuiltinWallpaperData {
     static func generate(account: Account) {
         let slugToName: [(String, String)] = [
             ("fqv01SQemVIBAAAApND8LDRUhRU", "`default`"),
+            ("Ye7DfT2kCVIKAAAAhzXfrkdOjxs", "legacy"),
             ("RlZs2PJkSFADAAAAElGaGwgJBgU", "variant1"),
             ("9LW_RcoOSVACAAAAFTk3DTyXN-M", "variant2"),
             ("CJNyxPMgSVAEAAAAvW9sMwc51cw", "variant3"),

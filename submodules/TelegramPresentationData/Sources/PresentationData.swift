@@ -383,7 +383,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         let effectiveColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]
         let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.colorFor(baseTheme: preferredBaseTheme ?? .day), bubbleColors: effectiveColors?.customBubbleColors ?? [], baseColor: effectiveColors?.baseColor) ?? defaultPresentationTheme
         
-        let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
+        var effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
+        if case .builtin = effectiveChatWallpaper {
+            effectiveChatWallpaper = defaultBuiltinWallpaper(data: .legacy, colors: legacyBuiltinWallpaperGradientColors.map(\.rgb))
+        }
         
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
@@ -761,6 +764,10 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                             if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.classic, .day].contains(baseTheme) {
                                 preferredBaseTheme = baseTheme
                             }
+                        }
+                        
+                        if case .builtin = effectiveChatWallpaper {
+                            effectiveChatWallpaper = defaultBuiltinWallpaper(data: .legacy, colors: legacyBuiltinWallpaperGradientColors.map(\.rgb))
                         }
                         
                         if let colors = effectiveColors, colors.baseColor == .theme {

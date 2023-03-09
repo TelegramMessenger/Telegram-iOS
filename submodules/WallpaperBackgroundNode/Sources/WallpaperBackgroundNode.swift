@@ -1035,7 +1035,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 if patternIsBlack {
                     self.patternImageLayer.softlightMode = .never
                 } else {
-                    if self.useSharedAnimationPhase {
+                    if self.useSharedAnimationPhase && file.settings.colors.count > 2 {
                         self.patternImageLayer.softlightMode = .whileAnimating
                     } else {
                         self.patternImageLayer.softlightMode = .always
