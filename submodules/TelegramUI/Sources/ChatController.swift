@@ -996,78 +996,92 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }))
                 }
-            }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
-                if let strongSelf = self {
-                    strongSelf.openUrl(url, concealed: concealed, message: nil)
-                }
-            }, openUrlIn: { [weak self] url in
-                if let strongSelf = self {
-                    strongSelf.openUrlIn(url)
-                }
-            }, openPeerMention: { [weak self] mention in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openPeerMention(mention)
-                }
-            }, openPeer: { [weak self] peer in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
-                }
-            }, openHashtag: { [weak self] peerName, hashtag in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openHashtag(peerName, hashtag)
-                }
-            }, openBotCommand: { [weak self] command in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction?.sendBotCommand(nil, command)
-                }
-            }, addContact: { [weak self] phoneNumber in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction?.addContact(phoneNumber)
-                }
-            }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
-                guard let strongSelf = self else {
-                    return
-                }
-                var storedState: MediaPlaybackStoredState?
-                if let timestamp = timestamp {
-                    storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
-                }
-                let _ = updateMediaPlaybackStoredStateInteractively(engine: strongSelf.context.engine, messageId: messageId, state: storedState).start()
-            }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
-                |> deliverOnMainQueue).start(next: { [weak self] message in
-                    guard let strongSelf = self, let message = message else {
+            }, actionInteraction: GalleryControllerActionInteraction(
+                openUrl: { [weak self] url, concealed in
+                    if let strongSelf = self {
+                        strongSelf.openUrl(url, concealed: concealed, message: nil)
+                    }
+                }, openUrlIn: { [weak self] url in
+                    if let strongSelf = self {
+                        strongSelf.openUrlIn(url)
+                    }
+                }, openPeerMention: { [weak self] mention in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.openPeerMention(mention)
+                    }
+                }, openPeer: { [weak self] peer in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
+                    }
+                }, openHashtag: { [weak self] peerName, hashtag in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.openHashtag(peerName, hashtag)
+                    }
+                }, openBotCommand: { [weak self] command in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                    }
+                }, addContact: { [weak self] phoneNumber in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction?.addContact(phoneNumber)
+                    }
+                }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var storedState: MediaPlaybackStoredState?
+                    if let timestamp = timestamp {
+                        storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
+                    }
+                    let _ = updateMediaPlaybackStoredStateInteractively(engine: strongSelf.context.engine, messageId: messageId, state: storedState).start()
+                }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
+                    guard let strongSelf = self else {
                         return
                     }
                     
-                    var mediaReference: AnyMediaReference?
-                    for media in message.media {
-                        if let image = media as? TelegramMediaImage {
-                            mediaReference = AnyMediaReference.standalone(media: image)
-                        } else if let file = media as? TelegramMediaFile {
-                            mediaReference = AnyMediaReference.standalone(media: file)
+                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                    |> deliverOnMainQueue).start(next: { [weak self] message in
+                        guard let strongSelf = self, let message = message else {
+                            return
                         }
-                    }
-                    
-                    if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
-                            transitionCompletion()
-                        }, getCaptionPanelView: { [weak self] in
-                            return self?.getCaptionPanelView()
-                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
-                            if let strongSelf = self {
-                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
+                        
+                        var mediaReference: AnyMediaReference?
+                        for media in message.media {
+                            if let image = media as? TelegramMediaImage {
+                                mediaReference = AnyMediaReference.standalone(media: image)
+                            } else if let file = media as? TelegramMediaFile {
+                                mediaReference = AnyMediaReference.standalone(media: file)
                             }
-                        }, present: { [weak self] c, a in
-                            self?.present(c, in: .window(.root), with: a)
-                        })
+                        }
+                        
+                        if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
+                            legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
+                                transitionCompletion()
+                            }, getCaptionPanelView: { [weak self] in
+                                return self?.getCaptionPanelView()
+                            }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                                if let strongSelf = self {
+                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
+                                }
+                            }, present: { [weak self] c, a in
+                                self?.present(c, in: .window(.root), with: a)
+                            })
+                        }
+                    })
+                }),
+                getSourceRect: { [weak self] in
+                    guard let strongSelf = self else {
+                        return nil
                     }
-                })
-            })))
+                    var rect: CGRect?
+                    strongSelf.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
+                        if itemNode.item?.message.id == message.id {
+                            rect = itemNode.view.convert(itemNode.contentFrame(), to: nil)
+                        }
+                    })
+                    return rect
+                }
+            ))
         }, openPeer: { [weak self] peer, navigation, fromMessage, source in
             self?.openPeer(peer: peer, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: source == .reaction ? fromMessage?.id : nil, expandAvatar: source == .groupParticipant)
         }, openPeerMention: { [weak self] name in

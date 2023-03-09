@@ -667,4 +667,5 @@ public enum FileMediaResourceMediaStatus: Equatable {
 
 public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
+    func contentFrame() -> CGRect
 }

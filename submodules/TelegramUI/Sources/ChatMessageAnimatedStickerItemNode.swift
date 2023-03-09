@@ -2889,6 +2889,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     override func unreadMessageRangeUpdated() {
         self.updateVisibility()
     }
+    
+    override func contentFrame() -> CGRect {
+        return self.imageNode.frame
+    }
 }
 
 struct AnimatedEmojiSoundsConfiguration {
