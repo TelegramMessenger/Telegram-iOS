@@ -26,7 +26,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
             }
         }
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
-            if fromLargestRepresentation.progressiveSizes != toLargestRepresentation.progressiveSizes {
+            if fromLargestRepresentation.resource is CloudPeerPhotoSizeMediaResource {
             } else {
                 copyOrMoveResourceData(from: fromLargestRepresentation.resource, to: toLargestRepresentation.resource, mediaBox: postbox.mediaBox)
             }
