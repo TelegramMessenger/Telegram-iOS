@@ -457,6 +457,7 @@ final class PhoneDemoComponent: Component {
             self.containerView.clipsToBounds = true
             
             self.phoneView = PhoneView(frame: CGRect(origin: .zero, size: phoneSize))
+            self.phoneView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
             

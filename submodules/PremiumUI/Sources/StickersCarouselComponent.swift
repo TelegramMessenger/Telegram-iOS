@@ -19,13 +19,16 @@ final class StickersCarouselComponent: Component {
     
     let context: AccountContext
     let stickers: [TelegramMediaFile]
+    let tapAction: () -> Void
     
     public init(
         context: AccountContext,
-        stickers: [TelegramMediaFile]
+        stickers: [TelegramMediaFile],
+        tapAction: @escaping () -> Void
     ) {
         self.context = context
         self.stickers = stickers
+        self.tapAction = tapAction
     }
     
     public static func ==(lhs: StickersCarouselComponent, rhs: StickersCarouselComponent) -> Bool {
@@ -48,7 +51,8 @@ final class StickersCarouselComponent: Component {
             if self.node == nil && !component.stickers.isEmpty {
                 let node = StickersCarouselNode(
                     context: component.context,
-                    stickers: component.stickers
+                    stickers: component.stickers,
+                    tapAction: component.tapAction
                 )
                 self.node = node
                 self.addSubnode(node)
@@ -278,6 +282,8 @@ private class StickerNode: ASDisplayNode {
 private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private let stickers: [TelegramMediaFile]
+    private let tapAction: () -> Void
+    
     private var itemContainerNodes: [ASDisplayNode] = []
     private var itemNodes: [Int: StickerNode] = [:]
     private let scrollNode: ASScrollNode
@@ -296,9 +302,10 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private var previousInteractionTimestamp: Double = 0.0
     private var timer: SwiftSignalKit.Timer?
     
-    init(context: AccountContext, stickers: [TelegramMediaFile]) {
+    init(context: AccountContext, stickers: [TelegramMediaFile], tapAction: @escaping () -> Void) {
         self.context = context
         self.stickers = stickers
+        self.tapAction = tapAction
         
         self.scrollNode = ASScrollNode()
         self.tapNode = ASDisplayNode()
@@ -335,11 +342,17 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     @objc private func stickerTapped(_ gestureRecognizer: UITapGestureRecognizer) {
         self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         
+        let point = gestureRecognizer.location(in: self.view)
+        let size = self.bounds.size
+        if point.y > size.height / 3.0 && point.y < size.height - size.height / 3.0 {
+            self.tapAction()
+            return
+        }
+        
         guard self.animator == nil, self.scrollStartPosition == nil else {
             return
         }
         
-        let point = gestureRecognizer.location(in: self.view)
         guard let index = self.itemContainerNodes.firstIndex(where: { $0.frame.contains(point) }) else {
             return
         }
