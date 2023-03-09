@@ -221,11 +221,11 @@ private func energeSavingSettingsScreenEntries(
     
     let allText: String
     if settings.energyUsageSettings.activationThreshold <= 4 {
-        allText = "Don’t disable all resource-intensive processes even when the battery is low."
+        allText = presentationData.strings.PowerSaving_AllDescriptionNever
     } else if settings.energyUsageSettings.activationThreshold >= 96 {
-        allText = "Always disable all resource-intensive processes, regardless of the battery charge level."
+        allText = presentationData.strings.PowerSaving_AllDescriptionAlways
     } else {
-        allText = "Automatically disable all resource-intensive processes when your battery is below \(settings.energyUsageSettings.activationThreshold)%."
+        allText = presentationData.strings.PowerSaving_AllDescriptionLimit("\(settings.energyUsageSettings.activationThreshold)").string
     }
     entries.append(.allFooter(allText))
     

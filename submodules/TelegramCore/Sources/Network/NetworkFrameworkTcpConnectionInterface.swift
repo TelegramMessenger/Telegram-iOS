@@ -6,11 +6,29 @@ import SwiftSignalKit
 
 @available(iOS 12.0, macOS 10.14, *)
 final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInterface {
+    private struct ReadRequest {
+        let length: Int
+        let tag: Int
+    }
+    
+    private final class ExecutingReadRequest {
+        let request: ReadRequest
+        var data: Data
+        var readyLength: Int = 0
+        
+        init(request: ReadRequest) {
+            self.request = request
+            self.data = Data(count: request.length)
+        }
+    }
+    
     private final class Impl {
         private let queue: Queue
         
         private weak var delegate: MTTcpConnectionInterfaceDelegate?
         private let delegateQueue: DispatchQueue
+        
+        private let requestChunkLength: Int
         
         private var connection: NWConnection?
         private var reportedDisconnection: Bool = false
@@ -22,6 +40,9 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
         private var usageCalculationInfo: MTNetworkUsageCalculationInfo?
         private var networkUsageManager: MTNetworkUsageManager?
         
+        private var readRequests: [ReadRequest] = []
+        private var currentReadRequest: ExecutingReadRequest?
+        
         init(
             queue: Queue,
             delegate: MTTcpConnectionInterfaceDelegate,
@@ -31,6 +52,8 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
             
             self.delegate = delegate
             self.delegateQueue = delegateQueue
+            
+            self.requestChunkLength = 256 * 1024
         }
         
         deinit {
@@ -120,6 +143,8 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
             self.connectTimeoutTimer?.start()
             
             connection.start(queue: self.queue.queue)
+            
+            self.processReadRequests()
         }
         
         private func stateUpdated(state: NWConnection.State) {
@@ -164,42 +189,85 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
         }
         
         func read(length: Int, timeout: Double, tag: Int) {
+            self.readRequests.append(NetworkFrameworkTcpConnectionInterface.ReadRequest(length: length, tag: tag))
+            self.processReadRequests()
+        }
+        
+        private func processReadRequests() {
+            if self.currentReadRequest != nil {
+                return
+            }
+            if self.readRequests.isEmpty {
+                return
+            }
+            
+            let readRequest = self.readRequests.removeFirst()
+            let currentReadRequest = ExecutingReadRequest(request: readRequest)
+            self.currentReadRequest = currentReadRequest
+            
+            self.processCurrentRead()
+        }
+        
+        private func processCurrentRead() {
+            guard let currentReadRequest = self.currentReadRequest else {
+                return
+            }
             guard let connection = self.connection else {
                 print("Connection not ready")
                 return
             }
             
-            connection.receive(minimumIncompleteLength: length, maximumLength: length, completion: { [weak self] data, context, isComplete, error in
-                guard let self = self else {
-                    return
+            let requestChunkLength = min(self.requestChunkLength, currentReadRequest.request.length - currentReadRequest.readyLength)
+            if requestChunkLength == 0 {
+                self.currentReadRequest = nil
+                
+                weak var delegate = self.delegate
+                self.delegateQueue.async {
+                    if let delegate = delegate {
+                        delegate.connectionInterfaceDidRead(currentReadRequest.data, withTag: currentReadRequest.request.tag)
+                    }
                 }
-                if let data = data {
-                    self.networkUsageManager?.addIncomingBytes(UInt(data.count), interface: self.currentInterfaceIsWifi ? MTNetworkUsageManagerInterfaceOther : MTNetworkUsageManagerInterfaceWWAN)
-                    
-                    if isComplete || data.count == length {
-                        if data.count == length {
+                
+                self.processReadRequests()
+            } else {
+                connection.receive(minimumIncompleteLength: requestChunkLength, maximumLength: requestChunkLength, completion: { [weak self] data, context, isComplete, error in
+                    guard let self = self, let currentReadRequest = self.currentReadRequest else {
+                        return
+                    }
+                    if let data = data {
+                        self.networkUsageManager?.addIncomingBytes(UInt(data.count), interface: self.currentInterfaceIsWifi ? MTNetworkUsageManagerInterfaceOther : MTNetworkUsageManagerInterfaceWWAN)
+                        
+                        if data.count != 0 && data.count <= currentReadRequest.request.length - currentReadRequest.readyLength {
+                            currentReadRequest.data.withUnsafeMutableBytes { currentBuffer in
+                                guard let currentBytes = currentBuffer.assumingMemoryBound(to: UInt8.self).baseAddress else {
+                                    return
+                                }
+                                data.copyBytes(to: currentBytes.advanced(by: currentReadRequest.readyLength), count: data.count)
+                            }
+                            currentReadRequest.readyLength += data.count
+                            
+                            let tag = currentReadRequest.request.tag
+                            let readCount = data.count
                             weak var delegate = self.delegate
                             self.delegateQueue.async {
                                 if let delegate = delegate {
-                                    delegate.connectionInterfaceDidRead(data, withTag: tag)
+                                    delegate.connectionInterfaceDidReadPartialData(ofLength: UInt(readCount), tag: tag)
                                 }
                             }
+                            
+                            self.processCurrentRead()
                         } else {
                             self.cancelWithError(error: error)
                         }
-                    } else {
-                        weak var delegate = self.delegate
-                        let dataCount = data.count
-                        self.delegateQueue.async {
-                            if let delegate = delegate {
-                                delegate.connectionInterfaceDidReadPartialData(ofLength: UInt(dataCount), tag: tag)
-                            }
+                        
+                        if isComplete && data.count == 0 {
+                            self.cancelWithError(error: nil)
                         }
+                    } else {
+                        self.cancelWithError(error: error)
                     }
-                } else {
-                    self.cancelWithError(error: error)
-                }
-            })
+                })
+            }
         }
         
         private func cancelWithError(error: Error?) {
