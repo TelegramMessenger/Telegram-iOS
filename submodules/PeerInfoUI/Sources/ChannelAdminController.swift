@@ -1406,14 +1406,14 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 footerItem = ChannelAdminAddBotFooterItem(theme: presentationData.theme, title: state.adminRights ? presentationData.strings.Bot_AddToChat_Add_AddAsAdmin : presentationData.strings.Bot_AddToChat_Add_AddAsMember, action: {
                     if state.adminRights {
                         let theme = AlertControllerTheme(presentationData: presentationData)
-                        let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_AdminAlertTitle, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                        let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_AdminAlertTitle, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: theme.primaryColor, paragraphAlignment: .center)
                       
                         let text = isGroup ? presentationData.strings.Bot_AddToChat_Add_AdminAlertTextGroup(peerTitle).string : presentationData.strings.Bot_AddToChat_Add_AdminAlertTextChannel(peerTitle).string
                         
-                        let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
-                        let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+                        let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
+                        let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
                         let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
-                        
+                                               
                         let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Bot_AddToChat_Add_AdminAlertAdd, action: {
                             rightButtonActionImpl()
                         }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {

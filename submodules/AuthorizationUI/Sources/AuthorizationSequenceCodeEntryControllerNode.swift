@@ -12,9 +12,9 @@ import PhoneNumberFormat
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
-import InvisibleInkDustNode
 import AuthorizationUtils
 import TelegramStringFormatting
+import TextNodeWithEntities
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -24,9 +24,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let titleNode: ImmediateTextNode
     private let titleActivateAreaNode: AccessibilityAreaNode
     private let titleIconNode: ASImageNode
-    private let currentOptionNode: ImmediateTextNode
+    private let currentOptionNode: ImmediateTextNodeWithEntities
     private let currentOptionActivateAreaNode: AccessibilityAreaNode
-    private var dustNode: InvisibleInkDustNode?
     
     private let currentOptionInfoNode: ASTextNode
     private let currentOptionInfoActivateAreaNode: AccessibilityAreaNode
@@ -105,11 +104,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleIconNode.displayWithoutProcessing = true
         self.titleIconNode.displaysAsynchronously = false
         
-        self.currentOptionNode = ImmediateTextNode()
+        self.currentOptionNode = ImmediateTextNodeWithEntities()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.lineSpacing = 0.1
         self.currentOptionNode.maximumNumberOfLines = 0
+        self.currentOptionNode.spoilerColor = self.theme.list.itemSecondaryTextColor
         
         self.currentOptionActivateAreaNode = AccessibilityAreaNode()
         self.currentOptionActivateAreaNode.accessibilityTraits = .staticText
@@ -569,23 +569,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
-        
-        if let textLayout = self.currentOptionNode.cachedLayout, !textLayout.spoilers.isEmpty {
-            if self.dustNode == nil {
-                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: true)
-                self.dustNode = dustNode
-                self.currentOptionNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.currentOptionNode)
-                
-            }
-            if let dustNode = self.dustNode {
-                let textFrame = self.currentOptionNode.frame
-                dustNode.update(size: textFrame.size, color: self.theme.list.itemSecondaryTextColor, textColor: self.theme.list.itemPrimaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
-                transition.updateFrame(node: dustNode, frame: textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0))
-            }
-        } else if let dustNode = self.dustNode {
-            self.dustNode = nil
-            dustNode.removeFromSupernode()
-        }
         
         self.nextOptionTitleNode.frame = self.nextOptionButtonNode.bounds
         

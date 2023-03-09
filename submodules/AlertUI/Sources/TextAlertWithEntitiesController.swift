@@ -1,151 +1,18 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Markdown
+import Display
+import SwiftSignalKit
+import TextNodeWithEntities
 
 private let alertWidth: CGFloat = 270.0
 
-public enum TextAlertActionType {
-    case genericAction
-    case defaultAction
-    case destructiveAction
-}
-
-public struct TextAlertAction {
-    public let type: TextAlertActionType
-    public let title: String
-    public let action: () -> Void
-    
-    public init(type: TextAlertActionType, title: String, action: @escaping () -> Void) {
-        self.type = type
-        self.title = title
-        self.action = action
-    }
-}
-
-public final class TextAlertContentActionNode: HighlightableButtonNode {
-    private var theme: AlertControllerTheme
-    let action: TextAlertAction
-    
-    private let backgroundNode: ASDisplayNode
-    
-    public var highlightedUpdated: (Bool) -> Void = { _ in }
-        
-    public init(theme: AlertControllerTheme, action: TextAlertAction) {
-        self.theme = theme
-        self.action = action
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.alpha = 0.0
-        
-        super.init()
-        
-        self.titleNode.maximumNumberOfLines = 2
-        
-        self.highligthedChanged = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.setHighlighted(value, animated: true)
-            }
-        }
-        
-        self.updateTheme(theme)
-    }
-    
-    public override func didLoad() {
-        super.didLoad()
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
-        
-        self.pointerInteraction = PointerInteraction(node: self, style: .hover, willEnter: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.setHighlighted(true, animated: false)
-            }
-        }, willExit: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.setHighlighted(false, animated: false)
-            }
-        })
-    }
-    
-    public func performAction() {
-        if self.actionEnabled {
-            self.action.action()
-        }
-    }
-    
-    public func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        self.highlightedUpdated(highlighted)
-        if highlighted {
-            if self.backgroundNode.supernode == nil {
-                self.insertSubnode(self.backgroundNode, at: 0)
-            }
-            self.backgroundNode.alpha = 1.0
-        } else {
-            if animated {
-                UIView.animate(withDuration: 0.3, animations: {
-                    self.backgroundNode.alpha = 0.0
-                })
-            } else {
-                self.backgroundNode.alpha = 0.0
-            }
-        }
-    }
-    public var actionEnabled: Bool = true {
-        didSet {
-            self.isUserInteractionEnabled = self.actionEnabled
-            self.updateTitle()
-        }
-    }
-    
-    public func updateTheme(_ theme: AlertControllerTheme) {
-        self.theme = theme
-        self.backgroundNode.backgroundColor = theme.highlightedItemColor
-        self.updateTitle()
-    }
-    
-    private func updateTitle() {
-        var font = Font.regular(theme.baseFontSize)
-        var color: UIColor
-        switch self.action.type {
-            case .defaultAction, .genericAction:
-                color = self.actionEnabled ? self.theme.accentColor : self.theme.disabledColor
-            case .destructiveAction:
-                color = self.actionEnabled ? self.theme.destructiveColor : self.theme.disabledColor
-        }
-        switch self.action.type {
-            case .defaultAction:
-                font = Font.semibold(theme.baseFontSize)
-            case .destructiveAction, .genericAction:
-                break
-        }
-        self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
-        self.accessibilityLabel = self.action.title
-        self.accessibilityTraits = [.button]
-    }
-    
-    @objc func pressed() {
-        self.action.action()
-    }
-    
-    override public func layout() {
-        super.layout()
-        
-        self.backgroundNode.frame = self.bounds
-    }
-}
-
-public enum TextAlertContentActionLayout {
-    case horizontal
-    case vertical
-}
-
-public final class TextAlertContentNode: AlertContentNode {
+final class TextAlertWithEntitiesContentNode: AlertContentNode {
     private var theme: AlertControllerTheme
     private let actionLayout: TextAlertContentActionLayout
     
     private let titleNode: ImmediateTextNode?
-    private let textNode: ImmediateTextNode
+    private let textNode: ImmediateTextNodeWithEntities
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -160,7 +27,7 @@ public final class TextAlertContentNode: AlertContentNode {
     
     private var highlightedItemIndex: Int? = nil
     
-    public var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
+    var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
         didSet {
             if let (attribute, textAttributeAction) = self.textAttributeAction {
                 self.textNode.highlightAttributeAction = { attributes in
@@ -183,7 +50,7 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool) {
+    init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool) {
         self.theme = theme
         self.actionLayout = actionLayout
         self._dismissOnOutsideTap = dismissOnOutsideTap
@@ -201,7 +68,7 @@ public final class TextAlertContentNode: AlertContentNode {
             self.titleNode = nil
         }
         
-        self.textNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.maximumNumberOfLines = 0
         self.textNode.attributedText = text
         self.textNode.displaysAsynchronously = false
@@ -214,6 +81,7 @@ public final class TextAlertContentNode: AlertContentNode {
                 self.textNode.textAlignment = paragraphStyle.alignment
             }
         }
+        self.textNode.spoilerColor = theme.secondaryColor
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -277,19 +145,19 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    override public func decreaseHighlightedIndex() {
+    override func decreaseHighlightedIndex() {
         let currentHighlightedIndex = self.highlightedItemIndex ?? 0
         
         self.setHighlightedItemIndex(max(0, currentHighlightedIndex - 1), update: true)
     }
     
-    override public func increaseHighlightedIndex() {
+    override func increaseHighlightedIndex() {
         let currentHighlightedIndex = self.highlightedItemIndex ?? -1
         
         self.setHighlightedItemIndex(min(self.actionNodes.count - 1, currentHighlightedIndex + 1), update: true)
     }
     
-    override public func performHighlightedAction() {
+    override func performHighlightedAction() {
         guard let highlightedItemIndex = self.highlightedItemIndex else {
             return
         }
@@ -304,7 +172,7 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    override public func updateTheme(_ theme: AlertControllerTheme) {
+    override func updateTheme(_ theme: AlertControllerTheme) {
         self.theme = theme
         
         if let titleNode = self.titleNode, let attributedText = titleNode.attributedText {
@@ -317,6 +185,7 @@ public final class TextAlertContentNode: AlertContentNode {
             updatedText.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.primaryColor, range: NSRange(location: 0, length: updatedText.length))
             self.textNode.attributedText = updatedText
         }
+        self.textNode.spoilerColor = theme.secondaryColor
 
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -331,7 +200,7 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    override public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = size
         
         let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
@@ -441,30 +310,46 @@ public final class TextAlertContentNode: AlertContentNode {
     }
 }
 
-public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, dismissOnOutsideTap: Bool = true) -> AlertController {
-    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap))
-}
-
-public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true) -> AlertController {
+public func textWithEntitiesAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
     var dismissImpl: (() -> Void)?
-    let attributedText: NSAttributedString
-    if parseMarkdown {
-        let font = title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
-        let boldFont = title == nil ? Font.bold(theme.baseFontSize) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
-        let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
-        let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
-        attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
-    } else {
-        attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0)), textColor: theme.primaryColor, paragraphAlignment: .center)
-    }
-    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.semibold(theme.baseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: attributedText, actions: actions.map { action in
+    let controller = AlertController(theme: theme, contentNode: TextAlertWithEntitiesContentNode(theme: theme, title: title, text: text, actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
-            dismissImpl?()
+            if dismissAutomatically {
+                dismissImpl?()
+            }
             action.action()
         })
-    }, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap), allowInputInset: allowInputInset)
+    }, actionLayout: actionLayout, dismissOnOutsideTap: true), allowInputInset: allowInputInset)
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }
+
+    return controller
+}
+
+
+public func textWithEntitiesAlertController(alertContext: AlertControllerContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
+    let theme = alertContext.theme
+    
+    var dismissImpl: (() -> Void)?
+    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions.map { action in
+        return TextAlertAction(type: action.type, title: action.title, action: {
+            if dismissAutomatically {
+                dismissImpl?()
+            }
+            action.action()
+        })
+    }, actionLayout: actionLayout, dismissOnOutsideTap: true), allowInputInset: allowInputInset)
+    dismissImpl = { [weak controller] in
+        controller?.dismissAnimated()
+    }
+    
+    let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
+        controller?.theme = theme
+    })
+    controller.dismissed = { _ in
+        presentationDataDisposable.dispose()
+    }
+    
     return controller
 }
