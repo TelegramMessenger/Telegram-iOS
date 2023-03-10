@@ -18,7 +18,7 @@ import HierarchyTrackingLayer
 
 private let motionAmount: CGFloat = 32.0
 
-private func generateBlurredContents(image: UIImage) -> UIImage? {
+private func generateBlurredContents(image: UIImage, dimColor: UIColor?) -> UIImage? {
     let size = image.size.aspectFitted(CGSize(width: 64.0, height: 64.0))
     guard let context = DrawingContext(size: size, scale: 1.0, opaque: true, clear: false) else {
         return nil
@@ -31,6 +31,13 @@ private func generateBlurredContents(image: UIImage) -> UIImage? {
     telegramFastBlurMore(Int32(context.size.width), Int32(context.size.height), Int32(context.bytesPerRow), context.bytes)
 
     adjustSaturationInContext(context: context, saturation: 1.7)
+    
+    if let dimColor {
+        context.withFlippedContext { c in
+            c.setFillColor(dimColor.cgColor)
+            c.fill(CGRect(origin: CGPoint(), size: size))
+        }
+    }
 
     return context.generateImage()
 }
@@ -323,6 +330,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         private var cleanWallpaperNode: ASDisplayNode?
         private var gradientWallpaperNode: GradientBackgroundNode.CloneNode?
+        private var overlayNode: ASDisplayNode?
         private weak var backgroundNode: WallpaperBackgroundNodeImpl?
         private var index: SparseBag<BubbleBackgroundNodeImpl>.Index?
 
@@ -369,11 +377,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             guard let backgroundNode = self.backgroundNode else {
                 return
             }
+            
+            var overlayColor: UIColor?
 
             if let bubbleTheme = backgroundNode.bubbleTheme, let bubbleCorners = backgroundNode.bubbleCorners {
                 let wallpaper = backgroundNode.wallpaper ?? bubbleTheme.chat.defaultWallpaper
 
                 let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+                
                 var needsCleanBackground = false
                 switch self.bubbleType {
                 case .incoming:
@@ -401,6 +412,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     self.contentNode.image = nil
                     self.contentNode.backgroundColor = nil
                     needsCleanBackground = true
+                    
+                    if wallpaper.isBuiltin {
+                        overlayColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
+                    }
                 }
 
                 var isInvertedGradient = false
@@ -490,6 +505,21 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     cleanWallpaperNode.removeFromSupernode()
                 }
             }
+            
+            if let overlayColor {
+                let overlayNode: ASDisplayNode
+                if let current = self.overlayNode {
+                    overlayNode = current
+                } else {
+                    overlayNode = ASDisplayNode()
+                    self.overlayNode = overlayNode
+                    self.addSubnode(overlayNode)
+                }
+                overlayNode.backgroundColor = overlayColor
+            } else if let overlayNode = self.overlayNode {
+                self.overlayNode = nil
+                overlayNode.removeFromSupernode()
+            }
 
             if let (rect, containerSize) = self.currentLayout {
                 self.update(rect: rect, within: containerSize)
@@ -521,6 +551,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
             }
+            if let overlayNode = self.overlayNode {
+                transition.updateFrame(layer: overlayNode.layer, frame: self.bounds, delay: delay)
+            }
         }
         
         func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator) {
@@ -538,6 +571,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 animator.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds, completion: nil)
                 animator.updateContentsRect(layer: gradientWallpaperNode.layer, contentsRect: shiftedContentsRect, completion: nil)
             }
+            if let overlayNode = self.overlayNode {
+                animator.updateFrame(layer: overlayNode.layer, frame: self.bounds, completion: nil)
+            }
         }
 
         func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
@@ -554,6 +590,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             if let gradientWallpaperNode = self.gradientWallpaperNode {
                 transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
                 gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+            }
+            if let overlayNode = self.overlayNode {
+                transition.updateFrame(layer: overlayNode.layer, frame: self.bounds)
             }
         }
 
@@ -856,6 +895,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         var gradientColors: [UInt32] = []
         var gradientAngle: Int32 = 0
+        
+        let wallpaperDimColor: UIColor? = nil
 
         if case let .color(color) = wallpaper {
             gradientColors = [color]
@@ -955,7 +996,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.contentNode.backgroundColor = .white
                 if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
-                    self.blurredBackgroundContents = generateBlurredContents(image: image)
+                    self.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: nil)
                     self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
@@ -963,7 +1004,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     }
                 } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
-                    self.blurredBackgroundContents = generateBlurredContents(image: image)
+                    self.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: nil)
                     self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
@@ -977,7 +1018,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         }
                         strongSelf.contentNode.contents = image?.0?.cgImage
                         if let image = image?.0 {
-                            strongSelf.blurredBackgroundContents = generateBlurredContents(image: image)
+                            strongSelf.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
                         } else {
                             strongSelf.blurredBackgroundContents = nil
                         }
