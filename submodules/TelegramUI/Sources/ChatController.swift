@@ -12759,24 +12759,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 case .gift:
                     initialButton = .gift
-                case let .bot(botId, _, _):
-                    for bot in attachMenuBots.reversed() {
-                        var peerType = peerType
-                        if bot.peer.id == peer.id {
-                            peerType.insert(.sameBot)
-                            peerType.remove(.bot)
-                        }
-                        let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
-                        if !bot.peerTypes.intersection(peerType).isEmpty {
-                            buttons.insert(button, at: 1)
-                            
+                default:
+                    break
+                }
+                
+                for bot in attachMenuBots.reversed() {
+                    var peerType = peerType
+                    if bot.peer.id == peer.id {
+                        peerType.insert(.sameBot)
+                        peerType.remove(.bot)
+                    }
+                    let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                    if !bot.peerTypes.intersection(peerType).isEmpty {
+                        buttons.insert(button, at: 1)
+                        
+                        if case let .bot(botId, _, _) = subject {
                             if initialButton == nil && bot.peer.id == botId {
                                 initialButton = button
                             }
                         }
-                        allButtons.insert(button, at: 1)
                     }
+                    allButtons.insert(button, at: 1)
                 }
+                
                 return (buttons, allButtons, initialButton)
             }
         } else {
