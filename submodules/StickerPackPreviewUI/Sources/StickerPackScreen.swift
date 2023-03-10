@@ -1537,7 +1537,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.01)
             self.containerContainingNode.cornerRadius = 10.0
             
-            let size = CGSize(width: 390.0, height: min(620.0, layout.size.height - 60.0))
+            let size = CGSize(width: 390.0, height: min(560.0, layout.size.height - 60.0))
             var contentRect: CGRect
             if let sourceRect = self.controller?.getSourceRect?() {
                 let sideSpacing: CGFloat = 10.0
