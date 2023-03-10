@@ -525,7 +525,22 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if nextType == nil {
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
-                        strongSelf.presentEmailComposeController(address: "sms@telegram.org", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
+                        
+                        var emailBody = ""
+                        emailBody.append(strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string)
+                        emailBody.append("\n\n")
+                        
+                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                        let systemVersion = UIDevice.current.systemVersion
+                        let locale = Locale.current.identifier
+                        let carrier = CTCarrier()
+                        let mnc = carrier.mobileNetworkCode ?? "none"
+                        emailBody.append("Telegram: \(appVersion)\n")
+                        emailBody.append("OS: \(systemVersion)\n")
+                        emailBody.append("Locale: \(locale)\n")
+                        emailBody.append("MNC: \(mnc)")
+                        
+                        strongSelf.presentEmailComposeController(address: "sms@telegram.org", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: emailBody, from: controller)
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
