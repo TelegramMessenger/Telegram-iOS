@@ -413,9 +413,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     self.contentNode.backgroundColor = nil
                     needsCleanBackground = true
                     
-                    if wallpaper.isBuiltin {
+                    //if wallpaper.isBuiltin {
                         overlayColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
-                    }
+                    //}
                 }
 
                 var isInvertedGradient = false
@@ -1446,7 +1446,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             return nil
         }
         
-        #if false
+        #if true
         var sourceView: PortalSourceView?
         switch type {
         case .free:
