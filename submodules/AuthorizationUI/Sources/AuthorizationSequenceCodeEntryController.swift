@@ -24,6 +24,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     var reset: (() -> Void)?
     var requestNextOption: (() -> Void)?
     var resetEmail: (() -> Void)?
+    var retryResetEmail: (() -> Void)?
     
     var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
@@ -112,6 +113,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         
         self.controllerNode.reset = { [weak self] in
             self?.resetEmail?()
+        }
+        
+        self.controllerNode.retryReset = { [weak self] in
+            self?.retryResetEmail?()
         }
         
         self.controllerNode.present = { [weak self] c, a in

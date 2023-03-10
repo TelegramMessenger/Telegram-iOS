@@ -9051,9 +9051,9 @@ Sorry for the inconvenience.";
 "Login.Email.ResetText" = "You can change your login email if you are logged into Telegram from another device. Otherwise, if you don't have access to email %1$@, you can reset this email with an **SMS** code **%2$@**.";
 "Login.Email.Reset" = "Reset";
 "Login.Email.ResetNowViaSMS" = "Reset now via SMS";
-"Login.Email.WillBeResetIn" = "Email will be reset in %@";
+"Login.Email.WillBeResetIn" = "Email will be reset %@";
 "Login.Email.PremiumRequiredTitle" = "Telegram Premium Required";
-"Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code. You can ask a friend to a gift a Premium subscription for your account %@";
+"Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code.\n\nYou can ask a friend to gift a Premium subscription for your account\n**%@**";
 
 "ChatList.StartMessaging" = "Select a chat to start messaging";
 

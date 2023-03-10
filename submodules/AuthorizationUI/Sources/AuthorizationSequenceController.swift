@@ -289,6 +289,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if c.data?.2 == type {
                     currentController = c
                 }
+//                else if case let .email(_, _, _, newPendingDate, _, _) = type, let previousType = c.data?.2, case let .email(_, _, _, previousPendingDate, _, _) = previousType, newPendingDate != nil && previousPendingDate == nil {
+//                    currentController = c
+//                }
                 break
             }
         }
@@ -304,16 +307,28 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
+            controller.retryResetEmail = { [weak self] in
+                if let self {
+                    self.actionDisposable.set(
+                        resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start()
+                    )
+                }
+            }
             controller.resetEmail = { [weak self, weak controller] in
                 if let self, case let .email(pattern, _, resetAvailablePeriod, resetPendingDate, _, setup) = type, !setup {
+                    let body = MarkdownAttributeSet(font: Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                     if let _ = resetPendingDate {
+                        let formattedNumber = formatPhoneNumber(number)
+                        let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                        let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_PremiumRequiredText(formattedNumber).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
                         
+                        let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { })])
+                        controller?.present(alertController, in: .window(.root))
                     } else if let resetAvailablePeriod  {
                         let pattern = pattern.replacingOccurrences(of: "*", with: "#")
                         let title = NSAttributedString(string: self.presentationData.strings.Login_Email_ResetTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                         let availableIn = unmuteIntervalString(strings: self.presentationData.strings, value: resetAvailablePeriod)
-                        let body = MarkdownAttributeSet(font: Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
-                        let bold = MarkdownAttributeSet(font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                         let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_ResetText(pattern, availableIn).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
                         if let regex = try? NSRegularExpression(pattern: "\\#", options: []) {
                             let matches = regex.matches(in: text.string, options: [], range: NSMakeRange(0, text.length))
