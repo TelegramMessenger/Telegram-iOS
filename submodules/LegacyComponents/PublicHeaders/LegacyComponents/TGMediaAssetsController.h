@@ -95,7 +95,7 @@ typedef enum
 - (UIBarButtonItem *)leftBarButtonItem;
 - (UIBarButtonItem *)rightBarButtonItem;
 
-- (void)send:(bool)silently;
+- (void)send:(bool)silently whenOnline:(bool)whenOnline;
 - (void)schedule:(bool)schedule;
 
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator;

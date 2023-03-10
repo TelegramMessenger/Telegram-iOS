@@ -1833,4 +1833,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
         return nil
     }
+    
+    override func contentFrame() -> CGRect {
+        return self.imageNode.frame
+    }
 }

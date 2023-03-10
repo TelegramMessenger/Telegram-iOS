@@ -1361,6 +1361,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 
                                 if (isChat && (wasPlaying || currentlyPlayingVideo)) || (!isChat && !wasPlaying && currentlyPlayingVideo) {
                                     var currentIsVisible = true
+                                    var nextIsVisible = false
                                     if let appliedPlayingMessageId = strongSelf.appliedPlayingMessageId {
                                         currentIsVisible = false
                                         strongSelf.forEachVisibleMessageItemNode({ view in
@@ -1369,7 +1370,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             }
                                         })
                                     }
-                                    if currentIsVisible && currentlyPlayingVideo {
+                                    strongSelf.forEachVisibleMessageItemNode({ view in
+                                        if view.item?.message.id == currentlyPlayingMessageId.id {
+                                            nextIsVisible = true
+                                        }
+                                    })
+                                    if currentIsVisible && nextIsVisible && currentlyPlayingVideo {
                                         updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
                                         scrollAnimationCurve = .Spring(duration: 0.4)
                                     }

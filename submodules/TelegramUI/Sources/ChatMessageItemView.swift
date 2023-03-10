@@ -951,4 +951,8 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     
     func unreadMessageRangeUpdated() {
     }
+    
+    public func contentFrame() -> CGRect {
+        return self.bounds
+    }
 }

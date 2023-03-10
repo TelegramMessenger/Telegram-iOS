@@ -1399,4 +1399,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
         return nil
     }
+    
+    override func contentFrame() -> CGRect {
+        return self.interactiveVideoNode.frame
+    }
 }

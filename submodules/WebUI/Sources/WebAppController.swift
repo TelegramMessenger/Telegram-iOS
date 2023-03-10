@@ -1340,7 +1340,7 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
     }
     
     func schedule() {

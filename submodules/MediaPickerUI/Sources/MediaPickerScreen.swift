@@ -408,17 +408,26 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             if let controller = self.controller, case .assets(nil) = controller.subject {
+                let enableAnimations = self.controller?.context.sharedContext.energyUsageSettings.fullTranslucency ?? true
+  
                 let cameraView = TGAttachmentCameraView(forSelfPortrait: false, videoModeByDefault: controller.bannedSendPhotos != nil && controller.bannedSendVideos == nil)!
                 cameraView.clipsToBounds = true
                 cameraView.removeCorners()
-                cameraView.pressed = { [weak self] in
+                cameraView.pressed = { [weak self, weak cameraView] in
                     if let strongSelf = self, !strongSelf.openingMedia {
                         strongSelf.dismissInput()
                         strongSelf.controller?.openCamera?(strongSelf.cameraView)
+                        
+                        if !enableAnimations {
+                            cameraView?.startPreview()
+                        }
                     }
                 }
                 self.cameraView = cameraView
-                cameraView.startPreview()
+                
+                if enableAnimations {
+                    cameraView.startPreview()
+                }
                 
                 self.gridNode.scrollView.addSubview(cameraView)
                 self.gridNode.addSubnode(self.cameraActivateAreaNode)
@@ -1758,8 +1767,8 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-        self.interaction?.sendSelected(nil, silently, nil, true, {})
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+        self.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, {})
     }
     
     func schedule() {

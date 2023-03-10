@@ -83,6 +83,7 @@ public enum AttachmentTextInputPanelSendMode {
     case generic
     case silent
     case schedule
+    case whenOnline
 }
 
 public protocol PeerSelectionController: ViewController {

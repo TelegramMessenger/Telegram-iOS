@@ -4562,4 +4562,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         return false
     }
+    
+    override func contentFrame() -> CGRect {
+        return self.backgroundNode.frame
+    }
 }

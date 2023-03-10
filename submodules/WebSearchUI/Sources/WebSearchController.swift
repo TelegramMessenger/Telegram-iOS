@@ -576,8 +576,8 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    public func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-        self.interaction?.sendSelected(nil, silently, nil)
+    public func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+        self.interaction?.sendSelected(nil, mode == .silently, nil)
     }
     
     public func schedule() {
