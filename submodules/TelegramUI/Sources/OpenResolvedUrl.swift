@@ -533,6 +533,19 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 })
             case .twoStepAuth:
                 break
+            case .enableLog:
+                if let navigationController = navigationController {
+                    let _ = updateLoggingSettings(accountManager: context.sharedContext.accountManager, {
+                        $0.withUpdatedLogToFile(true)
+                    }).start()
+                    
+                    if let controller = context.sharedContext.makeDebugSettingsController(context: context) {
+                        var controllers = navigationController.viewControllers
+                        controllers.append(controller)
+                        
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                }
             }
         case let .premiumOffer(reference):
             dismissInput()

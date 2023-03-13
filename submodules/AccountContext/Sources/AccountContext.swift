@@ -181,6 +181,7 @@ public enum ResolvedUrlSettingsSection {
     case devices
     case autoremoveMessages
     case twoStepAuth
+    case enableLog
 }
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {
@@ -833,6 +834,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
     
     func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController
+    
+    func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
