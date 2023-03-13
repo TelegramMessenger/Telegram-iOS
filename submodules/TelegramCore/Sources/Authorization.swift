@@ -809,6 +809,7 @@ public enum AuthorizationEmailResetError {
     case generic
     case limitExceeded
     case codeExpired
+    case alreadyInProgress
 }
 
 public func resetLoginEmail(account: UnauthorizedAccount, phoneNumber: String, phoneCodeHash: String) -> Signal<Never, AuthorizationEmailResetError> {
@@ -823,6 +824,8 @@ public func resetLoginEmail(account: UnauthorizedAccount, phoneNumber: String, p
                             return .fail(.limitExceeded)
                         } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
                             return .fail(.codeExpired)
+                        } else if errorDescription == "TASK_ALREADY_EXISTS" {
+                            return .fail(.alreadyInProgress)
                         } else {
                             return .fail(.generic)
                         }
