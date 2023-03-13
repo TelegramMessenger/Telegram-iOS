@@ -458,6 +458,9 @@ private final class CallSessionManagerContext {
                             }
                         }
                     })
+                } else {
+                    subscriber.putNext(CallSession(id: internalId, stableId: nil, isOutgoing: false, type: .audio, state: .terminated(id: nil, reason: .error(.generic), options: []), isVideoPossible: true))
+                    subscriber.putCompletion()
                 }
             }
             return disposable
@@ -536,7 +539,10 @@ private final class CallSessionManagerContext {
             let context = CallSessionContext(peerId: peerId, isOutgoing: false, type: isVideo ? .video : .audio, isVideoPossible: isVideoPossible, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions))
             self.contexts[internalId] = context
             let queue = self.queue
-            context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start(error: { [weak self] _ in
+            
+            let requestSignal: Signal<Api.Bool, MTRpcError> = self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash)))
+            
+            context.acknowledgeIncomingCallDisposable.set(requestSignal.start(error: { [weak self] _ in
                 queue.async {
                     guard let strongSelf = self else {
                         return
