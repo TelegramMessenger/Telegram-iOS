@@ -30,6 +30,7 @@ import StickerPackPreviewUI
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
 import StorageUsageScreen
+import DebugSettingsUI
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1272,6 +1273,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChannelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant) -> ViewController? {
         let controller = channelAdminController(context: context, peerId: peerId, adminId: adminId, initialParticipant: initialParticipant, updated: { _ in }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+        return controller
+    }
+    
+    public func makeDebugSettingsController(context: AccountContext?) -> ViewController? {
+        let controller = debugController(sharedContext: self, context: context)
         return controller
     }
     

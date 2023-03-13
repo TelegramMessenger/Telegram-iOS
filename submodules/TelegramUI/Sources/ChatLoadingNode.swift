@@ -477,7 +477,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         if self.backgroundNode?.hasExtraBubbleBackground() == true {
             self.backgroundColorNode.isHidden = true
         } else {
-            self.backgroundColorNode.isHidden = false
+            self.backgroundColorNode.isHidden = true
         }
         
         if let backgroundNode = self.backgroundNode, let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {

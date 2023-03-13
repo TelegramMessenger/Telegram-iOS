@@ -25,7 +25,7 @@ public struct CacheStorageSettings: Codable, Equatable {
             categoryStorageTimeout: [
                 .privateChats: Int32.max,
                 .groups: Int32(31 * 24 * 60 * 60),
-                .channels: Int32(31 * 24 * 60 * 60)
+                .channels: Int32(7 * 24 * 60 * 60)
             ]
         )
     }

@@ -24,7 +24,7 @@ public func selectReactionFillStaticColor(theme: PresentationTheme, wallpaper: T
     } else if case .builtin = wallpaper {
         return UIColor(rgb: 0x748391, alpha: 0.45)
     } else {
-        return theme.chat.serviceMessage.components.withCustomWallpaper.dateFillStatic
+        return .clear//theme.chat.serviceMessage.components.withCustomWallpaper.dateFillStatic
     }
 }
 

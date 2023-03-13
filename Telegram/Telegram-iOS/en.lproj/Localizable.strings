@@ -8854,9 +8854,6 @@ Sorry for the inconvenience.";
 "DataUsage.TopSectionMobile" = "Mobile";
 "DataUsage.TopSectionWifi" = "Wifi";
 
-"DataUsage.Title" = "Data Usage";
-"DataUsage.NoDataUsed" = "No Data Used";
-
 "Translation.Language.en" = "English";
 "Translation.Language.ar" = "Arabic";
 "Translation.Language.zh" = "Chinese";
@@ -9066,3 +9063,11 @@ Sorry for the inconvenience.";
 "Conversation.ForwardOptions.RecipientsMessagesForwardHidden" = "Recipients won't see they were forwarded";
 
 "Conversation.SendMessage.SendWhenOnline" = "Send When Online";
+
+"DataUsage.HeaderNoDataUsed" = "No data used";
+"DataUsage.Header" = "Data Usage";
+
+"DataUsage.SettingsHelpCellular" = "You can change your auto-download settings for media to reduce data usage when cellular.";
+"DataUsage.SettingsHelpWifi" = "You can change your auto-download settings for media to reduce data usage when on wifi.";
+
+"DataUsage.Reset" = "Reset Statistics";
