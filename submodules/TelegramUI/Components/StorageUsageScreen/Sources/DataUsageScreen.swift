@@ -783,9 +783,9 @@ final class DataUsageScreenComponent: Component {
             
             let headerText: String
             if totalSize == 0 {
-                headerText = "No Data Used"
+                headerText = environment.strings.DataUsage_NoDataUsed
             } else {
-                headerText = "Data Usage"
+                headerText = environment.strings.DataUsage_Title
             }
             let headerViewSize = self.headerView.update(
                 transition: .immediate,
@@ -1125,7 +1125,7 @@ final class DataUsageScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(DataButtonComponent(
                     theme: environment.theme,
-                    title: "Reset Statistics",
+                    title: environment.strings.NetworkUsageSettings_ResetStats,
                     action: { [weak self] in
                         self?.requestClear()
                     }

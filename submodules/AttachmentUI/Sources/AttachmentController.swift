@@ -967,9 +967,15 @@ public class AttachmentController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
+        if let previousSize, previousSize != layout.size {
+            Queue.mainQueue().after(0.1) {
+                self.node.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     

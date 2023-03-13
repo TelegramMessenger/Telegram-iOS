@@ -8854,6 +8854,9 @@ Sorry for the inconvenience.";
 "DataUsage.TopSectionMobile" = "Mobile";
 "DataUsage.TopSectionWifi" = "Wifi";
 
+"DataUsage.Title" = "Data Usage";
+"DataUsage.NoDataUsed" = "No Data Used";
+
 "Translation.Language.en" = "English";
 "Translation.Language.ar" = "Arabic";
 "Translation.Language.zh" = "Chinese";

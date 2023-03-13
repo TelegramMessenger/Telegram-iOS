@@ -570,6 +570,17 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private weak var currentUndoOverlayController: UndoOverlayController?
     
+    private var choosingStickerDisposable: Disposable?
+    private var scrollingStickersGridPromise = Promise<Bool>(false)
+    private var previewingStickersPromise = ValuePromise<Bool>(false)
+    private var choosingSticker: Signal<Bool, NoError> {
+        return combineLatest(self.scrollingStickersGridPromise.get(), self.previewingStickersPromise.get())
+        |> map { scrollingStickersGrid, previewingStickers -> Bool in
+            return scrollingStickersGrid || previewingStickers
+        }
+        |> distinctUntilChanged
+    }
+    
     public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
@@ -679,7 +690,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     },
                     presentController: controllerInteraction.presentController,
                     presentGlobalOverlayController: controllerInteraction.presentGlobalOverlayController,
-                    navigationController: controllerInteraction.navigationController
+                    navigationController: controllerInteraction.navigationController,
+                    updateIsPreviewing: { [weak self] value in
+                        self?.previewingStickersPromise.set(value)
+                    }
                 ),
                 chatPeerId: chatPeerId,
                 present: { c, a in
@@ -1670,6 +1684,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             })
         }
+        
+        self.choosingStickerDisposable = (self.choosingSticker
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction?.updateChoosingSticker(value)
+            }
+        })
     }
     
     deinit {
@@ -1677,6 +1698,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.hasRecentGifsDisposable?.dispose()
         self.emojiSearchDisposable.dispose()
         self.stickerSearchDisposable.dispose()
+        self.choosingStickerDisposable?.dispose()
     }
     
     private func reloadGifContext() {
@@ -1771,6 +1793,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         stickerContent?.inputInteractionHolder.inputInteraction = self.stickerInputInteraction
         self.currentInputData.emoji?.inputInteractionHolder.inputInteraction = self.emojiInputInteraction
+        
+        if let stickerInputInteraction = self.stickerInputInteraction {
+            self.scrollingStickersGridPromise.set(stickerInputInteraction.scrollingStickersGridPromise.get())
+        }
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
@@ -2466,8 +2492,9 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         public let presentController: (ViewController, Any?) -> Void
         public let presentGlobalOverlayController: (ViewController, Any?) -> Void
         public let navigationController: () -> NavigationController?
+        public let updateIsPreviewing: (Bool) -> Void
         
-        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, sendEmoji: @escaping (TelegramMediaFile) -> Void, setStatus: @escaping (TelegramMediaFile) -> Void, copyEmoji: @escaping (TelegramMediaFile) -> Void, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?) {
+        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, sendEmoji: @escaping (TelegramMediaFile) -> Void, setStatus: @escaping (TelegramMediaFile) -> Void, copyEmoji: @escaping (TelegramMediaFile) -> Void, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, updateIsPreviewing: @escaping (Bool) -> Void) {
             self.sendSticker = sendSticker
             self.sendEmoji = sendEmoji
             self.setStatus = setStatus
@@ -2475,6 +2502,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
             self.presentController = presentController
             self.presentGlobalOverlayController = presentGlobalOverlayController
             self.navigationController = navigationController
+            self.updateIsPreviewing = updateIsPreviewing
         }
     }
     
@@ -2772,11 +2800,12 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                 let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
                     return (sourceView, sourceRect)
                 })
-                /*controller.visibilityUpdated = { [weak self] visible in
-                    self?.previewingStickersPromise.set(visible)
-                    self?.requestDisableStickerAnimations?(visible)
-                    self?.simulateUpdateLayout(isVisible: !visible)
-                }*/
+                controller.visibilityUpdated = { [weak self] visible in
+                    guard let strongSelf = self, let interaction = strongSelf.interaction else {
+                        return
+                    }
+                    interaction.updateIsPreviewing(visible)
+                }
                 strongSelf.peekController = controller
                 strongSelf.present(controller, nil)
                 return controller
