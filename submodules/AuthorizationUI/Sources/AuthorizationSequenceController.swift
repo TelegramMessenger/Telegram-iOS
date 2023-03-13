@@ -319,55 +319,67 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     let body = MarkdownAttributeSet(font: Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                     let bold = MarkdownAttributeSet(font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                     if let _ = resetPendingDate {
-                        let formattedNumber = formatPhoneNumber(number)
-                        let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
-                        let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_PremiumRequiredText(formattedNumber).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
-                        
-                        let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { })])
-                        controller?.present(alertController, in: .window(.root))
-                    } else if let resetAvailablePeriod  {
-                        let pattern = pattern.replacingOccurrences(of: "*", with: "#")
-                        let title = NSAttributedString(string: self.presentationData.strings.Login_Email_ResetTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
-                        let availableIn = unmuteIntervalString(strings: self.presentationData.strings, value: resetAvailablePeriod)
-                        let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_ResetText(pattern, availableIn).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
-                        if let regex = try? NSRegularExpression(pattern: "\\#", options: []) {
-                            let matches = regex.matches(in: text.string, options: [], range: NSMakeRange(0, text.length))
-                            if let first = matches.first {
-                                text.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: NSRange(location: first.range.location, length: matches.count))
-                            }
-                        }
-                        
-                        let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_Email_Reset, action: { [weak self] in
-                            guard let self else {
-                                return
-                            }
+                        self.actionDisposable.set(
+                            resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start(error: { [weak self] error in
+                                if let self, case .alreadyInProgress = error {
+                                    let formattedNumber = formatPhoneNumber(number)
+                                    let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                                    let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_PremiumRequiredText(formattedNumber).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                                    
+                                    let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { })])
+                                    controller?.present(alertController, in: .window(.root))
+                                }
+                            })
+                        )
+                    } else if let resetAvailablePeriod {
+                        if resetAvailablePeriod == 0 {
                             self.actionDisposable.set(
-                                (resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash)
-                                 |> deliverOnMainQueue).start(error: { [weak self] error in
-                                     Queue.mainQueue().async {
-                                         guard let self, let controller = controller else {
-                                             return
-                                         }
-                                         controller.inProgress = false
-                                         
-                                         let text: String
-                                         switch error {
-                                         case .limitExceeded:
-                                             text = self.presentationData.strings.Login_CodeFloodError
-                                         case .generic:
-                                             text = self.presentationData.strings.Login_UnknownError
-                                         case .codeExpired:
-                                             text = self.presentationData.strings.Login_CodeExpired
-                                             let account = self.account
-                                             let _ = TelegramEngineUnauthorized(account: self.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
-                                         }
-                                         
-                                         controller.presentInGlobalOverlay(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]))
-                                     }
-                                 })
+                                resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start()
                             )
-                        })])
-                        controller?.present(alertController, in: .window(.root))
+                        } else {
+                            let pattern = pattern.replacingOccurrences(of: "*", with: "#")
+                            let title = NSAttributedString(string: self.presentationData.strings.Login_Email_ResetTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                            let availableIn = unmuteIntervalString(strings: self.presentationData.strings, value: resetAvailablePeriod)
+                            let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_ResetText(pattern, availableIn).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                            if let regex = try? NSRegularExpression(pattern: "\\#", options: []) {
+                                let matches = regex.matches(in: text.string, options: [], range: NSMakeRange(0, text.length))
+                                if let first = matches.first {
+                                    text.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: NSRange(location: first.range.location, length: matches.count))
+                                }
+                            }
+                            
+                            let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_Email_Reset, action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.actionDisposable.set(
+                                    (resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash)
+                                     |> deliverOnMainQueue).start(error: { [weak self] error in
+                                         Queue.mainQueue().async {
+                                             guard let self, let controller = controller else {
+                                                 return
+                                             }
+                                             controller.inProgress = false
+                                             
+                                             let text: String
+                                             switch error {
+                                             case .limitExceeded:
+                                                 text = self.presentationData.strings.Login_CodeFloodError
+                                             case .generic, .alreadyInProgress:
+                                                 text = self.presentationData.strings.Login_UnknownError
+                                             case .codeExpired:
+                                                 text = self.presentationData.strings.Login_CodeExpired
+                                                 let account = self.account
+                                                 let _ = TelegramEngineUnauthorized(account: self.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                             }
+                                             
+                                             controller.presentInGlobalOverlay(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]))
+                                         }
+                                     })
+                                )
+                            })])
+                            controller?.present(alertController, in: .window(.root))
+                        }
                     }
                 }
             }
