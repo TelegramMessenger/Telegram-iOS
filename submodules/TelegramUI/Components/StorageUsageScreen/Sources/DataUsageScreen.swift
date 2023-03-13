@@ -783,9 +783,9 @@ final class DataUsageScreenComponent: Component {
             
             let headerText: String
             if totalSize == 0 {
-                headerText = "No Data Used"
+                headerText = environment.strings.DataUsage_HeaderNoDataUsed
             } else {
-                headerText = "Data Usage"
+                headerText = environment.strings.DataUsage_Header
             }
             let headerViewSize = self.headerView.update(
                 transition: .immediate,
@@ -1092,7 +1092,7 @@ final class DataUsageScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: self.selectedStats == .mobile ? "You can change your auto-download settings for media to reduce data usage when cellular." : "You can change your auto-download settings for media to reduce data usage when on wifi.", attributes: MarkdownAttributes(
+                            text: self.selectedStats == .mobile ? environment.strings.DataUsage_SettingsHelpCellular : environment.strings.DataUsage_SettingsHelpWifi, attributes: MarkdownAttributes(
                                 body: body,
                                 bold: bold,
                                 link: body,
@@ -1125,7 +1125,7 @@ final class DataUsageScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(DataButtonComponent(
                     theme: environment.theme,
-                    title: "Reset Statistics",
+                    title: environment.strings.DataUsage_Reset,
                     action: { [weak self] in
                         self?.requestClear()
                     }
