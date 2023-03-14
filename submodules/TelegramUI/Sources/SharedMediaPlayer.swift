@@ -116,7 +116,7 @@ final class SharedMediaPlayer {
     private let audioSession: ManagedAudioSession
     private let overlayMediaManager: OverlayMediaManager
     private let playerIndex: Int32
-    private let playlist: SharedMediaPlaylist
+    let playlist: SharedMediaPlaylist
     
     private var playbackRate: AudioPlaybackRate
     
@@ -194,6 +194,8 @@ final class SharedMediaPlayer {
         
         if controlPlaybackWithProximity {
             self.forceAudioToSpeaker = !DeviceProximityManager.shared().currentValue()
+        } else {
+            self.forceAudioToSpeaker = true
         }
         
         playlist.currentItemDisappeared = { [weak self] in
