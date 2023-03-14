@@ -47,7 +47,7 @@ public struct ResourceStorePaths {
     public let complete: String
 }
 
-public struct MediaResourceData {
+public struct MediaResourceData: Equatable {
     public let path: String
     public let offset: Int64
     public let size: Int64
@@ -575,12 +575,22 @@ public final class MediaBox {
                 paths.partial,
                 paths.partial + ".meta"
             ])
-            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+            
+            #if true
+            if let fileContext = MediaBoxFileContextV2Impl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
                 return nil
             }
+            #else
+            if let fileContext = MediaBoxFileContextImpl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+                context = fileContext
+                self.fileContexts[resourceId] = fileContext
+            } else {
+                return nil
+            }
+            #endif
         }
         if let context = context {
             let index = context.addReference()
